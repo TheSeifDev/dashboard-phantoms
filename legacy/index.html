@@ -1,0 +1,3876 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wasla System — نظام إدارة وصلة</title>
+  <meta name="description" content="نظام إدارة فريق وصلة التقني — Code. Build. Innovate. Impact." />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="وصلة" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ========== LOGIN SCREEN — Wasla Tech ========== -->
+  <div id="login-screen">
+    <!-- Ambient floating dot -->
+    <div class="ls-ambient-dot" aria-hidden="true"></div>
+
+    <!-- Topbar -->
+    <div class="ls-topbar">
+      <div class="ls-topbar-left">
+        <div class="ls-brand-mark">
+          <div class="ls-logo-mark"></div>
+          <div class="ls-brand-mark-text">
+            <span class="ls-brand-name">wasla</span>
+            <span class="ls-brand-sub">tech</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="ls-body">
+      <!-- Left Column: Hero & Benefits -->
+      <div class="ls-brand-col" aria-hidden="false">
+        <div class="ls-brand-copy">
+          <p class="ls-eyebrow">في عالم تتسارع فيه التكنولوجيا، كان لا بد من وجود وصلة.</p>
+          <div class="ls-rule"></div>
+          <h1 class="ls-hero-title">أهلاً بك<br><span class="ls-hero-accent">مجدداً</span></h1>
+          <p class="ls-hero-sub">في وصلة، نحول الأفكار إلى واقع</p>
+          <div class="ls-benefits" role="list" aria-label="مميزات وصلة">
+            <div class="ls-benefit" role="listitem">
+              <span class="ls-benefit-ic" aria-hidden="true"><i class="fa-regular fa-lightbulb"></i></span>
+              <div class="ls-benefit-tx">
+                <strong>أفكار بلا حدود</strong>
+                <span>من الجامعة إلى التأثير</span>
+              </div>
+            </div>
+            <div class="ls-benefit" role="listitem">
+              <span class="ls-benefit-ic" aria-hidden="true"><i class="fa-solid fa-arrow-trend-up"></i></span>
+              <div class="ls-benefit-tx">
+                <strong>فرص أكبر</strong>
+                <span>نحو مستقبل أفضل</span>
+              </div>
+            </div>
+            <div class="ls-benefit" role="listitem">
+              <span class="ls-benefit-ic" aria-hidden="true"><i class="fa-solid fa-users"></i></span>
+              <div class="ls-benefit-tx">
+                <strong>مجتمع أقوى</strong>
+                <span>طلاب ومطورين ومبدعين</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Card -->
+      <div class="ls-auth-col">
+        <div class="ls-card">
+          <button type="button" class="ls-card-theme-btn" onclick="toggleTheme()" title="تبديل المظهر" aria-label="تبديل المظهر">
+            <i class="fas fa-moon" id="login-theme-icon"></i>
+          </button>
+          <div class="ls-card-head">
+            <div class="ls-card-brand">
+              <div class="ls-logo-mark ls-logo-mark--card"></div>
+              <div class="ls-brand-mark-text ls-brand-mark-text--center">
+                <span class="ls-brand-name">wasla</span>
+                <span class="ls-brand-sub">tech</span>
+              </div>
+            </div>
+            <h2 class="ls-card-title">تسجيل الدخول</h2>
+            <p class="ls-card-sub">أهلاً بك في نظام إدارة وصلة</p>
+          </div>
+          <div id="config-warn" class="ls-warn-card" style="display:none;">
+            <div class="ls-warn-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="ls-warn-text"><div class="ls-warn-title">مشكلة شبكة</div><div class="ls-warn-desc" dir="ltr">تأكد من Project URL</div></div>
+          </div>
+          <div class="ls-error-card" id="login-error" style="display:none;"></div>
+          <form id="login-form" novalidate>
+            <div class="ls-field">
+              <label for="username">البريد الإلكتروني</label>
+              <div class="ls-input-wrap ls-input-wrap--email">
+                <span class="ls-fi-left"><svg class="form-line-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="1.5"/><path d="m4.5 7 7.5 5.5L19.5 7"/></svg></span>
+                <input type="email" id="username" placeholder="admin@wasla.com" autocomplete="username" required dir="ltr" />
+              </div>
+            </div>
+            
+            <div class="ls-field" id="password-group">
+              <label for="password">كلمة المرور</label>
+              <div class="ls-input-wrap ls-input-wrap--pw">
+                <span class="ls-fi-left"><svg class="form-line-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+                <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+                <button type="button" class="ls-pw-btn" id="pw-toggle" aria-label="إظهار كلمة المرور">
+                  <svg id="eye-show" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+                  <svg id="eye-hide" viewBox="0 0 24 24" fill="none" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="ls-meta-row">
+              <label class="ls-remember"><input type="checkbox" id="remember-me" /><span class="ls-checkbox"></span><span>تذكرني</span></label>
+            </div>
+            <button type="submit" class="ls-btn" id="login-submit-btn">
+              <span class="ls-btn-text">دخول</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Page Footer -->
+    <div class="ls-page-footer">
+      <span class="ls-footer-impact">Code. Build. Innovate. Impact.</span>
+      <span class="ls-footer-copy">© 2026 Wasla Tech. جميع الحقوق محفوظة.</span>
+    </div>
+  </div>
+
+  <!-- ========== MAIN APP ========== -->
+  <div id="app">
+    <!-- Sidebar Backdrop -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-icon"><img src="wasla-logo.png" alt="Wasla Tech" /></div>
+          <div class="sidebar-brand-text">
+            <h2>wasla <em>tech</em></h2>
+            <span class="sidebar-brand-sub">نظام إدارة الفريق</span>
+          </div>
+        </div>
+      </div>
+      <ul class="nav-menu">
+        <svg class="nav-connection" viewBox="0 0 72 332" aria-hidden="true" focusable="false">
+          <path class="nav-connection-base" d="M58 18C25 18 24 83 48 95c22 11 20 50-2 61-25 13-24 56 2 68 25 12 24 55 0 68-23 12-23 54 5 58" />
+          <path class="nav-connection-active" d="M58 18C25 18 24 83 48 95" />
+        </svg>
+        <li class="nav-item active" data-page="dashboard">
+          <span class="nav-node" aria-hidden="true"></span>
+          <svg class="wasla-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11.5 12 4l8.5 7.5v8a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M9.5 20.5v-5h5v5"/></svg>
+          <span>لوحة التحكم</span>
+        </li>
+        <li class="nav-item" data-page="members">
+          <span class="nav-node" aria-hidden="true"></span>
+          <svg class="wasla-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c.5-4 2.4-6 5.5-6s5 2 5.5 6M16 5.5a3 3 0 0 1 0 5.8M17 14c2.2.5 3.3 2.4 3.5 5.5"/></svg>
+          <span>الأعضاء</span>
+        </li>
+        
+        <li class="nav-item" data-page="tasks" id="nav-tasks">
+          <span class="nav-node" aria-hidden="true"></span>
+          <svg class="wasla-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span>المهام</span>
+        </li>
+<li class="nav-item" data-page="ranking" id="nav-ranking">
+          <span class="nav-node" aria-hidden="true"></span>
+          <svg class="wasla-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0zM8 5H4v1a4 4 0 0 0 4 4M16 5h4v1a4 4 0 0 1-4 4M12 12v5M8.5 21h7M9 17h6"/></svg>
+          <span>نظام الترتيب</span>
+        </li>
+        <li class="nav-item" data-page="notes" id="nav-notes">
+          <span class="nav-node" aria-hidden="true"></span>
+          <svg class="wasla-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14v12L14 20.5H5zM14 20.5v-5h5M8 8h8M8 12h5"/></svg>
+          <span>الملاحظات</span>
+        </li>
+        <li class="nav-item" data-page="ai-assistant" id="nav-ai">
+          <span class="nav-node" aria-hidden="true"></span>
+          <svg class="wasla-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+          <span>المساعد الذكي</span>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="user-profile-card">
+          <div class="user-avatar" id="user-avatar">أ</div>
+          <div class="user-meta">
+            <div class="user-name" id="user-name">أحمد عيد</div>
+            <div class="user-role" id="user-role">قائد الفريق</div>
+          </div>
+          <button class="btn-logout" onclick="logout()" title="تسجيل الخروج" aria-label="تسجيل الخروج">
+            <svg class="wasla-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile Bottom Navigation Bar — 6 tabs -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="التنقل الرئيسي">
+      <button class="mbn-item active" data-page="dashboard" type="button" aria-label="لوحة التحكم">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11.5 12 4l8.5 7.5v8a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M9.5 20.5v-5h5v5"/></svg>
+        <span>الرئيسية</span>
+      </button>
+      <button class="mbn-item" data-page="members" type="button" aria-label="الأعضاء">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c.5-4 2.4-6 5.5-6s5 2 5.5 6M16 5.5a3 3 0 0 1 0 5.8M17 14c2.2.5 3.3 2.4 3.5 5.5"/></svg>
+        <span>الأعضاء</span>
+      </button>
+      <button class="mbn-item" data-page="tasks" type="button" aria-label="المهام">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>المهام</span>
+      </button>
+      <button class="mbn-item" data-page="ranking" type="button" aria-label="الترتيب">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0zM8 5H4v1a4 4 0 0 0 4 4M16 5h4v1a4 4 0 0 1-4 4M12 12v5M8.5 21h7M9 17h6"/></svg>
+        <span>الترتيب</span>
+      </button>
+      <button class="mbn-item" data-page="notes" type="button" aria-label="الملاحظات">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3.5h14v12L14 20.5H5zM14 20.5v-5h5M8 8h8M8 12h5"/></svg>
+        <span>الملاحظات</span>
+      </button>
+      <button class="mbn-item" data-page="ai-assistant" type="button" aria-label="المساعد">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <span>المساعد</span>
+      </button>
+    </nav>
+
+
+
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <header class="top-navbar">
+        <div class="top-navbar-right">
+          <button class="menu-toggle" onclick="toggleSidebar()" aria-label="تبديل القائمة"><i class="fas fa-bars"></i></button>
+          <div class="page-title-group">
+            <h1 class="page-title" id="page-title">لوحة التحكم</h1>
+            <p class="page-subtitle" id="page-subtitle">مرحباً أحمد ، هنا نظرة سريعة على فريقك و تقدم العمل اليوم</p>
+          </div>
+        </div>
+        <div class="navbar-actions">
+          <div class="header-search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="global-search" placeholder="ابحث في الأعضاء..." onkeydown="if(event.key==='Enter') executeGlobalSearch(this.value)" oninput="handleGlobalSearch(this.value)" />
+          </div>
+          <div class="notifications-wrapper" id="notifications-wrapper">
+            <button class="action-icon-btn" id="notif-btn" onclick="toggleNotificationsDropdown()" title="الإشعارات والمتابعات" aria-label="الإشعارات">
+              <i class="fas fa-bell"></i>
+              <span class="notification-badge-dot" id="notif-dot"></span>
+            </button>
+            <div class="notifications-dropdown" id="notifications-dropdown">
+              <div class="notifications-header">
+                <span class="notif-title">تنبيهات المتابعة</span>
+                <span class="notif-badge" id="notif-count-badge">3 متأخرون</span>
+              </div>
+              <div class="notifications-list" id="notifications-list"></div>
+            </div>
+          </div>
+          <button class="action-icon-btn theme-toggle" onclick="toggleTheme()" title="تبديل الوضع" aria-label="تبديل الوضع">
+            <i class="fas fa-moon" id="theme-icon"></i>
+          </button>
+          
+          <!-- زر خروج خاص بالموبايل يظهر في شريط التنقل العلوي -->
+          <button class="action-icon-btn text-danger" onclick="logout()" title="تسجيل الخروج" aria-label="تسجيل الخروج" style="color: #E11D48; border: 1px solid rgba(225, 29, 72, 0.2); background: rgba(225, 29, 72, 0.05); margin-inline-start: 4px;">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <!-- Dashboard Page -->
+        <div class="page active" id="page-dashboard">
+
+          <!-- Quick Actions Bar -->
+          <div class="quick-actions-bar">
+            <button class="btn btn-primary" onclick="openMemberModal()">
+              <i class="fas fa-user-plus"></i> إضافة عضو جديد
+            </button>
+            <button class="btn btn-primary" onclick="openCreateTaskModal()">
+              <i class="fas fa-tasks"></i> تكليف مهمة جديدة
+            </button>
+            <button class="btn btn-secondary" onclick="navigateToPage('notes'); setTimeout(() => document.getElementById('new-note-text').focus(), 300)">
+              <i class="fas fa-pen"></i> كتابة ملاحظة
+            </button>
+          </div>
+
+          <!-- 8 KPI Metrics Grid -->
+          <div class="stats-grid" id="stats-grid"></div>
+
+          <!-- Command Center Grid -->
+          <div class="command-center-grid">
+
+            <!-- Tasks Analytics -->
+            <div class="dash-card command-card">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="fas fa-chart-pie text-purple"></i>
+                  <span>حالة المهام (Tasks)</span>
+                </div>
+                <button class="btn-text-action" onclick="navigateToPage('tasks')">إدارة المهام</button>
+              </div>
+              <div class="dash-card-body" style="display:flex; align-items:center; justify-content:center; position:relative; min-height: 250px;">
+                <canvas id="tasksChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Top Ranking & Notes Summary -->
+            <div class="dash-card command-card">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="fas fa-trophy text-amber"></i>
+                  <span>أعلى 3 أعضاء (نظام الترتيب)</span>
+                </div>
+                <button class="btn-text-action" onclick="navigateToPage('ranking')">عرض الترتيب</button>
+              </div>
+              <div class="dash-card-body" id="top-rankings-widget">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+            <!-- Device/Readiness Stats -->
+            <div class="dash-card command-card">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="fas fa-laptop text-purple"></i>
+                  <span>جاهزية الأجهزة</span>
+                </div>
+              </div>
+              <div class="dash-card-body chart-card-body">
+                <div class="canvas-wrap" style="position:relative; height:180px; width:100%; display:flex; justify-content:center;">
+                  <canvas id="deviceChart"></canvas>
+                </div>
+                <div id="device-chart-legend" class="custom-chart-legend" style="margin-top: 16px;"></div>
+              </div>
+            </div>
+
+            <!-- Recent Activity Timeline -->
+            <div class="dash-card command-card">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="fas fa-history text-purple"></i>
+                  <span>أحدث النشاطات</span>
+                </div>
+              </div>
+              <div class="dash-card-body" id="recent-activity-feed" style="max-height: 320px; overflow-y: auto; padding-right: 8px;">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+            <!-- 🚨 رادار المتابعة: أقل بونص -->
+            <div class="dash-card command-card" style="border: 1px solid rgba(225, 29, 72, 0.2);">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="fas fa-arrow-trend-down" style="color: #E11D48;"></i>
+                  <span style="color: #E11D48; font-weight: 800;">مؤشر الخطر (أقل بونص)</span>
+                </div>
+              </div>
+              <div class="dash-card-body" id="lowest-rankings-widget">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+            <!-- 🚨 رادار المتابعة: متأخرون عن مهامهم -->
+            <div class="dash-card command-card" style="border: 1px solid rgba(245, 158, 11, 0.2);">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="fas fa-user-clock" style="color: #F59E0B;"></i>
+                  <span style="font-weight: 800;">متأخرون عن آخر مهمة</span>
+                </div>
+                <button class="btn-text-action" onclick="navigateToPage('tasks')">عرض المهمة</button>
+              </div>
+              <div class="dash-card-body" id="latest-task-late-widget">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+          </div>
+
+
+            <!-- Performance Trends Over Time -->
+            <div class="dash-card command-card" style="grid-column: 1 / -1;">
+              <div class="dash-card-header">
+                <div class="dash-card-title">
+                  <i class="fas fa-chart-area text-purple"></i>
+                  <span>أداء الفريق بمرور الوقت (نقاط بونص)</span>
+                </div>
+              </div>
+              <div class="dash-card-body chart-card-body">
+                <div class="canvas-wrap" style="position:relative; height:240px; width:100%; display:flex; justify-content:center;">
+                  <canvas id="trendsChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+          <!-- Bottom Row: Team Members Preview (collapsible) -->
+          <div class="dash-card members-panel-card" style="margin-top: 24px;">
+            <div class="dash-card-header members-header-row">
+              <div class="dash-card-title">
+                <i class="fas fa-users text-purple"></i>
+                <span>نظرة سريعة: أعضاء وصلة</span>
+                <span class="count-pill" id="members-count-badge">0 عضو</span>
+              </div>
+              <div class="members-header-actions">
+                <button class="btn-text-action" onclick="navigateToPage('members')">عرض الجدول الكامل</button>
+              </div>
+            </div>
+            <div class="dash-card-body">
+              <div id="team-members-preview" class="team-members-grid"></div>
+            </div>
+          </div>
+
+          <!-- Minimal Footer -->
+          <footer class="dashboard-footer">
+            <div class="footer-copy">Wasla Command Center © 2026</div>
+            <div class="footer-note">
+              <i class="fas fa-users"></i>
+              <span>العمل الجماعي يصنع المستقبل</span>
+            </div>
+          </footer>
+        </div>
+
+        <!-- Members Page -->
+        
+        <!-- Tasks Page -->
+        <div class="page" id="page-tasks">
+          <div class="section-card">
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h3 style="margin-bottom:4px"><i class="fas fa-tasks text-purple"></i> مهام الفريق</h3>
+                <p style="color:var(--text-muted); font-size:0.9rem">متابعة دقيقة بالإسناد والأوقات</p>
+              </div>
+              <button class="btn btn-primary" onclick="openCreateTaskModal()">
+                <i class="fas fa-plus"></i> مهمة جديدة
+              </button>
+            </div>
+            <div id="tasks-empty-state" style="display:none; text-align:center; padding: 40px; color:var(--text-muted)">
+               <i class="fas fa-clipboard-list" style="font-size:3rem; margin-bottom:14px; opacity:0.5"></i>
+               <h4>لا توجد مهام حالياً</h4>
+               <p>قم بإضافة مهمة جديدة وتكليف الأعضاء بها للمتابعة.</p>
+            </div>
+            <div id="tasks-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px; margin-top: 20px;">
+              <!-- Tasks will be injected here -->
+            </div>
+          </div>
+        </div>
+
+        <div class="page" id="page-members">
+          <div class="section-card">
+            <div class="section-header">
+              <h3><i class="fas fa-users"></i> جدول الأعضاء</h3>
+              <div style="display:flex; gap:10px; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-sm" onclick="exportToExcel()" style="padding: 6px 14px; font-weight: 600;">
+                  <i class="fas fa-file-export"></i> تصدير إكسيل
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('excel-import-file').click()" style="padding: 6px 14px; font-weight: 600;">
+                  <i class="fas fa-file-import"></i> استيراد إكسيل
+                </button>
+                <input type="file" id="excel-import-file" accept=".xlsx, .xls" style="display: none;" onchange="importFromExcel(event)">
+                <button class="btn btn-primary btn-sm" id="btn-add-member" onclick="openMemberModal()" style="display:none">
+                <i class="fas fa-plus"></i> إضافة عضو
+              </button>
+              </div>
+            </div>
+            <div class="table-controls">
+              <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="بحث بالاسم..." oninput="renderMembersTable()" />
+              </div>
+              <select class="filter-select" id="filter-device" onchange="renderMembersTable()">
+                <option value="">خيار الجهاز</option>
+                <option value="لاب توب">لاب توب</option>
+                <option value="كمبيوتر فقط">كمبيوتر فقط</option>
+                <option value="الاثنان معاً">الاثنان معاً</option>
+                <option value="تابلت">تابلت</option>
+                <option value="هاتف فقط">هاتف فقط</option>
+              </select>
+              <select class="filter-select" id="filter-work" onchange="renderMembersTable()">
+                <option value="">طبيعة العمل/التفرغ</option>
+                <option value="شغال">شغال بشكل دائم</option>
+                <option value="مش شغال">متفرغ / غير شغال</option>
+              </select>
+              <select class="filter-select" id="filter-alex" onchange="renderMembersTable()">
+                <option value="">إسكندرية؟</option>
+                <option value="yes">يقدر ينزل</option>
+                <option value="no">مش هينزل</option>
+              </select>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th onclick="sortTable('fullName')">الاسم <i class="fas fa-sort"></i></th>
+                    <th>رقم التليفون</th>
+                    <th>الجهاز المتوفر</th>
+                    <th onclick="sortTable('canGoAlexandria')">إسكندرية <i class="fas fa-sort"></i></th>
+                    <th>السكن</th>
+                    <th onclick="sortTable('workStatus')">حالة العمل <i class="fas fa-sort"></i></th>
+                    <th onclick="sortTable('totalBonus')">الترتيب/البونص <i class="fas fa-sort"></i></th>
+                    <th id="actions-header" style="text-align:center">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="members-tbody"></tbody>
+              </table>
+            </div>
+            <div class="pagination" id="pagination"></div>
+          </div>
+        </div>
+
+        <!-- Ranking Page -->
+        <div class="page" id="page-ranking">
+          <div class="section-card">
+            <div class="section-header">
+              <h3><i class="fas fa-trophy"></i> نظام الترتيب</h3>
+            </div>
+            <p style="color:var(--text-muted);margin-bottom:20px;font-size:0.95rem;font-weight:600">ترتيب أعضاء وصلة حسب نقاط التقييم (البونص) — اضغط على أي شخص لعرض ملفه الشخصي</p>
+            <div id="ranking-content" class="ranking-list"></div>
+          </div>
+        </div>
+
+        <!-- Notes Page -->
+        <div class="page" id="page-notes">
+          <div class="section-card notes-section">
+            <div class="section-header">
+              <h3><i class="fas fa-sticky-note"></i> نظام الملاحظات</h3>
+            </div>
+            <div class="notes-tabs" id="notes-tabs"></div>
+            <div id="notes-content"></div>
+          </div>
+        </div>
+
+        <!-- Wasla AI Assistant Standalone Page -->
+        <div class="page" id="page-ai-assistant">
+          <div class="ai-page-layout">
+            <!-- Header Card -->
+            <div class="ai-header-card">
+              <div class="ai-header-main">
+                <div class="ai-badge-icon">
+                  <svg class="wasla-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 3" />
+                  </svg>
+                </div>
+                <div class="ai-header-text">
+                  <h2>مساعد وصلة الذكي (Wasla AI)</h2>
+                  <p>تحليل فوري واستعلام ذكي محصور حصرياً في بيانات وأداء فريق وصلة (مدعوم بواسطة Google Gemini)</p>
+                </div>
+              </div>
+              <div class="ai-header-actions">
+                <span class="ai-status-pill">
+                  <span class="ai-status-dot"></span>
+                  متصل ببيانات الفريق
+                </span>
+                <button type="button" class="btn-text-action" onclick="openGroqKeyModal()" title="إعداد مفتاح Gemini API في Supabase">
+                  <i class="fas fa-key"></i>
+                  إعدادات المفتاح
+                </button>
+              </div>
+            </div>
+
+            <!-- Suggestion Quick Chips -->
+            <div class="ai-suggestions-bar">
+              <span class="ai-suggestions-label">استعلامات سريعة:</span>
+              <div class="ai-chips-list">
+                <button type="button" class="ai-chip" onclick="askQuickPrompt('من هم الأعضاء الذين لا يملكون لابتوب ويحتاجون متابعة؟')">
+                  غير الجاهزين
+                </button>
+                <button type="button" class="ai-chip" onclick="askQuickPrompt('من هم الأعضاء الذين يحتاجون لمتابعة حالياً؟')">إحصائيات المتابعة</button>
+                <button type="button" class="ai-chip" onclick="askQuickPrompt('من من الأعضاء يمتلك لابتوب ويمكنه السفر للإسكندرية؟')">
+                  توفر اللابتوب وسفر الإسكندرية
+                </button>
+                <button type="button" class="ai-chip" onclick="askQuickPrompt('من هم أصحاب المراكز الأولى في الترتيب؟')">
+                  متصدرو الترتيب
+                </button>
+                <button type="button" class="ai-chip" onclick="askQuickPrompt('لخص لي أهم الملاحظات المسجلة للفريق حالياً')">
+                  ملخص الملاحظات
+                </button>
+              </div>
+            </div>
+
+            <!-- Chat Window -->
+            <div class="ai-chat-window">
+              <div class="ai-messages-container" id="ai-messages">
+                <div class="ai-msg ai-msg-bot">
+                  <div class="ai-msg-avatar">و</div>
+                  <div class="ai-msg-content">
+                    <p>أهلاً بك! أنا <strong>مساعد وصلة الذكي</strong>. مهمتي الإجابة حصرياً عن بيانات المنظومة الحالية (حالة الأعضاء، درجة الاستعداد، الملاحظات، وجاهزية الفريق). كيف يمكنني مساعدتك اليوم؟</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Chat Input Bar -->
+              <div class="ai-input-wrapper">
+                <form id="ai-chat-form" onsubmit="handleAiSubmit(event)">
+                  <div class="ai-input-box">
+                    <textarea id="ai-prompt-input" rows="1" placeholder="اسأل عن أي معلومة تخص الفريق أو اللوجستيات..." required></textarea>
+                    <button type="submit" id="ai-send-btn" class="btn btn-primary ai-send-btn" aria-label="إرسال">
+                      <i class="fas fa-paper-plane"></i>
+                      <span>إرسال</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI API Key Modal -->
+  <div class="modal-overlay" id="groq-key-modal">
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <h3><i class="fas fa-shield-alt text-purple"></i> إعداد مفتاح Gemini API في Supabase</h3>
+        <button type="button" class="modal-close" onclick="closeGroqKeyModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.6;margin-bottom:14px">
+          يتم حفظ المفتاح بشكل مشفر ومخفي تماماً في <strong>Supabase Vault</strong> على خوادم السيرفر، ولا يمكن للمتصفح أو كود الواجهة الأمامية الوصول إليه نهائياً.
+        </p>
+        <div class="form-group">
+          <label>مفتاح Gemini API (يبدأ بـ AIzaSy...)</label>
+          <input type="password" id="groq-key-input" placeholder="AIzaSy..." style="direction:ltr;text-align:left;font-family:monospace" />
+        </div>
+        <div id="groq-key-status" style="font-size:0.9rem;margin-top:8px"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeGroqKeyModal()">إغلاق</button>
+        <button type="button" class="btn btn-primary" onclick="saveGroqKeyToSupabase()">حفظ في Supabase Vault</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Member Modal -->
+  <div class="modal-overlay" id="member-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">إضافة عضو</h3>
+        <button class="modal-close" onclick="closeMemberModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="member-form">
+          <input type="hidden" id="member-id" />
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>الاسم الكامل</label>
+              <input type="text" id="m-fullname" required />
+            </div>
+            <div class="form-group">
+              <label>رقم التليفون</label>
+              <input type="tel" id="m-phone" dir="ltr" style="text-align: right;" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>السكن</label>
+              <input type="text" id="m-residence" placeholder="مثال: القاهرة - المعادي" />
+            </div>
+            <div class="form-group">
+              <label>ينزل إسكندرية للميتنج؟</label>
+              <select id="m-alex">
+                <option value="true">نعم يقدر ينزل</option>
+                <option value="false">لا مش هينزل</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>الجهاز المتوفر</label>
+              <select id="m-device">
+                <option value="لاب توب">لاب توب</option>
+                <option value="كمبيوتر فقط">كمبيوتر فقط</option>
+                <option value="الاثنان معاً">الاثنان معاً</option>
+                <option value="تابلت">تابلت</option>
+                <option value="هاتف فقط">هاتف فقط</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>حالة العمل / التفرغ</label>
+              <select id="m-work">
+                <option value="شغال">شغال بشكل دائم</option>
+                <option value="مش شغال">متفرغ / غير شغال</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>ملاحظات عن الشغل</label>
+            <textarea id="m-work-notes" placeholder="اكتب ملاحظات عن طبيعة شغله وتفرغه..." style="width:100%;min-height:60px;padding:12px;border-radius:12px;border:2px solid var(--border);background:var(--card);color:var(--text);font-family:inherit"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>ملاحظات شخصية</label>
+            <textarea id="m-notes" placeholder="اكتب أي ملاحظات أو سمات شخصية..." style="width:100%;min-height:60px;padding:12px;border-radius:12px;border:2px solid var(--border);background:var(--card);color:var(--text);font-family:inherit"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeMemberModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveMember()">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile View Modal -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal" style="max-width:640px">
+      <div class="modal-header">
+        <h3>الملف الشخصي</h3>
+        <button class="modal-close" onclick="closeProfileModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="profile-body"></div>
+      <div class="modal-footer" id="profile-footer"></div>
+    </div>
+  </div>
+
+  
+  <!-- Create Task Modal -->
+  <div class="modal-overlay" id="task-create-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="task-modal-title"><i class="fas fa-tasks"></i> مهمة جديدة</h3>
+        <button class="btn-close" onclick="closeCreateTaskModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="task-create-form" onsubmit="saveNewTask(event)" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="form-group">
+            <label>عنوان المهمة</label>
+            <input type="text" id="t-title" required placeholder="مثال: مراجعة الديزاين النهائي" style="width:100%; height:44px; padding:0 14px; border:1px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); font-family:inherit">
+          </div>
+          <div class="form-group">
+            <label>وصف المهام التوضيحي (اختياري)</label>
+            <textarea id="t-desc" rows="3" placeholder="تفاصيل إضافية..." style="width:100%; padding:14px; border:1px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); font-family:inherit"></textarea>
+          </div>
+          <div class="form-group" style="display:flex; align-items:center; gap:10px; background:var(--bg); padding:12px; border-radius:10px; border:1px solid var(--border)">
+            <input type="checkbox" id="t-has-deadline" onchange="toggleTaskDeadlineUI()" style="transform: scale(1.2)">
+            <label for="t-has-deadline" style="margin:0; cursor:pointer; font-weight:600">تفعيل موعد نهائي للمهمة؟ (Deadline)</label>
+          </div>
+          <div class="form-group" id="t-deadline-group" style="display:none;">
+            <label>آخر موعد للتسليم (التاريخ والوقت)</label>
+            <input type="datetime-local" id="t-deadline" style="width:100%; height:44px; padding:0 14px; border:1px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); font-family:inherit">
+          </div>
+          <div class="form-group">
+            <label>إسناد إلى الأعضاء</label>
+            <select id="t-assign-type" onchange="toggleTaskAssigneesUI()" style="width:100%; height:44px; padding:0 14px; border:1px solid var(--border); border-radius:10px; background:var(--bg); color:var(--text); font-family:inherit; margin-bottom:10px;">
+              <option value="all">الجميع (إسناد لكافة الفريق)</option>
+              <option value="custom">تخصيص (اختيار أعضاء محددين)</option>
+            </select>
+            <div id="t-custom-assignees" style="display:none; max-height: 180px; overflow-y: auto; background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:10px; gap:8px; flex-direction:column;">
+              <!-- Inject via JS -->
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeCreateTaskModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="document.getElementById('task-create-form').requestSubmit()"><i class="fas fa-check"></i> حفظ المهمة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Track Task Modal (Creative UI) -->
+  <div class="modal-overlay" id="task-track-modal">
+    <div class="modal" style="max-width: 700px;">
+      <div class="modal-header" style="align-items:flex-start">
+        <div>
+          <h3 id="tt-title" style="font-size:1.4rem; color:var(--wasla); font-weight:800; margin-bottom:6px">عنوان المهمة</h3>
+          <p id="tt-desc" style="font-size:0.9rem; color:var(--text-muted);">وصف المهمة</p>
+          <div id="tt-deadline" style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; font-weight:700; padding:6px 12px; border-radius:20px; background:var(--bg); border:1px solid var(--border)">
+            <!-- Deadline details populated by JS -->
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeTrackTaskModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" style="max-height:60vh; overflow-y:auto; padding: 20px;">
+        <div id="tt-members-list" style="display:flex; flex-direction:column; gap:16px;">
+           <!-- Member track items -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" id="delete-modal">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-header">
+        <h3><i class="fas fa-exclamation-triangle" style="color:var(--danger)"></i> تأكيد الحذف</h3>
+        <button class="modal-close" onclick="closeDeleteModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:1.05rem;line-height:1.7">هل أنت متأكد من حذف هذا العضو؟<br><strong style="color:var(--danger)">لا يمكن التراجع عن هذا الإجراء.</strong></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">إلغاء</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">حذف نهائي</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toast-msg"></span></div>
+
+  <script>
+
+    /* =====================================================
+       Wasla Team Management System
+       ===================================================== */
+
+    
+    // ==========================================
+    // 🛡️ SECURITY MODULE (Blue Team Patches)
+    // ==========================================
+    
+    // 1. Data Sanitization (XSS Prevention)
+    function sanitizeInput(str) {
+      if (typeof str !== "string") return "";
+      return str.replace(/[&<>"'`=\/]/g, function(s) {
+        const entityMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;' };
+        return entityMap[s];
+      }).trim();
+    }
+
+    // Local Storage Tamper Protection (Basic Checksum)
+    function createSessionSignature(role) {
+       return btoa("securesalt_" + role).split('').reverse().join('');
+    }
+
+    const ROLE_FROM_DB = {
+      admin: "Admin"
+    };
+
+    const SAMPLE_MEMBERS = [
+      { id: 1, fullName: "أحمد عيد", team: "Wasla", teamNotes: "قائد الفريق - أداء متميز", hasLaptop: true, canGoAlexandria: true, device: "الاثنان معاً", residence: "القاهرة", workStatus: "شغال", phone: "01000000001", completionRank: 1 },
+      { id: 2, fullName: "ملك محمد", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: true, device: "لاب توب", residence: "الإسكندرية", workStatus: "شغال", phone: "01000000002", completionRank: 2 },
+      { id: 3, fullName: "مريم الشرقي", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: false, device: "لاب توب", residence: "القاهرة", workStatus: "شغال", phone: "01000000003", completionRank: 3 },
+      { id: 4, fullName: "ياسمين رجب", team: "Wasla", teamNotes: "", hasLaptop: false, canGoAlexandria: false, device: "هاتف فقط", residence: "الجيزة", workStatus: "مش شغال", phone: "01000000004" },
+      { id: 5, fullName: "ياسمين حسن", team: "Wasla", teamNotes: "تأخر في التسليم", hasLaptop: true, canGoAlexandria: false, device: "لاب توب", residence: "القاهرة", workStatus: "شغال", phone: "01000000005" },
+      { id: 6, fullName: "عمر", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: true, device: "الاثنان معاً", residence: "الإسكندرية", workStatus: "شغال", phone: "01000000006" },
+      { id: 7, fullName: "أحمد عشري", team: "Wasla", teamNotes: "يحتاج متابعة", hasLaptop: false, canGoAlexandria: false, device: "تابلت", residence: "القاهرة", workStatus: "مش شغال", phone: "01000000007" },
+      { id: 8, fullName: "أحمد رجب", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: false, device: "لاب توب", residence: "الجيزة", workStatus: "شغال", phone: "01000000008" },
+      { id: 9, fullName: "منة الله", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: true, device: "لاب توب", residence: "القاهرة", workStatus: "شغال", phone: "01000000009" },
+      { id: 10, fullName: "نور القاسم", team: "Wasla", teamNotes: "", hasLaptop: false, canGoAlexandria: false, device: "كمبيوتر فقط", residence: "الإسكندرية", workStatus: "مش شغال", phone: "01000000010" },
+      { id: 11, fullName: "رحمة", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: false, device: "لاب توب", residence: "القاهرة", workStatus: "شغال", phone: "01000000011" },
+      { id: 12, fullName: "سما ياسر", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: true, device: "الاثنان معاً", residence: "الجيزة", workStatus: "شغال", phone: "01000000012" },
+      { id: 13, fullName: "رحمة محمد", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: false, device: "لاب توب", residence: "القاهرة", workStatus: "شغال", phone: "01000000013" },
+      { id: 14, fullName: "شمس", team: "Wasla", teamNotes: "", hasLaptop: false, canGoAlexandria: false, device: "هاتف فقط", residence: "القاهرة", workStatus: "مش شغال", phone: "01000000014" },
+      { id: 15, fullName: "شروق", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: false, device: "لاب توب", residence: "الإسكندرية", workStatus: "شغال", phone: "01000000015" },
+      { id: 16, fullName: "يوسف", team: "Wasla", teamNotes: "", hasLaptop: true, canGoAlexandria: false, device: "لاب توب", residence: "الجيزة", workStatus: "شغال", phone: "01000000016" }
+    ];
+
+    const SAMPLE_TASKS = [
+      { id: 1, title: "إنهاء واجهة لوحة التحكم", description: "تطوير الصفحة الرئيسية للوحة التحكم وربطها بالبيانات", hasDeadline: true, deadlineDate: new Date(Date.now() + 3*24*60*60*1000).toISOString().slice(0,16), assignedTo: "ALL", tracking: { 1: { status: "مكتمل", notes: [] }, 2: { status: "قيد التنفيذ", notes: [] }, 5: { status: "قيد التنفيذ", notes: [] } } },
+      { id: 2, title: "مراجعة كود الأمان", description: "تدقيق فلاتر الـ XSS والـ RLS policies", hasDeadline: false, deadlineDate: "", assignedTo: [1, 3, 7], tracking: { 1: { status: "مكتمل", notes: [] } } },
+      { id: 3, title: "تجهيز اجتماع الإسكندرية", description: "تأكيد جاهزية الأجهزة والحضور", hasDeadline: true, deadlineDate: new Date(Date.now() - 2*24*60*60*1000).toISOString().slice(0,16), assignedTo: "ALL", tracking: { 2: { status: "مكتمل", notes: [] }, 6: { status: "قيد التنفيذ", notes: [] } } }
+    ];
+
+    const SAMPLE_NOTES = [
+      { id: 101, text: "أنهى مهمته مبكراً [B:+3]", author: "قائد الفريق", authorRole: "Wasla Leader", date: new Date(Date.now() - 0*86400000).toISOString().slice(0,10), team: "Wasla", targetTeam: "Wasla", targetMemberId: 1, targetName: "أحمد عيد" },
+      { id: 102, text: "تأخرت في التسليم [B:-1]", author: "قائد الفريق", authorRole: "Wasla Leader", date: new Date(Date.now() - 1*86400000).toISOString().slice(0,10), team: "Wasla", targetTeam: "Wasla", targetMemberId: 5, targetName: "ياسمين حسن" },
+      { id: 103, text: "أنهت مراجعة الكود [B:+2]", author: "قائد الفريق", authorRole: "Wasla Leader", date: new Date(Date.now() - 2*86400000).toISOString().slice(0,10), team: "Wasla", targetTeam: "Wasla", targetMemberId: 2, targetName: "ملك محمد" },
+      { id: 104, text: "اجتماع الاستعداد للإسكندرية يوم الجمعة", author: "أحمد عيد", authorRole: "Wasla Leader", date: new Date(Date.now() - 3*86400000).toISOString().slice(0,10), team: "Wasla", targetTeam: "Wasla", targetMemberId: null, targetName: null },
+      { id: 105, text: "يحتاج متابعة لعدم امتلاكه جهاز [B:-2]", author: "قائد الفريق", authorRole: "Wasla Leader", date: new Date(Date.now() - 4*86400000).toISOString().slice(0,10), team: "Wasla", targetTeam: "Wasla", targetMemberId: 7, targetName: "أحمد عشري" },
+      { id: 106, text: "أداء متميز في الديزاين [B:+2]", author: "قائد الفريق", authorRole: "Wasla Leader", date: new Date(Date.now() - 1*86400000).toISOString().slice(0,10), team: "Wasla", targetTeam: "Wasla", targetMemberId: 9, targetName: "منة الله" },
+      { id: 107, text: "حل مشكلة الـ dashboard [B:+4]", author: "قائد الفريق", authorRole: "Wasla Leader", date: new Date(Date.now() - 2*86400000).toISOString().slice(0,10), team: "Wasla", targetTeam: "Wasla", targetMemberId: 6, targetName: "عمر" }
+    ];
+
+    let currentUser = null;
+    let members = [];
+    let teamTasks = [];
+    let notes = { Wasla: [] };
+    let sortField = "fullName";
+    let sortAsc = true;
+    let currentPage = 1;
+    const PAGE_SIZE = 8;
+    let deleteId = null;
+    let activeNoteTeam = "Wasla";
+    let noteDraftText = "";
+    let noteDraftTarget = "";
+
+    const SUPABASE_URL = "https://mukqrnmveydxfphftlaq.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11a3Fybm12ZXlkeGZwaGZ0bGFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNzk2MDEsImV4cCI6MjEwNDY1NTYwMX0.-Kv6J-vnpBiONn6mpsXMZRdFPOvkjQ-HDQ_iVEpWPaM";
+
+    let sbClient = null;
+    function getSupabase() {
+      if (!window.supabase || !window.supabase.createClient) return null;
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL.includes("YOUR_PROJECT") || SUPABASE_ANON_KEY === "YOUR_ANON_KEY") {
+        console.warn("Supabase credentials not set");
+        return null;
+      }
+      if (!sbClient) sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      return sbClient;
+    }
+
+    function saveSession() {
+      if (currentUser) localStorage.setItem("tms_session", JSON.stringify(currentUser));
+    }
+
+    function memberToRow(m) {
+      return {
+        full_name: m.fullName,
+        team: m.team,
+        completion_rank: m.completionRank || 0,
+        team_notes: m.teamNotes || "",
+        has_laptop: !!m.hasLaptop,
+        can_go_alexandria: !!m.canGoAlexandria,
+        residence: m.residence || "",
+        work_conditions: m.workConditions || "",
+        bio: m.bio || "",
+        phone: m.phone || "",
+        device: m.device || "Laptop",
+        gender: m.gender || "ذكر",
+        meeting_attendance: m.meetingAttendance || "Yes",
+        work_status: m.workStatus || "مستمر"
+      };
+    }
+
+    function rowToMember(r) {
+      return normalizeMember({
+        id: r.id, fullName: r.full_name, team: r.team, 
+        
+        completionRank: r.completion_rank || 0, teamNotes: r.team_notes || "",
+        hasLaptop: r.has_laptop, canGoAlexandria: r.can_go_alexandria,
+        residence: r.residence || "", workConditions: r.work_conditions || "", bio: r.bio || "",
+        phone: r.phone || "", device: r.device || "Laptop", gender: r.gender || "ذكر",
+        meetingAttendance: r.meeting_attendance || "Yes", workStatus: r.work_status || "مستمر"
+      });
+    }
+
+    function noteToRow(n) {
+      const row = {
+        text: n.text, author: n.author || "", author_role: n.authorRole || "",
+        date: n.date || new Date().toISOString().slice(0, 10),
+        team: n.team || n.targetTeam || "Wasla",
+        target_team: n.targetTeam || n.team || "Wasla",
+        target_member_id: n.targetMemberId || null, target_name: n.targetName || ""
+      };
+      if (currentUser && currentUser.userId) row.created_by = currentUser.userId;
+      return row;
+    }
+
+    function rowToNote(r) {
+      return {
+        id: r.id, text: r.text || "", author: r.author || "", authorRole: r.author_role || "",
+        date: r.date || "", team: r.team || r.target_team || "Wasla",
+        targetTeam: r.target_team || r.team || "Wasla",
+        targetMemberId: r.target_member_id, targetName: r.target_name || ""
+      };
+    }
+
+    function notesArrayToBuckets(list) {
+      const buckets = { Wasla: [] };
+      for (const n of list) {
+        const t = "Wasla";
+        if (!buckets[t]) buckets[t] = [];
+        buckets[t].push(n);
+      }
+      return buckets;
+    }
+
+    async function dbFetchMembers() {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const { data, error } = await sb.from("members").select("*").order("id");
+      if (error) throw error;
+      return (data || []).map(rowToMember);
+    }
+
+    async function dbFetchNotes() {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const { data, error } = await sb.from("notes").select("*").order("id");
+      if (error) throw error;
+      return notesArrayToBuckets((data || []).map(rowToNote));
+    }
+
+    
+    async function dbFetchTasks() {
+      const sb = getSupabase();
+      if (!sb) return [];
+      const { data, error } = await sb.from("tasks").select("*").order("id", { ascending: false });
+      if (error) { console.warn("Supabase tasks fetch error:", error); return []; }
+      return data.map(rowToTask);
+    }
+
+    async function dbInsertTask(t) {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const { data, error } = await sb.from("tasks").insert(taskToRow(t)).select().single();
+      if (error) throw error;
+      return rowToTask(data);
+    }
+
+    async function dbUpdateTask(id, t) {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const { data, error } = await sb.from("tasks").update(taskToRow(t)).eq("id", id).select().single();
+      if (error) throw error;
+      return rowToTask(data);
+    }
+
+    function taskToRow(t) {
+      return {
+        id: t.id,
+        title: t.title,
+        description: t.description || "",
+        has_deadline: !!t.hasDeadline,
+        deadline_date: t.deadlineDate || null,
+        assigned_to: t.assignedTo,
+        tracking: t.tracking || {}
+      };
+    }
+
+    function rowToTask(r) {
+      return {
+        id: r.id,
+        title: r.title,
+        description: r.description || "",
+        hasDeadline: !!r.has_deadline,
+        deadlineDate: r.deadline_date || "",
+        assignedTo: r.assigned_to,
+        tracking: r.tracking || {}
+      };
+    }
+
+    async function dbInsertMember(m) {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const { data, error } = await sb.from("members").insert(memberToRow(m)).select().single();
+      if (error) { error.code = error.code || "DB_ERROR"; throw error; }
+      return rowToMember(data);
+    }
+
+    async function dbUpdateMember(id, m) {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const { data, error } = await sb.from("members").update(memberToRow(m)).eq("id", id).select().single();
+      if (error) throw error;
+      return rowToMember(data);
+    }
+
+    async function dbDeleteMember(id) {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const { error } = await sb.from("members").delete().eq("id", id);
+      if (error) throw error;
+      return { ok: true };
+    }
+
+    async function dbInsertNote(n) {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const { data, error } = await sb.from("notes").insert(noteToRow(n)).select().single();
+      if (error) throw error;
+      return rowToNote(data);
+    }
+
+    async function dbUpdateNote(id, patch) {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const row = {};
+      if (patch.text !== undefined) row.text = patch.text;
+      const { data, error } = await sb.from("notes").update(row).eq("id", id).select().single();
+      if (error) throw error;
+      return rowToNote(data);
+    }
+
+    async function dbDeleteNote(id) {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      const { error } = await sb.from("notes").delete().eq("id", id);
+      if (error) throw error;
+      return { ok: true };
+    }
+
+    function loadSampleData() {
+      try { const ts = localStorage.getItem("tms_tasks"); teamTasks = ts ? JSON.parse(ts) : [...SAMPLE_TASKS]; } catch(e) { teamTasks = [...SAMPLE_TASKS]; }
+
+      try {
+        const sm = localStorage.getItem("tms_members");
+        const sn = localStorage.getItem("tms_notes");
+        members = sm ? JSON.parse(sm).map(normalizeMember) : [...SAMPLE_MEMBERS].map(normalizeMember);
+        notes = sn ? JSON.parse(sn) : { Wasla: [...SAMPLE_NOTES] };
+        // تنظيف بيانات قديمة لفريق محذوف (توافق مع localStorage قديم)
+        if (notes.Phantoms) delete notes.Phantoms;
+        if (!notes.Wasla) notes.Wasla = [];
+      } catch (_) {
+        members = [...SAMPLE_MEMBERS].map(normalizeMember);
+        notes = { Wasla: [...SAMPLE_NOTES] };
+      }
+    }
+
+    async function loadFromAPI() {
+      if (currentUser && (currentUser.localOnly || currentUser.isGuest)) {
+        loadSampleData(); return false;
+      }
+      const sb = getSupabase();
+      if (!sb) { loadSampleData(); return false; }
+      try {
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 10000));
+        const results = await Promise.race([
+          Promise.allSettled([dbFetchMembers(), dbFetchNotes(), dbFetchTasks()]),
+          timeout
+        ]);
+        const [membersResult, notesResult, tasksResult] = results;
+        if (membersResult.status === "fulfilled") members = membersResult.value;
+        if (notesResult.status === "fulfilled") notes = notesResult.value;
+        if (tasksResult.status === "fulfilled") teamTasks = tasksResult.value || [];
+        try { localStorage.setItem("tms_tasks", JSON.stringify(teamTasks)); } catch (_) {}
+        try { localStorage.setItem("tms_members", JSON.stringify(members)); localStorage.setItem("tms_notes", JSON.stringify(notes)); } catch (_) {}
+        if (tasksResult.status === "rejected") console.info("Tasks table unavailable; using local task storage.");
+        return true;
+      } catch (e) {
+        console.warn("Supabase load failed, using local/sample", e);
+        loadSampleData(); return false;
+      }
+    }
+
+    function normalizeMember(x) {
+      const device = x.device || "Laptop";
+      return {
+        id: x.id, fullName: x.fullName || "", team: "Wasla",
+        completionRank: x.completionRank || 0, teamNotes: x.teamNotes || "",
+        hasLaptop: x.hasLaptop !== undefined ? !!x.hasLaptop : /لاب|الاثنين|الاثنان|laptop/i.test(device),
+        canGoAlexandria: x.canGoAlexandria !== undefined ? !!x.canGoAlexandria : false,
+        residence: x.residence || "", workConditions: x.workConditions || "", bio: x.bio || "",
+        phone: x.phone || "", device: device, gender: x.gender || "ذكر",
+        meetingAttendance: x.meetingAttendance || "Yes", workStatus: x.workStatus || "مستمر"
+      };
+    }
+
+    async function refreshData() {
+      if (currentUser && (currentUser.localOnly || currentUser.isGuest)) return;
+      try {
+        const [m, n] = await Promise.all([dbFetchMembers(), dbFetchNotes()]);
+        members = m; notes = n;
+        try { localStorage.setItem("tms_members", JSON.stringify(members)); localStorage.setItem("tms_notes", JSON.stringify(notes)); } catch (_) {}
+        if (currentUser) {
+          renderDashboard(); renderMembersTable(); renderRanking();
+          const noteInput = document.getElementById("new-note-text");
+          const noteTarget = document.getElementById("note-target");
+          const typing = noteInput && (document.activeElement === noteInput || document.activeElement === noteTarget || (noteInput.value || "").trim().length > 0);
+          if (typing) { if (noteInput) noteDraftText = noteInput.value; if (noteTarget) noteDraftTarget = noteTarget.value; }
+          else { renderNotes(); }
+        }
+      } catch (e) { console.warn("refresh failed", e); }
+    }
+
+    // ========== Supabase Auth ==========
+    document.getElementById("login-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const loginBtn = document.getElementById("login-submit-btn");
+      const errorEl = document.getElementById("login-error");
+      if (errorEl) { errorEl.style.display = "none"; errorEl.textContent = ""; }
+
+      const rawUsername = (document.getElementById("username").value || "").trim();
+      const password = document.getElementById("password").value || "";
+
+      if (!rawUsername || !password) {
+        if (loginBtn) loginBtn.classList.remove("ls-loading");
+        if (errorEl) {
+          errorEl.innerHTML = `<div>يرجى إدخال البريد الإلكتروني وكلمة المرور.</div>`;
+          errorEl.style.display = "block";
+        }
+        return;
+      }
+
+      // Shorthand username support (e.g. "admin" -> "admin@wasla.com")
+      let email = rawUsername.toLowerCase();
+      if (!email.includes("@")) {
+        email = email + "@wasla.com";
+      }
+
+      const finishLogin = () => { if (loginBtn) loginBtn.classList.remove("ls-loading"); };
+      let loginErrorMsg = "بيانات الدخول غير صحيحة. يرجى التأكد من البريد وكلمة المرور.";
+      
+      const sb = getSupabase();
+      if (sb) {
+         try {
+           const authPromise = sb.auth.signInWithPassword({ email, password });
+           const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("NETWORK_TIMEOUT")), 15000));
+           const { data, error } = await Promise.race([authPromise, timeoutPromise]);
+           if (error) {
+             console.warn("Supabase auth response error:", error);
+             if (error.message && error.message.toLowerCase().includes("rate limit")) {
+               loginErrorMsg = "تم تجاوز الحد المسموح به من المحاولات، يرجى الانتظار قليلاً.";
+             } else {
+               loginErrorMsg = "بيانات الدخول غير صحيحة. يرجى التأكد من البريد وكلمة المرور.";
+             }
+           } else if (data && data.user) {
+             const meta = data.user.user_metadata || {};
+             const dispName = meta.displayName || rawUsername;
+             const role = meta.role || (meta.is_ai ? "Wasla AI Assistant" : "Admin");
+             currentUser = {
+               username: email,
+               role: role,
+               displayName: dispName,
+               accountType: meta.is_ai ? "wasla_ai" : "admin",
+               userId: data.user.id,
+               localOnly: false,
+               signature: createSessionSignature(role)
+             };
+             saveSession();
+             loadSampleData();
+             showApp();
+             loadFromAPI().then(ok => { if (ok) { renderDashboard(); renderMembersTable(); renderNotes(); renderRanking(); } }).catch(() => {});
+             finishLogin();
+             return;
+           }
+         } catch (err) {
+           console.warn("Supabase auth exception:", err);
+           if (err && err.message === "NETWORK_TIMEOUT") {
+             loginErrorMsg = "تعذر الاتصال بالخادم (انتهت مهلة الانتظار). يرجى التحقق من اتصال الإنترنت.";
+           } else {
+             loginErrorMsg = "حدث خطأ أثناء الاتصال بالخادم. يرجى المحاولة لاحقاً.";
+           }
+         }
+      } else {
+        loginErrorMsg = "خدمة Supabase غير مهيأة أو غير متصلة.";
+      }
+
+      finishLogin();
+      if (errorEl) {
+         errorEl.innerHTML = `<div>${loginErrorMsg}</div>`;
+         errorEl.style.display = "block";
+      }
+    });
+
+    async function logout() {
+      try { const sb = getSupabase(); if (sb) await sb.auth.signOut(); } catch (_) {}
+      currentUser = null;
+      localStorage.removeItem("tms_session");
+      // 🛡️ Secure Wipe: Remove PII when leaving!
+      localStorage.removeItem("tms_members");
+      localStorage.removeItem("tms_tasks");
+      localStorage.removeItem("tms_notes");
+      members = []; teamTasks = []; notes = {Wasla:[]};
+
+      const app = document.getElementById("app");
+      const login = document.getElementById("login-screen");
+      if (app) { app.style.display = "none"; }
+      if (login) {
+        login.style.display = "flex";
+        login.style.visibility = "visible";
+        login.style.pointerEvents = "auto";
+      }
+      const uEl = document.getElementById("username"); if (uEl) uEl.value = "";
+      const pEl = document.getElementById("password"); if (pEl) pEl.value = "";
+      const aEl = document.getElementById("account-type"); if (aEl) aEl.value = "";
+      const errEl = document.getElementById("login-error"); if (errEl) { errEl.style.display = "none"; errEl.textContent = ""; }
+    }
+
+    function showApp() {
+      try {
+        const login = document.getElementById("login-screen");
+        const app = document.getElementById("app");
+        if (login) { login.style.display = "none"; login.style.visibility = "hidden"; login.style.pointerEvents = "none"; }
+        if (app) { app.style.display = "block"; app.style.visibility = "visible"; }
+        if (!members || !members.length) loadSampleData();
+        updateUIForRole();
+        showConnectionStatus();
+        renderDashboard();
+        renderMembersTable();
+        renderNotes();
+        renderRanking();
+      } catch (e) {
+        console.error("showApp error", e);
+        alert("حصل خطأ: " + (e.message || e));
+      }
+    }
+
+    function showConnectionStatus() {
+      const sb = getSupabase();
+      const isLocal = currentUser && currentUser.localOnly;
+      const isGuest = currentUser && currentUser.isGuest;
+      let statusHtml = "";
+      if (isGuest) statusHtml = `<span class="status-pill status-pill-warning"><i class="fas fa-eye"></i> وضع الزائر</span>`;
+      else if (isLocal) statusHtml = `<span class="status-pill status-pill-neutral"><i class="fas fa-wifi"></i> محلي</span>`;
+      else if (sb) statusHtml = `<span class="status-pill status-pill-success"><i class="fas fa-cloud"></i> متصل</span>`;
+      else statusHtml = `<span class="status-pill status-pill-danger"><i class="fas fa-triangle-exclamation"></i> غير متصل</span>`;
+      
+      let banner = document.getElementById("conn-status-banner");
+      if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "conn-status-banner";
+        const titleRow = document.querySelector(".page-title-group");
+        if (titleRow) {
+          titleRow.querySelector(".page-title").style.display = "inline-flex";
+          titleRow.querySelector(".page-title").style.alignItems = "center";
+          titleRow.querySelector(".page-title").style.gap = "10px";
+          titleRow.querySelector(".page-title").appendChild(banner);
+        }
+      }
+      banner.innerHTML = statusHtml;
+    }
+
+    function updateUIForRole() {
+      const role = currentUser.role;
+      const accountType = currentUser.accountType;
+      document.getElementById("user-name").textContent = currentUser.displayName;
+      document.getElementById("user-role").textContent = getRoleLabel(role);
+      document.getElementById("user-avatar").textContent = currentUser.displayName.charAt(0).toUpperCase();
+      const roleBadge = document.getElementById("role-badge");
+      if (roleBadge) roleBadge.textContent = getRoleLabel(role);
+      const avatarEl = document.getElementById("user-avatar");
+      avatarEl.className = "user-avatar";
+      if (accountType && accountType.includes('wasla')) avatarEl.classList.add('wasla');
+      const isAdmin = role === "Wasla Leader" || role === "Admin";
+      const addBtn = document.getElementById("btn-add-member");
+      if (addBtn) addBtn.style.display = isAdmin ? "inline-flex" : "none";
+      const notesNav = document.getElementById("nav-notes");
+      if (notesNav) notesNav.style.display = "flex";
+      const actionsHeader = document.getElementById("actions-header");
+      if (actionsHeader) actionsHeader.style.display = isAdmin ? "table-cell" : "none";
+    }
+
+    function getRoleLabel(role) {
+      const labels = { "Wasla Leader": "قائد الفريق", "Admin": "مدير النظام", "Wasla AI Assistant": "مساعد وصلة الذكي", "Normal User": "مستخدم" };
+      return labels[role] || role;
+    }
+
+    /* ===== Role-Based Permissions Model ===== */
+    const ROLE_PERMISSIONS = {
+      "Admin": {
+        canReadAllData: true,
+        canManageMembers: true,
+        canManageTasks: true,
+        canManageNotes: true,
+        canDeleteNotes: true,
+        canDeleteMembers: true
+      },
+      "Wasla Leader": {
+        canReadAllData: true,
+        canManageMembers: true,
+        canManageTasks: true,
+        canManageNotes: true,
+        canDeleteNotes: false,
+        canDeleteMembers: false
+      },
+      "Wasla AI Assistant": {
+        canReadAllData: true,
+        canManageMembers: true,
+        canManageTasks: true,
+        canManageNotes: true,
+        canDeleteNotes: false,
+        canDeleteMembers: true
+      },
+      "Normal User": {
+        canReadAllData: false,
+        canManageMembers: false,
+        canManageTasks: false,
+        canManageNotes: false,
+        canDeleteNotes: false,
+        canDeleteMembers: false
+      }
+    };
+
+    function getRolePermissions(role) {
+      return ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS["Normal User"];
+    }
+
+    function isLeaderRole() {
+      return currentUser && (currentUser.role === "Admin" || currentUser.role === "Wasla Leader" || currentUser.role === "Wasla AI Assistant");
+    }
+
+    function canWriteNotes() {
+      return currentUser && getRolePermissions(currentUser.role).canManageNotes;
+    }
+
+    function canViewNote(note) { return !!currentUser; }
+    function canEditNote(note) { return canWriteNotes(); }
+    function canEditNotes(team) { return canWriteNotes(); }
+    function canViewNotes(team) { return !!currentUser; }
+    function getVisibleTeam() { return null; }
+
+    function canManageMembers() {
+      return currentUser && getRolePermissions(currentUser.role).canManageMembers;
+    }
+
+    function canDeleteMembers() {
+      return currentUser && getRolePermissions(currentUser.role).canDeleteMembers;
+    }
+
+    function canManageTasks() {
+      return currentUser && getRolePermissions(currentUser.role).canManageTasks;
+    }
+
+    function canReadAllData() {
+      return currentUser && getRolePermissions(currentUser.role).canReadAllData;
+    }
+
+    const navConnectionPaths = {
+      dashboard: "M58 18C25 18 24 83 48 95",
+      members: "M58 18C25 18 24 83 48 95c22 11 20 50-2 61",
+      tasks: "M58 18C25 18 24 83 48 95c22 11 20 50-2 61",
+      ranking: "M58 18C25 18 24 83 48 95c22 11 20 50-2 61-25 13-24 56 2 68",
+      notes: "M58 18C25 18 24 83 48 95c22 11 20 50-2 61-25 13-24 56 2 68 25 12 24 55 0 68",
+      "ai-assistant": "M58 18C25 18 24 83 48 95c22 11 20 50-2 61-25 13-24 56 2 68 25 12 24 55 0 68-23 12-23 54 5 58"
+    };
+
+    function updateNavConnection(page) {
+      const path = document.querySelector(".nav-connection-active");
+      if (!path || !navConnectionPaths[page]) return;
+      path.setAttribute("d", navConnectionPaths[page]);
+      path.classList.remove("is-connecting");
+      void path.getBoundingClientRect();
+      path.classList.add("is-connecting");
+    }
+
+    updateNavConnection("dashboard");
+
+    document.querySelectorAll(".nav-item").forEach(item => {
+      item.addEventListener("click", () => {
+        const page = item.dataset.page;
+        document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+        item.classList.add("active");
+        updateNavConnection(page);
+        document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+        document.getElementById("page-" + page).classList.add("active");
+        const titles = { dashboard: "لوحة التحكم", members: "الأعضاء", notes: "الملاحظات", ranking: "نظام الترتيب", "ai-assistant": "مساعد وصلة الذكي", tasks: "إدارة المهام" };
+        document.getElementById("page-title").textContent = titles[page] || "لوحة التحكم";
+        if (page === "dashboard") renderDashboard();
+        if (page === "members") renderMembersTable();
+        if (page === "notes") renderNotes();
+        if (page === "ranking") renderRanking();
+        if (page === "tasks") renderTasksDashboard();
+        if (page === "ai-assistant") {
+          const inp = document.getElementById("ai-prompt-input");
+          if (inp) setTimeout(() => inp.focus(), 100);
+        }
+        document.getElementById("sidebar").classList.remove("open");
+        // sync bottom nav
+        document.querySelectorAll(".mbn-item").forEach(b => b.classList.toggle("active", b.dataset.page === page));
+      });
+    });
+
+    // Wire bottom nav
+    document.querySelectorAll(".mbn-item").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const page = btn.dataset.page;
+        // sync sidebar nav
+        document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.page === page));
+        document.querySelectorAll(".mbn-item").forEach(b => b.classList.toggle("active", b.dataset.page === page));
+        updateNavConnection(page);
+        document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+        const target = document.getElementById("page-" + page);
+        if (target) target.classList.add("active");
+        const titles = { dashboard: "لوحة التحكم", members: "الأعضاء", notes: "الملاحظات", ranking: "نظام الترتيب", "ai-assistant": "مساعد وصلة الذكي", tasks: "إدارة المهام" };
+        document.getElementById("page-title").textContent = titles[page] || "لوحة التحكم";
+        if (page === "dashboard") renderDashboard();
+        if (page === "members") renderMembersTable();
+        if (page === "notes") renderNotes();
+        if (page === "ranking") renderRanking();
+        if (page === "tasks") renderTasksDashboard();
+        if (page === "ai-assistant") {
+          const inp = document.getElementById("ai-prompt-input");
+          if (inp) setTimeout(() => inp.focus(), 100);
+        }
+        // scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    });
+
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      if (!sidebar) return;
+      const isOpen = sidebar.classList.toggle("open");
+      document.body.classList.toggle("sidebar-open", isOpen);
+    }
+    function closeSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      if (sidebar) sidebar.classList.remove("open");
+      document.body.classList.remove("sidebar-open");
+    }
+    // Wire backdrop click to close sidebar
+    (function() {
+      const backdrop = document.getElementById("sidebar-backdrop");
+      if (backdrop) {
+        backdrop.addEventListener("click", closeSidebar);
+        backdrop.addEventListener("touchend", function(e) {
+          e.preventDefault();
+          closeSidebar();
+        }, { passive: false });
+      }
+    })();
+
+    let deferredInstallPrompt = null;
+    let pwaInstallDismissed = false;
+    let pwaEngagementTimer = null;
+
+    function initPWA() {
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+      }
+
+      // Check if user previously dismissed
+      pwaInstallDismissed = localStorage.getItem("pwa_dismissed") === "1";
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        schedulePWABanner();
+      });
+
+      window.addEventListener("appinstalled", () => {
+        removePWAUI();
+        localStorage.removeItem("pwa_dismissed");
+        showPWASuccessToast();
+      });
+    }
+
+    function schedulePWABanner() {
+      // Show banner after 25s of engagement if not dismissed before
+      if (pwaInstallDismissed) {
+        showPWAFab(); // just show the small FAB
+        return;
+      }
+      clearTimeout(pwaEngagementTimer);
+      pwaEngagementTimer = setTimeout(() => {
+        if (deferredInstallPrompt) showPWABanner();
+      }, 25000);
+    }
+
+    function showPWABanner() {
+      if (document.getElementById("pwa-banner")) return;
+
+      const banner = document.createElement("div");
+      banner.id = "pwa-banner";
+      banner.className = "pwa-banner";
+      banner.innerHTML = `
+        <div class="pwa-banner-icon">
+          <img src="icons/icon-192.png" alt="wasla" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pwa-banner-icon-fallback" style="display:none"><i class="fas fa-layer-group"></i></div>
+        </div>
+        <div class="pwa-banner-body">
+          <p class="pwa-banner-title">ثبّت لوحة التحكم</p>
+          <p class="pwa-banner-sub">وصول فوري من سطح المكتب — بدون متصفح</p>
+        </div>
+        <div class="pwa-banner-actions">
+          <button class="pwa-banner-install" id="pwa-banner-install-btn" type="button">تثبيت</button>
+          <button class="pwa-banner-dismiss" id="pwa-banner-dismiss-btn" type="button" aria-label="إغلاق">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+      document.body.appendChild(banner);
+      requestAnimationFrame(() => banner.classList.add("pwa-banner--visible"));
+
+      document.getElementById("pwa-banner-install-btn").addEventListener("click", triggerPWAInstall);
+      document.getElementById("pwa-banner-dismiss-btn").addEventListener("click", dismissPWABanner);
+    }
+
+    function showPWAFab() {
+      if (document.getElementById("pwa-fab")) return;
+      const fab = document.createElement("button");
+      fab.id = "pwa-fab";
+      fab.className = "pwa-fab";
+      fab.type = "button";
+      fab.title = "تثبيت التطبيق";
+      fab.innerHTML = '<i class="fas fa-download"></i>';
+      fab.addEventListener("click", () => {
+        removePWAFab();
+        pwaInstallDismissed = false;
+        showPWABanner();
+      });
+      document.body.appendChild(fab);
+      requestAnimationFrame(() => fab.classList.add("pwa-fab--visible"));
+    }
+
+    function dismissPWABanner() {
+      const banner = document.getElementById("pwa-banner");
+      if (banner) {
+        banner.classList.remove("pwa-banner--visible");
+        banner.classList.add("pwa-banner--hiding");
+        setTimeout(() => banner.remove(), 350);
+      }
+      localStorage.setItem("pwa_dismissed", "1");
+      pwaInstallDismissed = true;
+      setTimeout(showPWAFab, 400);
+    }
+
+    async function triggerPWAInstall() {
+      if (!deferredInstallPrompt) return;
+      const banner = document.getElementById("pwa-banner");
+      const btn = document.getElementById("pwa-banner-install-btn");
+      if (btn) { btn.textContent = "جاري..."; btn.disabled = true; }
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      if (outcome === "accepted") {
+        removePWAUI();
+      } else {
+        if (btn) { btn.textContent = "تثبيت"; btn.disabled = false; }
+      }
+    }
+
+    function removePWAUI() {
+      const banner = document.getElementById("pwa-banner");
+      if (banner) { banner.classList.remove("pwa-banner--visible"); setTimeout(() => banner.remove(), 350); }
+      removePWAFab();
+    }
+
+    function removePWAFab() {
+      const fab = document.getElementById("pwa-fab");
+      if (fab) { fab.classList.remove("pwa-fab--visible"); setTimeout(() => fab.remove(), 300); }
+    }
+
+    function showPWASuccessToast() {
+      const toast = document.createElement("div");
+      toast.className = "pwa-toast";
+      toast.innerHTML = '<i class="fas fa-check-circle"></i> تم تثبيت التطبيق بنجاح';
+      document.body.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add("pwa-toast--visible"));
+      setTimeout(() => {
+        toast.classList.remove("pwa-toast--visible");
+        setTimeout(() => toast.remove(), 400);
+      }, 3500);
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.getAttribute("data-theme") === "dark";
+      const next = isDark ? "light" : "dark";
+      html.setAttribute("data-theme", next);
+      const ic = next === "dark" ? "fas fa-sun" : "fas fa-moon";
+      const a = document.getElementById("theme-icon"); if (a) a.className = ic;
+      const b = document.getElementById("login-theme-icon"); if (b) b.className = ic;
+      localStorage.setItem("tms_theme", next);
+      renderDashboard();
+    }
+
+    // ========== Helpers ==========
+    function formatDate(dStr) {
+      if (!dStr) return "—";
+      const parts = dStr.split("-");
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+      return dStr;
+    }
+
+    function navigateToPage(pageName) {
+      const item = document.querySelector(`.nav-item[data-page="${pageName}"]`);
+      if (item) item.click();
+    }
+
+    function openProfileByName(name) {
+      const m = members.find(x => x.fullName.trim() === name.trim());
+      if (m) openProfile(m.id);
+    }
+
+    function executeGlobalSearch(val) {
+      const q = (val || "").trim().toLowerCase();
+      if (!q) return;
+      navigateToPage("members");
+      const taskFilter = document.getElementById("filter-task");
+      if (taskFilter) taskFilter.value = "";
+      const courseFilter = document.getElementById("filter-course");
+      if (courseFilter) courseFilter.value = "";
+      const alexFilter = document.getElementById("filter-alex");
+      if (alexFilter) alexFilter.value = "";
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) {
+        searchInput.value = q;
+        currentPage = 1;
+        renderMembersTable();
+      }
+    }
+
+    function handleGlobalSearch(val) {
+      const q = (val || "").trim().toLowerCase();
+      if (q.length >= 2) {
+        executeGlobalSearch(q);
+      }
+    }
+
+    function navigateToMembers(mode) {
+      navigateToPage("members");
+      ["filter-task", "filter-course", "filter-alex", "filter-device", "filter-work"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      const searchInput = document.getElementById("search-input");
+      if (searchInput) searchInput.value = "";
+      currentPage = 1;
+      if (mode === "bonus-low") {
+        // فلتر مؤقت للأعضاء أصحاب النقاط السلبية — يُستخدم داخل getFilteredMembers
+        window.__bonusLowFilter = true;
+      } else {
+        window.__bonusLowFilter = false;
+      }
+      renderMembersTable();
+    }
+
+    
+
+    
+
+    function filterByAlexOrLapAndNavigate(type) {
+      navigateToMembers(null);
+      const alexFilter = document.getElementById("filter-alex");
+      const deviceFilter = document.getElementById("filter-device");
+      
+      if (alexFilter) alexFilter.value = "";
+      if (deviceFilter) deviceFilter.value = "";
+      
+      if (type === "alex" && alexFilter) {
+        alexFilter.value = "yes";
+      } else if (type === "no-alex" && alexFilter) {
+        alexFilter.value = "no";
+      } else if (type === "laptop" && deviceFilter) {
+        deviceFilter.value = "لاب توب";
+      }
+      renderMembersTable();
+    }
+
+    function renderMembersChips(list) {
+      const el = document.getElementById("team-members-preview");
+      if (!el) return;
+      if (!list.length) {
+        el.innerHTML = `<div class="empty-state-sm">لا توجد نتائج مطابقة</div>`;
+        return;
+      }
+      const statusConfig = {
+        "Completed": { cls: "done", title: "مكتمل" },
+        "In Progress": { cls: "pending", title: "قيد التنفيذ" },
+        "Late": { cls: "late", title: "متأخر" },
+        "Not Started": { cls: "not-started", title: "لم يبدأ" }
+      };
+
+      el.innerHTML = list.map(m => {
+        const initial = (m.fullName || "ع").trim().charAt(0);
+        const sConf = statusConfig[m.taskStatus] || { cls: "not-started", title: m.taskStatus || "لم يبدأ" };
+        return `
+          <div class="member-chip-card" onclick="openProfile(${m.id})" title="${escapeHtml(m.fullName)} — ${sConf.title}">
+            <div class="member-chip-avatar">${initial}</div>
+            <div class="member-chip-name">${escapeHtml(m.fullName)}</div>
+            <span class="chip-status-dot ${sConf.cls}" title="${sConf.title}"></span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function filterMemberPreview(query) {
+      const q = (query || "").trim().toLowerCase();
+      const waslaMembers = members.filter(m => m.team === "Wasla");
+      if (!q) {
+        renderMembersChips(waslaMembers);
+        return;
+      }
+      const filtered = waslaMembers.filter(m => m.fullName.toLowerCase().includes(q));
+      renderMembersChips(filtered);
+    }
+
+        function renderNeedsAttention() {
+      const el = document.getElementById("needs-attention-content");
+      const badge = document.getElementById("attention-count-badge");
+      if (!el) return;
+      const attentionList = members.filter(m => (m.totalBonus || 0) < 0).sort((a,b) => (a.totalBonus || 0) - (b.totalBonus || 0));
+      if (badge) badge.textContent = `${attentionList.length} بحاجة لمتابعة`;
+
+      if (attentionList.length === 0) {
+        el.innerHTML = `
+          <div class="empty-state-sm">
+            <i class="fas fa-check-circle text-green" style="font-size:1.4rem;margin-bottom:6px"></i>
+            <p>لا يوجد أعضاء بتقييم سلبي حالياً</p>
+          </div>
+        `;
+        return;
+      }
+
+      el.innerHTML = `
+        <div class="attention-list">
+          ${attentionList.map(m => `
+            <div class="attention-item">
+              <div class="attention-info">
+                <div class="attention-avatar" ${m.gender==='أنثى'?'style="background:#fce7f3;color:#be185d"':''}>${m.fullName.charAt(0)}</div>
+                <div class="attention-texts">
+                  <span class="attention-name">${escapeHtml(m.fullName)}</span>
+                  <span class="attention-deadline" style="color:var(--danger)">
+                    <i class="fas fa-arrow-trend-down"></i> نقاط: ${m.totalBonus || 0}
+                  </span>
+                </div>
+              </div>
+              <button class="btn-attention-action" onclick="openProfile(${m.id})">
+                <i class="fas fa-arrow-left"></i>
+              </button>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function toggleNotificationsDropdown() {
+      const dd = document.getElementById("notifications-dropdown");
+      if (dd) dd.classList.toggle("show");
+    }
+
+    function renderNotifications() {
+      const listEl = document.getElementById("notifications-list");
+      const countEl = document.getElementById("notif-count-badge");
+      const dotEl = document.getElementById("notif-dot");
+      const lateMembers = members.filter(m => m.taskStatus === "Late");
+
+      if (countEl) countEl.textContent = `${lateMembers.length} متأخرون`;
+      if (dotEl) dotEl.style.display = lateMembers.length > 0 ? "block" : "none";
+      if (!listEl) return;
+
+      if (lateMembers.length === 0) {
+        listEl.innerHTML = `<div class="notif-empty">لا توجد تنبيهات متأخرة</div>`;
+        return;
+      }
+
+      listEl.innerHTML = lateMembers.map(m => `
+        <div class="notif-item" onclick="openProfile(${m.id}); toggleNotificationsDropdown();">
+          <div class="notif-item-icon"><i class="fas fa-clock"></i></div>
+          <div class="notif-item-body">
+            <div class="notif-item-title">يحتاج متابعة: <strong>${escapeHtml(m.fullName)}</strong></div>
+            <div class="notif-item-time">الموعد النهائي: ${formatDate(m.deadline)}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // Close notifications dropdown on outside click
+    document.addEventListener("click", function(e) {
+      const wrapper = document.getElementById("notifications-wrapper");
+      if (wrapper && !wrapper.contains(e.target)) {
+        const dd = document.getElementById("notifications-dropdown");
+        if (dd) dd.classList.remove("show");
+      }
+    });
+
+    const waslaIcon = (name, className = "metric-icon") => {
+      const paths = {
+        members: '<circle cx="8.5" cy="8" r="3"/><path d="M3 20c.4-3.8 2.3-5.8 5.5-5.8S13.6 16.2 14 20M16 5.5a3 3 0 0 1 0 5.7M17.1 14.2c2.2.6 3.4 2.6 3.6 5.8"/>',
+        check: '<path d="m5 12.5 4.2 4.2L19.5 6.5"/><circle cx="12" cy="12" r="9"/>',
+        pulse: '<path d="M3 12h4l2-5 4 10 2-5h6"/>',
+        alert: '<path d="M12 4 21 20H3zM12 9v4M12 17h.01"/>',
+        course: '<path d="M3 8.5 12 4l9 4.5-9 4.5zM6.5 11.2V16c3.2 2.3 7.8 2.3 11 0v-4.8M21 9v6"/>',
+        laptop: '<rect x="5" y="4" width="14" height="11" rx="1.5"/><path d="M2.5 19h19"/>',
+        pin: '<path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11z"/><circle cx="12" cy="10" r="2"/>',
+        ranking: '<path d="M8 3h8v5a4 4 0 0 1-8 0zM8 5H4v1a4 4 0 0 0 4 4M16 5h4v1a4 4 0 0 1-4 4M12 12v5M8.5 21h7M9 17h6"/>'
+      };
+      return `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.pulse}</svg>`;
+    };
+
+    // ========== Dashboard ==========
+
+    let tasksChartInstance = null;
+    let deviceChartInstance = null;
+
+    function renderDashboard() {
+      // 1. Calculate General KPI metrics
+      members.forEach(m => m.totalBonus = getMemberTotalBonus(m.id));
+      const total = members.length;
+      const waslaCount = members.filter(m => m.team === "Wasla").length;
+      const alexCount = members.filter(m => m.canGoAlexandria).length;
+      const laptopCount = members.filter(m => { const d = m.device || ""; return d.includes("لاب") || d.includes("كمبيوتر") || d.includes("الاثنان") || d === "Laptop" || !!m.hasLaptop; }).length;
+      const readyTotalCount = members.filter(m => m.canGoAlexandria && (function(){const d = m.device || ""; return d.includes("لاب") || d.includes("كمبيوتر") || d.includes("الاثنان") || d === "Laptop" || !!m.hasLaptop;})()).length;
+
+      const alexPct = total ? Math.round((alexCount / total) * 100) : 0;
+      const laptopPct = total ? Math.round((laptopCount / total) * 100) : 0;
+      const readyPct = total ? Math.round((readyTotalCount / total) * 100) : 0;
+
+      // Render KPI Grid
+      const statsGrid = document.getElementById("stats-grid");
+      if (statsGrid) {
+        statsGrid.innerHTML = `
+          <section class="metrics-hero clickable-kpi" onclick="filterByAlexOrLapAndNavigate('alex')" title="عرض الأعضاء المؤكدين للقاء">
+            <div class="metrics-hero-copy"><span>جاهزية الفريق</span><strong>${readyPct}<small>%</small></strong><p>نسبة الجاهزين (لابتوب + نزول للاجتماع)</p></div>
+            <div class="loop-progress" style="--progress:${readyPct}%"><div>${waslaIcon('check')}<span>${readyTotalCount} من ${total}</span></div></div>
+          </section>
+          <div class="metrics-secondary">
+            <button class="metric-signal" onclick="filterByAlexOrLapAndNavigate('laptop')">
+              <span class="metric-signal-icon success">${waslaIcon('laptop')}</span>
+              <strong>${laptopCount}</strong><span>جاهزون باللاب</span>
+              <small>${laptopCount} من ${total} عضو</small>
+              <i><b style="width:${laptopPct}%"></b></i>
+            </button>
+            <button class="metric-signal" onclick="filterByAlexOrLapAndNavigate('alex')">
+              <span class="metric-signal-icon">${waslaIcon('pin')}</span>
+              <strong>${alexCount}</strong><span>مؤكدون للنزول</span>
+              <small>${alexCount} من ${total} عضو</small>
+              <i><b style="width:${alexPct}%"></b></i>
+            </button>
+          </div>
+        `;
+      }
+
+      // Render Team Members Preview
+      const countBadge = document.getElementById("members-count-badge");
+      if (countBadge) countBadge.textContent = `${total} عضو`;
+      renderMembersChips(members);
+
+      // Render Top 3 Ranking & Lowest Ranking
+      renderTopRankingsWidget();
+      renderLowestRankingsWidget();
+
+      // Render Late tasks radar
+      renderLatestTaskLateWidget();
+
+      // Render Recent Activity Feed
+      renderRecentActivityFeed();
+
+      // Draw Charts
+      drawDeviceChartNew();
+      drawTasksChart();
+      drawTrendsChart();
+    }
+
+    function renderTopRankingsWidget() {
+      const el = document.getElementById("top-rankings-widget");
+      if (!el) return;
+
+      let sorted = [...members].filter(m => m.totalBonus > 0).sort((a,b) => b.totalBonus - a.totalBonus).slice(0, 3);
+
+      if (sorted.length === 0) {
+        el.innerHTML = `<div class="empty-state-sm"><i class="fas fa-medal"></i><p>لم يتم تسجيل نقاط بونص بعد</p></div>`;
+        return;
+      }
+
+      el.innerHTML = sorted.map((m, i) => {
+        const posClass = i === 0 ? "gold" : i === 1 ? "silver" : "bronze";
+        const bgGradient = i === 0 ? 'linear-gradient(135deg,#f59e0b,#fbbf24)' : i === 1 ? 'linear-gradient(135deg,#94a3b8,#cbd5e1)' : 'linear-gradient(135deg,#b45309,#d97706)';
+        return `
+          <div class="rank-item" onclick="openProfile(${m.id})" style="display:flex;align-items:center;gap:14px;padding:12px;background:var(--bg);border-radius:12px;border:1px solid var(--border);margin-bottom:10px;cursor:pointer;">
+            <div class="rank-position ${posClass}" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;flex-shrink:0;background:${bgGradient};color:white">${i + 1}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:0.95rem">${escapeHtml(m.fullName)}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;padding:4px 10px;border-radius:8px;background:var(--card);border:2px dashed var(--wasla-energy);color:var(--wasla-energy);">
+              <span style="font-size:1rem;font-weight:900;">+${m.totalBonus}</span>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    function renderLowestRankingsWidget() {
+      const el = document.getElementById("lowest-rankings-widget");
+      if (!el) return;
+
+      let sorted = [...members].filter(m => m.totalBonus < 0).sort((a,b) => a.totalBonus - b.totalBonus);
+
+      if (sorted.length === 0) {
+        el.innerHTML = '<div class="empty-state-sm" style="opacity:0.7"><i class="fas fa-check-circle" style="color:var(--success);font-size:2rem;margin-bottom:10px"></i><p>لا يوجد أعضاء في نطاق الخطر (تحت الصفر)</p></div>';
+        return;
+      }
+
+      el.innerHTML = sorted.slice(0, 4).map(m => {
+        return `
+          <div class="clickable-row" onclick="openProfile(${m.id})" style="display:flex; justify-content:space-between; padding:12px 10px; border-bottom:1px dashed var(--border-light); border-radius:8px">
+            <div style="display:flex; gap:12px; align-items:center;">
+              <div style="width:34px; height:34px; border-radius:50%; background: #FFE4E6; color:#E11D48; display:flex; align-items:center; justify-content:center; font-weight:800; border: 1px solid #FECDD3">${m.fullName.charAt(0)}</div>
+              <strong style="color:var(--text); font-size:0.95rem">${escapeHtml(m.fullName)}</strong>
+            </div>
+            <span class="badge" style="background:#FFE4E6; color:#E11D48; border:1px solid #FECDD3; font-weight:800">${m.totalBonus}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderLatestTaskLateWidget() {
+      const el = document.getElementById("latest-task-late-widget");
+      if (!el) return;
+      
+      if (!teamTasks || teamTasks.length === 0) {
+        el.innerHTML = '<div class="empty-state-sm" style="opacity:0.7"><p>لا توجد مهام مُسندة</p></div>';
+        return;
+      }
+      
+      // الحصول على آخر مهمة تم إنشاؤها (الأعلى ID)
+      const latestTask = [...teamTasks].sort((a, b) => b.id - a.id)[0];
+      const now = new Date();
+      const isPassed = latestTask.hasDeadline && (new Date(latestTask.deadlineDate) < now);
+      
+      let targetMembers = members;
+      if (latestTask.assignedTo !== "ALL") {
+        targetMembers = members.filter(m => Array.isArray(latestTask.assignedTo) && latestTask.assignedTo.includes(m.id));
+      }
+      
+      let lateOrPending = targetMembers.filter(m => {
+        const track = latestTask.tracking[m.id];
+        if (!track) return true; 
+        if (track.status !== "مكتمل") return true; 
+        return false;
+      });
+      
+      if (lateOrPending.length === 0) {
+        el.innerHTML = `
+          <div style="text-align:center; padding:20px; opacity:0.8">
+            <i class="fas fa-star text-warning" style="font-size:2.5rem; margin-bottom:12px;"></i>
+            <h6 style="font-weight:800; font-size:1.05rem">الفريق أتم المهمة بنجاح!</h6>
+            <span style="color:var(--text-muted); font-size:0.85rem">${escapeHtml(latestTask.title)}</span>
+          </div>`;
+        return;
+      }
+      
+      let html = `<div style="margin-bottom:12px; font-size:0.9rem; color:var(--text-muted); line-height:1.4"><strong>المهمة النشطة:</strong> ${escapeHtml(latestTask.title)}</div>`;
+      
+      html += lateOrPending.slice(0, 5).map(m => {
+        const track = latestTask.tracking[m.id];
+        const statusText = !track || track.status === "لم يبدأ" ? "لم يبدأ" : track.status;
+        const badgeCls = (isPassed && statusText !== "مكتمل") ? "badge-late" : "badge-pending";
+        return `
+          <div class="clickable-row" onclick="navigateToPage('tasks')" style="display:flex; justify-content:space-between; padding:10px 8px; border-bottom:1px dashed var(--border-light); border-radius:8px">
+            <div style="display:flex; align-items:center; gap:10px"><i class="fas fa-user-circle" style="color:var(--text-muted); font-size:1.2rem"></i> <span style="font-weight:600; font-size:0.95rem">${escapeHtml(m.fullName)}</span></div>
+            <span class="badge ${badgeCls}">${statusText}</span>
+          </div>
+        `;
+      }).join("");
+
+      if (lateOrPending.length > 5) {
+        html += `<div style="text-align:center; font-size:0.85rem; font-weight:700; margin-top:10px; cursor:pointer; color:var(--wasla);" onclick="navigateToPage('tasks')">عرض ${lateOrPending.length - 5} أعضاء آخرين...</div>`;
+      }
+      el.innerHTML = html;
+    }
+
+    function renderRecentActivityFeed() {
+      const el = document.getElementById("recent-activity-feed");
+      if (!el) return;
+
+      let activities = [];
+
+      // Add recent notes to activity
+      if (notes.Wasla) {
+        notes.Wasla.forEach(n => {
+           activities.push({
+             type: 'note',
+             date: new Date(n.date || Date.now()),
+             html: `<div class="activity-icon note"><i class="fas fa-sticky-note"></i></div>
+                    <div class="activity-content">
+                      <strong>${escapeHtml(n.author)}</strong> أضاف ملاحظة لـ <strong>${escapeHtml(n.targetName || 'عضو')}</strong>
+                      <div class="activity-meta">${n.date}</div>
+                    </div>`
+           });
+        });
+      }
+
+      // Add task creations to activity
+      teamTasks.forEach(t => {
+         activities.push({
+           type: 'task',
+           date: new Date(), // Simulating recent if creation date missing
+           html: `<div class="activity-icon task"><i class="fas fa-tasks"></i></div>
+                  <div class="activity-content">
+                    تم تكليف مهمة جديدة: <strong>${escapeHtml(t.title)}</strong>
+                    <div class="activity-meta">المهام</div>
+                  </div>`
+         });
+      });
+
+      // Add members creation (simulated)
+      if (members.length > 0) {
+         const newestMember = members[members.length - 1];
+         activities.push({
+           type: 'member',
+           date: new Date(),
+           html: `<div class="activity-icon member"><i class="fas fa-user-plus"></i></div>
+                  <div class="activity-content">
+                    انضمام عضو جديد: <strong>${escapeHtml(newestMember.fullName)}</strong>
+                    <div class="activity-meta">الأعضاء</div>
+                  </div>`
+         });
+      }
+
+      activities.sort((a,b) => b.date - a.date);
+      activities = activities.slice(0, 6); // Keep top 6
+
+      if(activities.length === 0) {
+        el.innerHTML = `<div class="empty-state-sm"><p>لا يوجد نشاطات مسجلة</p></div>`;
+        return;
+      }
+
+      el.innerHTML = `<div class="activity-timeline">
+        ${activities.map(a => `
+          <div class="activity-item">
+            ${a.html}
+          </div>
+        `).join("")}
+      </div>`;
+    }
+
+    function drawTasksChart() {
+      const canvas = document.getElementById("tasksChart");
+      if (!canvas || !window.Chart) return;
+
+      let completed = 0, inProgress = 0, late = 0, notStarted = 0;
+      const now = new Date();
+
+      teamTasks.forEach(t => {
+         let assignedCount = t.assignedTo === "ALL" ? members.length : t.assignedTo.length;
+         const isPassed = t.hasDeadline && (new Date(t.deadlineDate) < now);
+
+         let handledCount = 0;
+         Object.values(t.tracking || {}).forEach(statusObj => {
+            handledCount++;
+            if (statusObj.status === "مكتمل") completed++;
+            else if (statusObj.status === "قيد التنفيذ") inProgress++;
+            else if (isPassed) late++;
+            else notStarted++;
+         });
+
+         // Account for those who haven't started
+         if (assignedCount > handledCount) {
+            const rem = assignedCount - handledCount;
+            if (isPassed) late += rem;
+            else notStarted += rem;
+         }
+      });
+
+      // If no tasks, show dummy data for visual aesthetics
+      if (completed===0 && inProgress===0 && late===0 && notStarted===0) {
+        notStarted = 1;
+      }
+
+      const ctx = canvas.getContext('2d');
+      if (tasksChartInstance) tasksChartInstance.destroy();
+
+      tasksChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['مكتمل', 'قيد التنفيذ', 'متأخر', 'لم يبدأ'],
+          datasets: [{
+            data: [completed, inProgress, late, notStarted],
+            backgroundColor: ['#10B981', '#3B82F6', '#EF4444', '#9CA3AF'],
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: {
+            legend: { position: 'bottom', labels: { font: { family: 'IBM Plex Sans Arabic' } } }
+          }
+        }
+      });
+    }
+
+
+    let trendsChartInstance = null;
+    function drawTrendsChart() {
+      const canvas = document.getElementById("trendsChart");
+      if (!canvas || !window.Chart) return;
+
+      // Aggregate notes by date to show bonus points over time
+      const dateMap = {};
+      if (notes.Wasla) {
+        notes.Wasla.forEach(n => {
+           if (n.date) {
+             if (!dateMap[n.date]) dateMap[n.date] = 0;
+             const bMatch = (n.text || "").match(/\[B:([+-]?\d+)\]/);
+             if (bMatch) {
+               dateMap[n.date] += parseInt(bMatch[1]);
+             }
+           }
+        });
+      }
+
+      // Sort dates chronologically
+      const sortedDates = Object.keys(dateMap).sort((a,b) => new Date(a) - new Date(b));
+      // Just take the last 7 days of activity
+      const recentDates = sortedDates.slice(-7);
+      const dataPoints = recentDates.map(d => dateMap[d]);
+
+      // Provide fallback data if empty
+      const finalLabels = recentDates.length > 0 ? recentDates : ['لا توجد بيانات'];
+      const finalData = recentDates.length > 0 ? dataPoints : [0];
+
+      const ctx = canvas.getContext('2d');
+      if (trendsChartInstance) trendsChartInstance.destroy();
+
+      trendsChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: finalLabels,
+          datasets: [{
+            label: 'إجمالي البونص اليومي',
+            data: finalData,
+            borderColor: '#8B5CF6',
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { ticks: { stepSize: 1, font: { family: 'IBM Plex Sans Arabic' } } },
+            x: { ticks: { font: { family: 'IBM Plex Sans Arabic' } } }
+          }
+        }
+      });
+    }
+
+    function drawDeviceChartNew() {
+      const canvas = document.getElementById("deviceChart");
+      if (!canvas || !window.Chart) return;
+
+      // عد الأجهزة بمرونة (تطابق جزئي) بدل المطابقة الصارمة
+      const hasLaptop = members.filter(m => { const d = m.device || (m.hasLaptop ? "لاب توب" : ""); return d.includes("لاب") || d.includes("الاثنان") || d === "Laptop"; }).length;
+      const hasPC = members.filter(m => { const d = m.device || ""; return d.includes("كمبيوتر") && !d.includes("الاثنان"); }).length;
+      const hasMobile = members.filter(m => { const d = m.device || ""; return d.includes("تابلت") || d.includes("هاتف"); }).length;
+
+      const counts = [hasLaptop, hasPC, hasMobile];
+      const labels = ['لاب توب', 'كمبيوتر', 'هاتف/تابلت'];
+
+      const ctx = canvas.getContext('2d');
+      if (deviceChartInstance) deviceChartInstance.destroy();
+
+      deviceChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'الأجهزة',
+            data: counts,
+            backgroundColor: ['#10B981', '#3B82F6', '#F59E0B'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'IBM Plex Sans Arabic' } } },
+            x: { ticks: { font: { family: 'IBM Plex Sans Arabic' } } }
+          }
+        }
+      });
+
+      // legend مخصص
+      const legend = document.getElementById("device-chart-legend");
+      if (legend) {
+        legend.innerHTML = labels.map((l, i) => {
+          const pct = members.length ? Math.round((counts[i] / members.length) * 100) : 0;
+          return `<span class="legend-item"><span class="legend-dot" style="background:${['#10B981','#3B82F6','#F59E0B'][i]}"></span>${l} — <strong>${counts[i]}</strong> (${pct}%)</span>`;
+        }).join("");
+      }
+    }
+
+    function drawDeviceChart() {
+
+      const canvas = document.getElementById("deviceChart");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const statuses = ["لاب توب", "كمبيوتر فقط", "الاثنان معاً", "تابلت", "هاتف فقط"];
+      const labels = ["لاب توب", "كمبيوتر", "معاً", "تابلت", "هاتف"];
+      const colors = ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444"];
+      const counts = statuses.map(s => members.filter(m => m.device === s).length);
+      
+      // Fallback: If device is empty or undefined, count as Laptop
+      const undefinedCount = members.filter(m => !m.device).length;
+      counts[0] += undefinedCount;
+      
+      const total = counts.reduce((a, b) => a + b, 0) || 1;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const outerRadius = Math.min(centerX, centerY) - 12;
+      const innerRadius = outerRadius * 0.68;
+
+      let startAngle = -Math.PI / 2;
+      counts.forEach((count, i) => {
+        if(count === 0) return;
+        const sliceAngle = (count / total) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, outerRadius, startAngle, startAngle + sliceAngle);
+        ctx.arc(centerX, centerY, innerRadius, startAngle + sliceAngle, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+        startAngle += sliceAngle;
+      });
+
+      // Center donut background
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, innerRadius - 0.5, 0, 2 * Math.PI);
+      ctx.fillStyle = isDark ? "#111827" : "#FFFFFF";
+      ctx.fill();
+
+      // Center Number
+      ctx.fillStyle = isDark ? "#F9FAFB" : "#111827";
+      ctx.font = "700 24px 'IBM Plex Sans Arabic', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`${total}`, centerX, centerY - 8);
+
+      // Center Label
+      ctx.fillStyle = isDark ? "#9CA3AF" : "#6B7280";
+      ctx.font = "500 13px 'IBM Plex Sans Arabic', sans-serif";
+      ctx.fillText("جهاز", centerX, centerY + 14);
+
+      // Custom Legend in HTML
+      const legendEl = document.getElementById("device-chart-legend");
+      if (legendEl) {
+        legendEl.innerHTML = labels.map((label, i) => `
+          <div class="chart-legend-pill">
+            <span class="clp-dot" style="background-color: ${colors[i]}"></span>
+            <span class="clp-label">${label}</span>
+            <span class="clp-count">${counts[i]}</span>
+          </div>
+        `).join("");
+      }
+    }
+    // ========== Members Table ==========
+    
+    // ========== Excel Export / Import ==========
+    function exportToExcel() {
+      // Prepare data
+      const dataToExport = members.map(m => ({
+        "الاسم الكامل": m.fullName,
+        "رقم التليفون": m.phone || "—",
+        "محافظة السكن": m.residence || "—",
+        "الجهاز المتاح": m.device || "—",
+        "النزول لإسكندرية": m.canGoAlexandria ? "يقدر ينزل" : "مش هينزل",
+        "حالة التفرغ": m.workStatus || "—",
+        "ظروف الشغل": m.workConditions || "—",
+        "نبذة / تعريف": m.bio || "—",
+        "ملاحظات الفريق": m.teamNotes || "—",
+        "نقاط البونص": (typeof getMemberTotalBonus === 'function') ? getMemberTotalBonus(m.id) : 0
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      ws['!dir'] = 'rtl'; // Right to left sheet
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Wasla Members");
+
+      XLSX.writeFile(wb, "Wasla_Team_Members.xlsx");
+      showToast("تم تصدير البيانات إلى ملف الإكسيل بنجاح!", false);
+    }
+
+    function importFromExcel(event) {
+      if (!isLeaderRole()) {
+        showToast("فقط قائد الفريق يمكنه استيراد البيانات!", true);
+        return;
+      }
+      
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet);
+          
+          let importCount = 0;
+          json.forEach(row => {
+            const name = row["الاسم الكامل"] || row["الاسم"] || row["FullName"];
+            if (!name) return;
+            
+            const existing = members.find(m => m.fullName === name);
+            if (!existing) {
+              const newId = (members.length > 0) ? Math.max(...members.map(m => m.id), 0) + 1 : 1;
+              const newM = normalizeMember({
+                id: newId,
+                fullName: sanitizeInput(name),
+                team: "Wasla",
+                phone: sanitizeInput(row["رقم التليفون"] || row["Phone"] || ""),
+                residence: sanitizeInput(row["محافظة السكن"] || row["السكن"] || ""),
+                device: String(row["الجهاز المتاح"] || row["الجهاز"] || "لاب توب"),
+                hasLaptop: [true, "يقدر ينزل", "نعم", "yes"].includes(row["الجهاز المتاح"] || row["الجهاز"]) || /لاب|الاثنان|laptop/i.test(String(row["الجهاز المتاح"] || row["الجهاز"] || "")),
+                canGoAlexandria: [true, "يقدر ينزل", "نعم", "yes"].includes(row["النزول لإسكندرية"] || row["إسكندرية"]),
+                workStatus: String(row["حالة التفرغ"] || row["العمل"] || "شغال"),
+                workConditions: sanitizeInput(row["ظروف الشغل"] || ""),
+                bio: sanitizeInput(row["نبذة / تعريف"] || row["ملاحظات شخصية"] || ""),
+                teamNotes: sanitizeInput(row["ملاحظات الفريق"] || "")
+              });
+              members.push(newM);
+              
+              const sb = getSupabase();
+              if (sb && !currentUser.localOnly) {
+                dbInsertMember(newM).catch(() => {});
+              }
+              importCount++;
+            }
+          });
+          
+          if (currentUser && currentUser.localOnly) {
+             try { localStorage.setItem("tms_members", JSON.stringify(members)); } catch(e){}
+          }
+
+          renderMembersTable();
+          renderDashboard();
+          renderRanking();
+          showToast(`تم استيراد ${importCount} عضو جديد بنجاح!`, false);
+          document.getElementById('excel-import-file').value = '';
+        } catch (err) {
+          console.error(err);
+          showToast("حدث خطأ في قراءة ملف الإكسيل", true);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function getFilteredMembers() {
+      // احسب البونص دائماً قبل أي فرز/فلترة (كان يُحتسب مرة واحدة فقط ويبقى stale)
+      members.forEach(m => { m.totalBonus = getMemberTotalBonus(m.id); });
+      let list = [...members];
+      const search = document.getElementById("search-input").value.trim().toLowerCase();
+      const deviceEl = document.getElementById("filter-device");
+      const workEl = document.getElementById("filter-work");
+      // أي تفاعل يدوي مع الفلاتر/البحث يلغي فلتر "بحاجة لمتابعة" الخفي
+      if (search || (deviceEl && deviceEl.value) || (workEl && workEl.value) ||
+          ["filter-alex", "filter-device", "filter-work"].some(id => { const el = document.getElementById(id); return el && el.value; })) {
+        window.__bonusLowFilter = false;
+      }
+      if (search) list = list.filter(m => m.fullName.toLowerCase().includes(search));
+      if (deviceEl && deviceEl.value) list = list.filter(m => m.device === deviceEl.value);
+      if (workEl && workEl.value) list = list.filter(m => (m.workStatus === "شغال" ? "شغال" : "مش شغال") === workEl.value);
+      const alexFilter = document.getElementById("filter-alex");
+      if (alexFilter && alexFilter.value === "yes") list = list.filter(m => m.canGoAlexandria);
+      if (alexFilter && alexFilter.value === "no") list = list.filter(m => !m.canGoAlexandria);
+      if (window.__bonusLowFilter) list = list.filter(m => (m.totalBonus || 0) < 0);
+      list.sort((a, b) => {
+        let va = a[sortField], vb = b[sortField];
+        if (sortField === "deadline" || sortField === "taskFinishDate") {
+          va = va ? new Date(va) : new Date(0);
+          vb = vb ? new Date(vb) : new Date(0);
+        }
+        if (typeof va === "string") va = va.toLowerCase();
+        if (typeof vb === "string") vb = vb.toLowerCase();
+        if (va < vb) return sortAsc ? -1 : 1;
+        if (va > vb) return sortAsc ? 1 : -1;
+        return 0;
+      });
+      return list;
+    }
+
+    function sortTable(field) {
+      if (sortField === field) sortAsc = !sortAsc;
+      else { sortField = field; sortAsc = true; }
+      renderMembersTable();
+    }
+
+    function renderMembersTable() {
+      const list = getFilteredMembers();
+      const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageItems = list.slice(start, start + PAGE_SIZE);
+      const isLeader = currentUser && isLeaderRole();
+
+      const tbody = document.getElementById("members-tbody");
+      if (pageItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><i class="fas fa-search"></i><p>لا توجد نتائج</p></td></tr>`;
+      } else {
+        tbody.innerHTML = pageItems.map(m => {
+          const mPhone = m.phone ? m.phone : "—";
+          const mDevice = m.device || "لابتوب";
+          const canAlex = m.canGoAlexandria;
+          const mRes = m.residence ? m.residence : "—";
+          const mWork = m.workStatus === "شغال" ? "شغال" : "مش شغال";
+          const mBonus = (typeof getMemberTotalBonus === 'function') ? getMemberTotalBonus(m.id) : 0;
+          
+          return `
+            <tr class="clickable-row" onclick="openProfile(${m.id})" style="cursor:pointer" title="اضغط لعرض البروفايل">
+              <td><strong>${escapeHtml(m.fullName)}</strong></td>
+              <td dir="ltr" style="text-align:right; font-family:monospace; font-size:1.05rem; letter-spacing:0.5px">${mPhone}</td>
+              <td><span class="badge ${mDevice.includes('لاب') || mDevice.includes('كمبيوتر') || mDevice.includes('الاثنان') ? 'badge-done' : 'badge-pending'}">${mDevice}</span></td>
+              <td><span class="badge ${canAlex ? 'badge-done' : 'badge-late'}">${canAlex ? 'يقدر ينزل' : 'مش هينزل'}</span></td>
+              <td>${escapeHtml(mRes)}</td>
+              <td><span class="badge ${mWork === 'شغال' ? 'badge-late' : 'badge-done'}">${mWork}</span></td>
+              <td>
+                <span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-weight:800;font-size:0.8rem;background:${mBonus > 0 ? 'var(--wasla-energy)' : mBonus < 0 ? '#E11D48' : 'var(--border)'};color:${mBonus !== 0 ? 'white' : 'var(--text-muted)'};">
+                  ${mBonus > 0 ? '+'+mBonus : mBonus} نقطة
+                </span>
+              </td>
+              <td style="text-align:center" onclick="event.stopPropagation()">
+                ${isLeader ? `<div style="display:flex; gap:8px; justify-content:center; min-width:85px;">
+                  <button class="btn btn-secondary btn-sm" onclick="openMemberModal(${m.id})" style="padding:8px; width:40px; height:40px; flex-shrink:0;"><i class="fas fa-edit"></i></button>
+                  <button class="btn btn-danger btn-sm" onclick="openDeleteModal(${m.id})" style="padding:8px; width:40px; height:40px; flex-shrink:0;"><i class="fas fa-trash"></i></button>
+                </div>` : ""}
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      let pagHtml = "";
+      for (let i = 1; i <= totalPages; i++) {
+        pagHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+      }
+      document.getElementById("pagination").innerHTML = pagHtml;
+    }
+
+    function goToPage(p) { currentPage = p; renderMembersTable(); }
+
+    // ========== Member CRUD ==========
+    function openMemberModal(id = null) {
+      if (!isLeaderRole()) return;
+      document.getElementById("member-modal").classList.add("show");
+      if (id) {
+        const m = members.find(x => x.id === id);
+        document.getElementById("modal-title").textContent = "تعديل عضو";
+        document.getElementById("member-id").value = m.id;
+        document.getElementById("m-fullname").value = m.fullName;
+        document.getElementById("m-phone").value = m.phone || "";
+        document.getElementById("m-residence").value = m.residence || "";
+        document.getElementById("m-alex").value = m.canGoAlexandria ? "true" : "false";
+        document.getElementById("m-device").value = m.device || "لاب توب";
+        document.getElementById("m-work").value = m.workStatus || "شغال";
+        document.getElementById("m-work-notes").value = m.workConditions || "";
+        document.getElementById("m-notes").value = m.teamNotes || "";
+      } else {
+        document.getElementById("modal-title").textContent = "إضافة عضو جديد";
+        document.getElementById("member-form").reset();
+        document.getElementById("member-id").value = "";
+        document.getElementById("m-device").value = "لاب توب";
+        document.getElementById("m-work").value = "شغال";
+        document.getElementById("m-alex").value = "false";
+      }
+    }
+
+    function closeMemberModal() { document.getElementById("member-modal").classList.remove("show"); }
+
+    function saveMember() {
+      if (!isLeaderRole()) return;
+      const id = document.getElementById("member-id").value;
+      const deviceVal = (document.getElementById("m-device") || {}).value || "لاب توب";
+      const data = {
+        fullName: document.getElementById("m-fullname").value.trim(),
+        team: "Wasla",
+        phone: (document.getElementById("m-phone") || {}).value ? document.getElementById("m-phone").value.trim() : "",
+        canGoAlexandria: (document.getElementById("m-alex") || {}).value === "true",
+        residence: (document.getElementById("m-residence") || {}).value ? document.getElementById("m-residence").value.trim() : "",
+        device: deviceVal,
+        hasLaptop: /لاب|الاثنين|الاثنان|laptop/i.test(deviceVal),
+        workStatus: (document.getElementById("m-work") || {}).value || "شغال",
+        workConditions: (document.getElementById("m-work-notes") || {}).value ? document.getElementById("m-work-notes").value.trim() : "",
+        teamNotes: (document.getElementById("m-notes") || {}).value ? document.getElementById("m-notes").value.trim() : ""
+      };
+      if (!data.fullName) { showToast("الاسم مطلوب", true); return; }
+      if (currentUser.isGuest) { showToast("الزوار لا يمكنهم التعديل", true); return; }
+
+      if (currentUser.localOnly) {
+        if (id) {
+          const idx = members.findIndex(m => m.id === parseInt(id));
+          if (idx >= 0) { members[idx] = { ...members[idx], ...data, id: parseInt(id) }; showToast("تم تحديث العضو (محلي)"); }
+        } else {
+          const newId = Math.max(...members.map(m => m.id), 0) + 1;
+          members.push({ ...data, id: newId });
+          showToast("تم إضافة العضو (محلي)");
+        }
+        try { localStorage.setItem("tms_members", JSON.stringify(members)); } catch (_) {}
+        closeMemberModal(); renderMembersTable(); renderDashboard(); renderRanking();
+        return;
+      }
+
+      (async () => {
+        try {
+          if (id) {
+            // دمج بيانات النموذج مع سجل العضو الحالي حتى لا نطمس الحقول غير الموجودة في النموذج
+            const existing = members.find(m => m.id === parseInt(id)) || {};
+            const merged = { ...existing, ...data, id: parseInt(id) };
+            const updated = await dbUpdateMember(parseInt(id), merged);
+            const idx = members.findIndex(m => m.id === parseInt(id));
+            if (idx >= 0) members[idx] = updated;
+            showToast("تم تحديث العضو بنجاح");
+          } else {
+            const created = await dbInsertMember(data);
+            members.push(created);
+            showToast("تم إضافة العضو بنجاح");
+          }
+          try { localStorage.setItem("tms_members", JSON.stringify(members)); } catch (_) {}
+          closeMemberModal(); renderMembersTable(); renderDashboard(); renderRanking();
+        } catch (e) {
+          const msg = e.message || "";
+          const code = e.code || "";
+          if (code === "403" || msg.includes("403") || msg.includes("row-level")) {
+            showToast("RLS منع العملية! تأكد من إعداد Supabase", true);
+          } else if (!getSupabase()) {
+            showToast("Supabase غير متصل!", true);
+          } else {
+            showToast("فشل الحفظ — " + msg, true);
+          }
+        }
+      })();
+    }
+
+    function openDeleteModal(id) {
+      if (!isLeaderRole()) return;
+      deleteId = id;
+      document.getElementById("delete-modal").classList.add("show");
+    }
+
+    function closeDeleteModal() { document.getElementById("delete-modal").classList.remove("show"); deleteId = null; }
+
+    function confirmDelete() {
+      if (!isLeaderRole() || !deleteId) return;
+      if (currentUser && currentUser.localOnly) {
+        members = members.filter(m => m.id !== deleteId);
+        try { localStorage.setItem("tms_members", JSON.stringify(members)); } catch (_) {}
+        closeDeleteModal(); renderMembersTable(); renderDashboard(); renderRanking();
+        showToast("تم حذف العضو بنجاح");
+        return;
+      }
+      (async () => {
+        try {
+          try { await dbDeleteMember(deleteId); } catch (e) {
+            showToast("تعذر الحذف من السحابة", true); return;
+          }
+          members = members.filter(m => m.id !== deleteId);
+          try { localStorage.setItem("tms_members", JSON.stringify(members)); } catch (_) {}
+          closeDeleteModal(); renderMembersTable(); renderDashboard(); renderRanking();
+          showToast("تم حذف العضو بنجاح");
+        } catch (e) { showToast("فشل الحذف", true); }
+      })();
+    }
+
+    // ========== Profile ==========
+    function openProfile(id) {
+      const m = members.find(x => x.id === id);
+      if (!m) return;
+      const isAdmin = currentUser && (currentUser.role === "Admin" || currentUser.role === "Wasla Leader" || currentUser.role === "Wasla AI Assistant");
+      const courseAr = { "Completed": "مكتمل", "In Progress": "قيد التنفيذ", "Not Started": "لم يبدأ" }[m.courseStatus] || m.courseStatus;
+      const taskAr = { "Completed": "مكتمل", "In Progress": "قيد التنفيذ", "Late": "متأخر", "Not Started": "لم يبدأ" }[m.taskStatus] || m.taskStatus;
+      const hasLap = (m.device || "").includes("لاب") || (m.device || "").includes("كمبيوتر") || (m.device || "").includes("الاثنان") || m.device === "Laptop" || !!m.hasLaptop;
+      const canAlex = m.canGoAlexandria !== undefined ? m.canGoAlexandria : false;
+
+      document.getElementById("profile-body").innerHTML = `
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+          <div style="width:68px;height:68px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:1.7rem;background:linear-gradient(135deg,var(--wasla),var(--wasla-light))">${m.fullName.charAt(0)}</div>
+          <div>
+            <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:4px">${escapeHtml(m.fullName)}</h3>
+            <span class="badge badge-wasla">${m.team}</span>
+            ${m.completionRank ? `<span style="margin-right:10px;color:var(--warning);font-weight:700">#${m.completionRank}</span>` : ""}
+          </div>
+          <div style="margin-right:auto;text-align:center;padding:8px 16px;border-radius:12px;background:var(--bg);border:2px dashed ${getMemberTotalBonus(m.id) > 0 ? 'var(--wasla-energy)' : getMemberTotalBonus(m.id) < 0 ? 'var(--danger)' : 'var(--border)'}">
+            <div style="font-size:1.4rem;font-weight:900;line-height:1;color:${getMemberTotalBonus(m.id) > 0 ? 'var(--wasla-energy)' : getMemberTotalBonus(m.id) < 0 ? 'var(--danger)' : 'var(--text)'}">${getMemberTotalBonus(m.id) > 0 ? '+' : ''}${getMemberTotalBonus(m.id)}</div>
+            <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);margin-top:4px">نقطة تقييم</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+          <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">رقم التليفون</div>
+            <div style="font-weight:600" dir="ltr">${m.phone || "—"}</div>
+          </div>
+          <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">التفرغ</div>
+            <div style="font-weight:600">${m.workStatus || "—"}</div>
+          </div>
+          <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">حالة الكورس</div>
+            <span class="badge" style="background:var(--surface);border:1px solid var(--border)">${courseAr || "—"}</span>
+          </div>
+          <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">حالة المهام</div>
+            <span class="badge" style="background:var(--surface);border:1px solid var(--border)">${taskAr || "—"}</span>
+          </div>
+          <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">معاه لاب توب؟</div>
+            <span class="badge ${hasLap ? 'badge-laptop' : 'badge-no-laptop'}">${hasLap ? 'نعم' : 'لا'}</span>
+          </div>
+          <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">إسكندرية للميتنج</div>
+            <span class="badge ${canAlex ? 'badge-alex-yes' : 'badge-alex-no'}">${canAlex ? 'يقدر ينزل' : 'مش هينزل'}</span>
+          </div>
+          <div style="background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">السكن</div>
+            <div style="font-weight:600">${m.residence || "—"}</div>
+          </div>
+          <div style="grid-column:1/-1;background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">ظروف الشغل / الدراسة</div>
+            <div style="font-weight:600">${m.workConditions || "—"}</div>
+          </div>
+          <div style="grid-column:1/-1;background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">تعريف / نبذة</div>
+            <div style="font-weight:600;white-space:pre-wrap;line-height:1.7">${m.bio || "لا توجد نبذة بعد"}</div>
+          </div>
+          ${m.teamNotes ? `<div style="grid-column:1/-1;background:var(--bg);border-radius:12px;padding:14px;border:1px solid var(--border)"><div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">ملاحظات الفريق</div><div style="font-weight:600">${m.teamNotes}</div></div>` : ""}
+        </div>
+      `;
+
+      document.getElementById("profile-footer").innerHTML = isAdmin
+        ? `<button class="btn btn-secondary" onclick="closeProfileModal()">إغلاق</button>
+           <button class="btn btn-primary" onclick="closeProfileModal(); openMemberModal(${m.id})"><i class="fas fa-edit"></i> تعديل</button>`
+        : `<button class="btn btn-secondary" onclick="closeProfileModal()">إغلاق</button>`;
+
+      document.getElementById("profile-modal").classList.add("show");
+    }
+
+    function openProfileByName(name) {
+      const m = members.find(x => x.fullName === name);
+      if (m) openProfile(m.id);
+    }
+
+    function closeProfileModal() { document.getElementById("profile-modal").classList.remove("show"); }
+
+    // ========== Ranking ==========
+    function getMemberTotalBonus(memberId) {
+      let total = 0;
+      const allNotes = notes["Wasla"] || [];
+      allNotes.forEach(n => {
+        if (n.targetMemberId === memberId) {
+          const match = (n.text || "").match(/\[B:([+-]?\d+)\]/);
+          if (match) {
+            total += parseInt(match[1]);
+          }
+        }
+      });
+      return total;
+    }
+
+    function renderRanking() {
+      const el = document.getElementById("ranking-content");
+      if (!el) return;
+      // Inject totalBonus dynamically
+      members.forEach(m => m.totalBonus = getMemberTotalBonus(m.id));
+
+      // Filter: must have a bonus OR be finished to show up in rankings
+      let list = members.filter(m => m.totalBonus !== 0 || m.taskFinishDate || m.completionRank > 0);
+      
+      list.sort((a, b) => {
+        // Primary sort: Total Bonus Points (descending)
+        if (a.totalBonus !== b.totalBonus) {
+          return b.totalBonus - a.totalBonus;
+        }
+        // Secondary sort: Completion Rank (ascending 1,2,3)
+        if (a.completionRank && b.completionRank) return a.completionRank - b.completionRank;
+        if (a.completionRank) return -1;
+        if (b.completionRank) return 1;
+        // Tertiary sort: Finish Date
+        if (a.taskFinishDate && b.taskFinishDate) return new Date(a.taskFinishDate) - new Date(b.taskFinishDate);
+        return 0;
+      });
+      const visibleTeam = getVisibleTeam();
+      if (visibleTeam) list = list.filter(m => m.team === visibleTeam);
+
+      if (list.length === 0) {
+        el.innerHTML = `<div class="empty-state"><i class="fas fa-trophy"></i><p>لا يوجد ترتيب بعد</p></div>`;
+        return;
+      }
+
+      el.innerHTML = list.map((m, i) => {
+        const pos = m.completionRank || (i + 1);
+        let posClass = "normal";
+        if (pos === 1) posClass = "gold";
+        else if (pos === 2) posClass = "silver";
+        else if (pos === 3) posClass = "bronze";
+        return `
+          <div class="rank-item" onclick="openProfile(${m.id})" style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border-radius:12px;border:1px solid var(--border);margin-bottom:10px;cursor:pointer;transition:all 0.25s">
+            <div class="rank-position ${posClass}" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;flex-shrink:0;background:${pos===1?'linear-gradient(135deg,#f59e0b,#fbbf24)':pos===2?'linear-gradient(135deg,#94a3b8,#cbd5e1)':pos===3?'linear-gradient(135deg,#b45309,#d97706)':'var(--border)'};color:${pos<=3?'white':'var(--text-muted)'}">${pos}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:0.98rem">${escapeHtml(m.fullName)}</div>
+              <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;margin-top:2px">
+                <span class="badge badge-wasla">${m.team}</span>
+                ${m.taskFinishDate ? ' أنهى في ' + m.taskFinishDate : ''}
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;margin-left:8px;margin-right:auto;padding:6px 12px;border-radius:10px;background:var(--card);border:2px dashed ${m.totalBonus > 0 ? 'var(--wasla-energy)' : m.totalBonus < 0 ? 'var(--danger)' : 'var(--border)'};color:${m.totalBonus > 0 ? 'var(--wasla-energy)' : m.totalBonus < 0 ? 'var(--danger)' : 'var(--text)'};">
+              <span style="font-size:1.1rem;font-weight:900;">${m.totalBonus > 0 ? '+' : ''}${m.totalBonus}</span>
+              <span style="font-size:0.65rem;font-weight:700">نقطة</span>
+            </div>
+            <i class="fas fa-chevron-left" style="color:var(--text-muted);font-size:0.85rem"></i>
+          </div>`;
+      }).join("");
+    }
+
+    // ========== Notes System - Enhanced (Wasla only) ==========
+    function getAllNotesFlat() {
+      const list = [];
+      for (const n of (notes["Wasla"] || [])) {
+        list.push({ ...n, team: "Wasla", targetTeam: "Wasla" });
+      }
+      return list;
+    }
+
+    function getNoteTargets() {
+      return [...members].sort((a, b) => a.fullName.localeCompare(b.fullName, "ar"));
+    }
+
+    function renderNotes() {
+      const tabsEl = document.getElementById("notes-tabs");
+      const contentEl = document.getElementById("notes-content");
+
+      // Wasla-only: keep tabs structure but single tab; allow future extension
+      activeNoteTeam = "Wasla";
+      if (tabsEl) {
+        tabsEl.innerHTML = `<button class="note-tab wasla active">Wasla</button>`;
+        tabsEl.style.display = "none";
+      }
+
+      let all = getAllNotesFlat().filter(canViewNote);
+      all.sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.id || 0) - (a.id || 0));
+
+      const canWrite = canWriteNotes();
+      let html = "";
+
+      if (canWrite) {
+        const targets = getNoteTargets();
+        html += `
+          <div class="add-note-form">
+            <div class="form-row" style="margin-bottom:12px">
+              <div class="form-group" style="margin-bottom:0">
+                <label><i class="fas fa-user"></i> إلى العضو</label>
+                <select id="note-target" style="width:100%;height:44px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);font-size:0.95rem;font-family:inherit" onchange="noteDraftTarget=this.value">
+                  <option value="">— اختر الشخص —</option>
+                  ${targets.map(m => `<option value="${m.id}" data-team="Wasla" data-name="${escapeHtml(m.fullName)}">${escapeHtml(m.fullName)} (Wasla)</option>`).join("")}
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label><i class="fas fa-star" style="color:var(--warning)"></i> التقييم (بونص / خصم)</label>
+                <select id="note-bonus" style="width:100%;height:44px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);font-size:0.95rem;font-family:inherit">
+                  <option value="0">بدون تقييم (0)</option>
+                  <optgroup label="بونص إيجابي">
+                    <option value="+1">+1 نقطة</option>
+                    <option value="+2">+2 نقطة</option>
+                    <option value="+3">+3 نقاط</option>
+                    <option value="+4">+4 نقاط</option>
+                    <option value="+5">+5 نقاط</option>
+                  </optgroup>
+                  <optgroup label="خصم سلبي">
+                    <option value="-1">-1 نقطة</option>
+                    <option value="-2">-2 نقطة</option>
+                    <option value="-3">-3 نقاط</option>
+                    <option value="-4">-4 نقاط</option>
+                    <option value="-5">-5 نقاط</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+            <textarea id="new-note-text" placeholder="اكتب الملاحظة هنا..." oninput="noteDraftText=this.value"></textarea>
+            <button class="btn btn-primary btn-sm" onclick="addNote()">
+              <i class="fas fa-paper-plane"></i> إرسال الملاحظة
+            </button>
+          </div>`;
+      }
+
+      if (all.length === 0) {
+        html += `<div class="empty-state"><i class="fas fa-sticky-note"></i><p>لا توجد ملاحظات ظاهرة لك</p></div>`;
+      } else {
+        html += all.map(n => {
+          const canEd = canEditNote(n);
+          const bMatch = (n.text || "").match(/\[B:([+-]?\d+)\]/);
+          let bHtml = "";
+          let cleanText = escapeHtml(n.text || "");
+          if (bMatch) {
+            const bVal = parseInt(bMatch[1]);
+            const isPos = bVal > 0;
+            cleanText = escapeHtml((n.text || "").replace(/\[B:[+-]?\d+\]/, '').trim());
+            bHtml = `<span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-weight:800;font-size:0.75rem;background:${isPos ? 'var(--wasla-energy)' : 'var(--danger)'};color:#fff;margin-right:auto;">
+              ${isPos ? '<i class="fas fa-arrow-up" style="margin-left:4px"></i> بونص: ' : '<i class="fas fa-arrow-down" style="margin-left:4px"></i> خصم: '} ${isPos ? '+'+bVal : bVal}
+            </span>`;
+          }
+          
+          return `
+          <div class="note-item" id="note-Wasla-${n.id}">
+            <div class="note-meta" style="display:flex;align-items:center;flex-wrap:wrap;gap:12px">
+              <span><i class="fas fa-user-circle"></i> من: <strong>${escapeHtml(n.author || "")}</strong></span>
+              <span><i class="fas fa-calendar-alt"></i> ${n.date || ""}</span>
+              ${bHtml}
+            </div>
+            <div class="note-target-badge wasla-target">
+              <i class="fas fa-arrow-left"></i>
+              <span>إلى: ${escapeHtml(n.targetName || "—")}</span>
+              <span class="badge badge-wasla" style="margin-right:6px">Wasla</span>
+            </div>
+            <div class="note-text" id="note-text-Wasla-${n.id}">${cleanText}</div>
+            ${canEd ? `
+              <div class="note-actions">
+                <button class="btn btn-secondary btn-xs" onclick="editNote('Wasla', ${n.id})"><i class="fas fa-edit"></i> تعديل</button>
+                <button class="btn btn-danger btn-xs" onclick="deleteNote('Wasla', ${n.id})"><i class="fas fa-trash"></i> حذف</button>
+              </div>` : ""}
+          </div>`;
+        }).join("");
+      }
+      contentEl.innerHTML = html;
+      const ta = document.getElementById("new-note-text");
+      if (ta && noteDraftText) ta.value = noteDraftText;
+      const sel = document.getElementById("note-target");
+      if (sel) {
+        if (noteDraftTarget) sel.value = noteDraftTarget;
+        sel.onchange = () => { noteDraftTarget = sel.value; };
+      }
+    }
+
+    function switchNoteTeam(team) { activeNoteTeam = "Wasla"; renderNotes(); }
+
+    function addNote() {
+      if (!canWriteNotes()) return;
+      const textEl = document.getElementById("new-note-text");
+      const text = (textEl && textEl.value || "").trim();
+      const sel = document.getElementById("note-target");
+      if (!sel || !sel.value) { showToast("اختر الشخص المستهدف أولاً", true); return; }
+      if (!text) { showToast("اكتب الملاحظة أولاً", true); return; }
+      const opt = sel.options[sel.selectedIndex];
+      const targetId = parseInt(sel.value);
+      const targetName = opt.getAttribute("data-name") || opt.textContent;
+      const bSel = document.getElementById("note-bonus");
+      const bonusVal = bSel ? parseInt(bSel.value) : 0;
+      const finalText = bonusVal !== 0 ? `${text} [B:${bonusVal > 0 ? '+' : ''}${bonusVal}]` : text;
+
+      if (currentUser && currentUser.localOnly) {
+        if (!notes["Wasla"]) notes["Wasla"] = [];
+        const nextId = (notes["Wasla"].length > 0) ? Math.max(...notes["Wasla"].map(n => n.id || 0), 0) + 1 : 1;
+        notes["Wasla"].push({
+          id: nextId,
+          text: finalText,
+          author: currentUser.displayName,
+          authorRole: currentUser.role,
+          date: new Date().toISOString().slice(0, 10),
+          team: "Wasla",
+          targetTeam: "Wasla",
+          targetMemberId: targetId,
+          targetName
+        });
+        try { localStorage.setItem("tms_notes", JSON.stringify(notes)); } catch (_) {}
+        noteDraftText = ""; noteDraftTarget = "";
+        renderNotes();
+        showToast("تم إرسال الملاحظة إلى " + targetName);
+        return;
+      }
+
+      (async () => {
+        try {
+          const payload = {
+            text: finalText, author: currentUser.displayName, authorRole: currentUser.role,
+            team: "Wasla", targetTeam: "Wasla", targetMemberId: targetId, targetName
+          };
+          const created = await dbInsertNote(payload);
+          if (!notes["Wasla"]) notes["Wasla"] = [];
+          notes["Wasla"].push(created);
+          try { localStorage.setItem("tms_notes", JSON.stringify(notes)); } catch (_) {}
+          noteDraftText = ""; noteDraftTarget = "";
+          renderNotes();
+          showToast("تم إرسال الملاحظة إلى " + targetName);
+        } catch (e) { showToast("فشل إضافة الملاحظة", true); console.error(e); }
+      })();
+    }
+
+    function editNote(team, id) {
+      const note = (notes["Wasla"] || []).find(n => n.id === id);
+      if (!note || !canEditNote(note)) return;
+      const textEl = document.getElementById("note-text-Wasla-" + id);
+      if (!textEl) return;
+      const current = note.text;
+      textEl.innerHTML = `
+        <textarea id="edit-note-Wasla-${id}" style="width:100%;min-height:80px;padding:12px;border-radius:12px;border:2px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:0.95rem;line-height:1.7">${escapeHtml(current)}</textarea>
+        <div style="margin-top:10px;display:flex;gap:10px">
+          <button class="btn btn-primary btn-sm" onclick="saveEditNote('Wasla', ${id})">حفظ التغييرات</button>
+          <button class="btn btn-secondary btn-sm" onclick="renderNotes()">إلغاء</button>
+        </div>`;
+    }
+
+    function saveEditNote(team, id) {
+      const el = document.getElementById("edit-note-Wasla-" + id);
+      const text = el ? el.value.trim() : "";
+      if (!text) return;
+
+      if (currentUser && currentUser.localOnly) {
+        const note = (notes["Wasla"] || []).find(n => n.id === id);
+        if (note) note.text = text;
+        try { localStorage.setItem("tms_notes", JSON.stringify(notes)); } catch (_) {}
+        renderNotes();
+        showToast("تم تحديث الملاحظة بنجاح");
+        return;
+      }
+
+      (async () => {
+        try {
+          await dbUpdateNote(id, { text });
+          const note = (notes["Wasla"] || []).find(n => n.id === id);
+          if (note) note.text = text;
+          try { localStorage.setItem("tms_notes", JSON.stringify(notes)); } catch (_) {}
+          renderNotes();
+          showToast("تم تحديث الملاحظة بنجاح");
+        } catch (e) { showToast("فشل التحديث", true); }
+      })();
+    }
+
+    function deleteNote(team, id) {
+      const note = (notes["Wasla"] || []).find(n => n.id === id);
+      if (!note || !canEditNote(note)) return;
+      if (!confirm("هل تريد حذف هذه الملاحظة؟")) return;
+
+      if (currentUser && currentUser.localOnly) {
+        notes["Wasla"] = (notes["Wasla"] || []).filter(n => n.id !== id);
+        try { localStorage.setItem("tms_notes", JSON.stringify(notes)); } catch (_) {}
+        renderNotes();
+        showToast("تم حذف الملاحظة بنجاح");
+        return;
+      }
+
+      (async () => {
+        try {
+          await dbDeleteNote(id);
+          notes["Wasla"] = (notes["Wasla"] || []).filter(n => n.id !== id);
+          try { localStorage.setItem("tms_notes", JSON.stringify(notes)); } catch (_) {}
+          renderNotes();
+          showToast("تم حذف الملاحظة بنجاح");
+        } catch (e) {
+          const isNoSb = !getSupabase();
+          if (isNoSb) showToast("Supabase غير متصل", true);
+          else showToast("فشل الحذف — " + (e.message || "مشكلة في السيرفر"), true);
+        }
+      })();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function showToast(msg, isError = false) {
+      const t = document.getElementById("toast");
+      const msgEl = document.getElementById("toast-msg");
+      msgEl.textContent = msg;
+      t.className = "toast show" + (isError ? " error" : "");
+      t.querySelector('i').className = isError ? "fas fa-exclamation-circle" : "fas fa-check-circle";
+      setTimeout(() => t.classList.remove("show"), 3500);
+    }
+
+    function enterAsGuest() {
+      currentUser = {
+        username: "زائر",
+        role: "Normal User",
+        displayName: "زائر",
+        accountType: "guest",
+        userId: null,
+        isGuest: true,
+        localOnly: true,
+        signature: createSessionSignature("Normal User")
+      };
+      saveSession(); loadSampleData(); showApp();
+      loadFromAPI().then(ok => { if (ok && currentUser) { renderDashboard(); renderMembersTable(); renderNotes(); renderRanking(); } }).catch(() => {});
+    }
+
+    async function restoreSession() {
+      const sb = getSupabase();
+      if (sb) {
+        try {
+          const { data: { session }, error: sessionError } = await sb.auth.getSession();
+          if (sessionError) console.warn("[TMS] getSession error:", sessionError);
+          if (session && session.user && session.user.id) {
+            const stored = localStorage.getItem("tms_session");
+            if (stored) {
+              currentUser = JSON.parse(stored);
+              currentUser.userId = session.user.id;
+              currentUser.isGuest = false;
+              currentUser.localOnly = false;
+              currentUser.signature = createSessionSignature(currentUser.role || "Admin");
+            } else {
+              const meta = session.user.user_metadata || {};
+              const role = meta.role || (meta.is_ai ? "Wasla AI Assistant" : "Admin");
+              const dispName = meta.displayName || session.user.email;
+              currentUser = {
+                username: session.user.email,
+                role: role,
+                displayName: dispName,
+                accountType: meta.is_ai ? "wasla_ai" : "admin",
+                userId: session.user.id,
+                isGuest: false,
+                localOnly: false,
+                signature: createSessionSignature(role)
+              };
+              saveSession();
+            }
+            loadSampleData(); showApp();
+            loadFromAPI().then(() => { if (currentUser) { renderDashboard(); renderMembersTable(); renderNotes(); renderRanking(); } }).catch(() => {});
+            return;
+          }
+        } catch (e) { console.warn("[TMS] restoreSession error:", e); }
+      }
+      try {
+        const stored = localStorage.getItem("tms_session");
+        if (stored) {
+          const u = JSON.parse(stored);
+          if (u && (u.localOnly || u.isGuest || u.accountType)) {
+            if (u.signature !== createSessionSignature(u.role || "Normal User")) {
+               console.warn("🛡️ SECURITY ALERT: Session Tampering Detected!");
+               logout();
+               return;
+            }
+            currentUser = u;
+            loadSampleData();
+            showApp();
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+
+    /* =====================================================
+       Wasla AI Assistant Integration
+       ===================================================== */
+
+    function getSystemDataContext() {
+      const activeMembers = (members && members.length > 0) ? members : SAMPLE_MEMBERS;
+      const memSummary = activeMembers.map((m, i) => {
+        const lap = m.hasLaptop ? "نعم" : "لا";
+        const alex = m.canGoAlexandria ? "نعم يقدر" : "لا";
+        const rnk = m.completionRank ? `#${m.completionRank}` : "غير محدد";
+        return `- الاسم: ${escapeHtml(m.fullName)} | لابتوب: ${lap} | سفر إسكندرية: ${alex} | سكن: ${m.residence || "غير محدد"} | ملاحظات: ${m.teamNotes || "لا توجد"}`;
+      }).join("\n");
+
+      let notesSummary = "";
+      if (notes && notes.Wasla && notes.Wasla.length > 0) {
+        notesSummary = notes.Wasla.map(n => `- [${n.date}] كاتب الملاحظة: ${escapeHtml(n.author)} (${n.authorRole || "عضو"}): "${n.text}"`).join("\n");
+      } else {
+        notesSummary = "لا توجد ملاحظات مسجلة حالياً.";
+      }
+
+      // المهام وتتبعها
+      let tasksSummary = "لا توجد مهام مُسندة حالياً.";
+      if (teamTasks && teamTasks.length > 0) {
+        const now = new Date();
+        tasksSummary = teamTasks.map(t => {
+          const assignedCount = t.assignedTo === "ALL" ? activeMembers.length : (Array.isArray(t.assignedTo) ? t.assignedTo.length : 0);
+          const tracking = t.tracking || {};
+          const completedCount = Object.values(tracking).filter(s => s && s.status === "مكتمل").length;
+          const inProgressCount = Object.values(tracking).filter(s => s && s.status === "قيد التنفيذ").length;
+          const isDeadlinePassed = t.hasDeadline && (new Date(t.deadlineDate) < now);
+          const totalHandled = Object.keys(tracking).length;
+          const lateCount = isDeadlinePassed ? (assignedCount - completedCount) : 0;
+
+          let lines = `- المهمة #${t.id}: "${t.title}" | الوصف: ${t.description || "لا يوجد"} | المكلفين: ${assignedCount}`;
+          if (t.hasDeadline) lines += ` | الموعد: ${t.deadlineDate}${isDeadlinePassed ? " (متأخر)" : ""}`;
+          lines += ` | مكتمل: ${completedCount}/${assignedCount} | قيد التنفيذ: ${inProgressCount}`;
+          if (lateCount > 0) lines += ` | متأخرون: ${lateCount}`;
+
+          const lateOrPending = activeMembers.filter(m => t.assignedTo === "ALL" || (Array.isArray(t.assignedTo) && t.assignedTo.includes(m.id)))
+            .filter(m => !tracking[m.id] || (tracking[m.id].status !== "مكتمل"))
+            .map(m => m.fullName);
+          if (lateOrPending.length > 0) lines += ` | لم يكمل بعد: ${lateOrPending.join("، ")}`;
+
+          return lines;
+        }).join("\n");
+      }
+
+      // إحصائيات حية
+      const total = activeMembers.length;
+      const alexCount = activeMembers.filter(m => m.canGoAlexandria).length;
+      const laptopCount = activeMembers.filter(m => m.hasLaptop).length;
+      const readyCount = activeMembers.filter(m => m.canGoAlexandria && m.hasLaptop).length;
+      const stats = [
+        `[إحصائيات حية]:`,
+        `- إجمالي الأعضاء: ${total}`,
+        `- يمتلك لابتوب: ${laptopCount} (${total ? Math.round((laptopCount/total)*100) : 0}%)`,
+        `- يؤكد النزول للإسكندرية: ${alexCount} (${total ? Math.round((alexCount/total)*100) : 0}%)`,
+        `- جاهز تماماً (لابتوب + نزول): ${readyCount} (${total ? Math.round((readyCount/total)*100) : 0}%)`
+      ].join("\n");
+
+      return `[قائمة أعضاء فريق وصلة (${activeMembers.length} عضو)]:\n${memSummary}\n\n[المهام وتتبعها]:\n${tasksSummary}\n\n[ملاحظات الفريق]:\n${notesSummary}\n\n${stats}\n\n[صلاحياتي]:\n- أملك صلاحية كاملة للقراءة على جميع البيانات.\n- أملك صلاحية إضافة/تعديل/حذف الأعضاء.\n- أملك صلاحية إدارة المهام وتحديث حالاتها.\n- أملك صلاحية إضافة الملاحظات.\n- يمكنك طلب تنفيذ أي من هذه الإجراءات مباشرة وسأنفذه فوراً.`;
+    }
+
+    async function handleAiSubmit(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById("ai-prompt-input");
+      const question = (input ? input.value : "").trim();
+      if (!question) return;
+
+      input.value = "";
+      input.style.height = "auto";
+
+      appendAiMessage(question, "user");
+
+      const loadingId = "ai-loading-" + Date.now();
+      appendAiLoading(loadingId);
+
+      try {
+        const sb = getSupabase();
+        const context = getSystemDataContext();
+        
+        let aiAnswer = null;
+        let aiAction = null;
+
+        // Try Supabase Edge Function first
+        let edgeFailed = false;
+        if (sb && !currentUser.localOnly) {
+          const { data, error } = await sb.functions.invoke("wasla-ai", {
+            body: { question, context }
+          });
+          if (!error && data && (data.answer || data.action)) {
+            aiAnswer = data.answer;
+            aiAction = data.action;
+          } else {
+            edgeFailed = true;
+          }
+        } else {
+          edgeFailed = true;
+        }
+
+        // Fallback to direct Gemini API call if Edge Function fails or localOnly
+        if (edgeFailed) {
+          // جلب المفتاح المحفوظ محلياً (من شاشة الإعدادات)
+          const fallbackKey = localStorage.getItem("tms_gemini_key");
+          
+          if (!fallbackKey || fallbackKey.startsWith("AIzaSy...")) {
+            throw new Error("المساعد غير مُعدّ. يرجى إعداد مفتاح Gemini API.");
+          }
+
+          const systemPrompt = `أنت "مساعد وصلة الذكي"، خبير في إدارة فريق "وصلة" وتحليل أدائهم وجاهزيتهم.
+أمامك سياق حي لبيانات الأعضاء، المهام، الملاحظات، والإحصائيات.
+
+تعليماتك الصارمة:
+1. الرد باللغة العربية بأسلوب احترافي وعملي.
+2. إذا كان السؤال عن إحصائيات عامة، لخصها من سياق البيانات أمامك مدعومة بالأرقام المتوفرة.
+3. إذا كان المستخدم يطلب تسجيل، إضافة، أو تدمير، أو تعديل حالة مهمة، قم بإصدار إجراء Action JSON بصيغة صالحة داخل ردك.
+
+أنواع الأكشنات المدعومة:
+- لتعديل عضو: \`\`\`json { "action": { "type": "update_member", "name": "اسم الشخص", "patch": {"hasLaptop": false} } } \`\`\`
+- لحذف/تدمير عضو: \`\`\`json { "action": { "type": "delete_member", "name": "اسم الشخص" } } \`\`\`
+- لإضافة ملاحظة: \`\`\`json { "action": { "type": "add_note", "text": "نص الملاحظة", "targetName": "اسم المستهدف إن وُجد" } } \`\`\`
+
+السياق المتوفر:
+${context}`;
+
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${fallbackKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: systemPrompt }] },
+              contents: [{ parts: [{ text: question }] }],
+              generationConfig: { temperature: 0.1 }
+            })
+          });
+
+          const resData = await res.json();
+          if (!res.ok) throw new Error(resData.error?.message || "Google AI error");
+
+          const reply = resData.candidates[0].content.parts[0].text;
+          
+          // Extract JSON
+          const match = reply.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+          if (match) {
+            try { aiAction = JSON.parse(match[1]).action; } catch(e){}
+          }
+          aiAnswer = reply.replace(/```json\s*(\{[\s\S]*?\})\s*```/g, '').trim();
+        }
+
+        removeAiLoading(loadingId);
+
+        if (aiAnswer) {
+          appendAiMessage(aiAnswer, "bot");
+          if (aiAction) executeAiAction(aiAction);
+        } else {
+          appendAiMessage("لم يصل رد صالح من المساعد.", "bot", true);
+        }
+      } catch (err) {
+        console.error("AI invoke error:", err);
+        removeAiLoading(loadingId);
+        const errorMsg = err.message || "حدث خطأ غير متوقع.";
+        if (errorMsg.includes("مُعدّ") || errorMsg.includes("API")) {
+          appendAiMessage(`${errorMsg} <br><button type="button" class="btn btn-primary" style="margin-top:10px;font-size:0.85rem;padding:6px 14px;" onclick="openGroqKeyModal()">إعداد مفتاح Gemini API الآن</button>`, "bot", true);
+        } else {
+          appendAiMessage("تعذر إرسال السؤال إلى خادم المساعد. تحقق من الاتصال بالإنترنت.", "bot", true);
+        }
+      }
+    }
+
+    function executeAiAction(action) {
+      if (!action || !action.type) return;
+
+      if (action.type === "update_member" && action.name) {
+        if (!canManageMembers()) { showToast("⚠️ الذكاء الاصطناعي غير مخول لتعديل الأعضاء", true); return; }
+        const queryName = action.name.trim().toLowerCase();
+        let m = members.find(x => x.fullName.trim().toLowerCase() === queryName);
+        if (!m) m = members.find(x => x.fullName.toLowerCase().includes(queryName) || queryName.includes(x.fullName.toLowerCase()));
+        
+        if (m) {
+          const patch = action.patch || {};
+          if (patch.taskStatus) m.taskStatus = patch.taskStatus;
+          if (patch.courseStatus) m.courseStatus = patch.courseStatus;
+          if (patch.deadline) m.deadline = patch.deadline;
+          if (patch.taskFinishDate) m.taskFinishDate = patch.taskFinishDate;
+          if (patch.hasLaptop !== undefined) m.hasLaptop = !!patch.hasLaptop;
+          if (patch.canGoAlexandria !== undefined) m.canGoAlexandria = !!patch.canGoAlexandria;
+          if (patch.completionRank !== undefined) m.completionRank = patch.completionRank;
+          if (patch.teamNotes) m.teamNotes = patch.teamNotes;
+
+          try {
+            const sb = getSupabase();
+            if (sb && m.id) {
+              dbUpdateMember(m.id, m).catch(err => console.warn("Supabase member update error:", err));
+            }
+          } catch (_) {}
+
+          renderMembersTable();
+          renderDashboard();
+          renderRanking();
+          showToast(`تم تحديث بيانات العضو ${escapeHtml(m.fullName)}`);
+        }
+      } else if (action.type === "add_member" && action.member) {
+        if (!canManageMembers()) { showToast("⚠️ الذكاء الاصطناعي غير مخول لإضافة الأعضاء", true); return; }
+        const item = action.member;
+        const newM = normalizeMember({
+          id: Date.now(),
+          fullName: item.fullName || "عضو جديد",
+          team: item.team || "Wasla",
+          
+          taskStatus: item.taskStatus || "Not Started",
+          
+          taskFinishDate: "",
+          completionRank: 0,
+          hasLaptop: item.hasLaptop !== undefined ? !!item.hasLaptop : true,
+          canGoAlexandria: item.canGoAlexandria !== undefined ? !!item.canGoAlexandria : false,
+          teamNotes: item.teamNotes || "",
+          residence: "",
+          workConditions: "",
+          bio: ""
+        });
+        members.push(newM);
+
+        try {
+          const sb = getSupabase();
+          if (sb) dbInsertMember(newM).catch(err => console.warn("Supabase insert error:", err));
+        } catch (_) {}
+
+        renderMembersTable();
+        renderDashboard();
+        renderRanking();
+        showToast(`تمت إضافة العضو ${newM.fullName} بنجاح`);
+      } else if (action.type === "add_note" && action.text) {
+        if (!canWriteNotes()) { showToast("⚠️ الذكاء الاصطناعي غير مخول لإضافة الملاحظات", true); return; }
+        // ربط العضو المستهدف بنقاط البونص إن وُجد في النص
+        let targetId = null, targetName = null;
+        if (action.targetName) {
+          const qn = String(action.targetName).trim().toLowerCase();
+          const tm = members.find(x => x.fullName.trim().toLowerCase() === qn) ||
+                     members.find(x => x.fullName.toLowerCase().includes(qn) || qn.includes(x.fullName.toLowerCase()));
+          if (tm) { targetId = tm.id; targetName = tm.fullName; }
+        }
+        const newNote = {
+          id: Date.now(),
+          text: action.text,
+          author: currentUser ? currentUser.displayName : "قائد الفريق",
+          authorRole: currentUser ? currentUser.role : "Wasla Leader",
+          date: new Date().toISOString().slice(0, 10),
+          team: "Wasla",
+          targetTeam: "Wasla",
+          targetMemberId: targetId,
+          targetName: targetName
+        };
+        if (!notes.Wasla) notes.Wasla = [];
+        notes.Wasla.unshift(newNote);
+
+        try {
+          const sb = getSupabase();
+          if (sb) dbInsertNote(newNote).catch(err => console.warn("Supabase note insert error:", err));
+        } catch (_) {}
+
+        renderNotes();
+        showToast("تمت إضافة الملاحظة بنجاح");
+      } else if (action.type === "delete_member" && action.name) {
+        if (!canDeleteMembers()) { showToast("⚠️ الذكاء الاصطناعي غير مخول لحذف الأعضاء", true); return; }
+        const queryName = String(action.name).trim().toLowerCase();
+        let m = members.find(x => x.fullName.trim().toLowerCase() === queryName);
+        if (!m) m = members.find(x => x.fullName.toLowerCase().includes(queryName) || queryName.includes(x.fullName.toLowerCase()));
+
+        if (m) {
+          const memberId = m.id;
+          const memberName = m.fullName;
+          members = members.filter(x => x.id !== memberId);
+          try { localStorage.setItem("tms_members", JSON.stringify(members)); } catch (_) {}
+
+          try {
+            const sb = getSupabase();
+            if (sb && !currentUser.localOnly) dbDeleteMember(memberId).catch(err => console.warn("Supabase member delete error:", err));
+          } catch (_) {}
+
+          renderMembersTable();
+          renderDashboard();
+          renderRanking();
+          showToast(`تم حذف العضو ${escapeHtml(memberName)} بنجاح`);
+        }
+      }
+    }
+
+    function appendAiMessage(text, sender, isHtml = false) {
+      const container = document.getElementById("ai-messages");
+      if (!container) return;
+
+      const msgDiv = document.createElement("div");
+      msgDiv.className = `ai-msg ai-msg-${sender}`;
+
+      const avatar = document.createElement("div");
+      avatar.className = "ai-msg-avatar";
+      avatar.textContent = sender === "user" ? (currentUser ? currentUser.displayName.slice(0, 1) : "أ") : "و";
+
+      const content = document.createElement("div");
+      content.className = "ai-msg-content";
+
+      if (isHtml) {
+        content.innerHTML = `<div class="ai-msg-text">${text}</div>`;
+      } else {
+        const formatted = formatAiText(text);
+        content.innerHTML = `<div class="ai-msg-text">${formatted}</div>`;
+      }
+
+      if (sender === "bot") {
+        const actions = document.createElement("div");
+        actions.className = "ai-msg-actions";
+        actions.innerHTML = `<button type="button" class="ai-copy-btn" onclick="copyAiResponse(this)" title="نسخ الرد"><i class="far fa-copy"></i> نسخ</button>`;
+        content.appendChild(actions);
+      }
+
+      msgDiv.appendChild(avatar);
+      msgDiv.appendChild(content);
+      container.appendChild(msgDiv);
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function formatAiText(raw) {
+      const safe = raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const lines = safe.split("\n");
+      let out = "";
+      let inList = false;
+
+      for (let line of lines) {
+        let trimmed = line.trim();
+        if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+          if (!inList) { out += "<ul>"; inList = true; }
+          const itemText = trimmed.slice(2).replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+          out += `<li>${itemText}</li>`;
+        } else {
+          if (inList) { out += "</ul>"; inList = false; }
+          if (trimmed) {
+            const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+            out += `<p>${formatted}</p>`;
+          }
+        }
+      }
+      if (inList) out += "</ul>";
+      return out || `<p>${safe}</p>`;
+    }
+
+    function appendAiLoading(id) {
+      const container = document.getElementById("ai-messages");
+      if (!container) return;
+      const loadDiv = document.createElement("div");
+      loadDiv.className = "ai-msg ai-msg-bot ai-loading-msg";
+      loadDiv.id = id;
+      loadDiv.innerHTML = `
+        <div class="ai-msg-avatar">و</div>
+        <div class="ai-msg-content">
+          <div class="ai-loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      `;
+      container.appendChild(loadDiv);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function removeAiLoading(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    function askQuickPrompt(promptText) {
+      const input = document.getElementById("ai-prompt-input");
+      if (input) {
+        input.value = promptText;
+        handleAiSubmit();
+      }
+    }
+
+    function copyAiResponse(btn) {
+      const contentEl = btn.closest(".ai-msg-content");
+      if (!contentEl) return;
+      const textEl = contentEl.querySelector(".ai-msg-text");
+      const text = textEl ? textEl.innerText.trim() : contentEl.innerText.trim();
+      navigator.clipboard.writeText(text).then(() => {
+        btn.innerHTML = `<i class="fas fa-check"></i> تم النسخ`;
+        setTimeout(() => {
+          btn.innerHTML = `<i class="far fa-copy"></i> نسخ`;
+        }, 2000);
+      });
+    }
+
+    function openGroqKeyModal() {
+      const modal = document.getElementById("groq-key-modal");
+      if (modal) modal.classList.add("active");
+      const status = document.getElementById("groq-key-status");
+      if (status) status.innerHTML = "";
+    }
+
+    function closeGroqKeyModal() {
+      const modal = document.getElementById("groq-key-modal");
+      if (modal) modal.classList.remove("active");
+    }
+
+    async function saveGroqKeyToSupabase() {
+      const input = document.getElementById("groq-key-input");
+      const status = document.getElementById("groq-key-status");
+      const key = (input ? input.value : "").trim();
+
+      if (!key) {
+        if (status) status.innerHTML = `<span style="color:var(--danger)">يرجى كتابة أو لصق المفتاح أولاً.</span>`;
+        return;
+      }
+
+      if (status) status.innerHTML = `<span style="color:var(--text-secondary)">جاري الحفظ المشفر...</span>`;
+
+      try {
+        localStorage.setItem("tms_gemini_key", key); // الحفظ محلياً لدعم الـ Fallback المباشر
+
+        const sb = getSupabase();
+        if (sb && !currentUser.localOnly) {
+          const { error } = await sb.rpc("set_groq_key", { p_key: key });
+          if (error) console.warn("Supabase Vault save skipped or failed:", error);
+        }
+
+        if (status) status.innerHTML = `<span style="color:var(--success);font-weight:600"><i class="fas fa-check-circle"></i> تم حفظ المفتاح بنجاح!</span>`;
+        showToast("تم تحديث مفتاح Gemini بنجاح");
+        input.value = "";
+        setTimeout(() => {
+          closeGroqKeyModal();
+        }, 1500);
+      } catch (err) {
+        console.error("Vault save error:", err);
+        if (status) status.innerHTML = `<span style="color:var(--danger)">فشل الحفظ: ${err.message || "خطأ"}</span>`;
+      }
+    }
+
+    
+    // ========== Advanced Task Management (ReasonKit Methodology) ==========
+
+    function saveTasksToLocal() {
+      if (currentUser && currentUser.localOnly) {
+         try { localStorage.setItem("tms_tasks", JSON.stringify(teamTasks)); } catch(e){}
+      }
+    }
+
+    function renderTasksDashboard() {
+      const g = document.getElementById("tasks-grid");
+      const empty = document.getElementById("tasks-empty-state");
+      if (!g || !empty) return;
+      
+      if (teamTasks.length === 0) {
+        g.style.display = "none";
+        empty.style.display = "block";
+      } else {
+        empty.style.display = "none";
+        g.style.display = "grid";
+        
+        g.innerHTML = teamTasks.map(t => {
+           let assignedCount = t.assignedTo === "ALL" ? members.length : t.assignedTo.length;
+           
+           // Analyze tracking statuses dynamically!
+           let completedCount = 0;
+           let inProgressCount = 0;
+           let lateCount = 0;
+           
+           const now = new Date();
+           const isDeadlinePassed = t.hasDeadline && (new Date(t.deadlineDate) < now);
+           
+           Object.values(t.tracking || {}).forEach(statusObj => {
+              if (statusObj.status === "مكتمل") completedCount++;
+              else if (statusObj.status === "قيد التنفيذ") inProgressCount++;
+              else if (isDeadlinePassed) lateCount++;
+           });
+           
+           const totalHandled = Object.keys(t.tracking || {}).length;
+           if (isDeadlinePassed) {
+              lateCount += (assignedCount - totalHandled); // Those who haven't started and missed deadline
+           }
+           
+           let pct = assignedCount > 0 ? Math.round((completedCount / assignedCount) * 100) : 0;
+           let strokeColor = pct === 100 ? "var(--success)" : "var(--wasla)";
+           if (isDeadlinePassed && pct < 100) strokeColor = "var(--danger)";
+           
+           let deadlineHtml = ``;
+           if (t.hasDeadline) {
+             const ds = new Date(t.deadlineDate).toLocaleString('ar-EG', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+             deadlineHtml = `<div style="font-size:0.8rem; color:${isDeadlinePassed ? 'var(--danger)' : 'var(--text-muted)'}; margin-top:8px; font-weight:700;"><i class="fas ${isDeadlinePassed ? 'fa-exclamation-triangle' : 'fa-clock'}"></i> التسليم: ${ds}</div>`;
+           }
+           
+           return `
+             <div class="dash-card" style="padding:20px; display:flex; flex-direction:column; cursor:pointer; transition:var(--transition);" onclick="openTrackTaskModal(${t.id})" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.transform='none';this.style.boxShadow='var(--shadow-sm)'">
+               <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                 <div>
+                   <h4 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--text);">${escapeHtml(t.title)}</h4>
+                   ${deadlineHtml}
+                 </div>
+                 <div style="width:40px; height:40px; border-radius:50%; background:var(--bg); border:2px solid ${strokeColor}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.8rem; color:${strokeColor}">
+                    ${pct}%
+                 </div>
+               </div>
+               <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:16px; flex:1;">${escapeHtml(t.description || "لا يوجد تفاصيل إضافية")}</p>
+               <div style="display:flex; gap:10px; border-top:1px solid var(--border); padding-top:14px;">
+                 <span class="badge badge-done" title="مكتمل">${completedCount}</span>
+                 <span class="badge badge-pending" title="قيد التنفيذ">${inProgressCount}</span>
+                 ${lateCount > 0 ? `<span class="badge badge-late" title="متأخر">${lateCount}</span>` : ""}
+                 <span style="margin-right:auto; font-size:0.8rem; color:var(--text-muted); font-weight:700;"><i class="fas fa-users"></i> المكلفين: ${assignedCount}</span>
+               </div>
+             </div>
+           `;
+        }).join("");
+      }
+    }
+
+    let customAssignContainer = null;
+    function openCreateTaskModal() {
+      if (!isLeaderRole()) return;
+      document.getElementById('task-create-modal').classList.add("show");
+      document.getElementById('task-create-form').reset();
+      document.getElementById('t-deadline-group').style.display = 'none';
+      
+      customAssignContainer = document.getElementById("t-custom-assignees");
+      customAssignContainer.style.display = "none";
+      customAssignContainer.innerHTML = members.map(m => `
+         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; padding:6px; background:var(--card); border-radius:6px; border:1px solid var(--border-light)">
+           <input type="checkbox" name="task-assignees-selected" value="${m.id}" style="transform:scale(1.2);">
+           ${escapeHtml(m.fullName)} <small style="color:var(--text-muted)">(${m.device || 'لابتوب'})</small>
+         </label>
+      `).join("");
+    }
+    
+    function closeCreateTaskModal() {
+       document.getElementById('task-create-modal').classList.remove("show");
+    }
+
+    function toggleTaskDeadlineUI() {
+      const check = document.getElementById('t-has-deadline').checked;
+      document.getElementById('t-deadline-group').style.display = check ? 'block' : 'none';
+    }
+
+    function toggleTaskAssigneesUI() {
+      const type = document.getElementById('t-assign-type').value;
+      document.getElementById('t-custom-assignees').style.display = type === "custom" ? "flex" : "none";
+    }
+
+    function saveNewTask(e) {
+      e.preventDefault();
+      
+      const title = document.getElementById('t-title').value.trim();
+      const desc = document.getElementById('t-desc').value.trim();
+      const hasDeadline = document.getElementById('t-has-deadline').checked;
+      const deadlineDate = document.getElementById('t-deadline').value;
+      const assignType = document.getElementById('t-assign-type').value;
+      
+      if (!title) { showToast("برجاء إدخال اسم المهمة", true); return; }
+      if (hasDeadline && !deadlineDate) { showToast("برجاء تحديد وقت الانتهاء", true); return; }
+      
+      let assignedTo = "ALL";
+      if (assignType === "custom") {
+        const checkboxes = document.querySelectorAll('input[name="task-assignees-selected"]:checked');
+        assignedTo = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        if (assignedTo.length === 0) { showToast("برجاء اختيار عضو واحد على الأقل", true); return; }
+      }
+      
+      const newId = teamTasks.length > 0 ? Math.max(...teamTasks.map(t => t.id)) + 1 : 1;
+      const tsk = {
+        id: newId,
+        title,
+        description: desc,
+        hasDeadline,
+        deadlineDate,
+        assignedTo,
+        tracking: {}
+      };
+      
+      teamTasks.unshift(tsk);
+      saveTasksToLocal();
+      if (getSupabase() && currentUser && !currentUser.localOnly) {
+         dbInsertTask(tsk).catch(e => console.warn("Task cloud sync failed:", e));
+      }
+      closeCreateTaskModal();
+      renderTasksDashboard();
+      showToast("تم تكليف المهمة بنجاح للنظام!");
+    }
+
+    let trackingTaskId = null;
+    function openTrackTaskModal(id) {
+       trackingTaskId = id;
+       const tsk = teamTasks.find(t => t.id === id);
+       if(!tsk) return;
+       
+       document.getElementById("task-track-modal").classList.add("show");
+       document.getElementById("tt-title").textContent = tsk.title;
+       document.getElementById("tt-desc").textContent = tsk.description || "بدون تفاصيل";
+       
+       const dl = document.getElementById("tt-deadline");
+       const now = new Date();
+       if (tsk.hasDeadline) {
+          const isPassed = new Date(tsk.deadlineDate) < now;
+          const ds = new Date(tsk.deadlineDate).toLocaleString('ar-EG', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+          dl.innerHTML = `<i class="fas ${isPassed ? 'fa-exclamation-circle' : 'fa-stopwatch'}" style="color:${isPassed?'var(--danger)':'var(--text)'}"></i> <span style="color:${isPassed?'var(--danger)':'var(--text)'}">آخر موعد: ${ds}</span>`;
+       } else {
+          dl.innerHTML = `<i class="fas fa-infinity" style="color:var(--text-muted)"></i> <span style="color:var(--text-muted)">مهمة ممتدة بمرونة</span>`;
+       }
+       
+       renderTrackDetailsModalList();
+    }
+    
+    function closeTrackTaskModal() {
+       document.getElementById("task-track-modal").classList.remove("show");
+       trackingTaskId = null;
+    }
+    
+    // Auto-calculates what users should be visible and builds the UI list for tracking
+    function renderTrackDetailsModalList() {
+       if(!trackingTaskId) return;
+       const tsk = teamTasks.find(t => t.id === trackingTaskId);
+       if(!tsk) return;
+       
+       let targetMembers = members;
+       if (tsk.assignedTo !== "ALL") {
+          targetMembers = members.filter(m => tsk.assignedTo.includes(m.id));
+       }
+       
+       const lst = document.getElementById("tt-members-list");
+       const now = new Date();
+       const isDeadlinePassed = tsk.hasDeadline && (new Date(tsk.deadlineDate) < now);
+       
+       lst.innerHTML = targetMembers.map(m => {
+          let trackData = tsk.tracking[m.id] || { status: "لم يبدأ", notes: [] };
+          
+          let derivedStatus = trackData.status;
+          if (derivedStatus !== "مكتمل" && isDeadlinePassed) {
+             derivedStatus = "متأخر 🚨";
+          }
+          
+          const badgeClass = derivedStatus === "مكتمل" ? "badge-done" : (derivedStatus.includes("متأخر") ? "badge-late" : (derivedStatus==="قيد التنفيذ" ? "badge-pending" : ""));
+          
+          return `
+            <div style="background:var(--card); padding:16px; border-radius:12px; border:1px solid var(--border); box-shadow:var(--shadow-sm)">
+               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+                  <strong style="font-size:1.05rem; color:var(--text)">${escapeHtml(m.fullName)}</strong>
+                  <div style="display:flex; gap:10px; align-items:center;">
+                     <span class="badge ${badgeClass}" style="flex-shrink:0">${derivedStatus}</span>
+                     ${isLeaderRole() ? `
+                        <select onchange="updateMemberTaskStatus(${tsk.id}, ${m.id}, this.value)" style="padding:6px; border-radius:6px; border:1px solid var(--border); background:var(--bg); font-weight:700; cursor:pointer; font-family:inherit">
+                           <option value="" disabled selected>تحديث الحالة</option>
+                           <option value="لم يبدأ">لم يبدأ</option>
+                           <option value="قيد التنفيذ">قيد التنفيذ</option>
+                           <option value="مكتمل">مكتمل</option>
+                        </select>
+                     ` : ""}
+                  </div>
+               </div>
+               <div style="background:var(--bg); padding:10px; border-radius:8px;">
+                  ${trackData.notes.map(n => `
+                    <div style="font-size:0.85rem; color:var(--text); margin-bottom:6px; padding-bottom:6px; border-bottom:1px dashed var(--border-light)">
+                      <strong style="color:var(--wasla); font-size:0.75rem">${n.date}</strong><br>
+                      ${escapeHtml(n.text)}
+                    </div>
+                  `).join("")}
+                  ${isLeaderRole() ? `
+                    <div style="display:flex; gap:8px; margin-top:8px">
+                       <input type="text" id="t-note-input-${m.id}" placeholder="اكتب ملاحظة متابعة هنا ثم اضغط إرسال..." style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:6px; background:var(--card); font-family:inherit; font-size:0.85rem;" onkeydown="if(event.key==='Enter') submitTaskNote(${tsk.id}, ${m.id})">
+                       <button class="btn btn-primary btn-sm" onclick="submitTaskNote(${tsk.id}, ${m.id})"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                  ` : ""}
+               </div>
+            </div>
+          `;
+       }).join("");
+    }
+
+    function updateMemberTaskStatus(taskId, memberId, newStatus) {
+       const tsk = teamTasks.find(t => t.id === taskId);
+       if(!tsk) return;
+       if (!tsk.tracking[memberId]) tsk.tracking[memberId] = { status: "لم يبدأ", notes: [] };
+       tsk.tracking[memberId].status = newStatus;
+       saveTasksToLocal();
+       if (getSupabase() && currentUser && !currentUser.localOnly) {
+          dbUpdateTask(taskId, tsk).catch(e => console.warn("Task tracking update failed:", e));
+       }
+       renderTrackDetailsModalList();
+       renderTasksDashboard();
+       showToast("تم تحديث حالة تسليم العضو بنجاح");
+    }
+    
+    function submitTaskNote(taskId, memberId) {
+       const inp = document.getElementById(`t-note-input-${memberId}`);
+       if(!inp) return;
+       const txt = inp.value.trim();
+       if(!txt) return;
+       
+       const tsk = teamTasks.find(t => t.id === taskId);
+       if(!tsk) return;
+       if (!tsk.tracking[memberId]) tsk.tracking[memberId] = { status: "لم يبدأ", notes: [] };
+       
+       const stamp = new Date().toLocaleString('ar-EG', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+       tsk.tracking[memberId].notes.push({ text: txt, date: stamp });
+       saveTasksToLocal();
+       if (getSupabase() && currentUser && !currentUser.localOnly) {
+          dbUpdateTask(taskId, tsk).catch(e => console.warn("Task note cloud sync failed:", e));
+       }
+       renderTrackDetailsModalList();
+    }
+
+    (function init() {
+      const savedTheme = localStorage.getItem("tms_theme") || "light";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+      const ic0 = savedTheme === "dark" ? "fas fa-sun" : "fas fa-moon";
+      const ti = document.getElementById("theme-icon"); if (ti) ti.className = ic0;
+      const li = document.getElementById("login-theme-icon"); if (li) li.className = ic0;
+      const cw = document.getElementById("config-warn");
+      if (cw && (!SUPABASE_URL || SUPABASE_URL.includes("YOUR_PROJECT") || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === "YOUR_ANON_KEY")) {
+        cw.style.display = "flex";
+      }
+      // Password toggle
+      const pwToggle = document.getElementById('pw-toggle');
+      const pwInput  = document.getElementById('password');
+      const eyeShow  = document.getElementById('eye-show');
+      const eyeHide  = document.getElementById('eye-hide');
+      if (pwToggle && pwInput) {
+        pwToggle.addEventListener('click', () => {
+          const isHidden = pwInput.type === 'password';
+          pwInput.type = isHidden ? 'text' : 'password';
+          eyeShow.style.display = isHidden ? 'none' : '';
+          eyeHide.style.display = isHidden ? ''    : 'none';
+        });
+      }
+
+      // Login error display helper patch
+      const origLoginError = document.getElementById('login-error');
+      if (origLoginError) {
+        const observer = new MutationObserver(() => {
+          origLoginError.style.display = origLoginError.textContent.trim() ? 'block' : 'none';
+        });
+        observer.observe(origLoginError, { childList: true, characterData: true, subtree: true });
+      }
+
+      // Login button loading state
+      const loginForm = document.getElementById('login-form');
+      const loginBtn  = document.getElementById('login-submit-btn');
+      if (loginForm && loginBtn) {
+        loginForm.addEventListener('submit', () => {
+          loginBtn.classList.add('ls-loading');
+        }, { capture: true });
+      }
+
+      // AI prompt input Enter key handler & auto-resize
+      const aiInput = document.getElementById("ai-prompt-input");
+      if (aiInput) {
+        aiInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleAiSubmit();
+          }
+        });
+        aiInput.addEventListener("input", () => {
+          aiInput.style.height = "auto";
+          aiInput.style.height = Math.min(aiInput.scrollHeight, 120) + "px";
+        });
+      }
+
+      // Restore existing session
+      initPWA();
+      restoreSession();
+    })();
+  </script>
+</body>
+</html>

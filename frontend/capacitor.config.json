@@ -1,0 +1,18 @@
+{
+  "appId": "com.wasla.app",
+  "appName": "وصلة تك",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#F4F1EA",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_launcher",
+      "iconColor": "#C8412B"
+    }
+  }
+}

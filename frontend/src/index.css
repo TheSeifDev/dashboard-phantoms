@@ -1,0 +1,131 @@
+@layer theme, base, components, utilities;
+
+@import "tailwindcss";
+@import "./styles/tokens.css";
+@import "./styles/auth.css" layer(components);
+@import "./styles/tables.css" layer(components);
+@import "./styles/sidebar.css" layer(components);
+@import "./styles/members.css" layer(components);
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    letter-spacing: 0;
+  }
+
+  html {
+    min-width: 320px;
+    font-family: 'Cairo', system-ui, sans-serif;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-width: 320px;
+    min-height: 100dvh;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    touch-action: manipulation;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    min-height: var(--touch);
+  }
+
+  /* مربعات الاختيار والراديو: حد اللمس 44px يُطبَّق على الـ label المحيط وليس
+     على العنصر نفسه — وإلا تمدّد المربع عمودياً (13×44) وانكسر محاذاة الصفوف. */
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 0;
+    min-inline-size: 0;
+    accent-color: var(--primary);
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 1rem;
+  }
+
+  button {
+    min-inline-size: var(--touch);
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body,
+  #root {
+    overflow-x: clip;
+  }
+
+  /* Custom elegant scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 20px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-muted);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+  }
+}
+
+@keyframes app-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes app-modal-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* أيقونة نجاح التسليم في بوابة الأعضاء */
+@keyframes celebrate-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}

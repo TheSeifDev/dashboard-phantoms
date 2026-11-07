@@ -1,0 +1,244 @@
+name: Wasla — Build & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  WORKING_DIR: frontend
+
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # الوظيفة 1: فحص الجودة (TypeScript + UX Guard)
+  # ─────────────────────────────────────────────────────────
+  quality:
+    name: Quality Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc -b --noEmit
+
+      - name: UX Guard
+        run: node scripts/ux-guard.mjs
+        continue-on-error: true  # تحذير فقط، لا يوقف البناء
+
+      - name: Security regression tests
+        run: npm run test:security
+
+      - name: Health Check (CI mode)
+        run: node scripts/wasla-health-check.mjs --json
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+        continue-on-error: true  # Health check لا يوقف CI
+
+  # ─────────────────────────────────────────────────────────
+  # الوظيفة 2: البناء
+  # ─────────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: quality
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env.local for build
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env.local
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env.local
+          echo "VITE_VAPID_PUBLIC_KEY=${{ secrets.VITE_VAPID_PUBLIC_KEY }}" >> .env.local
+
+      - name: Build
+        run: npx vite build
+
+      - name: Verify build artifacts
+        run: |
+          test -f dist/index.html && echo "✓ index.html"
+          test -f dist/sw.js && echo "✓ sw.js (Service Worker)"
+          test -f dist/manifest.json && echo "✓ manifest.json"
+          test -f dist/wasla-logo.png && echo "✓ wasla-logo.png"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: ${{ env.WORKING_DIR }}/dist
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────
+  # الوظيفة 3: نشر Preview (على كل PR)
+  # ─────────────────────────────────────────────────────────
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ${{ env.WORKING_DIR }}/dist
+
+      - name: Create .env.local
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env.local
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env.local
+          echo "VITE_VAPID_PUBLIC_KEY=${{ secrets.VITE_VAPID_PUBLIC_KEY }}" >> .env.local
+
+      - name: Deploy to Vercel (Preview)
+        id: deploy
+        run: |
+          URL=$(npx vercel --token=${{ secrets.VERCEL_TOKEN }} --yes 2>&1 | grep -E 'https://' | tail -1)
+          echo "preview_url=$URL" >> $GITHUB_OUTPUT
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        if: steps.deploy.outputs.preview_url != ''
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `**معاينة النشر جاهزة**\n\n${process.env.PREVIEW_URL}`
+            });
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+
+  # ─────────────────────────────────────────────────────────
+  # الوظيفة 4: نشر Production (على push إلى main فقط)
+  # ─────────────────────────────────────────────────────────
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.production_url }}
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ${{ env.WORKING_DIR }}/dist
+
+      - name: Create .env.local
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env.local
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env.local
+          echo "VITE_VAPID_PUBLIC_KEY=${{ secrets.VITE_VAPID_PUBLIC_KEY }}" >> .env.local
+
+      - name: Deploy to Vercel (Production)
+        id: deploy
+        run: |
+          URL=$(npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes 2>&1 | grep -E 'https://' | tail -1)
+          echo "production_url=$URL" >> $GITHUB_OUTPUT
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Create Release Summary
+        run: |
+          echo "## نشر ناجح" >> $GITHUB_STEP_SUMMARY
+          echo "| البند | القيمة |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| الرابط | ${{ steps.deploy.outputs.production_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| الـ Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| التاريخ | $(date '+%Y-%m-%d %H:%M UTC') |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Verify security headers on production
+        run: |
+          URL="${{ steps.deploy.outputs.production_url }}"
+          for i in 1 2 3; do
+            HEADERS=$(curl -sSI "$URL/admin/login")
+            echo "$HEADERS"
+            echo "$HEADERS" | grep -qi 'content-security-policy:' && echo "CSP enforced" && exit 0
+            echo "CSP header missing (attempt $i/3) - retrying in 15s..."
+            sleep 15
+          done
+          echo "::error::Content-Security-Policy header missing on production after deploy"
+          exit 1
