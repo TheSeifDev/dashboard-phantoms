@@ -6,6 +6,16 @@ import { useAddMember, useUpdateMember, useDeleteMember } from '../members/api';
 import { toast } from '../../store/toast';
 import type { Member, Task } from '../../types/db';
 
+export interface AiPendingConfirmation {
+  messageId: string;
+  action: AiAction;
+  actionType: 'delete_member' | 'delete_task' | 'delete_note';
+  actionTypeName: string;
+  targetEntityName: string;
+  targetId: string | number;
+  details?: string;
+}
+
 export function useAiConversation(members: Member[], tasks: Task[]) {
   const ask = useAskWaslaAi();
   const createTask = useCreateTask();
@@ -21,6 +31,7 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
     text: 'أهلاً بيك! أنا مساعد وصلة الذكي. اسألني عن الفريق والمهام أو اطلب مني أعمل مهمة أو ملاحظة.',
     timestamp: new Date().toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
   }]);
+  const [pendingConfirmation, setPendingConfirmation] = useState<AiPendingConfirmation | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,6 +87,10 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
     }
   };
 
+  /**
+   * Strict member resolution: requires exact ID or exact full name.
+   * Rejects ambiguous, partial, or multiple matches to prevent accidental mutations.
+   */
   const resolveTargetMember = (actionId?: unknown, targetName?: string | null): Member => {
     const memberId = Number(actionId);
     if (!isNaN(memberId) && memberId > 0) {
@@ -91,28 +106,95 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
     const exact = members.find((m) => m.full_name.trim().replace(/\s+/g, ' ').toLowerCase() === clean);
     if (exact) return exact;
 
+    // Strict rejection of partial/loose substring matches
     const candidates = members.filter((m) => {
       const name = m.full_name.trim().replace(/\s+/g, ' ').toLowerCase();
       return name.includes(clean) || clean.includes(name);
     });
 
-    if (candidates.length === 1) {
-      return candidates[0];
-    }
-    if (candidates.length > 1) {
+    if (candidates.length > 0) {
       const list = candidates.map((c) => c.full_name).join('، ');
-      throw new Error(`يوجد أكثر من عضو يطابق الاسم "${targetName}" (${list}). يرجى تحديد الاسم ثلاثياً لتفادي تعديل عضو خاطئ.`);
+      throw new Error(`لم يتم العثور على تطابق دقيق للاسم "${targetName}". المقترحات المحتملة: (${list}). يرجى كتابة الاسم كاملاً كما هو مسجل أو استخدام معرّف العضو.`);
     }
 
-    throw new Error(`ملقيناش عضو اسمه: ${targetName}`);
+    throw new Error(`لم يتم العثور على أي عضو يطابق الاسم: "${targetName}".`);
   };
 
-  const executeAction = async (messageId: string, action: AiAction) => {
+  /**
+   * Strict task resolution: requires exact numeric ID or exact title match.
+   */
+  const resolveTargetTask = (actionId?: unknown, title?: string | null): Task => {
+    const taskId = Number(actionId);
+    if (!isNaN(taskId) && taskId > 0) {
+      const byId = tasks.find((t) => t.id === taskId);
+      if (byId) return byId;
+    }
+    if (!title || !title.trim()) {
+      throw new Error('عنوان أو معرّف المهمة مطلوب لتنفيذ هذا الإجراء.');
+    }
+    const clean = title.trim().toLowerCase();
+    const exact = tasks.find((t) => t.title.trim().toLowerCase() === clean);
+    if (exact) return exact;
+    throw new Error(`لم يتم العثور على مهمة تطابق العنوان "${title}" بدقة. يرجى تحديد العنوان الدقيق أو معرّف المهمة.`);
+  };
+
+  const executeAction = async (messageId: string, action: AiAction, isConfirmed = false) => {
     const payload = action.payload ?? {};
     const actionType = typeof action.type === 'string' ? action.type.trim().toLowerCase() : '';
     const stringValue = (value: unknown): string | null => typeof value === 'string' && value.trim() ? value.trim() : null;
+
     try {
-      if (actionType === 'create_task') {
+      // 1. Destructive Actions: Require explicit user confirmation modal first
+      if (actionType === 'delete_member') {
+        const targetName = action.name?.trim() ?? stringValue(payload.name);
+        const member = resolveTargetMember(action.id ?? payload.id, targetName);
+        if (!isConfirmed) {
+          setPendingConfirmation({
+            messageId,
+            action,
+            actionType: 'delete_member',
+            actionTypeName: 'حذف عضو نهائيًا',
+            targetEntityName: member.full_name,
+            targetId: member.id,
+            details: `البريد: ${member.email} | الجهاز: ${member.device || 'غير محدد'}`,
+          });
+          return;
+        }
+        await deleteMember.mutateAsync(member.id);
+      } else if (actionType === 'delete_task') {
+        const taskIdStr = stringValue(action.id) ?? stringValue(payload.id);
+        const title = stringValue(action.title) ?? stringValue(payload.title) ?? action.name;
+        const task = resolveTargetTask(taskIdStr, title);
+        if (!isConfirmed) {
+          setPendingConfirmation({
+            messageId,
+            action,
+            actionType: 'delete_task',
+            actionTypeName: 'حذف مهمة نهائيًا',
+            targetEntityName: task.title,
+            targetId: task.id,
+            details: task.deadline_date ? `الموعد النهائي: ${task.deadline_date}` : 'بدون موعد نهائي',
+          });
+          return;
+        }
+        await deleteTask.mutateAsync(task.id);
+      } else if (actionType === 'delete_note') {
+        const noteId = Number(stringValue(action.id) ?? stringValue(payload.id));
+        if (isNaN(noteId) || noteId <= 0) throw new Error('رقم الملاحظة غير صحيح.');
+        if (!isConfirmed) {
+          setPendingConfirmation({
+            messageId,
+            action,
+            actionType: 'delete_note',
+            actionTypeName: 'حذف ملاحظة نهائيًا',
+            targetEntityName: `ملاحظة رقم #${noteId}`,
+            targetId: noteId,
+            details: stringValue(payload.text) ? `النص: "${payload.text}"` : undefined,
+          });
+          return;
+        }
+        await deleteNote.mutateAsync(noteId);
+      } else if (actionType === 'create_task') {
         const rawAssigned = payload.assigned_to;
         const assignedTo: string[] | string = Array.isArray(rawAssigned) ? rawAssigned.map(String) : stringValue(rawAssigned) ?? 'ALL';
         await createTask.mutateAsync({
@@ -123,17 +205,6 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
           assigned_to: assignedTo,
           tracking: {},
         });
-      } else if (actionType === 'delete_task') {
-        const taskIdStr = stringValue(action.id) ?? stringValue(payload.id);
-        const taskId = Number(taskIdStr);
-        if (!taskIdStr || isNaN(taskId)) {
-          const title = stringValue(action.title) ?? stringValue(payload.title) ?? action.name;
-          const task = tasks.find((t) => t.title === title);
-          if (!task) throw new Error('ملقيناش المهمة عشان نمسحها.');
-          await deleteTask.mutateAsync(task.id);
-        } else {
-          await deleteTask.mutateAsync(taskId);
-        }
       } else if (actionType === 'add_note') {
         await createNote.mutateAsync({
           text: stringValue(payload.text) ?? 'ملاحظة من مساعد وصلة الذكي (بدون نص).',
@@ -142,10 +213,6 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
           target_member_id: null,
           target_name: stringValue(payload.targetName),
         });
-      } else if (actionType === 'delete_note') {
-        const noteId = Number(stringValue(action.id) ?? stringValue(payload.id));
-        if (isNaN(noteId)) throw new Error('رقم الملاحظة مش صحيح.');
-        await deleteNote.mutateAsync(noteId);
       } else if (actionType === 'create_member') {
         const fullName = stringValue(payload.full_name);
         const email = stringValue(payload.email)?.toLowerCase();
@@ -176,14 +243,11 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
           id: member.id,
           ...patch,
         });
-      } else if (actionType === 'delete_member') {
-        const targetName = action.name?.trim() ?? stringValue(payload.name);
-        const member = resolveTargetMember(action.id ?? payload.id, targetName);
-        await deleteMember.mutateAsync(member.id);
       } else {
         toast.warning(`نوع الإجراء "${action.type}" مش مدعوم للتنفيذ التلقائي دلوقتي — نفّذ التعديل يدويًا من صفحات الإدارة.`);
         return;
       }
+
       setMessages((current) => current.map((message) => message.id === messageId ? { ...message, actionExecuted: true } : message));
       toast.success('اتنفّذ الإجراء فعليًا في قاعدة البيانات.');
     } catch (cause) {
@@ -191,5 +255,26 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
     }
   };
 
-  return { messages, messagesEndRef, isPending: ask.isPending, sendMessage, executeAction };
+  const confirmAction = async () => {
+    if (!pendingConfirmation) return;
+    const { messageId, action } = pendingConfirmation;
+    setPendingConfirmation(null);
+    await executeAction(messageId, action, true);
+  };
+
+  const cancelAction = () => {
+    setPendingConfirmation(null);
+    toast.info('تم إلغاء تنفيذ الإجراء.');
+  };
+
+  return {
+    messages,
+    messagesEndRef,
+    isPending: ask.isPending,
+    sendMessage,
+    executeAction,
+    pendingConfirmation,
+    confirmAction,
+    cancelAction,
+  };
 }

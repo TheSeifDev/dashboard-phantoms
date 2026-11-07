@@ -98,17 +98,12 @@ export default function LoginPage() {
       });
 
       if (otpError) {
-        // If Supabase Auth is not configured for OTP, fall back to lookup_member_by_email
-        const fallbackToken = generateDeviceToken();
-        const member = await fetchMemberByEmail(cleanEmail, fallbackToken);
-        if (!member) {
-          setError('البريد ده مش مسجل في فريق وصلة. راجع الإدارة.');
-        } else {
-          setMemberRemember(remember);
-          setDeviceToken(fallbackToken, remember);
-          setMember(member, remember);
-          navigate('/portal');
-        }
+        // Reject insecure anonymous fallback: email verification is strictly required
+        setError(
+          otpError.message
+            ? `تعذر إرسال رمز التحقق: ${otpError.message}. التحقق من البريد إلزامي لربط هذا الجهاز والتأكد من هويتك.`
+            : 'تعذر إرسال رمز التحقق إلى بريدك الإلكتروني. التحقق من البريد إلزامي لربط هذا الجهاز والتأكد من هويتك. تأكد من الاتصال أو راجع الإدارة وأعد المحاولة.'
+        );
       } else {
         setStep('otp_required');
         setInfo('أرسلنا رمز التحقق إلى بريدك الإلكتروني. اكتب الرمز لتأكيد هويتك وربط هذا الجهاز.');

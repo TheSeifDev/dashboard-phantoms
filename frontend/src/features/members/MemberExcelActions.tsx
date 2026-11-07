@@ -22,6 +22,10 @@ export function MemberExcelActions({
 
   const chooseFile = async (file: File | undefined) => {
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('حجم الملف كبير جدًا. الحد الأقصى المسموح لملفات Excel هو 5 ميجابايت.');
+      return;
+    }
     try {
       const parsed = await parseMemberWorkbook(await file.arrayBuffer(), members, customFields);
       setRows(parsed.members);

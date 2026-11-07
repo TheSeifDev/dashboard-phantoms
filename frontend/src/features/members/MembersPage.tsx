@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Link2, Settings2, UserPlus, Users } from 'lucide-react';
 import type { Member, MemberInsert } from '../../types/db';
 import { useMembers, useAddMember, useUpdateMember, useDeleteMember } from './api';
@@ -20,6 +20,7 @@ import { MemberExcelActions } from './MemberExcelActions';
 import { sanitizeText, isValidEmail, isValidEgyptianPhone } from '../../lib/validators';
 import { handleSupabaseError, logError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
+import { useMemberDeletionStore } from '../../store/memberDeletion';
 
 const emptyMember: MemberInsert = {
   email: '',
@@ -64,23 +65,10 @@ export default function MembersPage() {
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(12);
-  const deleteTimer = useRef<number | null>(null);
-  const pendingDeleteRef = useRef<Member | null>(null);
+  const scheduleDelete = useMemberDeletionStore((state) => state.scheduleDelete);
+  const pendingDeleteMap = useMemberDeletionStore((state) => state.pendingMap);
 
   const customFields = customFieldsQuery.data ?? [];
-
-  useEffect(() => {
-    return () => {
-      if (deleteTimer.current !== null) {
-        window.clearTimeout(deleteTimer.current);
-        deleteTimer.current = null;
-        const target = pendingDeleteRef.current;
-        if (target) {
-          void remove.mutateAsync(target.id);
-        }
-      }
-    };
-  }, [remove]);
 
   const workConditions = useMemo(
     () => [
@@ -96,6 +84,7 @@ export default function MembersPage() {
   const visibleMembers = useMemo(
     () =>
       (query.data ?? []).filter((member) => {
+        if (pendingDeleteMap[member.id]) return false;
         const term = filters.search.trim().toLowerCase();
         const customValuesText = Object.values(member.custom_fields ?? {})
           .filter((v) => v !== null && v !== undefined)
@@ -113,7 +102,7 @@ export default function MembersPage() {
           filters.alexandria === 'ALL' || member.can_go_alexandria === (filters.alexandria === 'YES');
         return matchesText && matchesWorkConditions && matchesDevice && matchesAlexandria;
       }),
-    [filters, query.data],
+    [filters, query.data, pendingDeleteMap],
   );
 
   // العودة لأول صفحة عند تغير الفلاتر أو البيانات أو حجم الصفحة
@@ -201,40 +190,17 @@ export default function MembersPage() {
     }
   };
 
-  // حذف مؤجل 5 ثوانٍ مع تراجع — مع ضمان التنفيذ في حال مغادرة الصفحة (BUG-03 fix)
+  // حذف مؤجل 5 ثوانٍ مع تراجع — يُدار عبر store عام للحفاظ على مؤقت التراجع عبر التنقل ومنع الحذف الإجباري عند unmount
   const confirmDelete = () => {
     const target = memberToDelete;
     if (!target) return;
     setMemberToDelete(null);
-    if (deleteTimer.current !== null) {
-      window.clearTimeout(deleteTimer.current);
-      if (pendingDeleteRef.current) {
-        void remove.mutateAsync(pendingDeleteRef.current.id);
-      }
-    }
-    pendingDeleteRef.current = target;
-    deleteTimer.current = window.setTimeout(() => {
-      deleteTimer.current = null;
-      pendingDeleteRef.current = null;
-      void remove.mutateAsync(target.id).then(
-        () => toast.success(`${target.full_name} اتمسح نهائيًا.`),
-        (cause: unknown) => toast.error(handleSupabaseError(cause).message || 'معرفناش نمسح العضو.'),
-      );
-    }, DELETE_UNDO_MS);
-    toast.success(`${target.full_name} اتمسح.`, {
-      durationMs: DELETE_UNDO_MS,
-      action: {
-        label: 'تراجع',
-        onClick: () => {
-          if (deleteTimer.current !== null) {
-            window.clearTimeout(deleteTimer.current);
-            deleteTimer.current = null;
-            pendingDeleteRef.current = null;
-          }
-          toast.info('اتلغى الحذف.');
-        },
-      },
-    });
+    scheduleDelete(
+      target,
+      (id) => remove.mutateAsync(id),
+      DELETE_UNDO_MS,
+      (cause) => logError(cause, 'MembersPage.deleteMember'),
+    );
   };
 
   const askDelete = (member: Member) => {

@@ -20,7 +20,6 @@ backend/**/.env
 backend/**/.env.*
 backend/**/.env.local
 !backend/**/.env.example
-!backend/whatsapp-service/.env
 
 backend/whatsapp-bridge/data/
 

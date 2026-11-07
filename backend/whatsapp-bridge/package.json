@@ -13,8 +13,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
-    "@whiskeysockets/baileys": "7.0.0-rc14",
-    "exceljs": "^4.4.0"
+    "@whiskeysockets/baileys": "7.0.0-rc14"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

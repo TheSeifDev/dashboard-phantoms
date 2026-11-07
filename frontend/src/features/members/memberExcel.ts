@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import type { Member, MemberCustomField, MemberInsert } from '../../types/db';
 import { formatCustomFieldValue, getMemberCustomFieldValue } from './customFieldsApi';
+import { validateXlsxArchive } from './safeXlsxGuard';
 
 type Row = Record<string, unknown>;
 const clean = (value: unknown) =>
@@ -32,6 +33,9 @@ export async function parseMemberWorkbook(
   knownMembers: Member[],
   customFields: MemberCustomField[] = [],
 ): Promise<{ members: MemberInsert[]; skipped: number }> {
+  // Pre-decompression verification: defends against CVE-2026-78206 / Zip Bomb attacks
+  await validateXlsxArchive(buffer);
+
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
   const worksheet = workbook.worksheets[0];
