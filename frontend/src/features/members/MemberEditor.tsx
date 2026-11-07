@@ -84,7 +84,7 @@ export function MemberEditor({
   );
 
   const updateCustomFieldValue = (field: MemberCustomField, nextVal: string | number | boolean | null) => {
-    const nextMap = { ...(value.custom_fields ?? {}) };
+    const nextMap = value.custom_fields ? { ...value.custom_fields } : {};
     delete nextMap[field.label];
     if (nextVal === null || nextVal === '') {
       delete nextMap[String(field.id)];

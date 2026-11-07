@@ -218,11 +218,31 @@ export interface RevokeTaskApprovalResult {
   bonus_reversed: number;
 }
 
+export type MemberEvaluationGrade = 'excellent' | 'very_good' | 'good' | 'needs_improvement' | 'warning';
+
+export type MemberEvaluation = {
+  id: number;
+  created_at: string;
+  member_id: number;
+  title: string;
+  grade: MemberEvaluationGrade;
+  points: number;
+  feedback: string;
+  evaluator_name: string;
+  bonus_note_id?: number | null;
+  viewed_at?: string | null;
+  read_at?: string | null;
+  created_by?: string | null;
+};
+
+export type MemberEvaluationInsert = Omit<MemberEvaluation, 'id' | 'created_at'>;
+
 export interface Database {
   public: {
     Tables: {
       members: { Row: Member; Insert: MemberInsert; Update: Partial<MemberInsert>; Relationships: [] };
       member_custom_fields: { Row: MemberCustomField; Insert: MemberCustomFieldInsert; Update: Partial<MemberCustomFieldInsert>; Relationships: [] };
+      member_evaluations: { Row: MemberEvaluation; Insert: MemberEvaluationInsert; Update: Partial<MemberEvaluationInsert>; Relationships: [] };
       tasks: { Row: Task; Insert: TaskInsert; Update: Partial<TaskInsert>; Relationships: [] };
       notes: { Row: Note; Insert: NoteInsert; Update: Partial<NoteInsert>; Relationships: [] };
       announcements: { Row: Announcement; Insert: AnnouncementInsert; Update: Partial<AnnouncementInsert>; Relationships: [] };
@@ -230,6 +250,7 @@ export interface Database {
     Views: Record<string, never>;
     Functions: {
       has_admin_permission: { Args: { p_permission: string }; Returns: boolean };
+      bind_member_device_session: { Args: { p_email: string; p_device_token: string }; Returns: boolean };
       set_member_bonus_infinite: { Args: { p_member_id: number; p_enabled: boolean; p_reason: string }; Returns: boolean };
       get_member_bonus_total: { Args: { p_member_id: number; p_device_token: string }; Returns: number };
       get_member_tasks: { Args: { p_member_id: number; p_device_token: string }; Returns: Task[] };
@@ -265,6 +286,7 @@ export interface Database {
 export const TABLES = {
   members: 'members',
   member_custom_fields: 'member_custom_fields',
+  member_evaluations: 'member_evaluations',
   tasks: 'tasks',
   notes: 'notes',
   announcements: 'announcements',

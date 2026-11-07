@@ -31,14 +31,19 @@ console.log(`\n${C.bold}وصلة — مشغّل Migrations${C.reset}\n`);
 
 // ── تحميل env ──────────────────────────────────────────
 const ROOT_FE = resolve(__dirname, '..');
-const envLines = readFileSync(resolve(ROOT_FE, '.env.local'), 'utf8').split('\n');
+const envPath = existsSync(resolve(ROOT_FE, '.env.local'))
+  ? resolve(ROOT_FE, '.env.local')
+  : (existsSync(resolve(ROOT_FE, '.env.production')) ? resolve(ROOT_FE, '.env.production') : null);
 const env = {};
-for (const line of envLines) {
-  const m = line.match(/^([^#=]+)=(.*)$/);
-  if (m) env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '');
+if (envPath) {
+  const envLines = readFileSync(envPath, 'utf8').split('\n');
+  for (const line of envLines) {
+    const m = line.match(/^([^#=]+)=(.*)$/);
+    if (m) env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '');
+  }
 }
-const SUPABASE_URL  = env.VITE_SUPABASE_URL;
-const SUPABASE_ANON = env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL  = env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON = env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
 // ── فحص مجلد migrations ────────────────────────────────
 if (!existsSync(MIGRATIONS_DIR)) {
@@ -67,6 +72,8 @@ const MIGRATION_ORDER = [
   { file: '0018_task_approval_reversal_and_ratings.sql', desc: 'Permission-Safe Task Approval Reversal + Rating RPC' },
   { file: '0019_member_information_and_ratings.sql', desc: 'Custom Member Information Forms + Admin Ratings' },
   { file: '0020_member_custom_fields.sql',        desc: 'Dynamic Member Custom Fields (JSONB + Metadata)' },
+  { file: '0021_member_evaluations.sql',          desc: 'Structured Member Evaluations System' },
+  { file: '0022_dynamic_system_ownership.sql',    desc: 'Dynamic System Ownership + Hardened Auth Sessions' },
 ];
 
 // ── قراءة الملفات ──────────────────────────────────────

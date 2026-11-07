@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
 permissions:
@@ -34,7 +37,7 @@ jobs:
       - name: Install Dependencies and Build Web Bundle
         working-directory: frontend
         run: |
-          npm install
+          npm ci
           npx vite build
 
       - name: Sync Capacitor Android Project
@@ -42,29 +45,54 @@ jobs:
         run: |
           npx cap sync android
 
-      - name: Build Signed Android APK
+      - name: Check for Release Keystore Secrets
+        id: check-secrets
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ]; then
+            echo "has_keystore=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_keystore=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Android APK
         working-directory: frontend/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/wasla-app.apk
+          if [ "${{ steps.check-secrets.outputs.has_keystore }}" = "true" ]; then
+            echo "Building signed Release APK..."
+            ./gradlew assembleRelease
+            cp app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/wasla-app.apk || cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/wasla-app.apk
+          else
+            echo "Keystore secrets not configured. Building Debug APK for QA/Testing..."
+            ./gradlew assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/wasla-app-debug.apk
+          fi
 
-      - name: Upload APK Artifact
+      - name: Upload Debug APK Artifact
+        if: steps.check-secrets.outputs.has_keystore != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: wasla-app-apk
-          path: frontend/android/app/build/outputs/apk/debug/wasla-app.apk
+          name: wasla-app-debug-apk
+          path: frontend/android/app/build/outputs/apk/debug/wasla-app-debug.apk
           if-no-files-found: error
 
-      - name: Publish Direct Download APK to GitHub Releases
+      - name: Upload Release APK Artifact
+        if: steps.check-secrets.outputs.has_keystore == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasla-app-release-apk
+          path: frontend/android/app/build/outputs/apk/release/wasla-app.apk
+          if-no-files-found: error
+
+      - name: Publish Release APK to GitHub Releases
         uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && steps.check-secrets.outputs.has_keystore == 'true'
         with:
           tag_name: latest-apk
-          name: "تطبيق وصلة تك للأندرويد (APK)"
+          name: "تطبيق وصلة تك للأندرويد (Release APK)"
           body: |
-            نسخة تطبيق الأندرويد المحدثة تلقائياً لنظام إدارة فريق وصلة تك.
+            نسخة تطبيق الأندرويد الموقعة رسمياً لنظام إدارة فريق وصلة تك.
             حمّل الملف `wasla-app.apk` من الأسفل وثبّته مباشرة على هاتفك.
-          files: frontend/android/app/build/outputs/apk/debug/wasla-app.apk
+          files: frontend/android/app/build/outputs/apk/release/wasla-app.apk
           prerelease: false
           make_latest: true

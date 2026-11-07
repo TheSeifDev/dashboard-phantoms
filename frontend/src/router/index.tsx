@@ -63,7 +63,7 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
     return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir="rtl"><ErrorState message="معرفناش نتحقق من صلاحيات الإدارة. مفيش صفحات هتفتح قبل نجاح التحقق." onRetry={() => { void access.refetch(); }} /><Button variant="secondary" onClick={() => void handleLogout()}>تسجيل الخروج</Button></div>;
   }
   if (!access.data?.is_admin) {
-    return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir="rtl"><ErrorState message="الحساب ده مش مضاف كحساب إداري. تواصل مع مالك النظام AHMEDROMU4 لو محتاج صلاحية." /><Button variant="secondary" onClick={() => void handleLogout()}>تسجيل الخروج</Button></div>;
+    return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir="rtl"><ErrorState message="الحساب ده مش مضاف كحساب إداري. تواصل مع مالك النظام لو محتاج صلاحية." /><Button variant="secondary" onClick={() => void handleLogout()}>تسجيل الخروج</Button></div>;
   }
   return <>{children}</>;
 }

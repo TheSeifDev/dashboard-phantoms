@@ -52,7 +52,7 @@ export default function AdminLoginPage() {
         <div className="grid gap-4" role="alert">
           <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6">
             <ShieldAlert className="mt-0.5 shrink-0 text-amber-500" size={20} aria-hidden="true" />
-            <p>{access.isError ? 'معرفناش نتحقق من صلاحية الحساب. سجّل الخروج وجرّب تاني.' : 'الحساب ده مش مضاف كحساب إداري. اطلب من مالك النظام AHMEDROMU4 إضافته.'}</p>
+            <p>{access.isError ? 'معرفناش نتحقق من صلاحية الحساب. سجّل الخروج وجرّب تاني.' : 'الحساب ده مش مضاف كحساب إداري. اطلب من مالك النظام إضافته.'}</p>
           </div>
           <Button variant="secondary" onClick={() => void signOutAndRetry()}>تسجيل الخروج والمحاولة بحساب آخر</Button>
         </div>
@@ -103,7 +103,7 @@ export default function AdminLoginPage() {
           await supabase.auth.signOut();
           setError(accessError
             ? 'معرفناش نتحقق من صلاحيات الحساب. جرّب تاني بعد شوية.'
-            : 'الحساب ده مش مضاف للإدارة. اطلب من المالك AHMEDROMU4 إضافته.');
+            : 'الحساب ده مش مضاف للإدارة. اطلب من مالك النظام إضافته.');
           return;
         }
         syncAdminSessionStorage(remember);

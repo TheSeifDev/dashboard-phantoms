@@ -1,21 +1,34 @@
 .playwright-mcp/
 .claude/
 
-# ملفات السجلات (hexstrike.log وغيرها) — لا تدخل المستودع
+# Log files
 *.log
-backend/whatsapp-bridge/.env
-backend/whatsapp-bridge/.env.*
-!backend/whatsapp-bridge/.env.example
+
+# Environment & Secrets (Deny by default)
+.env
+.env.*
+.env.local
+!.env.example
+
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+!frontend/.env.example
+!frontend/.env.production
+
+backend/**/.env
+backend/**/.env.*
+backend/**/.env.local
+!backend/**/.env.example
+!backend/whatsapp-service/.env
+
 backend/whatsapp-bridge/data/
-# أسرار التطوير المحلية لجسر واتساب — لا تدخل المستودع أبداً
-backend/whatsapp-service/.env.local
 
 # Dependencies
 node_modules/
 
 # Build output
 dist/
-# ملفات العمل المحلية وأسرار Vercel المسحوبة — لا تدخل المستودع
 .work/
 .manus/
 outputs/

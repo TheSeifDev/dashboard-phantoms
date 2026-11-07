@@ -23,7 +23,7 @@ export function MemberExcelActions({
   const chooseFile = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const parsed = parseMemberWorkbook(await file.arrayBuffer(), members, customFields);
+      const parsed = await parseMemberWorkbook(await file.arrayBuffer(), members, customFields);
       setRows(parsed.members);
       setMessage(`اتجهز ${parsed.members.length} عضو. اتساب ${parsed.skipped} صف عشان البيانات ناقصة أو مكررة.`);
     } catch (cause) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAskWaslaAi, type AiAction, type AiMessage } from './api';
+import { useAskWaslaAi, type AiAction, type AiChatTurn, type AiMessage } from './api';
 import { useCreateTask, useDeleteTask } from '../tasks/api';
 import { useCreateNote, useDeleteNote } from '../notes/api';
 import { useAddMember, useUpdateMember, useDeleteMember } from '../members/api';
@@ -50,8 +50,18 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
       timestamp: new Date().toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
     };
     setMessages((current) => [...current, userMessage]);
+
+    // Build chat history turns for multi-turn conversational context (BUG-01 fix)
+    const history: AiChatTurn[] = messages
+      .filter((m) => m.id !== 'welcome')
+      .slice(-10)
+      .map((m) => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        parts: [{ text: m.text }],
+      }));
+
     try {
-      const response = await ask.mutateAsync({ question: text, context: buildContext() });
+      const response = await ask.mutateAsync({ question: text, context: buildContext(), history });
       setMessages((current) => [...current, {
         id: (Date.now() + 1).toString(), sender: 'assistant', text: response.answer || 'اتنفّذ طلبك.',
         timestamp: new Date().toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
@@ -64,6 +74,37 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
         timestamp: new Date().toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
       }]);
     }
+  };
+
+  const resolveTargetMember = (actionId?: unknown, targetName?: string | null): Member => {
+    const memberId = Number(actionId);
+    if (!isNaN(memberId) && memberId > 0) {
+      const byId = members.find((m) => m.id === memberId);
+      if (byId) return byId;
+    }
+
+    if (!targetName || !targetName.trim()) {
+      throw new Error('اسم أو معرّف العضو مطلوب لتنفيذ هذا الإجراء.');
+    }
+
+    const clean = targetName.trim().replace(/\s+/g, ' ').toLowerCase();
+    const exact = members.find((m) => m.full_name.trim().replace(/\s+/g, ' ').toLowerCase() === clean);
+    if (exact) return exact;
+
+    const candidates = members.filter((m) => {
+      const name = m.full_name.trim().replace(/\s+/g, ' ').toLowerCase();
+      return name.includes(clean) || clean.includes(name);
+    });
+
+    if (candidates.length === 1) {
+      return candidates[0];
+    }
+    if (candidates.length > 1) {
+      const list = candidates.map((c) => c.full_name).join('، ');
+      throw new Error(`يوجد أكثر من عضو يطابق الاسم "${targetName}" (${list}). يرجى تحديد الاسم ثلاثياً لتفادي تعديل عضو خاطئ.`);
+    }
+
+    throw new Error(`ملقيناش عضو اسمه: ${targetName}`);
   };
 
   const executeAction = async (messageId: string, action: AiAction) => {
@@ -86,7 +127,6 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
         const taskIdStr = stringValue(action.id) ?? stringValue(payload.id);
         const taskId = Number(taskIdStr);
         if (!taskIdStr || isNaN(taskId)) {
-          // Try finding by title if id is not provided
           const title = stringValue(action.title) ?? stringValue(payload.title) ?? action.name;
           const task = tasks.find((t) => t.title === title);
           if (!task) throw new Error('ملقيناش المهمة عشان نمسحها.');
@@ -126,34 +166,19 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
           can_go_alexandria: false,
         });
       } else if (actionType === 'update_member') {
-        const targetName = action.name?.trim();
-        const patch = action.patch;
-        if (!targetName || !patch) {
-          throw new Error('بيانات العضو أو التعديل ناقصة في رد المساعد.');
+        const targetName = action.name?.trim() ?? stringValue(payload.name);
+        const patch = action.patch ?? (payload.patch as Record<string, unknown> | undefined);
+        if (!patch) {
+          throw new Error('بيانات التعديل ناقصة في رد المساعد.');
         }
-
-        // Find the member by name — exact, then contains, then first-name match
-        // (AI often returns first name only, e.g. "حنين" instead of full name).
-        const normalized = targetName.replace(/\s+/g, ' ');
-        const member = members.find((m) => m.full_name === normalized)
-          ?? members.find((m) => m.full_name.includes(normalized) || normalized.includes(m.full_name))
-          ?? members.find((m) => m.full_name.split(/\s+/)[0] === normalized.split(/\s+/)[0]);
-        if (!member) {
-          throw new Error(`ملقيناش عضو اسمه: ${targetName}`);
-        }
-
+        const member = resolveTargetMember(action.id ?? payload.id, targetName);
         await updateMember.mutateAsync({
           id: member.id,
           ...patch,
         });
       } else if (actionType === 'delete_member') {
         const targetName = action.name?.trim() ?? stringValue(payload.name);
-        if (!targetName) throw new Error('اكتب اسم العضو.');
-        const normalized = targetName.replace(/\s+/g, ' ');
-        const member = members.find((m) => m.full_name === normalized)
-          ?? members.find((m) => m.full_name.includes(normalized) || normalized.includes(m.full_name))
-          ?? members.find((m) => m.full_name.split(/\s+/)[0] === normalized.split(/\s+/)[0]);
-        if (!member) throw new Error(`ملقيناش عضو اسمه: ${targetName}`);
+        const member = resolveTargetMember(action.id ?? payload.id, targetName);
         await deleteMember.mutateAsync(member.id);
       } else {
         toast.warning(`نوع الإجراء "${action.type}" مش مدعوم للتنفيذ التلقائي دلوقتي — نفّذ التعديل يدويًا من صفحات الإدارة.`);

@@ -67,8 +67,8 @@ test('session_token is never anon-readable', async (t) => {
   });
   await t.test('migration 0009 grants anon columns without session_token', () => {
     const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
-    assert.ok(!/GRANT SELECT \([^)]*session_token[^)]*\)\s*ON public\.members TO anon/.test(mig));
-    assert.match(mig, /GRANT SELECT \(id, created_at, email, full_name, bio, device/);
+    assert.ok(!/GRANT (ALL|SELECT)[^;]*session_token[^;]*ON (TABLE )?public\.members TO [^;]*anon/i.test(mig));
+    assert.match(mig, /REVOKE ALL ON public\.members FROM PUBLIC,\s*anon;/);
   });
   await t.test('lookup_member_by_email returns no session_token', () => {
     const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
@@ -92,7 +92,7 @@ test('task tracking updates are device-bound server-side', async (t) => {
   });
   await t.test('migration revokes anon direct UPDATE on tasks', () => {
     const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
-    assert.match(mig, /REVOKE ALL ON public\.tasks FROM anon/);
+    assert.match(mig, /REVOKE ALL ON public\.tasks FROM (PUBLIC,\s*)?anon;/);
     assert.ok(!/GRANT UPDATE[^\n]*ON public\.tasks TO anon/.test(mig));
   });
   await t.test('submit_task_status verifies device + assignment + blocks approved', () => {
@@ -232,13 +232,13 @@ test('edge functions and bridge enforce auth', async (t) => {
   await t.test('wasla-ai: no wildcard CORS, POST-only, admin fallback to is_admin()', () => {
     const fn = rootSrc('backend/supabase/functions/wasla-ai/index.ts');
     assert.ok(!fn.includes("?? '*'"), 'wildcard origin must be gone');
-    assert.match(fn, /allowedOrigins\.includes\(origin\)/);
+    assert.ok(/allowedOrigins\.(has|includes)\(origin\)/.test(fn), 'allowedOrigins must guard origin');
     assert.match(fn, /req\.method !== 'POST'/);
-    assert.match(fn, /rpc\('is_admin'\)/);
+    assert.ok(/rpc\('(is_admin|has_admin_permission)'/.test(fn), 'admin check required');
   });
   await t.test('push-notify: origin allowlist enforced', () => {
     const fn = rootSrc('backend/supabase/functions/push-notify/index.ts');
-    assert.match(fn, /allowedOrigins\.includes\(origin\)/);
+    assert.ok(/allowedOrigins\.(has|includes)\(origin\)/.test(fn), 'allowedOrigins must guard origin');
   });
   await t.test('bridge auth: no silent dev fallback', () => {
     const auth = rootSrc('backend/whatsapp-service/src/middleware/auth.ts');

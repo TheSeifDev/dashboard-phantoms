@@ -1,7 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const OWNER_ID = '8ce17aae-84c1-4c89-a020-8b683a0dbabb';
 const allowedOrigins = new Set([
   ...(Deno.env.get('WASLA_ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()),
   Deno.env.get('WASLA_APP_URL')?.trim().replace(/\/+$/, '') ?? '',
@@ -42,7 +41,7 @@ serve(async (req) => {
   if (authError || !userData.user) return reply({ code: 'UNAUTHORIZED', message: 'جلسة الإدارة غير صالحة.' }, 401, origin);
 
   const { data: access, error: accessError } = await ownerClient.rpc('get_admin_access');
-  if (accessError || !access?.is_owner || userData.user.id !== OWNER_ID) {
+  if (accessError || !access?.is_owner) {
     return reply({ code: 'OWNER_ONLY', message: 'حذف الحسابات متاح لمالك النظام فقط.' }, 403, origin);
   }
 
@@ -51,7 +50,7 @@ serve(async (req) => {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
     return reply({ code: 'INVALID_ID', message: 'معرّف الحساب مش صحيح.' }, 400, origin);
   }
-  if (userId === OWNER_ID) {
+  if (userId === userData.user.id) {
     return reply({ code: 'OWNER_IMMUTABLE', message: 'مينفعش حذف مالك النظام.' }, 403, origin);
   }
 

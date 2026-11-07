@@ -259,6 +259,16 @@ export const fetchMemberByEmail = async (email: string, deviceToken?: string): P
   return (data as Member | null) ?? null;
 };
 
+export const bindMemberDeviceSession = async (email: string, deviceToken: string): Promise<boolean> => {
+  const cleanEmail = email.trim().toLowerCase();
+  const { data, error } = await supabase.rpc('bind_member_device_session', {
+    p_email: cleanEmail,
+    p_device_token: deviceToken,
+  });
+  if (error) throw toAppError(error, 'معرفناش نوثق ونربط هذا الجهاز.');
+  return data === true;
+};
+
 export const logoutMemberDevice = async (memberId: number, deviceToken: string): Promise<void> => {
   const { error } = await supabase.rpc('logout_member_device', {
     p_member_id: memberId,

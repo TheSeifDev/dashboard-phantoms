@@ -1,29 +1,61 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import type { Member, MemberCustomField, MemberInsert } from '../../types/db';
 import { formatCustomFieldValue, getMemberCustomFieldValue } from './customFieldsApi';
 
 type Row = Record<string, unknown>;
-const isRow = (value: unknown): value is Row =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 const clean = (value: unknown) =>
   Array.from(String(value ?? ''))
     .filter((character) => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127)
     .join('')
     .trim();
+
 const cell = (row: Row, names: string[]) =>
   names
     .map((name) => row[name])
     .find((value) => value !== undefined && value !== null && clean(value) !== '');
 
-export function parseMemberWorkbook(
+function extractCellValue(cellValue: ExcelJS.CellValue): unknown {
+  if (cellValue === null || cellValue === undefined) return '';
+  if (typeof cellValue === 'object') {
+    if ('text' in cellValue) {
+      return (cellValue as { text: string }).text;
+    }
+    if ('result' in cellValue) {
+      return (cellValue as { result: unknown }).result;
+    }
+  }
+  return cellValue;
+}
+
+export async function parseMemberWorkbook(
   buffer: ArrayBuffer,
   knownMembers: Member[],
   customFields: MemberCustomField[] = [],
-) {
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  if (!sheet) throw new Error('الملف مفيهوش ورقة بيانات.');
-  const rows = XLSX.utils.sheet_to_json<unknown>(sheet).filter(isRow);
+): Promise<{ members: MemberInsert[]; skipped: number }> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) throw new Error('الملف مفيهوش ورقة بيانات.');
+
+  const headers: string[] = [];
+  const headerRow = worksheet.getRow(1);
+  headerRow.eachCell({ includeEmpty: false }, (c, colNumber) => {
+    headers[colNumber] = clean(extractCellValue(c.value));
+  });
+
+  const rows: Row[] = [];
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const rowObj: Row = {};
+    row.eachCell({ includeEmpty: false }, (c, colNumber) => {
+      const header = headers[colNumber];
+      if (header) {
+        rowObj[header] = extractCellValue(c.value);
+      }
+    });
+    rows.push(rowObj);
+  });
+
   const imported: MemberInsert[] = [];
   const seenNames = new Set<string>();
   const seenEmails = new Set<string>();
@@ -82,31 +114,59 @@ export function parseMemberWorkbook(
   return { members: imported, skipped };
 }
 
-export function downloadMembersWorkbook(members: Member[], customFields: MemberCustomField[] = []) {
-  const rows = members.map((member) => {
-    const baseRow: Record<string, string> = {
-      'الاسم الكامل': safeCell(member.full_name),
-      'البريد الإلكتروني': safeCell(member.email),
-      'الجهاز المتوفر': safeCell(member.device),
-      'محل الإقامة': safeCell(member.residence),
-      'رقم الهاتف': safeCell(member.phone),
-      'متاح لنزول الإسكندرية': member.can_go_alexandria ? 'نعم' : 'لا',
-      'حالة العمل': safeCell(member.work_status),
-      'نبذة / الدور': safeCell(member.bio),
-      'الجنس': safeCell(member.gender),
-      'ظروف العمل': safeCell(member.work_conditions),
+export async function downloadMembersWorkbook(members: Member[], customFields: MemberCustomField[] = []): Promise<void> {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('أعضاء وصلة', {
+    views: [{ rightToLeft: true }],
+  });
+
+  const columns: { header: string; key: string; width: number }[] = [
+    { header: 'الاسم الكامل', key: 'name', width: 25 },
+    { header: 'البريد الإلكتروني', key: 'email', width: 28 },
+    { header: 'الجهاز المتوفر', key: 'device', width: 18 },
+    { header: 'محل الإقامة', key: 'residence', width: 20 },
+    { header: 'رقم الهاتف', key: 'phone', width: 16 },
+    { header: 'متاح لنزول الإسكندرية', key: 'alex', width: 22 },
+    { header: 'حالة العمل', key: 'work_status', width: 16 },
+    { header: 'نبذة / الدور', key: 'bio', width: 25 },
+    { header: 'الجنس', key: 'gender', width: 12 },
+    { header: 'ظروف العمل', key: 'work_conditions', width: 20 },
+  ];
+
+  for (const field of customFields) {
+    columns.push({
+      header: field.label,
+      key: `cf_${field.id}`,
+      width: 20,
+    });
+  }
+
+  worksheet.columns = columns;
+
+  for (const member of members) {
+    const rowValues: Record<string, string> = {
+      name: safeCell(member.full_name),
+      email: safeCell(member.email),
+      device: safeCell(member.device),
+      residence: safeCell(member.residence),
+      phone: safeCell(member.phone),
+      alex: member.can_go_alexandria ? 'نعم' : 'لا',
+      work_status: safeCell(member.work_status),
+      bio: safeCell(member.bio),
+      gender: safeCell(member.gender),
+      work_conditions: safeCell(member.work_conditions),
     };
+
     for (const field of customFields) {
       const val = formatCustomFieldValue(field, getMemberCustomFieldValue(member, field));
-      baseRow[field.label] = safeCell(val || null);
+      rowValues[`cf_${field.id}`] = safeCell(val || null);
     }
-    return baseRow;
-  });
-  const sheet = XLSX.utils.json_to_sheet(rows);
-  sheet['!dir'] = 'rtl';
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, 'أعضاء وصلة');
+
+    worksheet.addRow(rowValues);
+  }
+
   const fileName = `wasla-members-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const uint8 = await workbook.xlsx.writeBuffer();
 
   const isNativeContainer =
     typeof window !== 'undefined' &&
@@ -116,18 +176,15 @@ export function downloadMembersWorkbook(members: Member[], customFields: MemberC
 
   if (isNativeContainer && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     try {
-      const arrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
       const file = new File(
-        [arrayBuffer],
+        [uint8],
         fileName,
         { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
       );
       if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-        void navigator.share({
+        await navigator.share({
           title: 'دليل أعضاء وصلة',
           files: [file],
-        }).catch(() => {
-          XLSX.writeFile(workbook, fileName);
         });
         return;
       }
@@ -136,10 +193,20 @@ export function downloadMembersWorkbook(members: Member[], customFields: MemberC
     }
   }
 
-  XLSX.writeFile(workbook, fileName);
+  const blob = new Blob([uint8], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 }
 
-function safeCell(value: string | null) {
+function safeCell(value: string | null): string {
   const text = clean(value);
   return /^[=+\-@]/.test(text) ? `'${text}` : text;
 }

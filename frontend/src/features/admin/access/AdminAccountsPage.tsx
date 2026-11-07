@@ -91,7 +91,7 @@ export default function AdminAccountsPage() {
     return <ErrorState message="معرفناش نتحقق من صلاحياتك. أعد المحاولة قبل إدارة الحسابات." onRetry={() => { void access.refetch(); }} />;
   }
   if (!access.data?.is_owner) {
-    return <EmptyState title="إدارة الحسابات للمالك فقط" description="حسابك يقدر يدير بيانات النظام، لكن إضافة المشرفين أو حذفهم محصورة بحساب AHMEDROMU4." />;
+    return <EmptyState title="إدارة الحسابات للمالك فقط" description="حسابك يقدر يدير بيانات النظام، لكن إضافة المشرفين أو حذفهم محصورة بمالك النظام." />;
   }
 
   return (
@@ -99,7 +99,7 @@ export default function AdminAccountsPage() {
       <PageHeader
         icon={<ShieldCheck size={24} />}
         title="إدارة المشرفين"
-        description="حساب AHMEDROMU4 هو مالك النظام الثابت. تقدر تحدد الأقسام المتاحة لكل مشرف وتحذف حساب دخوله بالكامل."
+        description="مالك النظام يملك كامل الصلاحيات. تقدر تحدد الأقسام المتاحة لكل مشرف وتحذف حساب دخوله بالكامل."
       />
 
       <Card>

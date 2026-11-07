@@ -65,15 +65,22 @@ export default function MembersPage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(12);
   const deleteTimer = useRef<number | null>(null);
+  const pendingDeleteRef = useRef<Member | null>(null);
 
   const customFields = customFieldsQuery.data ?? [];
 
-  useEffect(
-    () => () => {
-      if (deleteTimer.current !== null) window.clearTimeout(deleteTimer.current);
-    },
-    [],
-  );
+  useEffect(() => {
+    return () => {
+      if (deleteTimer.current !== null) {
+        window.clearTimeout(deleteTimer.current);
+        deleteTimer.current = null;
+        const target = pendingDeleteRef.current;
+        if (target) {
+          void remove.mutateAsync(target.id);
+        }
+      }
+    };
+  }, [remove]);
 
   const workConditions = useMemo(
     () => [
@@ -144,7 +151,7 @@ export default function MembersPage() {
       meeting_attendance: member.meeting_attendance,
       work_status: member.work_status ?? 'active',
       can_go_alexandria: member.can_go_alexandria,
-      custom_fields: { ...(member.custom_fields ?? {}) },
+      custom_fields: member.custom_fields ? { ...member.custom_fields } : {},
     });
     setFormError('');
     setDialogOpen(true);
@@ -194,14 +201,21 @@ export default function MembersPage() {
     }
   };
 
-  // حذف مؤجل 5 ثوانٍ مع تراجع — نفس منطق الحذف الحالي دون تغيير semantics الخادم
+  // حذف مؤجل 5 ثوانٍ مع تراجع — مع ضمان التنفيذ في حال مغادرة الصفحة (BUG-03 fix)
   const confirmDelete = () => {
     const target = memberToDelete;
     if (!target) return;
     setMemberToDelete(null);
-    if (deleteTimer.current !== null) window.clearTimeout(deleteTimer.current);
+    if (deleteTimer.current !== null) {
+      window.clearTimeout(deleteTimer.current);
+      if (pendingDeleteRef.current) {
+        void remove.mutateAsync(pendingDeleteRef.current.id);
+      }
+    }
+    pendingDeleteRef.current = target;
     deleteTimer.current = window.setTimeout(() => {
       deleteTimer.current = null;
+      pendingDeleteRef.current = null;
       void remove.mutateAsync(target.id).then(
         () => toast.success(`${target.full_name} اتمسح نهائيًا.`),
         (cause: unknown) => toast.error(handleSupabaseError(cause).message || 'معرفناش نمسح العضو.'),
@@ -215,6 +229,7 @@ export default function MembersPage() {
           if (deleteTimer.current !== null) {
             window.clearTimeout(deleteTimer.current);
             deleteTimer.current = null;
+            pendingDeleteRef.current = null;
           }
           toast.info('اتلغى الحذف.');
         },
