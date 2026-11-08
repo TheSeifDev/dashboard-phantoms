@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build PHANTOMS Android APK
 
 on:
   push:
@@ -54,34 +54,34 @@ jobs:
             echo "has_keystore=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build Android APK
+      - name: Build PHANTOMS Android APK
         working-directory: frontend/android
         run: |
           chmod +x gradlew
           if [ "${{ steps.check-secrets.outputs.has_keystore }}" = "true" ]; then
             echo "Building signed Release APK..."
             ./gradlew assembleRelease
-            cp app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/wasla-app.apk || cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/wasla-app.apk
+            cp app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/phantoms-app.apk || cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/phantoms-app.apk
           else
             echo "Keystore secrets not configured. Building Debug APK for QA/Testing..."
             ./gradlew assembleDebug
-            cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/wasla-app-debug.apk
+            cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/phantoms-app-debug.apk
           fi
 
       - name: Upload Debug APK Artifact
         if: steps.check-secrets.outputs.has_keystore != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: wasla-app-debug-apk
-          path: frontend/android/app/build/outputs/apk/debug/wasla-app-debug.apk
+          name: phantoms-app-debug-apk
+          path: frontend/android/app/build/outputs/apk/debug/phantoms-app-debug.apk
           if-no-files-found: error
 
       - name: Upload Release APK Artifact
         if: steps.check-secrets.outputs.has_keystore == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: wasla-app-release-apk
-          path: frontend/android/app/build/outputs/apk/release/wasla-app.apk
+          name: phantoms-app-release-apk
+          path: frontend/android/app/build/outputs/apk/release/phantoms-app.apk
           if-no-files-found: error
 
       - name: Publish Release APK to GitHub Releases
@@ -89,10 +89,10 @@ jobs:
         if: github.ref == 'refs/heads/main' && steps.check-secrets.outputs.has_keystore == 'true'
         with:
           tag_name: latest-apk
-          name: "تطبيق وصلة تك للأندرويد (Release APK)"
+          name: "تطبيق PHANTOMS للأندرويد (Release APK)"
           body: |
-            نسخة تطبيق الأندرويد الموقعة رسمياً لنظام إدارة فريق وصلة تك.
-            حمّل الملف `wasla-app.apk` من الأسفل وثبّته مباشرة على هاتفك.
-          files: frontend/android/app/build/outputs/apk/release/wasla-app.apk
+            نسخة تطبيق الأندرويد الموقعة رسمياً لنظام إدارة وعمليات فريق PHANTOMS.
+            حمّل الملف `phantoms-app.apk` من الأسفل وثبّته مباشرة على هاتفك.
+          files: frontend/android/app/build/outputs/apk/release/phantoms-app.apk
           prerelease: false
           make_latest: true

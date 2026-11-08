@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * build-apk.mjs — بناء ملف تطبيق الأندرويد (wasla-app.apk) بضغطة واحدة
+ * build-apk.mjs — بناء ملف تطبيق الأندرويد (phantoms-app.apk) بضغطة واحدة
  *
  * الاستخدام:
  *   npm run apk
@@ -26,7 +26,7 @@ const gradleCmd = process.platform === 'win32' ? '.\\gradlew.bat assembleDebug' 
 execSync(gradleCmd, { cwd: ANDROID_DIR, stdio: 'inherit' });
 
 const builtApk = resolve(ANDROID_DIR, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
-const targetApk = resolve(ROOT_DIR, 'wasla-app.apk');
+const targetApk = resolve(ROOT_DIR, 'phantoms-app.apk');
 
 if (existsSync(builtApk)) {
   copyFileSync(builtApk, targetApk);

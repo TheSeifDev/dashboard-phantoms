@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 .vercel
+*.env.development
+.env.production
+.env.production.local
+.env
+

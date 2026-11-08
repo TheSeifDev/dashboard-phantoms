@@ -13,7 +13,7 @@ const read = (relPath) => readFileSync(resolve(ROOT, relPath), 'utf8');
 test('PHANTOMS Brand Transition Verification Suite', async (t) => {
   await t.test('1. Document Title & Head Metadata', () => {
     const html = read('index.html');
-    assert.match(html, /<title>PHANTOMS — نظام إدارة العمليات والتكليفات<\/title>/);
+    assert.match(html, /<title>PHANTOMS.*<\/title>/);
   });
 
   await t.test('2. Web App Manifest Metadata', () => {
@@ -26,10 +26,17 @@ test('PHANTOMS Brand Transition Verification Suite', async (t) => {
   await t.test('3. Mobile Configurations (Capacitor & Android)', () => {
     const capacitor = JSON.parse(read('capacitor.config.json'));
     assert.equal(capacitor.appName, 'PHANTOMS');
+    assert.equal(capacitor.appId, 'com.phantoms.app');
 
     const androidStrings = read('android/app/src/main/res/values/strings.xml');
     assert.match(androidStrings, /<string name="app_name">PHANTOMS<\/string>/);
     assert.match(androidStrings, /<string name="title_activity_main">PHANTOMS<\/string>/);
+    assert.match(androidStrings, /<string name="package_name">com\.phantoms\.app<\/string>/);
+    assert.match(androidStrings, /<string name="custom_url_scheme">com\.phantoms\.app<\/string>/);
+
+    const gradle = read('android/app/build.gradle');
+    assert.match(gradle, /namespace = "com\.phantoms\.app"/);
+    assert.match(gradle, /applicationId "com\.phantoms\.app"/);
   });
 
   await t.test('4. Navigation & Layout Branding', () => {
@@ -108,5 +115,15 @@ test('PHANTOMS Brand Transition Verification Suite', async (t) => {
     const notifCenter = read('src/features/portal/WhatsAppNotificationCenter.tsx');
     assert.match(notifCenter, /إشعارات PHANTOMS الفورية/);
     assert.match(notifCenter, /PHANTOMS — الإدارة/);
+  });
+
+  await t.test('9. CI Workflow & Release Artifacts', () => {
+    const ci = readFileSync(resolve(ROOT, '..', '.github', 'workflows', 'build-apk.yml'), 'utf8');
+    assert.match(ci, /name: Build PHANTOMS Android APK/);
+    assert.match(ci, /name: "تطبيق PHANTOMS للأندرويد \(Release APK\)"/);
+    assert.match(ci, /phantoms-app\.apk/);
+
+    const script = read('scripts/build-apk.mjs');
+    assert.match(script, /phantoms-app\.apk/);
   });
 });

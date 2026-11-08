@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">PHANTOMS</string>
     <string name="title_activity_main">PHANTOMS</string>
-    <string name="package_name">com.wasla.app</string>
-    <string name="custom_url_scheme">com.wasla.app</string>
+    <string name="package_name">com.phantoms.app</string>
+    <string name="custom_url_scheme">com.phantoms.app</string>
 </resources>

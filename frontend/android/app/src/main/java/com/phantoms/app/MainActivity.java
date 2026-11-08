@@ -1,5 +1,6 @@
-package com.wasla.app;
+package com.phantoms.app;
 
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {}
+

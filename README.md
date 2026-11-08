@@ -1,13 +1,13 @@
 # PHANTOMS — Operations & Team Management Platform
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-6-646cff.svg)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.2.8-61dafb.svg)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8.3.6-646cff.svg)](https://vitejs.dev/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8.svg)](https://tailwindcss.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%2015-3ecf8e.svg)](https://supabase.com/)
 [![Security Hardened](https://img.shields.io/badge/Security-Hardened-emerald.svg)](#security-architecture)
 
-> **PHANTOMS** is a high-performance, security-hardened operations and team management platform built for modern distributed teams. It provides end-to-end task assignment, member evaluations, performance ranking, real-time push/WhatsApp notifications, and an AI operations copilot.
+> **PHANTOMS** is an operations and team management platform built for distributed teams. It provides task assignment, member evaluations, performance ranking, real-time push/WhatsApp notifications, and an AI operations copilot.
 
 ---
 
@@ -22,11 +22,11 @@
                                                            ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                            Frontend Core                                               │
-│   • React 19 + TypeScript + Vite 6                                                                     │
+│   • React 19.2 + TypeScript 5.9 + Vite 8.3                                                             │
 │   • State Management: Zustand (Auth, Toasts, Member Deletion Undo)                                     │
 │   • Server Cache: TanStack React Query v5                                                              │
 │   • Styling: CSS Tokens & Design System + Tailwind CSS v4                                              │
-│   • Excel Engine: ExcelJS (Hardened Export with CSV/Formula Injection Guard)                           │
+│   • Excel Engine: ExcelJS (Hardened Export with CSV/Formula Injection Guard; Import Gated)             │
 │   • AI Operations: PHANTOMS Assistant (Streaming Edge Function + Strict Human Confirmation)            │
 └────────────────────────────────────────┬───────────────────────────────────────────────────────────────┘
                                          │ HTTPS / WSS
@@ -35,7 +35,7 @@
 │                                       Backend Infrastructure                                           │
 │   • Supabase PostgreSQL (Schema & Row Level Security)                                                  │
 │   • RPC Security Functions (`is_admin`, `bind_member_device_session`, `admin_add_member_rating`)        │
-│   • Edge Functions (`wasla-ai`, `push-notify`)                                                         │
+│   • Edge Functions (`wasla-ai`, `push-notify`, `whatsapp-tasks`)                                       │
 │   • WhatsApp Integration Service (Baileys Bridge / Multi-Device Protocol)                              │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -59,7 +59,7 @@
 
 4. **Member Portal**
    - Clean, focused interface for members to view assigned tasks, submit links, and view evaluations.
-   - Device binding authentication via email OTP for frictionless, secure access.
+   - Device binding authentication via email OTP for verified device sessions.
 
 5. **Evaluations & Performance Ranking**
    - Structured evaluations with grade levels (`excellent`, `very_good`, `good`, `needs_improvement`, `warning`).
@@ -70,20 +70,20 @@
    - Strict XML context boundary to defend against prompt injection attacks.
    - Explicit confirmation modal required before executing any destructive operations (`delete_member`, `delete_task`, `delete_note`).
 
-7. **Data Export & Reporting**
+7. **Spreadsheet Management (Export Active, Import Feature-Gated)**
    - RTL-formatted Excel workbooks (`phantoms-members-YYYY-MM-DD.xlsx`).
-   - Built-in CSV / Excel formula injection mitigation (sanitizing `=`, `+`, `-`, `@` triggers).
-   - XLSX Import Feature Gate active to protect against untrusted archive decompression vulnerabilities (CVE-2026-78206).
+   - Built-in CSV / Excel formula injection mitigation via `safeCell()` (sanitizing `=`, `+`, `-`, `@` triggers).
+   - **XLSX Import Feature Gate:** Due to unresolved upstream archive vulnerabilities in ExcelJS (CVE-2026-78206), untrusted file importing in `MemberExcelActions.tsx` is temporarily gated (`XLSX_IMPORT_DISABLED = true`) with a user-facing security notice.
 
 ---
 
-## Security Architecture
+## Security Architecture & Authorization Model
 
-- **Verified-Device Session Binding:** Members authenticate through cryptographic device tokens registered via email OTP. Anonymous session hijacking is systematically blocked.
-- **Dynamic Owner & Admin Authorization:** Administrative access is governed by the `admin_access` table and secure PostgreSQL `is_admin()` checks, completely decoupling authorization from hardcoded UUIDs.
+- **Verified-Device Session Binding:** Members authenticate through cryptographic device tokens (`wasla_device_token`). For new devices, Supabase Auth email OTP (`signInWithOtp` and `verifyOtp`) is required to verify email ownership before `bind_member_device_session` registers a SHA-256 session hash.
+- **Dynamic Multi-Admin & Owner Authorization:** Administrative access is governed by the `admin_access` table and PostgreSQL `is_admin()` RPC checks (migration `0022`), decoupling authorization from hardcoded UUIDs and supporting granular administrative permissions.
 - **Destructive Mutation Guards:** AI assistant actions that perform deletions cannot execute autonomously; they require explicit operator confirmation through dedicated UI modals.
 - **Spreadsheet Security:** Archive validation safeguards (`safeXlsxGuard.ts`) enforce total decompress size bounds, entry caps, and compression ratio limits. Untrusted file uploads remain feature-gated.
-- **Secret Isolation:** Environment secrets (`.env`) are strictly untracked and excluded from version control.
+- **Secret Isolation:** Environment secrets (`.env`) are untracked and excluded from version control.
 
 ---
 
@@ -99,16 +99,21 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/organization/phantoms.git
-cd phantoms
+git clone https://github.com/TheSeifDev/dashboard-phantoms.git
+cd dashboard-phantoms
 
 # Install frontend dependencies
 cd frontend
 npm install
-
-# Configure environment
-cp .env.example .env.local
 ```
+
+### Environment Configuration
+
+The frontend reads environment variables from `frontend/.env.production` (or optional local override `frontend/.env.local`). Required keys:
+- `VITE_SUPABASE_URL`: Supabase project URL.
+- `VITE_SUPABASE_ANON_KEY`: Supabase anon public API key.
+- `VITE_WHATSAPP_BRIDGE_URL`: WhatsApp Bridge service endpoint.
+- `VITE_PUBLIC_WEB_URL`: Base URL for member invite and portal links.
 
 ### Development
 
@@ -119,7 +124,7 @@ npm run dev
 # Run TypeScript typecheck
 npx tsc --noEmit
 
-# Run Oxlint / ESLint linter
+# Run Oxlint linter
 npm run lint
 
 # Build for production
@@ -137,6 +142,9 @@ npm run test:xlsx
 
 # Execute runtime behavioral integration tests
 npm run test:runtime
+
+# Execute brand transition verification suite
+npm run test:brand
 ```
 
 ---
@@ -144,7 +152,7 @@ npm run test:runtime
 ## Repository Structure
 
 ```
-phantoms/
+dashboard-phantoms/
 ├── frontend/                     # React 19 Frontend Application
 │   ├── public/                   # Static assets, PWA manifest, and app icons
 │   ├── src/
@@ -157,11 +165,19 @@ phantoms/
 │   └── scripts/                  # Security tests, APK builders, audit scripts
 ├── backend/
 │   ├── migrations/               # PostgreSQL schema migrations (0001 - 0022)
-│   ├── supabase/functions/       # Supabase Edge Functions (wasla-ai, push-notify)
+│   ├── supabase/functions/       # Supabase Edge Functions (wasla-ai, push-notify, whatsapp-tasks)
 │   ├── whatsapp-service/         # WhatsApp notification API service
 │   └── whatsapp-bridge/          # Baileys WhatsApp client gateway
 └── audit/reports/                # Independent technical & security audit reports
 ```
+
+---
+
+## Mobile & Android Identity
+
+- Capacitor Android package namespace: `com.phantoms.app`
+- Application Display Name: `PHANTOMS`
+- Build script: `npm run apk` (outputs `phantoms-app.apk`)
 
 ---
 
