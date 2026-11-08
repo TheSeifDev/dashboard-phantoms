@@ -261,7 +261,7 @@ export async function ensureAndroidNotificationChannel(): Promise<void> {
   try {
     await LocalNotifications.createChannel({
       id: ANDROID_CHANNEL_ID,
-      name: 'إشعارات وصلة تك الفورية',
+      name: 'إشعارات PHANTOMS الفورية',
       description: 'تنبيهات المهام والتقييمات والإعلانات الهامة بأعلى أولوية مع الصوت والاهتزاز',
       importance: 5,
       visibility: 1,
@@ -333,7 +333,7 @@ export async function dispatchPhoneSystemNotification(item: {
             title: item.title,
             body: item.body,
             largeBody: item.body,
-            summaryText: 'وصلة تك — بوابة الفريق',
+            summaryText: 'PHANTOMS — بوابة الفريق',
             channelId: ANDROID_CHANNEL_ID,
             schedule: { at: new Date(Date.now() + 120) },
             extra: {
@@ -418,7 +418,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       body: payload.body,
       category: payload.category,
       targetTab: payload.targetTab,
-      senderName: payload.senderName || 'وصلة تك — الإدارة',
+      senderName: payload.senderName || 'PHANTOMS — الإدارة',
       createdAt: payload.createdAt || new Date().toISOString(),
       read: false,
     };

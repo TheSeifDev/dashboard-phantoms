@@ -38,7 +38,7 @@ export function useCreateMemberRating() {
         p_member_id: memberId,
         p_points: points,
         p_reason: reason.trim(),
-        p_author: author.trim() || 'إدارة وصلة',
+        p_author: author.trim() || 'إدارة PHANTOMS',
       });
       if (error) throw toAppError(error, 'معرفناش نسجل تقييم العضو.');
       return data;

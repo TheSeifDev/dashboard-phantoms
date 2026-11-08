@@ -20,7 +20,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
   const [points, setPoints] = useState<number>(1);
   const [mode, setMode] = useState<'rating' | 'infinite'>('rating');
   const [reason, setReason] = useState<string>('');
-  const [author, setAuthor] = useState<string>('إدارة وصلة');
+  const [author, setAuthor] = useState<string>('إدارة PHANTOMS');
   const [error, setError] = useState<string>('');
   const createRating = useCreateMemberRating();
   const setInfiniteBonus = useSetMemberInfiniteBonus();
@@ -77,7 +77,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
         memberId: selectedMember.id,
         points,
         reason: reason.trim(),
-        author: author.trim() || 'إدارة وصلة',
+        author: author.trim() || 'إدارة PHANTOMS',
       });
       setReason('');
       setPoints(1);

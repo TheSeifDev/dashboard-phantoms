@@ -52,7 +52,7 @@ export function EvaluationCreateModal({
   const [grade, setGrade] = useState<EvaluationGrade>('very_good');
   const [points, setPoints] = useState<number>(0);
   const [feedback, setFeedback] = useState('');
-  const [evaluatorName, setEvaluatorName] = useState('إدارة وصلة');
+  const [evaluatorName, setEvaluatorName] = useState('إدارة PHANTOMS');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export function EvaluationCreateModal({
         grade,
         points,
         feedback: feedback.trim(),
-        evaluatorName: evaluatorName.trim() || 'إدارة وصلة',
+        evaluatorName: evaluatorName.trim() || 'إدارة PHANTOMS',
       });
       for (let i = 0; i < selectedIds.length; i += 50) {
         const chunk = selectedIds.slice(i, i + 50);

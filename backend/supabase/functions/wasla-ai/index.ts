@@ -80,7 +80,7 @@ serve(async (req) => {
     }
 
     // Prompt Injection Defense (SEC-HIGH-03): Strictly bound untrusted data in XML tags
-    const systemPrompt = `أنت "مساعد وصلة الذكي"، خبير في إدارة فريق "وصلة" وتحليل أدائهم وجاهزيتهم.
+    const systemPrompt = `أنت "مساعد PHANTOMS الذكي" (PHANTOMS Assistant)، خبير في إدارة فريق وعمليات "PHANTOMS" وتحليل أدائهم وجاهزيتهم.
 
 تعليماتك الصارمة:
 1. الرد باللغة العربية بأسلوب احترافي وعملي.

@@ -1,4 +1,4 @@
-# Project Context
+# Project Context — PHANTOMS Architecture & Tech Stack
 
 ## Stack
 - **Frontend:** React + TypeScript (Vite)
@@ -9,9 +9,10 @@
   - State: Zustand (auth, theme, toast)
   - PWA: `vite-plugin-pwa` with `injectManifest` + custom service worker (`src/sw.ts`)
 - **Backend (data/security layer):** Supabase PostgreSQL + RLS policies + RPC functions
-  - Schema/migrations in `backend/migrations/*.sql`
+  - Schema/migrations in `backend/migrations/*.sql` (0001 through 0022)
   - Security hardening in `backend/migrations/0001_security_hardening.sql`
-  - Operational “single-device” and “admin-only” enforcement via DB functions/policies
+  - Dynamic admin & owner model via `admin_access` table and `is_admin()` RPC (migration 0022)
+  - Operational verified-device enforcement via DB functions and email OTP
 - **Backend (Edge Functions):** Supabase Edge Functions (Deno)
   - `backend/supabase/functions/wasla-ai`
   - `backend/supabase/functions/push-notify`
@@ -35,9 +36,10 @@
     - Dashboard, Members, Tasks, Notes, Announcements, AI Assistant, WhatsApp
     - Data access is directly via Supabase PostgREST queries (`supabase.from(...).select(...)`) and RPC calls.
 
-- **Member portal experience** (anonymous/“anon” + DB-enforced device gating):
+- **Member portal experience** (OTP verified + DB-enforced device session):
   - Member login: `frontend/src/features/auth/LoginPage.tsx`
-    - Uses RPC `lookup_member_by_email` to validate and bind a `deviceToken`.
+    - Recognizes existing valid device tokens (`wasla_device_token`).
+    - For new devices, requires Supabase email OTP verification (`signInWithOtp`) to prove email ownership before binding device sessions via `bind_member_device_session`.
     - On success: Zustand `setMember` and route to `/portal`.
   - Member portal page: `frontend/src/features/portal/MemberPortalPage.tsx`
     - Logout clears local member state and calls `logout_member_device(memberId)`.

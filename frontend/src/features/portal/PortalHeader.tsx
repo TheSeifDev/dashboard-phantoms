@@ -11,9 +11,9 @@ export function PortalHeader({ onLogout }: { onLogout: () => void }) {
   return (
     <header className="sticky top-0 z-[var(--z-sticky)] flex min-h-[calc(var(--header-h)+env(safe-area-inset-top))] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-4 pt-[env(safe-area-inset-top)] sm:px-6">
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-        <img src="/wasla-logo.png" alt="" className="size-8 object-contain sm:size-9" />
+        <img src="/wasla-logo.png" alt="PHANTOMS" className="size-8 object-contain sm:size-9" />
         <div>
-          <strong className="block text-sm font-black sm:text-base">وصلة تك</strong>
+          <strong className="block text-sm font-black sm:text-base">PHANTOMS</strong>
           <span className="hidden text-xs text-[var(--text-muted)] sm:block">بوابة أعضاء الفريق</span>
         </div>
       </div>

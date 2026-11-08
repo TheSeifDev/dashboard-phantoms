@@ -22,7 +22,7 @@ export default function AiAssistantPage() {
             <Bot size={24} />
           </span>
           <div>
-            <h1 className="text-[var(--fs-xl)] font-black">مساعد وصلة الذكي</h1>
+            <h1 className="text-[var(--fs-xl)] font-black">مساعد PHANTOMS الذكي (PHANTOMS Assistant)</h1>
             <p className="mt-1 text-sm text-[var(--text-muted)]">اسأل عن الفريق والمهام أو اطلب مني أعمل مهمة وملاحظة.</p>
           </div>
         </div>

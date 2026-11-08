@@ -30,12 +30,12 @@ export function buildTaskMessage(task: Task, member: Member): string {
 
   return (
     `السلام عليكم ${member.full_name}،\n\n` +
-    `حابين نبلغك إن اتسندت لك مهمة جديدة على منصة وصلة بعنوان:\n` +
+    `حابين نبلغك إن اتسندت لك مهمة جديدة على منصة PHANTOMS بعنوان:\n` +
     `«${task.title}»${deadlineText}${bonusText}\n\n` +
-    `من فضلك ادخل على بوابة وصلة عشان تراجع تفاصيل المهمة وتبدأ التنفيذ:\n` +
+    `من فضلك ادخل على بوابة PHANTOMS عشان تراجع تفاصيل المهمة وتبدأ التنفيذ:\n` +
     `${baseUrl}/login\n\n` +
     `نتمنالك التوفيق،\n` +
-    `فريق إدارة وصلة.`
+    `فريق إدارة PHANTOMS.`
   );
 }
 

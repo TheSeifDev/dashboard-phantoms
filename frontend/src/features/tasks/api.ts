@@ -64,7 +64,7 @@ export const useCreateTask = () => {
           const chunk = members.slice(i, i + 50);
           void sendPushNotification(
             `مهمة جديدة: ${taskTitle}`,
-            (taskDesc || 'تم إسناد مهمة جديدة ليك على بوابة وصلة تك.').slice(0, 120),
+            (taskDesc || 'تم إسناد مهمة جديدة ليك على بوابة PHANTOMS.').slice(0, 120),
             chunk,
             '/portal',
           ).catch(() => {});

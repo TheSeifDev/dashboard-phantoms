@@ -64,7 +64,7 @@ export const useAskWaslaAi = () => {
       // الدالة قد تعيد 200 مع جسم { error } — عاملها كخطأ
       if (invokeError) {
         throw new Error(
-          'معرفناش نوصل لمساعد وصلة الذكي. اتأكد إن الإنترنت شغال وإن الـ Edge Function شغالة، وجرّب تاني.'
+          'معرفناش نوصل لمساعد PHANTOMS الذكي. اتأكد إن الإنترنت شغال وإن الـ Edge Function شغالة، وجرّب تاني.'
         );
       }
       if (!data || data.error) {

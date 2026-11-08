@@ -156,7 +156,7 @@ export function WhatsAppNotificationCenter({
           memberId,
           {
             id: data.payload.id || `push_${Date.now()}`,
-            title: data.payload.title || 'وصلة تك — إشعار جديد',
+            title: data.payload.title || 'PHANTOMS — إشعار جديد',
             body: data.payload.body || 'وصلك تحديث جديد على البوابة',
             category: data.payload.category || 'announcement',
             targetTab: data.payload.targetTab || 'ANNOUNCEMENTS',
@@ -219,7 +219,7 @@ export function WhatsAppNotificationCenter({
         pushNotification(memberId, {
           id: `task_new_${task.id}`,
           title: `مهمة جديدة: ${task.title}`,
-          body: task.description || 'تم إسناد مهمة جديدة ليك على بوابة وصلة تك.',
+          body: task.description || 'تم إسناد مهمة جديدة ليك على بوابة PHANTOMS.',
           category: 'task',
           targetTab: 'TASKS',
         });
@@ -381,7 +381,7 @@ export function WhatsAppNotificationCenter({
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
-                      {activeBanner.senderName || 'وصلة تك — الإدارة'}
+                      {activeBanner.senderName || 'PHANTOMS — الإدارة'}
                     </span>
                     <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
                       {categoryLabel(activeBanner.category)}
@@ -449,7 +449,7 @@ export function WhatsAppNotificationCenter({
                   <BellRing size={20} aria-hidden="true" />
                 </span>
                 <div>
-                  <h2 className="text-base font-black text-[var(--text)]">إشعارات وصلة الفورية</h2>
+                  <h2 className="text-base font-black text-[var(--text)]">إشعارات PHANTOMS الفورية</h2>
                   <p className="text-xs text-[var(--text-muted)]">تنبيهات المهام والتقييمات والإعلانات</p>
                 </div>
               </div>

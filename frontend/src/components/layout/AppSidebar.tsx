@@ -180,9 +180,9 @@ export function AppSidebar({
   return (
     <>
       <aside className="app-sidebar" aria-label="الشريط الجانبي">
-        <NavLink to="/admin" className="app-sidebar-brand" aria-label="وصلة تك — الرئيسية">
-          <img src="/wasla-logo.png" alt="" />
-          <span>وصلة تك</span>
+        <NavLink to="/admin" className="app-sidebar-brand" aria-label="PHANTOMS — الرئيسية">
+          <img src="/wasla-logo.png" alt="PHANTOMS" />
+          <span>PHANTOMS</span>
         </NavLink>
         <nav aria-label="التنقل الرئيسي" className="app-sidebar-nav">
           <SidebarLinks railTips isOwner={isOwner} permissions={permissions} />

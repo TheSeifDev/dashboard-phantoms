@@ -39,14 +39,14 @@ export default function DashboardPage() {
       {/* Hero Section */}
       <section className="grid gap-4 rounded-[var(--radius-lg)] bg-[var(--primary)] p-5 text-white sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center shadow-md">
         <div>
-          <p className="text-sm font-bold text-violet-200 uppercase tracking-widest leading-relaxed">مركز عمليات وصلة</p>
+          <p className="text-sm font-bold text-violet-200 uppercase tracking-widest leading-relaxed">مركز عمليات PHANTOMS</p>
           <h2 className="mt-1 text-2xl font-black sm:text-3xl tracking-tight">الفريق كله، في صورة واحدة</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-violet-100/90">تابع جاهزية الأعضاء، مؤشرات المهام، والنشاط دلوقتي، وخد قراراتك بناءً على بيانات حقيقية.</p>
         </div>
         <div className="grid gap-3 sm:flex sm:flex-wrap pt-3 lg:pt-0">
           <Button onClick={() => navigate('/admin/tasks')} icon={<Plus size={17} />} className="bg-white text-purple-900 hover:bg-violet-50 transition-colors" fullOnMobile>تكليف مهمة</Button>
           <Button variant="secondary" onClick={() => navigate('/admin/members')} icon={<UserRoundPlus size={17} />} className="border-white/30 bg-white/10 text-white hover:bg-white/20" fullOnMobile>إضافة عضو</Button>
-          <Button variant="ghost" onClick={() => navigate('/admin/ai-assistant')} icon={<Bot size={17} />} fullOnMobile className="text-white hover:bg-white/10">مساعد وصلة</Button>
+          <Button variant="ghost" onClick={() => navigate('/admin/ai-assistant')} icon={<Bot size={17} />} fullOnMobile className="text-white hover:bg-white/10">مساعد PHANTOMS</Button>
         </div>
       </section>
 

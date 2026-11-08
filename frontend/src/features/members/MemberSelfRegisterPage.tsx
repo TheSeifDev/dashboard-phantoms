@@ -245,7 +245,7 @@ export default function MemberSelfRegisterPage() {
             <div>
               <h1 className="text-lg font-black text-[var(--text)]">تم تسجيل بياناتك بنجاح</h1>
               <p className="text-xs text-[var(--text-muted)]">
-                أهلاً بك في فريق وصلة — بياناتك وصلت للإدارة واتحفظت بالكامل.
+                أهلاً بك في فريق PHANTOMS — بياناتك وصلت للإدارة واتحفظت بالكامل.
               </p>
             </div>
           </div>
@@ -289,7 +289,7 @@ export default function MemberSelfRegisterPage() {
             </span>
             <div>
               <h1 className="text-lg font-black text-[var(--text)]">الرابط غير متاح للاستخدام</h1>
-              <p className="text-xs text-[var(--text-muted)]">حماية روابط الدعوة في نظام وصلة</p>
+              <p className="text-xs text-[var(--text-muted)]">حماية روابط الدعوة في نظام PHANTOMS</p>
             </div>
           </div>
 
@@ -327,7 +327,7 @@ export default function MemberSelfRegisterPage() {
           </div>
           <div>
             <h1 className="text-xl font-black text-[var(--text)] sm:text-2xl">
-              استمارة تسجيل عضو جديد — فريق وصلة
+              استمارة تسجيل عضو جديد — فريق PHANTOMS
             </h1>
             <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
               املا بياناتك الكاملة بدقة. بمجرد الضغط على «تأكيد وتسجيل بياناتي» هيتسجّل حسابك في الفريق ويتقفل الرابط ده نهائياً.

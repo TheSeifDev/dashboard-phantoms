@@ -1,6 +1,6 @@
-# Project Blueprint v2 — Wasla Tech Administration System
+# Project Blueprint — PHANTOMS Operations & Team Management System
 
-> الهدف: نظام إدارة فريق وصلة، مبني على React + TypeScript + Vite، يحافظ على **الهوية البصرية الأصلية 100%** وينهي فوضى الملف الواحد (Spaghetti) نهائياً.
+> الهدف: منصة إدارة العمليات وتكليفات فريق PHANTOMS، مبنية على React 19 + TypeScript + Vite، تحافظ على نظام التصميم الأصلي ورموز التصميم، مع تطبيق أعلى معايير الأمان والتوافقية الهندسية.
 
 ---
 

@@ -120,7 +120,7 @@ export async function parseMemberWorkbook(
 
 export async function downloadMembersWorkbook(members: Member[], customFields: MemberCustomField[] = []): Promise<void> {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('أعضاء وصلة', {
+  const worksheet = workbook.addWorksheet('أعضاء PHANTOMS', {
     views: [{ rightToLeft: true }],
   });
 
@@ -169,7 +169,7 @@ export async function downloadMembersWorkbook(members: Member[], customFields: M
     worksheet.addRow(rowValues);
   }
 
-  const fileName = `wasla-members-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const fileName = `phantoms-members-${new Date().toISOString().slice(0, 10)}.xlsx`;
   const uint8 = await workbook.xlsx.writeBuffer();
 
   const isNativeContainer =
@@ -187,7 +187,7 @@ export async function downloadMembersWorkbook(members: Member[], customFields: M
       );
       if (!navigator.canShare || navigator.canShare({ files: [file] })) {
         await navigator.share({
-          title: 'دليل أعضاء وصلة',
+          title: 'دليل أعضاء PHANTOMS',
           files: [file],
         });
         return;

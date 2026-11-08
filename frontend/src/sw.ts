@@ -22,13 +22,13 @@ self.addEventListener('push', (event) => {
     payload = event.data.json();
   } catch {
     payload = {
-      title: 'وصلة تك — الإدارة',
+      title: 'PHANTOMS — الإدارة',
       body: event.data.text(),
       url: '/portal',
     };
   }
 
-  const title = payload.title || 'وصلة تك — إشعار جديد';
+  const title = payload.title || 'PHANTOMS — إشعار جديد';
   const body = payload.body || 'وصلك تحديث جديد على بوابة الفريق';
   const targetUrl = payload.url || '/portal';
   const tag = `wasla-push-${Date.now()}`;

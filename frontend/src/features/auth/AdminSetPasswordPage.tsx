@@ -53,7 +53,7 @@ export default function AdminSetPasswordPage() {
   };
 
   return (
-    <AuthShell audience="admin" badge="دعوة إدارة وصلة" title="أنشئ كلمة المرور" description={`اختار كلمة مرور لحساب الإدارة ${user.email ?? ''}.`} footer={<Link to="/login" className="auth-inline-link"><span>بوابة الأعضاء</span><ArrowLeft size={16} /></Link>}>
+    <AuthShell audience="admin" badge="دعوة إدارة PHANTOMS" title="أنشئ كلمة المرور" description={`اختار كلمة مرور لحساب الإدارة ${user.email ?? ''}.`} footer={<Link to="/login" className="auth-inline-link"><span>بوابة الأعضاء</span><ArrowLeft size={16} /></Link>}>
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
       <form onSubmit={(event) => void savePassword(event)} className="auth-form" noValidate>
         <label className="auth-field" htmlFor="invite-password">كلمة المرور الجديدة

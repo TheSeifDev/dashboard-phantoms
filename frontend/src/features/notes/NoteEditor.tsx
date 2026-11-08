@@ -8,7 +8,7 @@ import { useCreateNote } from './api';
 
 export function NoteEditor({ isOpen, members, onClose }: { isOpen: boolean; members: Member[]; onClose: () => void }) {
   const [text, setText] = useState('');
-  const [author, setAuthor] = useState('إدارة وصلة');
+  const [author, setAuthor] = useState('إدارة PHANTOMS');
   const [targetType, setTargetType] = useState<'all' | 'member'>('all');
   const [targetMemberId, setTargetMemberId] = useState<number | null>(null);
   const [points, setPoints] = useState<number>(0);
@@ -17,7 +17,7 @@ export function NoteEditor({ isOpen, members, onClose }: { isOpen: boolean; memb
 
   const reset = () => {
     setText('');
-    setAuthor('إدارة وصلة');
+    setAuthor('إدارة PHANTOMS');
     setTargetType('all');
     setTargetMemberId(null);
     setPoints(0);

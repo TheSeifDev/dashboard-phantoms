@@ -64,7 +64,7 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
   };
 
   const handleCopyInviteMessage = (invite: CreatedMemberInvite) => {
-    const greeting = invite.note ? `أهلاً بك (${invite.note}) في فريق وصلة،` : 'أهلاً بك في فريق وصلة،';
+    const greeting = invite.note ? `أهلاً بك (${invite.note}) في فريق PHANTOMS،` : 'أهلاً بك في فريق PHANTOMS،';
     const message = [
       greeting,
       'ده رابط تسجيل محمي وخاص بيك عشان تسجّل بياناتك الكاملة في النظام بنفسك:',

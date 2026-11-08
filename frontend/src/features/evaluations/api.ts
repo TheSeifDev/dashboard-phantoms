@@ -96,7 +96,7 @@ function parseFallbackTaskRow(task: Task): MemberEvaluation | null {
     evaluator_name:
       typeof parsed.evaluator_name === 'string' && parsed.evaluator_name.trim()
         ? parsed.evaluator_name.trim()
-        : 'إدارة وصلة',
+        : 'إدارة PHANTOMS',
     bonus_note_id: typeof parsed.bonus_note_id === 'number' ? parsed.bonus_note_id : null,
     viewed_at: isViewed ? updatedAt || task.created_at : null,
     read_at: isRead ? updatedAt || task.created_at : null,
@@ -122,7 +122,7 @@ async function fetchAdminEvaluations(): Promise<MemberEvaluation[]> {
         grade: normalizeGrade(row.grade),
         points: Number(row.points ?? 0),
         feedback: String(row.feedback ?? ''),
-        evaluator_name: String(row.evaluator_name ?? 'إدارة وصلة'),
+        evaluator_name: String(row.evaluator_name ?? 'إدارة PHANTOMS'),
         bonus_note_id: typeof row.bonus_note_id === 'number' ? row.bonus_note_id : null,
         viewed_at: typeof row.viewed_at === 'string' ? row.viewed_at : null,
         read_at: typeof row.read_at === 'string' ? row.read_at : null,
@@ -216,7 +216,7 @@ export function useCreateEvaluations() {
     mutationFn: async (input: CreateEvaluationInput): Promise<number> => {
       const cleanTitle = input.title.trim();
       const cleanFeedback = input.feedback.trim();
-      const cleanEvaluator = input.evaluatorName.trim() || 'إدارة وصلة';
+      const cleanEvaluator = input.evaluatorName.trim() || 'إدارة PHANTOMS';
       let createdCount = 0;
 
       for (const memberId of input.memberIds) {
@@ -361,7 +361,7 @@ export function useMemberEvaluations(memberId: number | null | undefined) {
             grade: normalizeGrade(row.grade),
             points: Number(row.points ?? 0),
             feedback: String(row.feedback ?? ''),
-            evaluator_name: String(row.evaluator_name ?? 'إدارة وصلة'),
+            evaluator_name: String(row.evaluator_name ?? 'إدارة PHANTOMS'),
             bonus_note_id: null,
             viewed_at: typeof row.viewed_at === 'string' ? row.viewed_at : null,
             read_at: typeof row.read_at === 'string' ? row.read_at : null,

@@ -1,11 +1,19 @@
 import { useRef, useState } from 'react';
-import { Download, FileSpreadsheet, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, ShieldAlert, Upload } from 'lucide-react';
 import type { Member, MemberCustomField, MemberInsert } from '../../types/db';
 import { useBulkUpsertMembers } from './api';
 import { parseMemberWorkbook, downloadMembersWorkbook } from './memberExcel';
 import { Modal } from '../../components/ui/Modal';
 import { toast } from '../../store/toast';
 import { Button } from '../../components/ui/Button';
+
+/**
+ * Feature gate: XLSX importing is temporarily disabled pending safe parser upgrades (CVE-2026-78206).
+ * Export functionality (downloadMembersWorkbook) remains fully enabled and secured.
+ */
+const XLSX_IMPORT_DISABLED = true;
+const XLSX_DISABLED_MESSAGE =
+  'تم إيقاف استيراد ملفات Excel (XLSX) مؤقتًا لدواعي الأمان والتوافقية الهندسية (CVE-2026-78206). ميزة تصدير البيانات مستمرة بالكامل.';
 
 export function MemberExcelActions({
   members,
@@ -18,9 +26,13 @@ export function MemberExcelActions({
   const importMembers = useBulkUpsertMembers();
   const [isOpen, setIsOpen] = useState(false);
   const [rows, setRows] = useState<MemberInsert[]>([]);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(XLSX_IMPORT_DISABLED ? XLSX_DISABLED_MESSAGE : '');
 
   const chooseFile = async (file: File | undefined) => {
+    if (XLSX_IMPORT_DISABLED) {
+      setMessage(XLSX_DISABLED_MESSAGE);
+      return;
+    }
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       setMessage('حجم الملف كبير جدًا. الحد الأقصى المسموح لملفات Excel هو 5 ميجابايت.');
@@ -36,6 +48,10 @@ export function MemberExcelActions({
   };
 
   const confirmImport = async () => {
+    if (XLSX_IMPORT_DISABLED) {
+      toast.warning(XLSX_DISABLED_MESSAGE);
+      return;
+    }
     try {
       await importMembers.mutateAsync(rows);
       setRows([]);
@@ -77,17 +93,36 @@ export function MemberExcelActions({
       </Button>
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="استيراد بيانات الأعضاء من Excel" maxWidth="xl">
         <div className="grid gap-4">
-          <label className="grid gap-3 rounded-2xl border-2 border-dashed border-[var(--border)] bg-[var(--bg)] p-5 text-center">
+          {XLSX_IMPORT_DISABLED && (
+            <div
+              className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs font-semibold leading-relaxed text-[var(--text)]"
+              role="alert"
+            >
+              <ShieldAlert size={20} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+              <div>
+                <p className="font-bold text-amber-800 dark:text-amber-300">استيراد ملفات Excel معطّل مؤقتًا</p>
+                <p className="mt-1 text-[var(--text-2)]">{XLSX_DISABLED_MESSAGE}</p>
+              </div>
+            </div>
+          )}
+          <label
+            className={`grid gap-3 rounded-2xl border-2 border-dashed border-[var(--border)] bg-[var(--bg)] p-5 text-center ${
+              XLSX_IMPORT_DISABLED ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+            }`}
+          >
             <FileSpreadsheet size={34} className="mx-auto text-emerald-700 dark:text-emerald-300" />
-            <span className="text-sm font-bold">اختار ملف Excel أو CSV</span>
+            <span className="text-sm font-bold">
+              {XLSX_IMPORT_DISABLED ? 'الاستيراد معطّل مؤقتًا لدواعي الأمان' : 'اختار ملف Excel أو CSV'}
+            </span>
             <input
               ref={inputRef}
               type="file"
               accept=".xlsx,.xls,.csv"
+              disabled={XLSX_IMPORT_DISABLED}
               onChange={(event) => {
                 void chooseFile(event.target.files?.[0]);
               }}
-              className="min-h-11 text-sm"
+              className="min-h-11 text-sm disabled:cursor-not-allowed"
             />
           </label>
           {message && (

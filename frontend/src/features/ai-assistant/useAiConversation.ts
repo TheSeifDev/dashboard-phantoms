@@ -28,7 +28,7 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
   const [messages, setMessages] = useState<AiMessage[]>([{
     id: 'welcome',
     sender: 'assistant',
-    text: 'أهلاً بيك! أنا مساعد وصلة الذكي. اسألني عن الفريق والمهام أو اطلب مني أعمل مهمة أو ملاحظة.',
+    text: 'أهلاً بيك! أنا مساعد PHANTOMS الذكي. اسألني عن الفريق والمهام أو اطلب مني أعمل مهمة أو ملاحظة.',
     timestamp: new Date().toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
   }]);
   const [pendingConfirmation, setPendingConfirmation] = useState<AiPendingConfirmation | null>(null);
@@ -207,8 +207,8 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
         });
       } else if (actionType === 'add_note') {
         await createNote.mutateAsync({
-          text: stringValue(payload.text) ?? 'ملاحظة من مساعد وصلة الذكي (بدون نص).',
-          author: 'مساعد وصلة الذكي (AI)', author_role: 'AI Assistant',
+          text: stringValue(payload.text) ?? 'ملاحظة من مساعد PHANTOMS الذكي (بدون نص).',
+          author: 'PHANTOMS Assistant', author_role: 'AI Assistant',
           date: new Date().toLocaleDateString('ar-EG-u-nu-latn', { dateStyle: 'medium' }),
           target_member_id: null,
           target_name: stringValue(payload.targetName),

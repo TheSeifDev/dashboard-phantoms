@@ -1,7 +1,7 @@
 {
-  "name": "نظام إدارة وصلة",
-  "short_name": "وصلة",
-  "description": "منصة وصلة لإدارة فريقك التقني",
+  "name": "نظام إدارة PHANTOMS",
+  "short_name": "PHANTOMS",
+  "description": "منصة PHANTOMS لإدارة العمليات والمهام وتكليفات الفريق",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "/",

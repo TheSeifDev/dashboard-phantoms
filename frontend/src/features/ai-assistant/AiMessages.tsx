@@ -86,7 +86,7 @@ export function AiMessages({
           role="status"
         >
           <Bot size={17} className="animate-pulse" />
-          مساعد وصلة بيحلّل بيانات الفريق...
+          مساعد PHANTOMS بيحلّل بيانات الفريق...
         </p>
       )}
       <div ref={endRef} />

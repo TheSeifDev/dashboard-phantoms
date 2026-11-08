@@ -200,7 +200,7 @@ export function usePWA({ memberId, memberEmail }: { memberId?: number; memberEma
         useNotificationStore.getState().pushNotification(
           memberId,
           {
-            title: 'تم تفعيل إشعارات وصلة تك',
+            title: 'تم تفعيل إشعارات PHANTOMS',
             body: 'هتوصلك تنبيهات المهام والتقييمات والإعلانات بصوت وتنبيه فوري.',
             category: 'system',
             targetTab: 'ALL',
@@ -226,7 +226,7 @@ export function usePWA({ memberId, memberEmail }: { memberId?: number; memberEma
       useNotificationStore.getState().pushNotification(
         memberId,
         {
-          title: 'تم تفعيل إشعارات وصلة تك',
+          title: 'تم تفعيل إشعارات PHANTOMS',
           body: 'هتوصلك تنبيهات المهام والتقييمات والإعلانات بصوت وتنبيه فوري.',
           category: 'system',
           targetTab: 'ALL',
@@ -251,7 +251,7 @@ export function usePWA({ memberId, memberEmail }: { memberId?: number; memberEma
     useNotificationStore.getState().pushNotification(
       memberId,
       {
-        title: 'رسالة إشعار تجريبية — وصلة تك',
+        title: 'رسالة إشعار تجريبية — PHANTOMS',
         body: 'الإشعارات والصوت شغالين ممتاز على جهازك دلوقتي وتنبيهات الفريق هتوصلك فوراً.',
         category: 'announcement',
         targetTab: 'ALL',

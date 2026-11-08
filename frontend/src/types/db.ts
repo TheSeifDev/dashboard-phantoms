@@ -1,5 +1,5 @@
 // =====================================================
-// أنواع بيانات قاعدة بيانات وصلة (Supabase / PostgreSQL)
+// أنواع بيانات قاعدة بيانات PHANTOMS (Supabase / PostgreSQL)
 // المصدر: supabase_setup.sql — MUST يطابق السكيما دائماً
 // =====================================================
 
@@ -9,7 +9,7 @@ export type Member = {
   email: string;
   full_name: string;
   completion_rank: number | null;
-  /** ملاحظات الإدارة الخاصة بالعضو — ليست فرقاً، النظام كله وصلة واحدة */
+  /** ملاحظات الإدارة الخاصة بالعضو — ليست فرقاً، النظام كله فريق PHANTOMS واحد */
   team_notes: string | null;
   residence: string | null;
   work_conditions: string | null;

@@ -19,19 +19,19 @@ export function AuthShell({ title, description, badge, audience, children, foote
   return (
     <div className="auth-shell" dir="rtl">
       <header className="auth-topbar">
-        <Link className="auth-brand" to="/login" aria-label="وصلة تك — الرئيسية">
-          <img src="/wasla-logo.png" alt="" />
-          <span><strong>وصلة</strong><small>TECH</small></span>
+        <Link className="auth-brand" to="/login" aria-label="PHANTOMS — الرئيسية">
+          <img src="/wasla-logo.png" alt="PHANTOMS" />
+          <span><strong>PHANTOMS</strong></span>
         </Link>
-        <span className="auth-topbar-caption">نظام إدارة الفريق</span>
+        <span className="auth-topbar-caption">نظام إدارة العمليات والتكليفات</span>
       </header>
       <main className="auth-layout">
-        <section className="auth-story" aria-label="عن وصلة">
-          <p className="auth-eyebrow">في عالم التكنولوجيا اللي بيتسارع، كان لازم يبقى فيه وصلة.</p>
-          <h1>أهلاً بيك<br /><span>في مساحة بتعمل فرق</span></h1>
-          <p className="auth-story-copy">في وصلة، بنحوّل الأفكار لواقع وبنشتغل سوا عشان مستقبل أحسن.</p>
+        <section className="auth-story" aria-label="عن PHANTOMS">
+          <p className="auth-eyebrow">منصة متطورة لإدارة وتنسيق مهام وفرق العمليات.</p>
+          <h1>أهلاً بيك<br /><span>في منصة PHANTOMS</span></h1>
+          <p className="auth-story-copy">في PHANTOMS، بنمكّن الفرق من إنجاز العمليات وتتبع المهام بدقة وسرعة فائقة.</p>
           <div className="auth-benefits">
-            <span>أفكار بلا حدود</span><span>فرص أكبر</span><span>مجتمع أقوى</span>
+            <span>عمليات متكاملة</span><span>كفاءة عالية</span><span>أداء متميز</span>
           </div>
         </section>
         <section className="auth-panel" aria-labelledby="auth-title">
@@ -47,7 +47,7 @@ export function AuthShell({ title, description, badge, audience, children, foote
           <div className="auth-footer">{footer}</div>
         </section>
       </main>
-      <footer className="auth-page-footer" dir="ltr" lang="en">Code. Build. Innovate. Impact. <span>© 2026 Wasla Tech</span></footer>
+      <footer className="auth-page-footer" dir="ltr" lang="en">Code. Build. Innovate. Impact. <span>© 2026 PHANTOMS</span></footer>
     </div>
   );
 }

@@ -42,7 +42,7 @@ export async function resolveTaskMessage(admin: AdminRequest, taskId: number, me
   const due = task.has_deadline && task.deadline_date ? `\n\n📅 *الموعد النهائي لإنجاز المهمة:* ${formatArabicDate(task.deadline_date)}` : '';
   const bonus = Math.max(0, Math.trunc(Number(task.bonus_points ?? 0)) || 0);
   const reward = bonus > 0 ? `\n🎁 *بونص المهمة بعد الاعتماد:* ${bonus} نقطة` : '';
-  const text = `أهلًا ${member.full_name} 👋،\n\nحابين نبلغك إن اتسندت لك مهمة جديدة على منصة وصلة بعنوان:\n📌 *«${task.title}»*${due}${reward}\n\nمن فضلك ادخل على بوابة وصلة عشان تراجع تفاصيل المهمة وتبدأ التنفيذ:\n🔗 ${baseUrl}/login\n\nنتمنالك التوفيق،\nفريق إدارة وصلة.`;
+  const text = `أهلًا ${member.full_name} 👋،\n\nحابين نبلغك إن اتسندت لك مهمة جديدة على منصة PHANTOMS بعنوان:\n📌 *«${task.title}»*${due}${reward}\n\nمن فضلك ادخل على بوابة PHANTOMS عشان تراجع تفاصيل المهمة وتبدأ التنفيذ:\n🔗 ${baseUrl}/login\n\nنتمنالك التوفيق،\nفريق إدارة PHANTOMS.`;
   return { phone: normalizePhone(member.phone)!, memberName: member.full_name, taskTitle: task.title, text };
 }
 
@@ -59,6 +59,6 @@ export async function resolveAnnouncementMessage(admin: AdminRequest, announceme
   if (!member.phone || !normalizePhone(member.phone)) throw new Error('رقم العضو مش صالح.');
   
   const icon = ann.priority === 'urgent' ? '🚨' : ann.priority === 'high' ? '⚠️' : '📢';
-  const text = `أهلًا ${member.full_name} 👋،\n\n${icon} *إعلان إداري مهم!*\n📌 *«${ann.title}»*\n\n${ann.content}\n\nادخل على بوابة وصلة عشان تعرف تفاصيل أكتر:\n🔗 ${baseUrl}/login\n\nإدارة وصلة.`;
+  const text = `أهلًا ${member.full_name} 👋،\n\n${icon} *إعلان إداري مهم!*\n📌 *«${ann.title}»*\n\n${ann.content}\n\nادخل على بوابة PHANTOMS عشان تعرف تفاصيل أكتر:\n🔗 ${baseUrl}/login\n\nإدارة PHANTOMS.`;
   return { phone: normalizePhone(member.phone)!, memberName: member.full_name, announcementTitle: ann.title, text };
 }

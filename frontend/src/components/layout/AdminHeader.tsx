@@ -9,7 +9,7 @@ const pageTitles: Record<string, string> = {
   '/admin/ranking': 'ترتيب الفريق',
   '/admin/notes': 'الملاحظات والتوجيهات',
   '/admin/announcements': 'الإعلانات والتنبيهات',
-  '/admin/ai-assistant': 'مساعد وصلة الذكي',
+  '/admin/ai-assistant': 'مساعد PHANTOMS الذكي',
   '/admin/whatsapp': 'إرسال المهام عبر واتساب',
   '/admin/admins': 'إدارة المشرفين',
 };
