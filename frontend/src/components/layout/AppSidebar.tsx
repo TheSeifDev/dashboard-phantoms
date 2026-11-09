@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from '../../store/auth';
 import { supabase } from '../../lib/supabase/client';
 import { Drawer } from '../ui/Drawer';
+import { PhantomsLogo } from '../brand/PhantomsLogo';
 import type { AdminPermission, AdminPermissions } from '../../types/db';
 
 interface SidebarLink {
@@ -181,8 +182,7 @@ export function AppSidebar({
     <>
       <aside className="app-sidebar" aria-label="الشريط الجانبي">
         <NavLink to="/admin" className="app-sidebar-brand" aria-label="PHANTOMS — الرئيسية">
-          <img src="/wasla-logo.png" alt="PHANTOMS" />
-          <span>PHANTOMS</span>
+          <PhantomsLogo size="md" className="app-sidebar-logo" />
         </NavLink>
         <nav aria-label="التنقل الرئيسي" className="app-sidebar-nav">
           <SidebarLinks railTips isOwner={isOwner} permissions={permissions} />

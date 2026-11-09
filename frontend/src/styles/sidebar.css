@@ -27,24 +27,18 @@
     justify-content: center;
     gap: var(--space-3);
     border-block-end: 1px solid var(--border);
-    padding-inline: var(--space-5);
+    padding-inline: var(--space-4);
     color: var(--text);
     text-decoration: none;
   }
 
-  .app-sidebar-brand img { width: 36px; height: 36px; object-fit: contain; }
-
-  .app-sidebar-brand span {
+  .app-sidebar-brand .app-sidebar-logo span {
     display: none;
-    white-space: nowrap;
-    font-size: var(--fs-lg);
-    font-weight: 900;
-    letter-spacing: 0;
   }
 
   @media (min-width: 1280px) {
-    .app-sidebar-brand { justify-content: flex-start; }
-    .app-sidebar-brand span { display: block; }
+    .app-sidebar-brand { justify-content: flex-start; padding-inline: var(--space-5); }
+    .app-sidebar-brand .app-sidebar-logo span { display: block; }
   }
 
   .app-sidebar-nav {

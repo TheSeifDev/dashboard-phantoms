@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Moon, ShieldCheck, Sparkles, Sun } from 'lucide-react';
 import { useThemeStore } from '../../store/theme';
+import { PhantomsLogo } from '../brand/PhantomsLogo';
 
 interface AuthShellProps {
   title: string;
@@ -20,8 +21,7 @@ export function AuthShell({ title, description, badge, audience, children, foote
     <div className="auth-shell" dir="rtl">
       <header className="auth-topbar">
         <Link className="auth-brand" to="/login" aria-label="PHANTOMS — الرئيسية">
-          <img src="/wasla-logo.png" alt="PHANTOMS" />
-          <span><strong>PHANTOMS</strong></span>
+          <PhantomsLogo size="md" />
         </Link>
         <span className="auth-topbar-caption">نظام إدارة العمليات والتكليفات</span>
       </header>

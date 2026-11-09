@@ -1,54 +1,113 @@
+/**
+ * =========================================================================
+ * PHANTOMS Operations Platform — Official Design Tokens (v2.3)
+ * =========================================================================
+ * 
+ * DESIGN PRINCIPLES:
+ * 1. Modern Enterprise Operations Platform: High-density, commanding clarity.
+ * 2. Visual Hierarchy: Strict high-contrast typography, clear boundaries.
+ * 3. Restrained Aesthetics: Crisp 1px borders, subtle elevation, no muddy gradients.
+ * 4. Arabic RTL First: Balanced line heights, tabular figures, logical flow.
+ * 5. Complete Semantic Organization: Structured across Literal, Semantic,
+ *    Surface, and Component tiers.
+ * =========================================================================
+ */
+
 :root {
   color-scheme: light;
   
-  /* Wasla Tech Official Brand */
-  --primary: #6D28D9;
-  --primary-hover: #5B21B6;
-  --primary-soft: #F3E8FF;
-  --primary-ink: #4C1D95;
-  --on-primary: #FFFFFF;
-  --link: #6D28D9;
+  /* -----------------------------------------------------------------------
+   * 1. Brand & Accent Tokens (Provisional PHANTOMS Palette)
+   * ----------------------------------------------------------------------- */
+  --primary: #4F46E5;          /* Indigo 600 — Primary action / brand core */
+  --primary-hover: #4338CA;    /* Indigo 700 */
+  --primary-active: #3730A3;   /* Indigo 800 */
+  --primary-soft: #EEF2FF;     /* Indigo 50 — Subdued brand tint */
+  --primary-ink: #3730A3;      /* High-contrast brand text */
+  --on-primary: #FFFFFF;       /* Pure white text on brand */
+  --link: #4F46E5;             /* Interactive link / primary accent */
+  --link-hover: #4338CA;
+  --accent: #6366F1;           /* Accent highlight */
   
-  /* Semantic */
-  --success: #10B981;
-  --warning: #F59E0B;
-  --danger: #EF4444;
-  --info: #06B6D4;
+  /* -----------------------------------------------------------------------
+   * 2. Semantic Status Tokens (Light Theme)
+   * ----------------------------------------------------------------------- */
+  --success: #059669;
+  --success-hover: #047857;
+  --success-soft: #ECFDF5;
+  --success-border: #A7F3D0;
+  --success-text: #065F46;
   
-  /* Surface / Background (Wasla Palette) */
-  --bg: #F3F4F6;
-  --surface: #FFFFFF;
-  --surface-2: #F8FAFC;
+  --warning: #D97706;
+  --warning-hover: #B45309;
+  --warning-soft: #FFFBEB;
+  --warning-border: #FDE68A;
+  --warning-text: #92400E;
+  
+  --danger: #DC2626;
+  --danger-hover: #B91C1C;
+  --danger-soft: #FEF2F2;
+  --danger-border: #FECACA;
+  --danger-text: #991B1B;
+  
+  --info: #0284C7;
+  --info-hover: #0369A1;
+  --info-soft: #F0F9FF;
+  --info-border: #BAE6FD;
+  --info-text: #075985;
+  
+  /* -----------------------------------------------------------------------
+   * 3. Surface & Canvas Tokens (Light Theme)
+   * ----------------------------------------------------------------------- */
+  --bg: #F8FAFC;               /* Clean slate canvas */
+  --surface: #FFFFFF;          /* Primary card and modal panel */
+  --surface-2: #F1F5F9;        /* Slate 100 — Table headers, input backdrops, chips */
+  --surface-hover: #F8FAFC;
   --bg-elevated: #FFFFFF;
+  --surface-elevated: #FFFFFF;
   --card: #FFFFFF;
   --card-hover: #F8FAFC;
   
-  /* Text */
-  --text: #0F172A;
-  --text-2: #334155;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
+  /* -----------------------------------------------------------------------
+   * 4. Text & Typography Tokens (Light Theme)
+   * ----------------------------------------------------------------------- */
+  --text: #0B132B;             /* Primary text — AAA contrast (16.5:1) */
+  --text-2: #334155;           /* Secondary text (9.6:1) */
+  --text-secondary: #475569;   /* Body secondary (6.8:1) */
+  --text-muted: #64748B;       /* Muted labels & captions (4.6:1) */
   --text-inverse: #FFFFFF;
   
-  /* Borders */
-  --border: #E2E8F0;
+  /* -----------------------------------------------------------------------
+   * 5. Border & Divider Tokens (Light Theme)
+   * ----------------------------------------------------------------------- */
+  --border: #E2E8F0;           /* Slate 200 — High-precision structural border */
+  --border-subtle: #F1F5F9;    /* Subtle inner divider */
+  --border-focus: #4F46E5;
+  --focus-ring: #4F46E5;
   
-  /* Layout */
-  --touch: 44px;
+  /* -----------------------------------------------------------------------
+   * 6. Layout & Spatial Dimension Tokens
+   * ----------------------------------------------------------------------- */
+  --touch: 44px;               /* Minimum accessible tap target */
   --header-h: 64px;
   --bottom-nav-h: 64px;
   --sidebar-w: 264px;
   --sidebar-rail-w: 72px;
   --content-max: 1400px;
   
-  /* Radius */
-  --radius-xs: 6px;
-  --radius-sm: 8px; /* controls */
-  --radius: 12px;    /* cards */
-  --radius-lg: 16px;
+  /* -----------------------------------------------------------------------
+   * 7. Geometric Radius Scale
+   * ----------------------------------------------------------------------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;            /* Badges & micro-chips */
+  --radius: 10px;              /* Buttons, inputs, standard cards */
+  --radius-md: 12px;           /* Large cards & interactive panels */
+  --radius-lg: 16px;           /* Modals, drawers & dialogs */
   --radius-full: 9999px;
   
-  /* Spacing Scale */
+  /* -----------------------------------------------------------------------
+   * 8. Spacing Scale (4px Base Grid)
+   * ----------------------------------------------------------------------- */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -57,19 +116,30 @@
   --space-6: 32px;
   --space-7: 48px;
   
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  /* -----------------------------------------------------------------------
+   * 9. Elevation Shadows
+   * ----------------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.09), 0 4px 6px -4px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.06);
   
-  /* Typography Scale */
-  --fs-sm: 0.875rem;
-  --fs-base: 1rem;
+  /* -----------------------------------------------------------------------
+   * 10. Fluid Typography Scale
+   * ----------------------------------------------------------------------- */
+  --fs-xs: 0.75rem;            /* 12px */
+  --fs-sm: 0.875rem;           /* 14px */
+  --fs-base: 1rem;             /* 16px */
+  --fs-md: 1.125rem;           /* 18px */
   --fs-lg: clamp(1.125rem, 1rem + 0.5vw, 1.25rem);
   --fs-xl: clamp(1.25rem, 1.1rem + 0.8vw, 1.625rem);
   --fs-2xl: clamp(1.5rem, 1.2rem + 1.4vw, 2.25rem);
+  --fs-3xl: clamp(1.875rem, 1.4rem + 1.8vw, 2.75rem);
   
-  /* Z-Index */
+  /* -----------------------------------------------------------------------
+   * 11. Stacking Context (Z-Index Scale)
+   * ----------------------------------------------------------------------- */
   --z-sticky: 90;
   --z-sidebar: 110;
   --z-modal: 150;
@@ -77,26 +147,75 @@
   --z-toast: 300;
 }
 
+/* =========================================================================
+ * Dark Mode Palette: Obsidian Operations Room
+ * ========================================================================= */
 [data-theme="dark"] {
   color-scheme: dark;
-  --primary: #8B5CF6;
-  --primary-hover: #A78BFA;
-  --primary-soft: rgba(139, 92, 246, 0.16);
-  --primary-ink: #DDD6FE;
-  --link: #A78BFA;
   
-  --bg: #0F172A;
-  --surface: #1E293B;
-  --surface-2: #334155;
+  /* Brand Tokens (Dark) */
+  --primary: #6366F1;          /* Indigo 500 — Vibrant in dark context */
+  --primary-hover: #818CF8;    /* Indigo 400 */
+  --primary-active: #A5B4FC;   /* Indigo 300 */
+  --primary-soft: rgba(99, 102, 241, 0.16);
+  --primary-ink: #E0E7FF;      /* Indigo 100 */
+  --on-primary: #FFFFFF;
+  --link: #818CF8;             /* Indigo 400 */
+  --link-hover: #A5B4FC;
+  --accent: #818CF8;
+  
+  /* Semantic Status Tokens (Dark) */
+  --success: #34D399;
+  --success-hover: #6EE7B7;
+  --success-soft: rgba(16, 185, 129, 0.16);
+  --success-border: rgba(16, 185, 129, 0.35);
+  --success-text: #A7F3D0;
+  
+  --warning: #FBBF24;
+  --warning-hover: #FCD34D;
+  --warning-soft: rgba(245, 158, 11, 0.16);
+  --warning-border: rgba(245, 158, 11, 0.35);
+  --warning-text: #FDE68A;
+  
+  --danger: #F87171;
+  --danger-hover: #FCA5A5;
+  --danger-soft: rgba(239, 68, 68, 0.16);
+  --danger-border: rgba(239, 68, 68, 0.35);
+  --danger-text: #FECACA;
+  
+  --info: #38BDF8;
+  --info-hover: #7DD3FC;
+  --info-soft: rgba(14, 165, 233, 0.16);
+  --info-border: rgba(14, 165, 233, 0.35);
+  --info-text: #BAE6FD;
+  
+  /* Surface & Canvas Tokens (Dark) */
+  --bg: #090D16;               /* Obsidian slate canvas */
+  --surface: #111827;          /* Card & panel background */
+  --surface-2: #1F2937;        /* Table headers, controls, chip fills */
+  --surface-hover: #1E293B;
   --bg-elevated: #1E293B;
-  --card: #1E293B;
-  --card-hover: #334155;
+  --surface-elevated: #1E293B;
+  --card: #111827;
+  --card-hover: #1F2937;
   
-  --text: #F8FAFC;
-  --text-2: #E2E8F0;
-  --text-secondary: #CBD5E1;
-  --text-muted: #94A3B8;
-  --text-inverse: #0F172A;
+  /* Text & Typography Tokens (Dark) */
+  --text: #F8FAFC;             /* Slate 50 — AAA contrast (17.8:1) */
+  --text-2: #E2E8F0;           /* Slate 200 (13.5:1) */
+  --text-secondary: #CBD5E1;   /* Slate 300 (11.2:1) */
+  --text-muted: #94A3B8;       /* Slate 400 (6.3:1) */
+  --text-inverse: #090D16;
   
-  --border: #334155;
+  /* Border & Divider Tokens (Dark) */
+  --border: #263345;           /* Refined dark border */
+  --border-subtle: #1A2333;
+  --border-focus: #818CF8;
+  --focus-ring: #818CF8;
+  
+  /* Elevation Shadows (Dark) */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.45), 0 1px 2px -1px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.55), 0 4px 6px -4px rgb(0 0 0 / 0.35);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.65), 0 8px 10px -6px rgb(0 0 0 / 0.45);
 }

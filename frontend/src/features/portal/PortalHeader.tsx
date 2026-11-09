@@ -1,6 +1,7 @@
 import { Bell, LogOut, Moon, Sun } from 'lucide-react';
 import { useThemeStore } from '../../store/theme';
 import { useNotificationStore } from '../../lib/notifications';
+import { PhantomsLogo } from '../../components/brand/PhantomsLogo';
 
 export function PortalHeader({ onLogout }: { onLogout: () => void }) {
   const { theme, toggle } = useThemeStore();
@@ -10,12 +11,8 @@ export function PortalHeader({ onLogout }: { onLogout: () => void }) {
 
   return (
     <header className="sticky top-0 z-[var(--z-sticky)] flex min-h-[calc(var(--header-h)+env(safe-area-inset-top))] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-4 pt-[env(safe-area-inset-top)] sm:px-6">
-      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-        <img src="/wasla-logo.png" alt="PHANTOMS" className="size-8 object-contain sm:size-9" />
-        <div>
-          <strong className="block text-sm font-black sm:text-base">PHANTOMS</strong>
-          <span className="hidden text-xs text-[var(--text-muted)] sm:block">بوابة أعضاء الفريق</span>
-        </div>
+      <div className="flex shrink-0 items-center">
+        <PhantomsLogo size="sm" subtitle="بوابة أعضاء الفريق" />
       </div>
       <div className="flex items-center gap-2">
         <button
