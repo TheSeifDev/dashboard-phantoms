@@ -11,6 +11,14 @@ node_modules
 dist
 dist-ssr
 *.local
+*.local.*
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.template
+!.env.sample
 
 # Editor directories and files
 .vscode/*
@@ -24,8 +32,3 @@ dist-ssr
 *.sw?
 
 .vercel
-*.env.development
-.env.production
-.env.production.local
-.env
-

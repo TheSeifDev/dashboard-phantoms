@@ -1,37 +1,70 @@
-.playwright-mcp/
-.claude/
+# =========================================================================
+# PHANTOMS Platform — Comprehensive Security .gitignore Policy
+# =========================================================================
 
-# Log files
-*.log
+# --- 1. Environment & Secrets (Deny by default across all workspaces) ---
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.template
+!**/.env.sample
 
-# Environment & Secrets (Deny by default)
-.env
-.env.*
-.env.local
-!.env.example
+# Local overrides
+*.local
+*.local.*
 
-frontend/.env
-frontend/.env.local
-frontend/.env.*.local
-!frontend/.env.example
-!frontend/.env.production
+# Secret & credential directories
+**/secrets/
+**/credentials/
+**/*service-account*.json
+**/credentials*.json
 
-backend/**/.env
-backend/**/.env.*
-backend/**/.env.local
-!backend/**/.env.example
+# Private keys, certificates & keystores
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
 
+# Platform temporary / secret cache
+**/.vercel/
+**/.supabase/.temp/
+
+# WhatsApp Bridge local session storage
 backend/whatsapp-bridge/data/
 
-# Dependencies
+# --- 2. Dependencies & Package Managers ---
 node_modules/
+.pnpm-store/
 
-# Build output
+# --- 3. Build & Distribution Artifacts ---
 dist/
+dist-ssr/
+build/
+outputs/
 .work/
 .manus/
-outputs/
-.vercel/output/
-.vercel/.env*
-
 *.apk
+*.aab
+
+# --- 4. Logs & Diagnostics ---
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- 5. Editor & Agent Directories ---
+.playwright-mcp/
+.claude/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

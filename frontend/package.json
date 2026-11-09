@@ -26,6 +26,8 @@
     "test:xlsx": "npx tsx --test scripts/safe-xlsx-test.ts",
     "test:brand": "node --test scripts/brand-transition-test.mjs",
     "test:storage": "npx tsx --test scripts/test-storage-migration.ts",
+    "test:secrets": "node scripts/validate-secrets.mjs",
+    "audit:build-secrets": "node scripts/validate-secrets.mjs --build-artifacts",
     "audit:identity": "node scripts/audit-legacy-identity.mjs",
     "apk:sync": "npm run build && npx cap sync android",
     "apk": "node scripts/build-apk.mjs"
