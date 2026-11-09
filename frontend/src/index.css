@@ -19,7 +19,7 @@
 
   html {
     min-width: 320px;
-    font-family: 'Cairo', system-ui, sans-serif;
+    font-family: var(--font-arabic);
     text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
   }
@@ -97,8 +97,21 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--link);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
+  }
+
+  code, pre, kbd, samp, .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  .font-brand {
+    font-family: var(--font-english);
+  }
+
+  table, .tabular-nums, [data-tabular] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
   }
 
   @media (prefers-reduced-motion: reduce) {

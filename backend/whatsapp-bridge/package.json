@@ -1,5 +1,5 @@
 {
-  "name": "wasla-whatsapp-qr-bridge",
+  "name": "@phantoms/whatsapp-bridge",
   "private": true,
   "type": "module",
   "engines": {

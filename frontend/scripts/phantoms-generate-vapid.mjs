@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * wasla-generate-vapid.mjs — مولّد مفاتيح VAPID ذكي
+ * phantoms-generate-vapid.mjs — مولّد مفاتيح VAPID ذكي
  *
  * يولّد مفاتيح VAPID جديدة ويحدّث .env.local تلقائياً
  * ويطبع الأوامر اللازمة لتحديث Supabase secrets.
  *
  * الاستخدام:
- *   node scripts/wasla-generate-vapid.mjs
- *   node scripts/wasla-generate-vapid.mjs --print-only  (بدون كتابة)
+ *   node scripts/phantoms-generate-vapid.mjs
+ *   node scripts/phantoms-generate-vapid.mjs --print-only  (بدون كتابة)
  */
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
@@ -24,7 +24,7 @@ const C = {
   cyan: '\x1b[36m', bold: '\x1b[1m', reset: '\x1b[0m', dim: '\x1b[2m',
 };
 
-console.log(`\n${C.bold}وصلة — مولّد مفاتيح VAPID${C.reset}\n`);
+console.log(`\n${C.bold}PHANTOMS — مولّد مفاتيح VAPID${C.reset}\n`);
 
 // ── توليد المفاتيح ──────────────────────────────────────
 let publicKey, privateKey;

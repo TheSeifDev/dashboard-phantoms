@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * wasla-health-check.mjs — فحص صحة النظام الكامل
+ * phantoms-health-check.mjs — فحص صحة النظام الكامل
  * يفحص: Supabase DB، Edge Functions، Push VAPID، Vercel deployment
  *
  * الاستخدام:
- *   node scripts/wasla-health-check.mjs
- *   node scripts/wasla-health-check.mjs --json   (للـ CI/CD)
+ *   node scripts/phantoms-health-check.mjs
+ *   node scripts/phantoms-health-check.mjs --json   (للـ CI/CD)
  */
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
@@ -149,7 +149,7 @@ if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
 
 // ── 3. فحص Edge Functions ───────────────────────────────
 section('Edge Functions');
-const FUNCTIONS = ['push-notify', 'wasla-ai', 'whatsapp-tasks', 'admin-invite', 'admin-delete-account'];
+const FUNCTIONS = ['push-notify', 'phantoms-ai', 'whatsapp-tasks', 'admin-invite', 'admin-delete-account'];
 if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
   for (const fn of FUNCTIONS) {
     try {
@@ -222,7 +222,7 @@ section('ملفات المشروع');
 const requiredFiles = [
   ['frontend/.env.local', 'ضروري للبناء'],
   ['frontend/public/manifest.json', 'ضروري للـ PWA'],
-  ['frontend/public/wasla-logo.png', 'لوجو التطبيق'],
+  ['frontend/public/branding/phantoms-mark.png', 'لوجو التطبيق الأساسي'],
   ['frontend/public/icons/icon-192.png', 'أيقونة الإشعارات'],
   ['frontend/public/icons/icon-512.png', 'أيقونة التثبيت'],
   ['frontend/src/sw.ts', 'Service Worker'],

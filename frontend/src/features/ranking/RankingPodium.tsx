@@ -75,7 +75,7 @@ export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: Ran
               </span>
 
               {/* Bonus score */}
-              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-violet-500/10 border border-violet-200 dark:border-violet-900 text-violet-700 dark:text-violet-300 font-black text-sm">
+              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary)] font-black text-sm">
                 <span>{member.bonus_infinite === true ? '∞' : formatSigned(member.totalBonus)}</span>
                 <span className="text-xs font-semibold">{member.bonus_infinite === true ? 'بونص غير محدود' : 'نقطة'}</span>
               </div>

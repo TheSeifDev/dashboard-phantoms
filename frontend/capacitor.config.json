@@ -6,13 +6,13 @@
     "androidScheme": "https"
   },
   "android": {
-    "backgroundColor": "#F4F1EA",
+    "backgroundColor": "#0B0B0B",
     "allowMixedContent": false
   },
   "plugins": {
     "LocalNotifications": {
       "smallIcon": "ic_launcher",
-      "iconColor": "#C8412B"
+      "iconColor": "#E51C19"
     }
   }
 }

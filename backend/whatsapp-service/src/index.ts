@@ -32,7 +32,7 @@ app.use(express.json({ limit: '1mb' }));
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
-    service: 'wasla-whatsapp-service',
+    service: 'phantoms-whatsapp-service',
     isMock: config.isMock,
   });
 });

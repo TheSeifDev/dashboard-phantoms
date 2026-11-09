@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build-apk:
-    name: Build Wasla Android APK
+    name: Build PHANTOMS Android APK
     runs-on: ubuntu-latest
 
     steps:

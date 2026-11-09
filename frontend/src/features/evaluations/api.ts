@@ -50,7 +50,8 @@ export interface CreateEvaluationInput {
 }
 
 interface FallbackEvalContent {
-  __wasla_eval: true;
+  __phantoms_eval?: boolean;
+  __wasla_eval?: boolean;
   member_id: number;
   grade: EvaluationGrade;
   points: number;
@@ -250,6 +251,7 @@ export function useCreateEvaluations() {
 
         if (isMissingRelationError(nativeInsert.error, 'member_evaluations')) {
           const contentPayload: FallbackEvalContent = {
+            __phantoms_eval: true,
             __wasla_eval: true,
             member_id: memberId,
             grade: input.grade,

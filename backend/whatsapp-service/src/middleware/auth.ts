@@ -32,7 +32,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
   if (bypassAllowed && (!token || token === 'dev-token' || token === 'mock-admin-token')) {
     req.user = {
       id: 'mock-admin-id',
-      email: 'admin@wasla.local',
+      email: 'admin@phantoms.local',
       role: 'admin',
     };
     return next();

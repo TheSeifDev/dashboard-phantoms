@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * wasla-deploy.mjs — نظام نشر ذكي متكامل
+ * phantoms-deploy.mjs — نظام نشر ذكي متكامل
  *
  * المراحل:
  *   1. فحص صحة (health check)
@@ -10,10 +10,10 @@
  *   5. تقرير نهائي مع روابط
  *
  * الاستخدام:
- *   node scripts/wasla-deploy.mjs
- *   node scripts/wasla-deploy.mjs --dry-run    (بدون نشر فعلي)
- *   node scripts/wasla-deploy.mjs --skip-check (تخطى فحص الصحة)
- *   node scripts/wasla-deploy.mjs --prod       (نشر للإنتاج الحقيقي)
+ *   node scripts/phantoms-deploy.mjs
+ *   node scripts/phantoms-deploy.mjs --dry-run    (بدون نشر فعلي)
+ *   node scripts/phantoms-deploy.mjs --skip-check (تخطى فحص الصحة)
+ *   node scripts/phantoms-deploy.mjs --prod       (نشر للإنتاج الحقيقي)
  */
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
@@ -60,8 +60,8 @@ let stepsFailed = 0;
 // ── شعار البداية ─────────────────────────────────────────
 console.log(`
 ${C.bold}╔══════════════════════════════════════════╗
-║       وصلة — نظام النشر الذكي           ║
-║       Wasla Smart Deploy v1.0            ║
+║     PHANTOMS — نظام النشر الذكي          ║
+║     PHANTOMS Smart Deploy v1.0           ║
 ╚══════════════════════════════════════════╝${C.reset}
 `);
 
@@ -72,7 +72,7 @@ if (PROD)    warn('وضع الإنتاج — سيُنشر للـ production doma
 step(1, 'فحص صحة النظام');
 if (!SKIP_CHECK) {
   try {
-    const healthScript = resolve(ROOT, 'scripts', 'wasla-health-check.mjs');
+    const healthScript = resolve(ROOT, 'scripts', 'phantoms-health-check.mjs');
     if (existsSync(healthScript)) {
       const result = execSync(`node "${healthScript}" --json`, {
         cwd: ROOT,

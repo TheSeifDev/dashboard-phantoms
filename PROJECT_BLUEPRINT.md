@@ -1,4 +1,4 @@
-# PROJECT BLUEPRINT: Wasla Tech Management System (v2)
+# PROJECT BLUEPRINT: PHANTOMS Operations & Team Management Platform (v2)
 
 > **Document Version:** 2.0.0  
 > **Status:** APPROVED & LOCKED ARCHITECTURE  
@@ -8,7 +8,7 @@
 ---
 
 ## 1. Project Overview
-Wasla Tech Management System (v2) is a specialized, closed internal operations management platform and intelligence suite engineered specifically for the Wasla Tech team and its leadership. The system orchestrates member logistical readiness (device availability, location tracking, field attendance feasibility), task distribution and multi-stage lifecycle verification, member ranking and reward scoreboards, contextual team notes, and an agentic operational AI Assistant (Wasla AI) with execution capabilities. "Done" is defined as a fully responsive, RTL-native, dual-portal web application (Admin Control Center & Member Portal) backed by Supabase PostgreSQL, edge functions, and real-time client state management with zero compilation errors, full TypeScript type safety, and zero UI regressions.
+PHANTOMS Operations & Team Management Platform (v2) is a specialized, closed internal operations management platform and intelligence suite engineered specifically for the PHANTOMS team and its leadership. The system orchestrates member logistical readiness (device availability, location tracking, field attendance feasibility), task distribution and multi-stage lifecycle verification, member ranking and reward scoreboards, contextual team notes, and an agentic operational AI Assistant (PHANTOMS AI) with execution capabilities. "Done" is defined as a fully responsive, RTL-native, dual-portal web application (Admin Control Center & Member Portal) backed by Supabase PostgreSQL, edge functions, and real-time client state management with zero compilation errors, full TypeScript type safety, and zero UI regressions.
 
 ---
 
@@ -37,7 +37,7 @@ Wasla Tech Management System (v2) is a specialized, closed internal operations m
 - **Operational Notes & Team Activity Log:**
   - Categorized note creation (General team note, Targeted sub-team note, Direct member note).
   - Historical chronological audit timeline with author attribution and timestamps.
-- **Wasla AI Operational Assistant (Agentic):**
+- **PHANTOMS AI Operational Assistant (Agentic):**
   - Live conversational interface in Admin Dashboard with streaming capability.
   - Scoped database context injection (live member count, delayed tasks, device readiness).
   - Agentic Tool Calling & Action Execution: AI can propose and trigger structured mutations (e.g., `create_task`, `update_member`, `assign_task`, `add_note`) with explicit user confirmation or automated execution.
@@ -275,12 +275,12 @@ CREATE POLICY "Anon read notes" ON public.notes FOR SELECT TO anon USING (true);
 - **Purpose:** Fast, passwordless entry for team members to access their personal workspace.
 - **Access:** Public.
 - **Components:**
-  - Wasla Brand Mark (Logo + Animated Ambient Accent).
+  - PHANTOMS Brand Mark (Logo + Animated Ambient Accent).
   - Single input field: Email address (`dir="ltr"`, email validator).
   - "دخول سريع" (Quick Login) Action Button with loading state.
   - Link to Admin Login: "تسجيل دخول الإدارة ->" linking to `/admin/login`.
 - **States:** Default, Submitting, Email Not Found Error, Active Session.
-- **Actions:** On submission, checks `members` table for matching email. If found, stores `wasla_member_session` in `localStorage` + Zustand and navigates to `/portal`. If not found, shows: `"هذا البريد الإلكتروني غير مسجل في الفريق. تواصل مع الإدارة."`
+- **Actions:** On submission, checks `members` table for matching email. If found, stores `phantoms_member_session` in `localStorage` + Zustand and navigates to `/portal`. If not found, shows: `"هذا البريد الإلكتروني غير مسجل في الفريق. تواصل مع الإدارة."`
 
 ### 8.2 Admin Login (`/admin/login`)
 - **Purpose:** Secure authentication for team leads and system administrators.
@@ -327,7 +327,7 @@ CREATE POLICY "Anon read notes" ON public.notes FOR SELECT TO anon USING (true);
   - Full Leaderboard Table: Rank #, Member, Team, Completed Tasks, Score %, Badges.
   - Quick Score Adjustment Modal (Bonus points for outstanding field initiatives).
 
-### 8.7 Wasla AI Assistant (`/admin/assistant`)
+### 8.7 PHANTOMS AI Assistant (`/admin/assistant`)
 - **Purpose:** Intelligent conversational partner for team logistics queries and agentic task execution.
 - **Access:** Authenticated Admins.
 - **Components:**
@@ -353,10 +353,9 @@ CREATE POLICY "Anon read notes" ON public.notes FOR SELECT TO anon USING (true);
 
 ```
 /* Primary Theme Palette (Tokens) */
---primary: #6D28D9        (Wasla Royal Purple)
---primary-hover: #5B21B6  (Deep Purple)
---primary-light: #F3E8FF  (Soft Lavender Tint)
---accent: #7C3AED         (Electric Violet)
+--primary: #E51C19        (Phantom Red)
+--secondary: #0B0B0B      (Phantom Black)
+--editorial-white: #F5F4F1 (Editorial White)
 
 /* Semantic Colors */
 --success: #10B981        (Emerald Green - Approved / Active)
@@ -408,6 +407,6 @@ CREATE POLICY "Anon read notes" ON public.notes FOR SELECT TO anon USING (true);
 ## 12. Open Questions & Risks
 
 1. **Member Authentication Scale:** Email-only lookup offers zero-friction access for internal team members. If the team grows beyond 100+ members or handles sensitive proprietary assets, migrate to Magic Link (OTP via Email/WhatsApp) in Phase 2.
-2. **AI Action Verification:** All agentic actions proposed by Wasla AI (such as task deletion or member removal) MUST require explicit one-click UI confirmation by the Admin in the chat window before executing database mutations.
+2. **AI Action Verification:** All agentic actions proposed by PHANTOMS AI (such as task deletion or member removal) MUST require explicit one-click UI confirmation by the Admin in the chat window before executing database mutations.
 3. **Excel Column Header Sync:** The SheetJS import utility must support fuzzy Arabic header matching (e.g., `"الاسم"`, `"اسم العضو"`, `"الاسم بالكامل"` all map to `full_name`).
 

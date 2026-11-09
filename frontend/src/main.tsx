@@ -7,7 +7,11 @@ import { ToastViewport } from './components/ui/Toast';
 import { useThemeStore, parseTheme } from './store/theme';
 import { registerSW } from 'virtual:pwa-register';
 import { initCapacitorNativeBridge, isRunningInNativeApk } from './lib/capacitor';
+import { runLocalStorageMigration } from './lib/storageMigration';
 import './index.css';
+
+// الترحيل الآمن لمفاتيح الجلسة المحلية القديمة (wasla_* -> phantoms_*)
+runLocalStorageMigration();
 
 // تهيئة بيئة تطبيق الأندرويد (زر الرجوع والتكامل الأصلي)
 initCapacitorNativeBridge();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * wasla-db-audit.mjs — مراجعة ذكية لقاعدة البيانات
+ * phantoms-db-audit.mjs — مراجعة ذكية لقاعدة البيانات
  *
  * يتحقق من:
  *   - هل كل الـ migrations طُبِّقت؟
@@ -10,8 +10,8 @@
  *   - هل توجد subscriptions منتهية الصلاحية؟
  *
  * الاستخدام:
- *   node scripts/wasla-db-audit.mjs
- *   node scripts/wasla-db-audit.mjs --clean-subscriptions
+ *   node scripts/phantoms-db-audit.mjs
+ *   node scripts/phantoms-db-audit.mjs --clean-subscriptions
  */
 import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
@@ -66,7 +66,7 @@ const fail = (m, d = '') => console.error(`  ${C.red}✗${C.reset} ${m}${d ? ` $
 const warn = (m, d = '') => console.warn(`  ${C.yellow}⚠${C.reset} ${m}${d ? ` ${C.dim}(${d})${C.reset}` : ''}`);
 const sec  = (n) => console.log(`\n${C.bold}${C.cyan}── ${n} ${'─'.repeat(45 - n.length)}${C.reset}`);
 
-console.log(`\n${C.bold}وصلة — مراجعة قاعدة البيانات${C.reset}\n`);
+console.log(`\n${C.bold}فانتومز (PHANTOMS) — مراجعة قاعدة البيانات${C.reset}\n`);
 
 // ── 1. الجداول الأساسية ────────────────────────────────────
 sec('الجداول الأساسية');
@@ -125,7 +125,7 @@ for (const r of RPCS) {
 // ── 3. إحصاءات البيانات (مع auth تجريبية) ─────────────────
 sec('إحصاءات البيانات');
 // نستخدم RPC المتاحة للـ anon
-const lookup = await rpc('lookup_member_by_email', { p_email: 'nonexistent@wasla.com' });
+const lookup = await rpc('lookup_member_by_email', { p_email: 'nonexistent@phantoms.org' });
 if (lookup.status === 200) {
   ok('dالوصول إلى البيانات', `lookup_member_by_email يعمل بشكل صحيح`);
 } else {

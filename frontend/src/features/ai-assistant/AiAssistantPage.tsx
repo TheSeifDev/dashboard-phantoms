@@ -18,7 +18,7 @@ export default function AiAssistantPage() {
     <section id="page-ai-assistant" className="flex min-h-[calc(100dvh-8rem)] flex-col gap-4" dir="rtl">
       <header className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-6">
         <div className="flex items-center gap-3">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--primary)] text-white">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--primary)] text-white ">
             <Bot size={24} />
           </span>
           <div>

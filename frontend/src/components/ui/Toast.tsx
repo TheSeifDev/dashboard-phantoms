@@ -9,10 +9,10 @@ const icons: Record<ToastKind, typeof CheckCircle2> = {
 };
 
 const styles: Record<ToastKind, string> = {
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100',
-  error: 'border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950/60 dark:text-red-100',
-  info: 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)]',
-  warning: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-100',
+  success: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success)]',
+  error: 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)] dark:text-[var(--danger)]',
+  info: 'border-[var(--info-border)] bg-[var(--info-soft)] text-[var(--info-text)] dark:text-[var(--info)]',
+  warning: 'border-[var(--warning-border)] bg-[var(--warning-soft)] text-[var(--warning-text)] dark:text-[var(--warning)]',
 };
 
 export function ToastViewport() {

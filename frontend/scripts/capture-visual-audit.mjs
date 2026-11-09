@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT_DIR = path.resolve('.');
-const OUT_DIR = path.resolve('../audit/screenshots/phase2_2');
+const OUT_DIR = path.resolve('../audit/screenshots/phase2_4');
 
 if (!fs.existsSync(OUT_DIR)) {
   fs.mkdirSync(OUT_DIR, { recursive: true });

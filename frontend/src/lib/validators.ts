@@ -1,6 +1,6 @@
 /**
  * مكتبة التحقق من صحة البيانات
- * Validation utilities for Wasla Tech System
+ * Validation utilities for PHANTOMS Platform
  */
 
 /**

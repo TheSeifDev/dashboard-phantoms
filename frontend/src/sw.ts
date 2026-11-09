@@ -31,7 +31,7 @@ self.addEventListener('push', (event) => {
   const title = payload.title || 'PHANTOMS — إشعار جديد';
   const body = payload.body || 'وصلك تحديث جديد على بوابة الفريق';
   const targetUrl = payload.url || '/portal';
-  const tag = `wasla-push-${Date.now()}`;
+  const tag = `phantoms-push-${Date.now()}`;
 
   const options: NotificationOptions & { vibrate?: number[]; renotify?: boolean } = {
     body,
@@ -54,16 +54,22 @@ self.addEventListener('push', (event) => {
       self.registration.showNotification(title, options),
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
         for (const client of clients) {
+          const messagePayload = {
+            id: tag,
+            title,
+            body,
+            url: targetUrl,
+            category: payload.category || 'announcement',
+            targetTab: payload.targetTab || 'ALL',
+          };
+          client.postMessage({
+            type: 'PHANTOMS_PUSH_RECEIVED',
+            payload: messagePayload,
+          });
+          // Backward compatibility postMessage
           client.postMessage({
             type: 'WASLA_PUSH_RECEIVED',
-            payload: {
-              id: tag,
-              title,
-              body,
-              url: targetUrl,
-              category: payload.category || 'announcement',
-              targetTab: payload.targetTab || 'ALL',
-            },
+            payload: messagePayload,
           });
         }
       }),
@@ -80,6 +86,10 @@ self.addEventListener('notificationclick', (event) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
         if ('focus' in client) {
+          client.postMessage({
+            type: 'PHANTOMS_NOTIFICATION_CLICKED',
+            payload: event.notification.data || {},
+          });
           client.postMessage({
             type: 'WASLA_NOTIFICATION_CLICKED',
             payload: event.notification.data || {},

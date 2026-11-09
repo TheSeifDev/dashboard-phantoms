@@ -15,14 +15,14 @@ const onlyPage = process.env.WASLA_ONLY_PAGE ?? (process.env.WASLA_ONLY_WHATSAPP
 const adminPages = onlyPage ? pages.filter(([, name]) => name === onlyPage) : pages.slice(3, 10);
 const members = [{ id: 701, created_at: '2026-09-01T12:00:00Z', email: 'demo.member@example.test', full_name: 'سلمى محمود', team: 'التصميم', completion_rank: 86, bio: 'مصممة واجهات', device: 'لابتوب', meeting_attendance: 'منتظم', work_status: 'active', phone: '+201001234567', can_go_alexandria: true }];
 const tasks = [{ id: 801, created_at: '2026-09-10T12:00:00Z', title: 'إعداد واجهة لوحة التحكم', description: 'مراجعة تجربة الاستخدام ودعم الشاشات الصغيرة.', has_deadline: true, deadline_date: '2026-10-12', assigned_to: 'ALL', tracking: { '701': { status: 'under_review', note: 'جاهز للمراجعة', submission_url: 'https://example.test/demo', updated_at: '2026-09-11T12:00:00Z' } } }];
-const notes = [{ id: 901, created_at: '2026-09-12T12:00:00Z', text: 'تذكير بمراجعة التصميم قبل الاجتماع الأسبوعي.', author: 'إدارة وصلة', author_role: 'Admin', date: '2026-09-12', team: null, target_team: 'التصميم', target_member_id: null, target_name: null }];
+const notes = [{ id: 901, created_at: '2026-09-12T12:00:00Z', text: 'تذكير بمراجعة التصميم قبل الاجتماع الأسبوعي.', author: 'إدارة PHANTOMS', author_role: 'Admin', date: '2026-09-12', team: null, target_team: 'التصميم', target_member_id: null, target_name: null }];
 const memberSession = JSON.stringify(members[0]);
 let whatsappEnabled = false;
 
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
-await page.addInitScript((member) => localStorage.setItem('wasla_member_session', member), memberSession);
+await page.addInitScript((member) => localStorage.setItem('phantoms_member_session', member), memberSession);
 await page.route('**/rest/v1/**', async (route) => {
   const url = new URL(route.request().url());
   const table = url.pathname.split('/').at(-1);

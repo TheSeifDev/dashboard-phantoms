@@ -22,16 +22,19 @@ export function AuthShell({ title, description, badge, audience, children, foote
       <header className="auth-topbar">
         <Link className="auth-brand" to="/login" aria-label="PHANTOMS — الرئيسية">
           <PhantomsLogo size="md" />
+          <span className="sr-only"><strong>PHANTOMS</strong></span>
         </Link>
         <span className="auth-topbar-caption">نظام إدارة العمليات والتكليفات</span>
       </header>
       <main className="auth-layout">
         <section className="auth-story" aria-label="عن PHANTOMS">
-          <p className="auth-eyebrow">منصة متطورة لإدارة وتنسيق مهام وفرق العمليات.</p>
-          <h1>أهلاً بيك<br /><span>في منصة PHANTOMS</span></h1>
-          <p className="auth-story-copy">في PHANTOMS، بنمكّن الفرق من إنجاز العمليات وتتبع المهام بدقة وسرعة فائقة.</p>
+          <p className="auth-eyebrow">DESIGN FROM THE SHADOW • IDEAS INTO IMPACT.</p>
+          <h1>أهلاً بيك في<br /><span>PHANTOMS</span></h1>
+          <p className="auth-story-copy">فريق تقني يجمع العقول والتخصصات لبناء حلول وتجارب تقنية وتحويل الأفكار إلى تأثير حقيقي في إدارة العمليات والتكليفات.</p>
           <div className="auth-benefits">
-            <span>عمليات متكاملة</span><span>كفاءة عالية</span><span>أداء متميز</span>
+            <span className="auth-benefit-pill">PEOPLE • الناس</span>
+            <span className="auth-benefit-pill">IDEAS • الأفكار</span>
+            <span className="auth-benefit-pill">IMPACT • التأثير</span>
           </div>
         </section>
         <section className="auth-panel" aria-labelledby="auth-title">
@@ -47,7 +50,7 @@ export function AuthShell({ title, description, badge, audience, children, foote
           <div className="auth-footer">{footer}</div>
         </section>
       </main>
-      <footer className="auth-page-footer" dir="ltr" lang="en">Code. Build. Innovate. Impact. <span>© 2026 PHANTOMS</span></footer>
+      <footer className="auth-page-footer" dir="ltr" lang="en">DESIGN FROM THE SHADOW • IDEAS INTO IMPACT. <span>© 2026 PHANTOMS</span></footer>
     </div>
   );
 }

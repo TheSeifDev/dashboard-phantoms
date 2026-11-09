@@ -27,7 +27,7 @@ const C = {
   cyan: '\x1b[36m', bold: '\x1b[1m', reset: '\x1b[0m', dim: '\x1b[2m',
 };
 
-console.log(`\n${C.bold}وصلة — مشغّل Migrations${C.reset}\n`);
+console.log(`\n${C.bold}فانتومز (PHANTOMS) — مشغّل Migrations${C.reset}\n`);
 
 // ── تحميل env ──────────────────────────────────────────
 const ROOT_FE = resolve(__dirname, '..');

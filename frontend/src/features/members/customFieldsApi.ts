@@ -10,11 +10,13 @@ import type {
 } from '../../types/db';
 
 export const MEMBER_CUSTOM_FIELDS_KEY = ['member_custom_fields'] as const;
-export const ONBOARDING_CARRIER_LABEL = '__WASLA_ONBOARDING__';
+export const ONBOARDING_CARRIER_LABEL = '__PHANTOMS_ONBOARDING__';
+export const LEGACY_ONBOARDING_CARRIER_LABEL = '__WASLA_ONBOARDING__';
 
 const CF_MARKER_PREFIX = '[[WASLA_CF:';
 const CF_MARKER_REGEX = /\s*\[\[WASLA_CF:(\{[\s\S]*\})\]\]$/;
-const LOCAL_STORAGE_FALLBACK_KEY = 'wasla_member_custom_fields_v1';
+const LOCAL_STORAGE_FALLBACK_KEY = 'phantoms_member_custom_fields_v1';
+const LEGACY_LOCAL_STORAGE_FALLBACK_KEY = 'wasla_member_custom_fields_v1';
 
 export const CUSTOM_FIELD_TYPE_LABELS: Record<MemberCustomFieldType, string> = {
   short_text: 'نص حر (كتابة أي قيمة)',
@@ -93,13 +95,13 @@ export function normalizeFieldRow(row: Record<string, unknown>): MemberCustomFie
 
 function readLocalFallbackFields(): MemberCustomField[] {
   try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_FALLBACK_KEY);
+    const raw = window.localStorage.getItem(LOCAL_STORAGE_FALLBACK_KEY) ?? window.localStorage.getItem(LEGACY_LOCAL_STORAGE_FALLBACK_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed)
       ? parsed
           .map((r) => normalizeFieldRow(r as Record<string, unknown>))
-          .filter((f) => f.is_active && f.label !== ONBOARDING_CARRIER_LABEL)
+          .filter((f) => f.is_active && f.label !== ONBOARDING_CARRIER_LABEL && f.label !== LEGACY_ONBOARDING_CARRIER_LABEL)
       : [];
   } catch {
     return [];
@@ -109,6 +111,7 @@ function readLocalFallbackFields(): MemberCustomField[] {
 function writeLocalFallbackFields(fields: MemberCustomField[]): void {
   try {
     window.localStorage.setItem(LOCAL_STORAGE_FALLBACK_KEY, JSON.stringify(fields));
+    try { window.localStorage.removeItem(LEGACY_LOCAL_STORAGE_FALLBACK_KEY); } catch {}
   } catch {
     // ignore storage errors
   }

@@ -12,7 +12,7 @@ const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
 if (vapidPublicKey && vapidPrivateKey) {
   webpush.setVapidDetails(
-    'mailto:admin@wasla.com',
+    process.env.VAPID_SUBJECT || 'mailto:operations@phantoms.org',
     vapidPublicKey,
     vapidPrivateKey
   );
@@ -49,8 +49,8 @@ router.post('/api/push', asyncHandler(async (req: Request, res: Response) => {
   }
   const validIds = numericIds;
 
-  const safeIcon = typeof icon === 'string' && icon !== '' ? icon.slice(0, 2048) : '/wasla-logo.png';
-  if (safeIcon !== '/wasla-logo.png' && !safeIcon.startsWith('/') && !/^https:\/\/[^/]+/.test(safeIcon)) {
+  const safeIcon = typeof icon === 'string' && icon !== '' ? icon.slice(0, 2048) : '/branding/phantoms-mark-192.png';
+  if (safeIcon !== '/branding/phantoms-mark-192.png' && safeIcon !== '/wasla-logo.png' && !safeIcon.startsWith('/') && !/^https:\/\/[^/]+/.test(safeIcon)) {
     return res.status(400).json({ error: 'Invalid icon URL.' });
   }
   const safeUrl = typeof url === 'string' && url !== '' ? url.slice(0, 2048) : '/portal';

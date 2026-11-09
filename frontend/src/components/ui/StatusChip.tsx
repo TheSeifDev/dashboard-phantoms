@@ -3,14 +3,11 @@ import type { ReactNode } from 'react';
 type ChipTone = 'success' | 'muted' | 'info' | 'warning' | 'danger';
 
 const tones: Record<ChipTone, string> = {
-  success:
-    'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-400',
+  success: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success)]',
   muted: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]',
-  info: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)]',
-  warning:
-    'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-300',
-  danger:
-    'border-red-200 bg-red-50 text-red-700 dark:border-red-800/50 dark:bg-red-950/30 dark:text-red-300',
+  info: 'border-[var(--info-border)] bg-[var(--info-soft)] text-[var(--info-text)] dark:text-[var(--info)]',
+  warning: 'border-[var(--warning-border)] bg-[var(--warning-soft)] text-[var(--warning-text)] dark:text-[var(--warning)]',
+  danger: 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)] dark:text-[var(--danger)]',
 };
 
 /** شارة حالة لا تلتف أبداً. */

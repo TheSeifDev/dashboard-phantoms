@@ -5,7 +5,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 export type NotificationCategory = 'task' | 'evaluation' | 'announcement' | 'review' | 'system';
 export type NotificationTargetTab = 'ALL' | 'TASKS' | 'EVALUATIONS' | 'ANNOUNCEMENTS';
 
-export interface WaslaNotificationItem {
+export interface PhantomsNotificationItem {
   id: string;
   title: string;
   body: string;
@@ -16,15 +16,18 @@ export interface WaslaNotificationItem {
   senderName?: string;
 }
 
+/** Backward compatibility type alias */
+export type WaslaNotificationItem = PhantomsNotificationItem;
+
 interface NotificationState {
-  items: WaslaNotificationItem[];
-  activeBanner: WaslaNotificationItem | null;
+  items: PhantomsNotificationItem[];
+  activeBanner: PhantomsNotificationItem | null;
   soundEnabled: boolean;
   drawerOpen: boolean;
   hydrateForMember: (memberId: number) => void;
   pushNotification: (
     memberId: number,
-    item: Omit<WaslaNotificationItem, 'id' | 'createdAt' | 'read'> & { id?: string; createdAt?: string },
+    item: Omit<PhantomsNotificationItem, 'id' | 'createdAt' | 'read'> & { id?: string; createdAt?: string },
     options?: { triggerSystem?: boolean; playSound?: boolean; showBanner?: boolean },
   ) => void;
   dismissBanner: () => void;
@@ -35,27 +38,53 @@ interface NotificationState {
   setDrawerOpen: (open: boolean) => void;
 }
 
-const SOUND_PREF_KEY = 'wasla_notif_sound_enabled';
-const ANDROID_CHANNEL_ID = 'wasla_whatsapp_alerts_v2';
+const SOUND_PREF_KEY = 'phantoms_notif_sound_enabled';
+const LEGACY_SOUND_PREF_KEY = 'wasla_notif_sound_enabled';
+const ANDROID_CHANNEL_ID = 'phantoms_whatsapp_alerts_v2';
+// Legacy Android channel: 'wasla_whatsapp_alerts_v2'
 
 function storageKeyForMember(memberId: number): string {
+  return `phantoms_notifications_v2_${memberId}`;
+}
+
+function legacyStorageKeyForMember(memberId: number): string {
   return `wasla_notifications_v2_${memberId}`;
 }
 
-function loadStoredItems(memberId: number): WaslaNotificationItem[] {
+function loadStoredItems(memberId: number): PhantomsNotificationItem[] {
   try {
-    const raw = localStorage.getItem(storageKeyForMember(memberId));
+    const primaryKey = storageKeyForMember(memberId);
+    let raw = localStorage.getItem(primaryKey);
+    if (!raw) {
+      // Check legacy storage key with transparent on-the-fly migration
+      const legacyKey = legacyStorageKeyForMember(memberId);
+      const legacyRaw = localStorage.getItem(legacyKey);
+      if (legacyRaw) {
+        raw = legacyRaw;
+        try {
+          localStorage.setItem(primaryKey, legacyRaw);
+          if (localStorage.getItem(primaryKey) === legacyRaw) {
+            localStorage.removeItem(legacyKey);
+          }
+        } catch {
+          // ignore quota errors
+        }
+      }
+    }
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as WaslaNotificationItem[]).slice(0, 60) : [];
+    return Array.isArray(parsed) ? (parsed as PhantomsNotificationItem[]).slice(0, 60) : [];
   } catch {
     return [];
   }
 }
 
-function saveStoredItems(memberId: number, items: WaslaNotificationItem[]): void {
+function saveStoredItems(memberId: number, items: PhantomsNotificationItem[]): void {
   try {
     localStorage.setItem(storageKeyForMember(memberId), JSON.stringify(items.slice(0, 60)));
+    try {
+      localStorage.removeItem(legacyStorageKeyForMember(memberId));
+    } catch {}
   } catch {
     // ignore storage quota errors
   }
@@ -63,7 +92,9 @@ function saveStoredItems(memberId: number, items: WaslaNotificationItem[]): void
 
 function loadSoundPref(): boolean {
   try {
-    return localStorage.getItem(SOUND_PREF_KEY) !== '0';
+    const primary = localStorage.getItem(SOUND_PREF_KEY);
+    if (primary !== null) return primary !== '0';
+    return localStorage.getItem(LEGACY_SOUND_PREF_KEY) !== '0';
   } catch {
     return true;
   }
@@ -267,7 +298,7 @@ export async function ensureAndroidNotificationChannel(): Promise<void> {
       visibility: 1,
       vibration: true,
       lights: true,
-      lightColor: '#C8412B',
+      lightColor: '#E51C19',
     });
     androidChannelInitialized = true;
   } catch {
@@ -355,9 +386,9 @@ export async function dispatchPhoneSystemNotification(item: {
 
   const options: NotificationOptions & { vibrate?: number[]; renotify?: boolean } = {
     body: item.body,
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
-    tag: item.tag || `wasla-${Date.now()}`,
+    icon: '/branding/phantoms-mark-192.png',
+    badge: '/branding/phantoms-mark-192.png',
+    tag: item.tag || `phantoms-${Date.now()}`,
     renotify: true,
     vibrate: [200, 100, 200],
     dir: 'rtl',

@@ -36,17 +36,34 @@ export default function DashboardPage() {
     <div className="grid gap-5" dir="rtl">
       {isError && <ErrorState message="معرفناش نحمّل بعض بيانات لوحة التحكم." onRetry={retry} />}
       
-      {/* Hero Section */}
-      <section className="grid gap-4 rounded-[var(--radius-lg)] bg-[var(--primary)] p-5 text-white sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center shadow-md">
-        <div>
-          <p className="text-sm font-bold text-violet-200 uppercase tracking-widest leading-relaxed">مركز عمليات PHANTOMS</p>
-          <h2 className="mt-1 text-2xl font-black sm:text-3xl tracking-tight">الفريق كله، في صورة واحدة</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-violet-100/90">تابع جاهزية الأعضاء، مؤشرات المهام، والنشاط دلوقتي، وخد قراراتك بناءً على بيانات حقيقية.</p>
+      {/* Hero Section — Official PHANTOMS Art Direction */}
+      <section className="relative overflow-hidden grid gap-4 rounded-[var(--radius-lg)] bg-[var(--phantom-black)] border border-white/10 border-s-4 border-s-[var(--primary)] p-5 text-white sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center shadow-lg">
+        {/* Subtle brutalist geometric technical reticle in background */}
+        <div className="pointer-events-none absolute -end-10 -bottom-10 size-48 rounded-full border border-red-900/20 opacity-30 sm:size-64" aria-hidden="true" />
+        <div className="relative z-10">
+          <div className="inline-flex items-center gap-2 mb-1.5">
+            <span className="size-2 rounded-full bg-[var(--primary)] animate-pulse" aria-hidden="true" />
+            <p className="text-xs font-black tracking-widest text-[var(--accent-pink)] uppercase font-['Montserrat',sans-serif]">
+              DESIGN FROM THE SHADOW • IDEAS INTO IMPACT
+            </p>
+          </div>
+          <h2 className="mt-1 text-2xl font-black sm:text-3xl tracking-tight text-[var(--editorial-white)] font-[var(--font-arabic)]">
+            مركز عمليات PHANTOMS
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--soft-grey)]">
+            متابعة فورية لجاهزية الأعضاء، مؤشرات الإنجاز، والتكليفات التشغيلية بدقة وكفاءة عالية.
+          </p>
         </div>
-        <div className="grid gap-3 sm:flex sm:flex-wrap pt-3 lg:pt-0">
-          <Button onClick={() => navigate('/admin/tasks')} icon={<Plus size={17} />} className="bg-white text-purple-900 hover:bg-violet-50 transition-colors" fullOnMobile>تكليف مهمة</Button>
-          <Button variant="secondary" onClick={() => navigate('/admin/members')} icon={<UserRoundPlus size={17} />} className="border-white/30 bg-white/10 text-white hover:bg-white/20" fullOnMobile>إضافة عضو</Button>
-          <Button variant="ghost" onClick={() => navigate('/admin/ai-assistant')} icon={<Bot size={17} />} fullOnMobile className="text-white hover:bg-white/10">مساعد PHANTOMS</Button>
+        <div className="relative z-10 grid gap-3 sm:flex sm:flex-wrap pt-3 lg:pt-0">
+          <Button onClick={() => navigate('/admin/tasks')} icon={<Plus size={17} />} className="bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] border-0" fullOnMobile>
+            تكليف مهمة
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/admin/members')} icon={<UserRoundPlus size={17} />} className="border-white/20 bg-white/10 text-[var(--editorial-white)] hover:bg-white/20" fullOnMobile>
+            إضافة عضو
+          </Button>
+          <Button variant="ghost" onClick={() => navigate('/admin/ai-assistant')} icon={<Bot size={17} />} fullOnMobile className="text-[var(--editorial-white)] hover:bg-white/10">
+            مساعد PHANTOMS
+          </Button>
         </div>
       </section>
 

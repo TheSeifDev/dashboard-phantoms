@@ -13,6 +13,9 @@ export function PortalHeader({ onLogout }: { onLogout: () => void }) {
     <header className="sticky top-0 z-[var(--z-sticky)] flex min-h-[calc(var(--header-h)+env(safe-area-inset-top))] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-4 pt-[env(safe-area-inset-top)] sm:px-6">
       <div className="flex shrink-0 items-center">
         <PhantomsLogo size="sm" subtitle="بوابة أعضاء الفريق" />
+        <div className="sr-only">
+          <strong className="block text-sm font-black sm:text-base">PHANTOMS</strong>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <button

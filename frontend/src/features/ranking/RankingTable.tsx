@@ -93,11 +93,11 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black border ${
                       member.bonus_infinite === true
-                        ? 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/50 dark:bg-violet-950/30 dark:text-violet-300'
+                        ? 'border-[var(--primary)]/30 bg-[var(--primary-soft)] text-[var(--primary)]'
                         : member.totalBonus > 0
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400'
+                        ? 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success)]'
                         : member.totalBonus < 0
-                        ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400'
+                        ? 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)] dark:text-[var(--danger)]'
                         : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]'
                     }`}
                   >

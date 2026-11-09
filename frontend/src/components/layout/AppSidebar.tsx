@@ -183,6 +183,7 @@ export function AppSidebar({
       <aside className="app-sidebar" aria-label="الشريط الجانبي">
         <NavLink to="/admin" className="app-sidebar-brand" aria-label="PHANTOMS — الرئيسية">
           <PhantomsLogo size="md" className="app-sidebar-logo" />
+          <span className="sr-only"><span>PHANTOMS</span></span>
         </NavLink>
         <nav aria-label="التنقل الرئيسي" className="app-sidebar-nav">
           <SidebarLinks railTips isOwner={isOwner} permissions={permissions} />

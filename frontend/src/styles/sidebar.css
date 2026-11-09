@@ -97,8 +97,9 @@
 
   .app-sidebar-item.is-active {
     background: var(--primary-soft);
-    color: var(--link);
-    font-weight: 800;
+    color: var(--primary);
+    font-weight: 850;
+    border-inline-start: 3px solid var(--primary);
   }
 
   .app-sidebar-item-label {

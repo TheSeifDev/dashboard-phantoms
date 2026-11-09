@@ -1,15 +1,24 @@
 /**
  * =========================================================================
- * PHANTOMS Operations Platform — Official Design Tokens (v2.3)
+ * PHANTOMS Brand Identity System V1.0 — Official Design Tokens
  * =========================================================================
  * 
- * DESIGN PRINCIPLES:
- * 1. Modern Enterprise Operations Platform: High-density, commanding clarity.
- * 2. Visual Hierarchy: Strict high-contrast typography, clear boundaries.
- * 3. Restrained Aesthetics: Crisp 1px borders, subtle elevation, no muddy gradients.
- * 4. Arabic RTL First: Balanced line heights, tabular figures, logical flow.
- * 5. Complete Semantic Organization: Structured across Literal, Semantic,
- *    Surface, and Component tiers.
+ * CORE BRAND ATTRIBUTES:
+ * - Brand Name: PHANTOMS
+ * - Brand Tagline: DESIGN FROM THE SHADOW
+ * - Campaign Message: IDEAS INTO IMPACT.
+ * - Brand Pillars: PEOPLE | IDEAS | IMPACT
+ * - Brand Personality: Mysterious, Intelligent, Ambitious, Collaborative, Impactful
+ * 
+ * OFFICIAL PALETTE:
+ * - Phantom Black:  #0B0B0B
+ * - Editorial White: #F5F4F1
+ * - Phantom Red:     #E51C19
+ * - Deep Red:        #B50F0F
+ * - Accent Pink:     #FFBEB8
+ * - Concrete Grey:   #777777
+ * - Soft Grey:       #B3B3B3
+ * - Mist Grey:       #D9D9D9
  * =========================================================================
  */
 
@@ -17,20 +26,33 @@
   color-scheme: light;
   
   /* -----------------------------------------------------------------------
-   * 1. Brand & Accent Tokens (Provisional PHANTOMS Palette)
+   * 1. Official PHANTOMS Palette (Literal Tokens)
    * ----------------------------------------------------------------------- */
-  --primary: #4F46E5;          /* Indigo 600 — Primary action / brand core */
-  --primary-hover: #4338CA;    /* Indigo 700 */
-  --primary-active: #3730A3;   /* Indigo 800 */
-  --primary-soft: #EEF2FF;     /* Indigo 50 — Subdued brand tint */
-  --primary-ink: #3730A3;      /* High-contrast brand text */
-  --on-primary: #FFFFFF;       /* Pure white text on brand */
-  --link: #4F46E5;             /* Interactive link / primary accent */
-  --link-hover: #4338CA;
-  --accent: #6366F1;           /* Accent highlight */
+  --phantom-black: #0B0B0B;
+  --editorial-white: #F5F4F1;
+  --phantom-red: #E51C19;
+  --deep-red: #B50F0F;
+  --accent-pink: #FFBEB8;
+  --concrete-grey: #777777;
+  --soft-grey: #B3B3B3;
+  --mist-grey: #D9D9D9;
   
   /* -----------------------------------------------------------------------
-   * 2. Semantic Status Tokens (Light Theme)
+   * 2. Semantic Brand Tokens (Light Theme — Editorial White Base)
+   * ----------------------------------------------------------------------- */
+  --primary: #E51C19;          /* Phantom Red — Primary brand color */
+  --primary-hover: #B50F0F;    /* Deep Red */
+  --primary-active: #8C0B0B;
+  --primary-soft: #FFF1F0;     /* Subtle phantom red tint */
+  --primary-ink: #991B1B;      /* High-contrast brand text */
+  --on-primary: #FFFFFF;       /* Crisp white on red */
+  --link: #E51C19;             /* Interactive link / primary action */
+  --link-hover: #B50F0F;
+  --accent: #E51C19;
+  --accent-pink-soft: #FFEAE8;
+  
+  /* -----------------------------------------------------------------------
+   * 3. Operational Semantic Status Tokens (Independent of Brand Red)
    * ----------------------------------------------------------------------- */
   --success: #059669;
   --success-hover: #047857;
@@ -44,8 +66,8 @@
   --warning-border: #FDE68A;
   --warning-text: #92400E;
   
-  --danger: #DC2626;
-  --danger-hover: #B91C1C;
+  --danger: #B50F0F;           /* Deep Red for destructive / error states */
+  --danger-hover: #8C0B0B;
   --danger-soft: #FEF2F2;
   --danger-border: #FECACA;
   --danger-text: #991B1B;
@@ -57,36 +79,44 @@
   --info-text: #075985;
   
   /* -----------------------------------------------------------------------
-   * 3. Surface & Canvas Tokens (Light Theme)
+   * 4. Surface & Canvas Tokens (Light Theme — Editorial White Canvas)
    * ----------------------------------------------------------------------- */
-  --bg: #F8FAFC;               /* Clean slate canvas */
-  --surface: #FFFFFF;          /* Primary card and modal panel */
-  --surface-2: #F1F5F9;        /* Slate 100 — Table headers, input backdrops, chips */
-  --surface-hover: #F8FAFC;
+  --bg: #F5F4F1;               /* Editorial White Canvas */
+  --surface: #FFFFFF;          /* Pure white card / panel */
+  --surface-2: #EFEFEB;        /* Subtle warm grey — input fills, table headers */
+  --surface-hover: #F8F8F5;
   --bg-elevated: #FFFFFF;
   --surface-elevated: #FFFFFF;
   --card: #FFFFFF;
-  --card-hover: #F8FAFC;
+  --card-hover: #F8F8F5;
   
   /* -----------------------------------------------------------------------
-   * 4. Text & Typography Tokens (Light Theme)
+   * 5. Text & Typography Tokens (Light Theme)
    * ----------------------------------------------------------------------- */
-  --text: #0B132B;             /* Primary text — AAA contrast (16.5:1) */
-  --text-2: #334155;           /* Secondary text (9.6:1) */
-  --text-secondary: #475569;   /* Body secondary (6.8:1) */
-  --text-muted: #64748B;       /* Muted labels & captions (4.6:1) */
-  --text-inverse: #FFFFFF;
+  --text: #0B0B0B;             /* Phantom Black — AAA contrast (17.8:1) */
+  --text-2: #333333;           /* Secondary body text */
+  --text-secondary: #555555;   /* Refined readable secondary text */
+  --text-muted: #777777;       /* Concrete Grey */
+  --text-inverse: #F5F4F1;     /* Editorial White */
   
   /* -----------------------------------------------------------------------
-   * 5. Border & Divider Tokens (Light Theme)
+   * 6. Border & Divider Tokens (Light Theme)
    * ----------------------------------------------------------------------- */
-  --border: #E2E8F0;           /* Slate 200 — High-precision structural border */
-  --border-subtle: #F1F5F9;    /* Subtle inner divider */
-  --border-focus: #4F46E5;
-  --focus-ring: #4F46E5;
+  --border: #D9D9D9;           /* Mist Grey — Clean architectural division */
+  --border-subtle: #E8E8E5;    /* Inner subtle divider */
+  --border-strong: #B3B3B3;    /* Soft Grey */
+  --border-focus: #E51C19;     /* Phantom Red focus indicator */
+  --focus-ring: #E51C19;
   
   /* -----------------------------------------------------------------------
-   * 6. Layout & Spatial Dimension Tokens
+   * 7. Font Stacks (IBM Plex Sans Arabic / Montserrat / JetBrains Mono)
+   * ----------------------------------------------------------------------- */
+  --font-arabic: "IBM Plex Sans Arabic", sans-serif;
+  --font-english: "Montserrat", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  /* -----------------------------------------------------------------------
+   * 8. Layout & Dimension Tokens
    * ----------------------------------------------------------------------- */
   --touch: 44px;               /* Minimum accessible tap target */
   --header-h: 64px;
@@ -96,17 +126,17 @@
   --content-max: 1400px;
   
   /* -----------------------------------------------------------------------
-   * 7. Geometric Radius Scale
+   * 9. Geometric Radius Scale (Brutalist Technical Precision)
    * ----------------------------------------------------------------------- */
   --radius-xs: 4px;
   --radius-sm: 6px;            /* Badges & micro-chips */
-  --radius: 10px;              /* Buttons, inputs, standard cards */
-  --radius-md: 12px;           /* Large cards & interactive panels */
-  --radius-lg: 16px;           /* Modals, drawers & dialogs */
+  --radius: 8px;               /* Buttons, inputs, standard cards */
+  --radius-md: 10px;           /* Large cards & panels */
+  --radius-lg: 14px;           /* Modals, drawers & dialogs */
   --radius-full: 9999px;
   
   /* -----------------------------------------------------------------------
-   * 8. Spacing Scale (4px Base Grid)
+   * 10. Spacing Scale (4px Base Grid)
    * ----------------------------------------------------------------------- */
   --space-1: 4px;
   --space-2: 8px;
@@ -117,16 +147,16 @@
   --space-7: 48px;
   
   /* -----------------------------------------------------------------------
-   * 9. Elevation Shadows
+   * 11. Elevation Shadows (Crisp Architectural Depth)
    * ----------------------------------------------------------------------- */
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.09), 0 4px 6px -4px rgb(0 0 0 / 0.06);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.06);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.09), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.14), 0 8px 10px -6px rgb(0 0 0 / 0.08);
   
   /* -----------------------------------------------------------------------
-   * 10. Fluid Typography Scale
+   * 12. Fluid Typography Scale
    * ----------------------------------------------------------------------- */
   --fs-xs: 0.75rem;            /* 12px */
   --fs-sm: 0.875rem;           /* 14px */
@@ -138,7 +168,7 @@
   --fs-3xl: clamp(1.875rem, 1.4rem + 1.8vw, 2.75rem);
   
   /* -----------------------------------------------------------------------
-   * 11. Stacking Context (Z-Index Scale)
+   * 13. Stacking Context (Z-Index Scale)
    * ----------------------------------------------------------------------- */
   --z-sticky: 90;
   --z-sidebar: 110;
@@ -148,21 +178,22 @@
 }
 
 /* =========================================================================
- * Dark Mode Palette: Obsidian Operations Room
+ * Dark Mode Palette: Phantom Black Base ("DESIGN FROM THE SHADOW")
  * ========================================================================= */
 [data-theme="dark"] {
   color-scheme: dark;
   
   /* Brand Tokens (Dark) */
-  --primary: #6366F1;          /* Indigo 500 — Vibrant in dark context */
-  --primary-hover: #818CF8;    /* Indigo 400 */
-  --primary-active: #A5B4FC;   /* Indigo 300 */
-  --primary-soft: rgba(99, 102, 241, 0.16);
-  --primary-ink: #E0E7FF;      /* Indigo 100 */
+  --primary: #E51C19;          /* Phantom Red */
+  --primary-hover: #FF3B38;    /* Lighter red for high visibility */
+  --primary-active: #B50F0F;
+  --primary-soft: rgba(229, 28, 25, 0.18);
+  --primary-ink: #FFBEB8;      /* Accent Pink for dark text contrast */
   --on-primary: #FFFFFF;
-  --link: #818CF8;             /* Indigo 400 */
-  --link-hover: #A5B4FC;
-  --accent: #818CF8;
+  --link: #FF423F;             /* Vibrant red accent */
+  --link-hover: #FF706D;
+  --accent: #E51C19;
+  --accent-pink-soft: rgba(255, 190, 184, 0.12);
   
   /* Semantic Status Tokens (Dark) */
   --success: #34D399;
@@ -179,8 +210,8 @@
   
   --danger: #F87171;
   --danger-hover: #FCA5A5;
-  --danger-soft: rgba(239, 68, 68, 0.16);
-  --danger-border: rgba(239, 68, 68, 0.35);
+  --danger-soft: rgba(181, 15, 15, 0.22);
+  --danger-border: rgba(248, 113, 113, 0.40);
   --danger-text: #FECACA;
   
   --info: #38BDF8;
@@ -189,33 +220,34 @@
   --info-border: rgba(14, 165, 233, 0.35);
   --info-text: #BAE6FD;
   
-  /* Surface & Canvas Tokens (Dark) */
-  --bg: #090D16;               /* Obsidian slate canvas */
-  --surface: #111827;          /* Card & panel background */
-  --surface-2: #1F2937;        /* Table headers, controls, chip fills */
-  --surface-hover: #1E293B;
-  --bg-elevated: #1E293B;
-  --surface-elevated: #1E293B;
-  --card: #111827;
-  --card-hover: #1F2937;
+  /* Surface & Canvas Tokens (Dark — Phantom Black Base) */
+  --bg: #0B0B0B;               /* Official Phantom Black */
+  --surface: #141414;          /* Elevated charcoal surface */
+  --surface-2: #1F1F1F;        /* Secondary surface / table header / input fill */
+  --surface-hover: #262626;
+  --bg-elevated: #1A1A1A;
+  --surface-elevated: #1A1A1A;
+  --card: #141414;
+  --card-hover: #1F1F1F;
   
   /* Text & Typography Tokens (Dark) */
-  --text: #F8FAFC;             /* Slate 50 — AAA contrast (17.8:1) */
-  --text-2: #E2E8F0;           /* Slate 200 (13.5:1) */
-  --text-secondary: #CBD5E1;   /* Slate 300 (11.2:1) */
-  --text-muted: #94A3B8;       /* Slate 400 (6.3:1) */
-  --text-inverse: #090D16;
+  --text: #F5F4F1;             /* Editorial White — AAA contrast (17.8:1) */
+  --text-2: #D9D9D9;           /* Mist Grey */
+  --text-secondary: #B3B3B3;   /* Soft Grey */
+  --text-muted: #777777;       /* Concrete Grey */
+  --text-inverse: #0B0B0B;     /* Phantom Black */
   
   /* Border & Divider Tokens (Dark) */
-  --border: #263345;           /* Refined dark border */
-  --border-subtle: #1A2333;
-  --border-focus: #818CF8;
-  --focus-ring: #818CF8;
+  --border: #262626;           /* Restrained charcoal border */
+  --border-subtle: #1C1C1C;
+  --border-strong: #333333;
+  --border-focus: #E51C19;
+  --focus-ring: #E51C19;
   
   /* Elevation Shadows (Dark) */
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.35);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.45), 0 1px 2px -1px rgb(0 0 0 / 0.35);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.35);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.55), 0 4px 6px -4px rgb(0 0 0 / 0.35);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.65), 0 8px 10px -6px rgb(0 0 0 / 0.45);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.45);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.60), 0 1px 2px -1px rgb(0 0 0 / 0.45);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.65), 0 2px 4px -2px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.70), 0 4px 6px -4px rgb(0 0 0 / 0.45);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.80), 0 8px 10px -6px rgb(0 0 0 / 0.55);
 }

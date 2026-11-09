@@ -1,4 +1,4 @@
-# دليل نشر التحصين الأمني (P0) — Wasla Tech v2
+# دليل نشر التحصين الأمني (P0) — منصة PHANTOMS
 
 > **من هذا الدليل؟** خطوات تطبيق التحصين الأمني على قاعدة بيانات Supabase حقيقية موجودة.
 > الوقت المتوقع: **10 دقائق**. المخاطر: صفر على البيانات (الملف لا يحذف أي صف أو جدول).
@@ -41,18 +41,18 @@ SELECT public.get_groq_key_from_vault();
 
 ### 3) أعد نشر الـ Edge Function
 
-الوظيفة `wasla-ai` تعُدِّلَت لتقرأ المفتاح بهوية **service_role** (لأن الوصول عبر
+الوظيفة `phantoms-ai` (وسابقتها `wasla-ai`) تعُدِّلَت لتقرأ المفتاح بهوية **service_role** (لأن الوصول عبر
 authenticated/anon أُغلق في الخطوة 1). بدون إعادة النشر **سيتوقف المساعد الذكي**.
 
 ```bash
-supabase functions deploy wasla-ai
+supabase functions deploy phantoms-ai
 ```
 
 - اختياري (يُوصى به بعد امتلاك نطاق النشر): حدد المصدر المسموح:
 
 ```bash
-supabase secrets set WASLA_ALLOWED_ORIGINS=https://موقعك.com
-supabase functions deploy wasla-ai
+supabase secrets set PHANTOMS_ALLOWED_ORIGINS=https://موقعك.com
+supabase functions deploy phantoms-ai
 ```
 
 بدون هذا المتغير تُقبل أي جهة (فترة الانتقال فقط — مدرجة في المرحلة 3 للقفل).

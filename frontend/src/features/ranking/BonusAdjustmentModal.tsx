@@ -243,7 +243,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
           />
         </label>
         </> : <>
-          <div className={`grid gap-1 rounded-xl border p-3 text-sm ${selectedMember.bonus_infinite ? 'border-violet-300 bg-violet-50 text-violet-950 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-100' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)]'}`}>
+          <div className={`grid gap-1 rounded-xl border p-3 text-sm ${selectedMember.bonus_infinite ? 'border-[var(--primary)]/30 bg-[var(--primary-soft)] text-[var(--primary-ink)]' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)]'}`}>
             <strong>{selectedMember.bonus_infinite ? 'البونص غير المحدود مفعّل ∞' : 'البونص غير المحدود غير مفعّل'}</strong>
             <span className="leading-6">{selectedMember.bonus_infinite ? 'إلغاء العلامة يرجّع عرض رصيد النقاط المسجلة كما هو، من غير حذف أو خصم.' : 'تفعيل العلامة يضع العضو فوق كل الأرصدة الرقمية. نقاطه الحالية تظل محفوظة.'}</span>
           </div>

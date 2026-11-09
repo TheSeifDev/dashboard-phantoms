@@ -1,4 +1,4 @@
-name: Wasla — Build & Deploy
+name: PHANTOMS — Build & Deploy
 
 on:
   push:
@@ -55,7 +55,7 @@ jobs:
         run: npm run test:security
 
       - name: Health Check (CI mode)
-        run: node scripts/wasla-health-check.mjs --json
+        run: node scripts/phantoms-health-check.mjs --json
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -101,7 +101,7 @@ jobs:
           test -f dist/index.html && echo "✓ index.html"
           test -f dist/sw.js && echo "✓ sw.js (Service Worker)"
           test -f dist/manifest.json && echo "✓ manifest.json"
-          test -f dist/wasla-logo.png && echo "✓ wasla-logo.png"
+          test -f dist/branding/phantoms-mark.png && echo "✓ phantoms-mark.png"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

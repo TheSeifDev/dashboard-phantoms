@@ -10,7 +10,7 @@ export default defineConfig({
     srcDir: 'src',
     filename: 'sw.ts',
     registerType: 'autoUpdate',
-    includeAssets: ['wasla-logo.png', 'icons/icon-192.png', 'icons/icon-512.png'],
+    includeAssets: ['branding/phantoms-mark.png', 'icons/icon-192.png', 'icons/icon-512.png', 'favicon.ico', 'favicon.png'],
     manifest: false,
     injectManifest: {
       maximumFileSizeToCacheInBytes: 3000000,

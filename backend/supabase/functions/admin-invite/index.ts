@@ -2,8 +2,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const allowedOrigins = new Set([
-  ...(Deno.env.get('WASLA_ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()),
-  Deno.env.get('WASLA_APP_URL')?.trim().replace(/\/+$/, '') ?? '',
+  ...(Deno.env.get('PHANTOMS_ALLOWED_ORIGINS') ?? Deno.env.get('WASLA_ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()),
+  (Deno.env.get('PHANTOMS_APP_URL') ?? Deno.env.get('WASLA_APP_URL') ?? '').trim().replace(/\/+$/, ''),
+  'https://admin-phantoms.vercel.app',
   'https://admin-wasla.vercel.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -21,7 +22,7 @@ serve(async (req) => {
   const origin = req.headers.get('Origin') ?? '';
   if (origin && !allowedOrigins.has(origin)) return new Response('Forbidden', { status: 403 });
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { ...corsHeaders, 'Access-Control-Allow-Origin': origin || 'https://admin-wasla.vercel.app' } });
+    return new Response('ok', { headers: { ...corsHeaders, 'Access-Control-Allow-Origin': origin || 'https://admin-phantoms.vercel.app' } });
   }
   if (req.method !== 'POST') return reply({ code: 'METHOD_NOT_ALLOWED', message: 'الطريقة غير مدعومة.' }, 405, origin);
 

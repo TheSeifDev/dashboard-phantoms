@@ -65,10 +65,10 @@ async function run() {
   // Member login injection
   console.log('Logging in as Member...');
   await page.evaluate(() => {
-    localStorage.setItem('wasla_member_session', JSON.stringify({
+    localStorage.setItem('phantoms_member_session', JSON.stringify({
       id: 'mock-member',
       full_name: 'عضو تجريبي',
-      email: 'member@wasla.com',
+      email: 'member@phantoms.com',
       role: 'DEV',
       work_status: 'ACTIVE',
       device_status: 'LAPTOP'

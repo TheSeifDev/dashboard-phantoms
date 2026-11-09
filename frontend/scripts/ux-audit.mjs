@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const BASE = 'http://127.0.0.1:5173';
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'screenshots', 'ux-audit');
-const MEMBER_EMAILS = ['01274684425@wasla.app', '01208937039@wasla.app', '01009087751@wasla.app'];
+const MEMBER_EMAILS = ['01274684425@phantoms.org', '01208937039@phantoms.org', '01009087751@phantoms.org'];
 const PUBLIC_ROUTES = ['/login', '/admin/login'];
 
 const AUDIT_SCRIPT = () => {

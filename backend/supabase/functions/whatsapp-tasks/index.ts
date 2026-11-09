@@ -2,8 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const allowedOrigins = new Set([
-  ...(Deno.env.get('WASLA_ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()),
-  Deno.env.get('WASLA_APP_URL')?.trim().replace(/\/+$/, '') ?? '',
+  ...(Deno.env.get('PHANTOMS_ALLOWED_ORIGINS') ?? Deno.env.get('WASLA_ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()),
+  (Deno.env.get('PHANTOMS_APP_URL') ?? Deno.env.get('WASLA_APP_URL') ?? '').trim().replace(/\/+$/, ''),
+  'https://admin-phantoms.vercel.app',
   'https://admin-wasla.vercel.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -39,7 +40,7 @@ serve(async (req) => {
     const { action, taskId, memberIds, consentConfirmed, enabled } = await req.json()
     const token = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
     const phoneNumberId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')
-    const templateName = Deno.env.get('WHATSAPP_TEMPLATE_NAME') ?? 'wasla_task_assignment'
+    const templateName = Deno.env.get('WHATSAPP_TEMPLATE_NAME') ?? 'phantoms_task_assignment'
     const templateLanguage = Deno.env.get('WHATSAPP_TEMPLATE_LANGUAGE') ?? 'ar'
     const graphVersion = Deno.env.get('WHATSAPP_GRAPH_API_VERSION')
     const configured = Boolean(token && phoneNumberId && templateName && templateLanguage && graphVersion)

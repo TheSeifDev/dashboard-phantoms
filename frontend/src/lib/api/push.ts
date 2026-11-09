@@ -12,7 +12,7 @@ export async function sendPushNotification(title: string, body: string, memberId
       body,
       memberIds,
       url,
-      icon: '/wasla-logo.png'
+      icon: '/branding/phantoms-mark-192.png'
     },
   });
 
