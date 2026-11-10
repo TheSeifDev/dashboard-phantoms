@@ -2,7 +2,7 @@
 
 **التاريخ:** 2 أكتوبر 2026  
 **الوقت:** 10:53 UTC  
-**المشروع:** نظام إدارة وصلة تك (Wasla Tech Administration System)  
+**المشروع:** منصة إدارة وعمليات PHANTOMS (PHANTOMS Operations & Team Management Platform)  
 **الإصدار:** 2.0.1 - Stable & Production Ready
 
 ---
@@ -157,7 +157,7 @@ team: string | null; // معرّف بشكل صحيح
 
 // ✅ Validation صارم
 isValidEmail("test") // false
-isValidEmail("ahmed@wasla.com") // true
+isValidEmail("ahmed@phantoms.com") // true
 
 // ✅ رسائل واضحة
 "البريد الإلكتروني مُستخدم بالفعل"

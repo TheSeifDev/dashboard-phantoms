@@ -238,7 +238,7 @@ CREATE POLICY "Anon read notes" ON public.notes FOR SELECT TO anon USING (true);
 - `getNotes()`: Fetches notes with optional target filtering.
 - `createNote(note: NoteInsert)`: Inserts note.
 
-### 7.2 Wasla AI Edge Function Contract (`/functions/v1/wasla-ai`)
+### 7.2 PHANTOMS AI Edge Function Contract (`/functions/v1/phantoms-ai`)
 - **Method:** `POST`
 - **Headers:** `Authorization: Bearer <token | anon_key>`, `Content-Type: application/json`
 - **Request Body:**
@@ -387,7 +387,7 @@ CREATE POLICY "Anon read notes" ON public.notes FOR SELECT TO anon USING (true);
    - Public/Anon member portal submissions are restricted to updating their specific tracking slot within `tasks.tracking` and reading member directories.
 3. **API Key Safety:**
    - Groq API / Gemini AI API keys MUST NEVER exist in client-side `.env` files or bundles.
-   - All AI calls route through Supabase Edge Function `wasla-ai`, retrieving credentials from `vault.decrypted_secrets`.
+   - All AI calls route through Supabase Edge Function `phantoms-ai`, retrieving credentials from `vault.decrypted_secrets`.
 4. **Input Sanitization:**
    - All text inputs rendered from members or Excel imports MUST be sanitized to prevent Stored XSS attacks.
 

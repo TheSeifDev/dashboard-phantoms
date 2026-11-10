@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAskWaslaAi, type AiAction, type AiChatTurn, type AiMessage } from './api';
+import { useAskPhantomsAi, type AiAction, type AiChatTurn, type AiMessage } from './api';
 import { useCreateTask, useDeleteTask } from '../tasks/api';
 import { useCreateNote, useDeleteNote } from '../notes/api';
 import { useAddMember, useUpdateMember, useDeleteMember } from '../members/api';
@@ -17,7 +17,7 @@ export interface AiPendingConfirmation {
 }
 
 export function useAiConversation(members: Member[], tasks: Task[]) {
-  const ask = useAskWaslaAi();
+  const ask = useAskPhantomsAi();
   const createTask = useCreateTask();
   const deleteTask = useDeleteTask();
   const createNote = useCreateNote();

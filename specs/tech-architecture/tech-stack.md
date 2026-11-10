@@ -14,7 +14,7 @@
   - Dynamic admin & owner model via `admin_access` table and `is_admin()` RPC (migration 0022)
   - Operational verified-device enforcement via DB functions and email OTP
 - **Backend (Edge Functions):** Supabase Edge Functions (Deno)
-  - `backend/supabase/functions/wasla-ai`
+  - `backend/supabase/functions/phantoms-ai`
   - `backend/supabase/functions/push-notify`
   - `backend/supabase/functions/whatsapp-tasks`
 - **Backend (WhatsApp integration):** Node services
@@ -38,7 +38,7 @@
 
 - **Member portal experience** (OTP verified + DB-enforced device session):
   - Member login: `frontend/src/features/auth/LoginPage.tsx`
-    - Recognizes existing valid device tokens (`wasla_device_token`).
+    - Recognizes existing valid device tokens (`phantoms_device_token` with legacy compatibility).
     - For new devices, requires Supabase email OTP verification (`signInWithOtp`) to prove email ownership before binding device sessions via `bind_member_device_session`.
     - On success: Zustand `setMember` and route to `/portal`.
   - Member portal page: `frontend/src/features/portal/MemberPortalPage.tsx`
@@ -147,7 +147,7 @@
 - Admin login: `frontend/src/features/auth/AdminLoginPage.tsx`
 - Member login: `frontend/src/features/auth/LoginPage.tsx`
 - Edge functions:
-  - `backend/supabase/functions/wasla-ai/index.ts`
+  - `backend/supabase/functions/phantoms-ai/index.ts`
   - `backend/supabase/functions/push-notify/index.ts`
   - `backend/supabase/functions/whatsapp-tasks/index.ts`
 - WhatsApp bridge:

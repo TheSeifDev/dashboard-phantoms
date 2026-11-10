@@ -1,15 +1,14 @@
 -- ========================================================
--- إعداد قاعدة بيانات Supabase لنظام (Wasla Tech Administration v2)
+-- إعداد قاعدة بيانات Supabase لنظام (PHANTOMS Operations Platform)
 -- النسخة المحصّنة (Security-Hardened)
 --
--- لقاعدة موجودة بالفعل بالنسخة القديمة: استخدم migrations بالترتيب.
--- بعد التثبيت الجديد، أنشئ حساب AHMEDROMU4 في Supabase Auth ثم طبّق
--- كل ملفات backend/migrations بالترتيب (حالياً 0001 إلى 0019) لتفعيل
--- صلاحيات الأقسام، إلغاء اعتماد المهام، ونماذج معلومات الأعضاء وتقييماتها.
+-- لقاعدة موجودة بالفعل: استخدم migrations بالترتيب (0000 إلى 0023).
+-- بعد التثبيت الجديد، أنشئ حساب المالك في Supabase Auth ثم أضفه
+-- إلى public.admin_accounts بدور 'owner'.
 --
 -- قواعد الأمان المعتمدة هنا:
 --   1. الإدارة: صلاحيات الأقسام عبر RLS؛ مصدرها admin_accounts وhas_admin_permission
---      والمالك الثابت لديه جميع الصلاحيات.
+--      والمالك لديه جميع الصلاحيات ديناميكياً.
 --   2. بوابة الأعضاء (anon): لا تقرأ جداول الأعضاء أو المهام أو الملاحظات مباشرة.
 --      الوصول للبيانات يتم عبر RPCs تتحقق من رمز الجهاز (lookup_member_by_email،
 --      get_member_tasks، get_member_bonus_total، submit_task_status،
@@ -94,8 +93,8 @@ CREATE TABLE IF NOT EXISTS public.admin_emails (
 );
 
 INSERT INTO public.admin_emails (email) VALUES
-  ('admin@wasla.com'),
-  ('admin@wasla.local'),
+  ('admin@phantoms.com'),
+  ('admin@phantoms.local'),
   ('admin@example.com')
 ON CONFLICT (email) DO NOTHING;
 

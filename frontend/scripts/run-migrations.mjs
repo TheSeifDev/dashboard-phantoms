@@ -44,6 +44,9 @@ if (envPath) {
 }
 const SUPABASE_URL  = env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON = env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const projectRef = SUPABASE_URL ? (() => {
+  try { return new URL(SUPABASE_URL).hostname.split('.')[0]; } catch { return 'cbuiwgrmsmsidyjhzvla'; }
+})() : 'cbuiwgrmsmsidyjhzvla';
 
 // ── فحص مجلد migrations ────────────────────────────────
 if (!existsSync(MIGRATIONS_DIR)) {
@@ -52,6 +55,7 @@ if (!existsSync(MIGRATIONS_DIR)) {
 }
 
 const MIGRATION_ORDER = [
+  { file: '0000_base_schema.sql',                      desc: 'PHANTOMS Base Schema & Baseline Tables' },
   { file: '0001_security_hardening.sql',               desc: 'RLS + Column Security + Vault' },
   { file: '0002_whatsapp_settings.sql',                desc: 'WhatsApp Settings Table' },
   { file: '0003_atomic_approval_and_member_lookup.sql', desc: 'Atomic Approval + Member Lookup RPC' },
@@ -74,6 +78,7 @@ const MIGRATION_ORDER = [
   { file: '0020_member_custom_fields.sql',        desc: 'Dynamic Member Custom Fields (JSONB + Metadata)' },
   { file: '0021_member_evaluations.sql',          desc: 'Structured Member Evaluations System' },
   { file: '0022_dynamic_system_ownership.sql',    desc: 'Dynamic System Ownership + Hardened Auth Sessions' },
+  { file: '0023_phantoms_identity_migration.sql', desc: 'Full PHANTOMS Identity Database Migration' },
 ];
 
 // ── قراءة الملفات ──────────────────────────────────────
@@ -116,7 +121,7 @@ if (PRINT_ONLY) {
   console.log(`\n${C.bold}الأوامر اللازمة للتطبيق اليدوي:${C.reset}
   
   ${C.cyan}عبر Supabase SQL Editor:${C.reset}
-  افتح: https://supabase.com/dashboard/project/mukqrnmveydxfphftlaq/sql/new
+  افتح: https://supabase.com/dashboard/project/${projectRef}/sql/new
   
   الصق كل ملف بالترتيب وشغّله:
 `);
@@ -170,7 +175,7 @@ for (const m of toApply) {
       } else {
         console.log(`${C.red}✗${C.reset} — ${body.message || res.status}`);
         console.log(`\n  ${C.yellow}انتبه: هذا الـ migration يحتاج تنفيذاً يدوياً في Supabase SQL Editor.${C.reset}`);
-        console.log(`  ${C.cyan}https://supabase.com/dashboard/project/mukqrnmveydxfphftlaq/sql/new${C.reset}\n`);
+        console.log(`  ${C.cyan}https://supabase.com/dashboard/project/${projectRef}/sql/new${C.reset}\n`);
       }
     }
   } catch (e) {

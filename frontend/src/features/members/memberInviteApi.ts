@@ -97,13 +97,13 @@ function decodeUtf8Base64Url(encoded: string): string {
 export function generateLongInviteToken(): string {
   const bytes = new Uint8Array(72);
   window.crypto.getRandomValues(bytes);
-  return `wsl_${bytesToBase64Url(bytes)}`;
+  return `phm_${bytesToBase64Url(bytes)}`;
 }
 
 export function buildMemberInviteUrl(token: string): string {
   const configuredWebUrl = (
     (import.meta.env.VITE_PUBLIC_WEB_URL as string | undefined) ||
-    'https://admin-wasla.vercel.app'
+    'https://admin-phantoms.vercel.app'
   ).replace(/\/+$/, '');
 
   const rawOrigin = typeof window !== 'undefined' ? window.location.origin : '';

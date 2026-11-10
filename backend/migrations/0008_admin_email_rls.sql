@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS public.admin_emails (
 
 -- 2) بذار آمن (توافق مع قيم افتراضية موجودة في المشروع)
 INSERT INTO public.admin_emails (email) VALUES
+  ('admin@phantoms.com'),
+  ('admin@phantoms.local'),
   ('admin@wasla.com'),
   ('admin@wasla.local'),
   ('admin@example.com')

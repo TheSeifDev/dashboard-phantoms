@@ -59,7 +59,7 @@ serve(async (req) => {
   }
 
   const serviceClient = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const configuredAppUrl = Deno.env.get('WASLA_APP_URL')?.trim();
+  const configuredAppUrl = Deno.env.get('PHANTOMS_APP_URL')?.trim() ?? Deno.env.get('WASLA_APP_URL')?.trim();
   const redirectOrigin = configuredAppUrl
     || (origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin) ? origin : '');
   const redirectTo = redirectOrigin ? new URL('/admin/set-password', redirectOrigin).toString() : undefined;

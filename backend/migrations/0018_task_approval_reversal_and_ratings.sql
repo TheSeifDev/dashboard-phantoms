@@ -267,7 +267,7 @@ CREATE OR REPLACE FUNCTION public.admin_add_member_rating(
   p_member_id BIGINT,
   p_points INT,
   p_reason TEXT,
-  p_author TEXT DEFAULT 'إدارة وصلة'
+  p_author TEXT DEFAULT 'إدارة PHANTOMS'
 )
 RETURNS BIGINT
 LANGUAGE plpgsql
@@ -277,7 +277,7 @@ AS $$
 DECLARE
   v_name TEXT;
   v_reason TEXT := pg_catalog.btrim(COALESCE(p_reason, ''));
-  v_author TEXT := COALESCE(NULLIF(pg_catalog.btrim(COALESCE(p_author, '')), ''), 'إدارة وصلة');
+  v_author TEXT := COALESCE(NULLIF(pg_catalog.btrim(COALESCE(p_author, '')), ''), 'إدارة PHANTOMS');
   v_text TEXT;
   v_note_id BIGINT;
 BEGIN

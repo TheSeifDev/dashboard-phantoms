@@ -9,12 +9,14 @@ import type {
   MemberCustomFieldType,
 } from '../../types/db';
 
+import { LEGACY_COMPATIBILITY_MARKERS } from '../../lib/legacyCompatibility';
+
 export const MEMBER_CUSTOM_FIELDS_KEY = ['member_custom_fields'] as const;
 export const ONBOARDING_CARRIER_LABEL = '__PHANTOMS_ONBOARDING__';
-export const LEGACY_ONBOARDING_CARRIER_LABEL = '__WASLA_ONBOARDING__';
+export const LEGACY_ONBOARDING_CARRIER_LABEL = LEGACY_COMPATIBILITY_MARKERS.ONBOARDING_CARRIER_LABEL;
 
-const CF_MARKER_PREFIX = '[[WASLA_CF:';
-const CF_MARKER_REGEX = /\s*\[\[WASLA_CF:(\{[\s\S]*\})\]\]$/;
+const CF_MARKER_PREFIX = LEGACY_COMPATIBILITY_MARKERS.PHANTOMS_CF_MARKER_PREFIX;
+const CF_MARKER_REGEX = LEGACY_COMPATIBILITY_MARKERS.CF_MARKER_REGEX;
 const LOCAL_STORAGE_FALLBACK_KEY = 'phantoms_member_custom_fields_v1';
 const LEGACY_LOCAL_STORAGE_FALLBACK_KEY = 'wasla_member_custom_fields_v1';
 
