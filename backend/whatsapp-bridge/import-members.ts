@@ -1,7 +1,7 @@
 import fs from 'fs';
 import ExcelJS from 'exceljs';
 
-const filePath = String.raw`C:\Users\aboha\Desktop\بيانات تيم وصلة  (الردود).xlsx`;
+const filePath = String.raw`C:\Users\aboha\Desktop\بيانات تيم PHANTOMS (الردود).xlsx`;
 
 const normalizePhone = (p: string | number | undefined | null) => {
   if (!p) return null;
@@ -58,7 +58,7 @@ async function main() {
 
     if (!fullName) continue;
 
-    const email = phone ? `${phone}@wasla.app` : `${fullName.replace(/\s+/g, '.')}@wasla.app`;
+    const email = phone ? `${phone}@phantoms.app` : `${fullName.replace(/\s+/g, '.')}@phantoms.app`;
     const residence = (row['السكن '] as string) || null;
     const attendance = row['نزول اجتماعات التيم '];
     const can_go_alexandria = attendance === 'متاح' || attendance === 'نعم';

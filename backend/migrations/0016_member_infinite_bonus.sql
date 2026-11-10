@@ -58,6 +58,7 @@ SET search_path = ''
 AS $$
 BEGIN
   IF OLD.bonus_infinite IS DISTINCT FROM NEW.bonus_infinite
+     AND pg_catalog.current_setting('phantoms.member_bonus_rpc', true) IS DISTINCT FROM 'enabled'
      AND pg_catalog.current_setting('wasla.member_bonus_rpc', true) IS DISTINCT FROM 'enabled' THEN
     RAISE EXCEPTION 'BONUS_RPC_REQUIRED: غيّر حالة البونص من شاشة تقييم العضو.';
   END IF;
@@ -88,7 +89,10 @@ DECLARE
   v_email TEXT;
   v_actor_email TEXT := COALESCE(NULLIF(pg_catalog.lower(pg_catalog.btrim(COALESCE(auth.jwt() ->> 'email', ''))), ''), auth.uid()::TEXT);
   v_reason TEXT := pg_catalog.btrim(COALESCE(p_reason, ''));
-  v_write_token TEXT := pg_catalog.current_setting('wasla.member_bonus_rpc', true);
+  v_write_token TEXT := COALESCE(
+    NULLIF(pg_catalog.current_setting('phantoms.member_bonus_rpc', true), ''),
+    pg_catalog.current_setting('wasla.member_bonus_rpc', true)
+  );
 BEGIN
   IF auth.uid() IS NULL OR NOT public.has_admin_permission('ranking') THEN
     RAISE EXCEPTION 'RANKING_PERMISSION_REQUIRED: يلزم صلاحية ترتيب الفريق لتعديل البونص غير المحدود.';
@@ -113,10 +117,12 @@ BEGIN
     RAISE EXCEPTION 'BONUS_STATE_UNCHANGED: حالة البونص مطابقة للطلب بالفعل.';
   END IF;
 
+  PERFORM pg_catalog.set_config('phantoms.member_bonus_rpc', 'enabled', true);
   PERFORM pg_catalog.set_config('wasla.member_bonus_rpc', 'enabled', true);
   UPDATE public.members
   SET bonus_infinite = p_enabled
   WHERE id = p_member_id;
+  PERFORM pg_catalog.set_config('phantoms.member_bonus_rpc', COALESCE(v_write_token, ''), true);
   PERFORM pg_catalog.set_config('wasla.member_bonus_rpc', COALESCE(v_write_token, ''), true);
 
   INSERT INTO public.member_infinite_bonus_events (

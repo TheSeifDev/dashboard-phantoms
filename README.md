@@ -35,7 +35,7 @@
 │                                       Backend Infrastructure                                           │
 │   • Supabase PostgreSQL (Schema & Row Level Security)                                                  │
 │   • RPC Security Functions (`is_admin`, `bind_member_device_session`, `admin_add_member_rating`)        │
-│   • Edge Functions (`wasla-ai`, `push-notify`, `whatsapp-tasks`)                                       │
+│   • Edge Functions (`phantoms-ai`, `push-notify`, `whatsapp-tasks`)                                    │
 │   • WhatsApp Integration Service (Baileys Bridge / Multi-Device Protocol)                              │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -79,7 +79,7 @@
 
 ## Security Architecture & Authorization Model
 
-- **Verified-Device Session Binding:** Members authenticate through cryptographic device tokens (`wasla_device_token`). For new devices, Supabase Auth email OTP (`signInWithOtp` and `verifyOtp`) is required to verify email ownership before `bind_member_device_session` registers a SHA-256 session hash.
+- **Verified-Device Session Binding:** Members authenticate through cryptographic device tokens (`phantoms_device_token` with legacy compatibility). For new devices, Supabase Auth email OTP (`signInWithOtp` and `verifyOtp`) is required to verify email ownership before `bind_member_device_session` registers a SHA-256 session hash.
 - **Dynamic Multi-Admin & Owner Authorization:** Administrative access is governed by the `admin_access` table and PostgreSQL `is_admin()` RPC checks (migration `0022`), decoupling authorization from hardcoded UUIDs and supporting granular administrative permissions.
 - **Destructive Mutation Guards:** AI assistant actions that perform deletions cannot execute autonomously; they require explicit operator confirmation through dedicated UI modals.
 - **Spreadsheet Security:** Archive validation safeguards (`safeXlsxGuard.ts`) enforce total decompress size bounds, entry caps, and compression ratio limits. Untrusted file uploads remain feature-gated.
@@ -164,8 +164,8 @@ dashboard-phantoms/
 │   │   └── types/                # TypeScript schema & entity definitions
 │   └── scripts/                  # Security tests, APK builders, audit scripts
 ├── backend/
-│   ├── migrations/               # PostgreSQL schema migrations (0001 - 0022)
-│   ├── supabase/functions/       # Supabase Edge Functions (wasla-ai, push-notify, whatsapp-tasks)
+│   ├── migrations/               # PostgreSQL schema migrations (0000 - 0023)
+│   ├── supabase/functions/       # Supabase Edge Functions (phantoms-ai, push-notify, whatsapp-tasks)
 │   ├── whatsapp-service/         # WhatsApp notification API service
 │   └── whatsapp-bridge/          # Baileys WhatsApp client gateway
 └── audit/reports/                # Independent technical & security audit reports

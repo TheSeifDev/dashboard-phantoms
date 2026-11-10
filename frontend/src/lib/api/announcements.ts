@@ -44,7 +44,9 @@ export class AnnouncementsAPI {
       throw toAppError(error, 'معرفناش نحمّل الإعلانات.');
     }
 
-    return (announcements || []).filter((ann) => !ann.title.startsWith('[[WASLA_EVAL]]'));
+    return (announcements || []).filter(
+      (ann) => !ann.title.startsWith('[[PHANTOMS_EVAL]]') && !ann.title.startsWith('[[WASLA_EVAL]]'),
+    );
   }
 
   /**
@@ -144,7 +146,9 @@ export class AnnouncementsAPI {
       .rpc('get_member_announcements', { p_member_id: memberId, p_device_token: getDeviceToken() });
 
     if (!error) {
-      return (announcements || []).filter((ann) => !ann.title.startsWith('[[WASLA_EVAL]]'));
+      return (announcements || []).filter(
+      (ann) => !ann.title.startsWith('[[PHANTOMS_EVAL]]') && !ann.title.startsWith('[[WASLA_EVAL]]'),
+    );
     }
 
     const msg = String(error.message ?? '').toLowerCase();
@@ -161,7 +165,7 @@ export class AnnouncementsAPI {
           const nowMs = Date.now();
           return (directRes.data as Announcement[])
             .filter((a) => {
-              if (a.title.startsWith('[[WASLA_EVAL]]')) return false;
+              if (a.title.startsWith('[[PHANTOMS_EVAL]]') || a.title.startsWith('[[WASLA_EVAL]]')) return false;
               if (a.expires_at && new Date(a.expires_at).getTime() <= nowMs) return false;
               const receipt = (a.read_receipts ?? {})[String(memberId)];
               if (receipt?.dismissed_at) return false;

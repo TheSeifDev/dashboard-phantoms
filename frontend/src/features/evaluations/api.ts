@@ -7,7 +7,8 @@ import type { Task } from '../../types/db';
 import { isMissingRelationError } from '../members/customFieldsApi';
 
 export const EVALUATIONS_QUERY_KEY = ['member_evaluations'] as const;
-export const EVAL_CARRIER_PREFIX = '[[WASLA_EVAL]]';
+export const EVAL_CARRIER_PREFIX = '[[PHANTOMS_EVAL]]';
+export const LEGACY_EVAL_CARRIER_PREFIX = '[[WASLA_EVAL]]';
 
 export type EvaluationGrade =
   | 'excellent'
@@ -66,8 +67,11 @@ function normalizeGrade(val: unknown): EvaluationGrade {
 }
 
 function parseFallbackTaskRow(task: Task): MemberEvaluation | null {
-  if (!task.title.startsWith(EVAL_CARRIER_PREFIX)) return null;
-  const cleanTitle = task.title.slice(EVAL_CARRIER_PREFIX.length).trim() || 'تقييم أداء';
+  const isPhantoms = task.title.startsWith(EVAL_CARRIER_PREFIX);
+  const isLegacy = task.title.startsWith(LEGACY_EVAL_CARRIER_PREFIX);
+  if (!isPhantoms && !isLegacy) return null;
+  const prefixLength = isPhantoms ? EVAL_CARRIER_PREFIX.length : LEGACY_EVAL_CARRIER_PREFIX.length;
+  const cleanTitle = task.title.slice(prefixLength).trim() || 'تقييم أداء';
   let parsed: Partial<FallbackEvalContent> = {};
   try {
     parsed = JSON.parse(task.description ?? '{}') as Partial<FallbackEvalContent>;

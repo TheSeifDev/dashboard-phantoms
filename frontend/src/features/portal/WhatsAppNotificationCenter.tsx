@@ -19,7 +19,7 @@ import {
   useNotificationStore,
   type NotificationCategory,
   type NotificationTargetTab,
-  type WaslaNotificationItem,
+  type PhantomsNotificationItem,
 } from '../../lib/notifications';
 
 interface KnownPortalSnapshot {
@@ -377,7 +377,7 @@ export function WhatsAppNotificationCenter({
     };
   }, [memberId, pushNotification]);
 
-  const handleOpenItem = (item: WaslaNotificationItem) => {
+  const handleOpenItem = (item: PhantomsNotificationItem) => {
     markAsRead(memberId, item.id);
     dismissBanner();
     setDrawerOpen(false);

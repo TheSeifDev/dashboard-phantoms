@@ -34,7 +34,7 @@ serve(async (req) => {
 
   if (origin && !allowedOrigins.has(origin)) return new Response('Forbidden', { status: 403 });
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { ...corsHeaders, 'Access-Control-Allow-Origin': origin || 'https://admin-wasla.vercel.app' } });
+    return new Response('ok', { headers: { ...corsHeaders, 'Access-Control-Allow-Origin': origin || 'https://admin-phantoms.vercel.app' } });
   }
 
   if (req.method !== 'POST') return reply({ error: 'Method not allowed' }, 405);
@@ -71,7 +71,7 @@ serve(async (req) => {
     const safeIcon = typeof icon === 'string' && icon !== ''
       ? icon.slice(0, 2048)
       : '/branding/phantoms-mark-192.png';
-    if (safeIcon !== '/branding/phantoms-mark-192.png' && safeIcon !== '/wasla-logo.png' && !/^https:\/\/[^/]+/.test(safeIcon) && !safeIcon.startsWith('/')) {
+    if (safeIcon !== '/branding/phantoms-mark-192.png' && safeIcon !== '/branding/phantoms-icon-192.png' && safeIcon !== '/wasla-logo.png' && !/^https:\/\/[^/]+/.test(safeIcon) && !safeIcon.startsWith('/')) {
       return reply({ error: 'أيقونة الإشعار غير صالحة.' }, 400);
     }
     const safeUrl = typeof url === 'string' && url !== '' ? url.slice(0, 2048) : '/portal';

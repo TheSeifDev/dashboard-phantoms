@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS public.member_evaluations (
   points INT NOT NULL DEFAULT 0
     CHECK (points BETWEEN -10 AND 20),
   feedback TEXT NOT NULL CHECK (pg_catalog.char_length(pg_catalog.btrim(feedback)) BETWEEN 1 AND 3000),
-  evaluator_name TEXT NOT NULL DEFAULT 'إدارة وصلة'
+  evaluator_name TEXT NOT NULL DEFAULT 'إدارة PHANTOMS'
     CHECK (pg_catalog.char_length(pg_catalog.btrim(evaluator_name)) BETWEEN 1 AND 120),
   bonus_note_id BIGINT REFERENCES public.notes (id) ON DELETE SET NULL,
   viewed_at TIMESTAMPTZ,

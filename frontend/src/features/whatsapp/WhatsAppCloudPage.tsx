@@ -121,7 +121,7 @@ export default function WhatsAppCloudPage() {
     <Modal isOpen={openModal} onClose={() => { setOpenModal(false); setConsent(false); }} title="أكد إرسال الدفعة" subtitle={`لـ ${memberIds.length} عضو بخصوص «${task?.title}»`} maxWidth="lg">
       <div className="grid gap-4">
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-6">
-          <p>هيتبعت رسالة باستخدام القالب الرسمي <b>{status.data?.templateName || 'wasla_task_assignment'}</b> للأعضاء اللي اخترتهم.</p>
+          <p>هيتبعت رسالة باستخدام القالب الرسمي <b>{status.data?.templateName || 'phantoms_task_assignment'}</b> للأعضاء اللي اخترتهم.</p>
         </div>
         <label className="flex items-start gap-3 rounded-xl border border-amber-300 p-3 text-sm leading-6 dark:border-amber-900">
           <input type="checkbox" className="mt-1 size-5 shrink-0 accent-[var(--primary)]" checked={consent} onChange={(event) => setConsent(event.target.checked)} />

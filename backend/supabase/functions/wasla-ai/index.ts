@@ -1,12 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-// لتقييد CORS في الإنتاج: اضبط WASLA_ALLOWED_ORIGINS في أسرار الـ Edge Function
-// بصيغة: https://wasla.vercel.app,http://localhost:5173
-// غياب القائمة يعني رفض أي Origin متصفح — لا wildcard مع بيانات موثقة.
+// دالة توافقية موروثة (Legacy Alias) لوظيفة phantoms-ai
+// لتقييد CORS في الإنتاج: اضبط PHANTOMS_ALLOWED_ORIGINS (أو WASLA_ALLOWED_ORIGINS) في أسرار الـ Edge Function
 const allowedOrigins = new Set([
-  ...(Deno.env.get('WASLA_ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()),
-  Deno.env.get('WASLA_APP_URL')?.trim().replace(/\/+$/, '') ?? '',
+  ...(Deno.env.get('PHANTOMS_ALLOWED_ORIGINS') ?? Deno.env.get('WASLA_ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()),
+  (Deno.env.get('PHANTOMS_APP_URL') ?? Deno.env.get('WASLA_APP_URL') ?? '').trim().replace(/\/+$/, ''),
+  'https://admin-phantoms.vercel.app',
   'https://admin-wasla.vercel.app',
   'https://localhost',
   'http://localhost',

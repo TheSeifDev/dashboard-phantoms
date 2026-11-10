@@ -56,6 +56,7 @@ function classifyOccurrence(filePath, lineNum, lineContent) {
     normPath.includes('backend/whatsapp-bridge/import.sql') ||
     normPath.includes('backend/whatsapp-bridge/import-members.ts') ||
     normPath.includes('backend/whatsapp-bridge/parse-excel.ts') ||
+    normPath.includes('src/lib/legacyCompatibility.ts') ||
     normPath.includes('.user_uploaded') ||
     normPath.includes('scripts/brand-transition-test.mjs') ||
     normPath.includes('scripts/security-regression.mjs') ||
@@ -108,8 +109,8 @@ function classifyOccurrence(filePath, lineNum, lineContent) {
     lineContent.includes('WaslaNotificationItem') ||
     lineContent.includes('__wasla_eval') ||
     lineContent.includes('__wasla_invite') ||
-    lineContent.includes('[[WASLA_EVAL]]') ||
-    lineContent.includes('[[WASLA_CF:') ||
+    lineContent.includes('WASLA_EVAL') ||
+    lineContent.includes('WASLA_CF') ||
     lineContent.includes('__WASLA_ONBOARDING__') ||
     lineContent.includes('@invite.wasla.local')
   ) {
