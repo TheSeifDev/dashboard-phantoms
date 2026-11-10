@@ -177,11 +177,23 @@ All local suites passed with 100% compliance:
 - `.github/workflows/build-apk.yml` (Keystore decoding, signature verification, PR testing, safe release gates)
 - `frontend/android/app/build.gradle` (Version bump to v2 / 1.1.0, release signing config)
 
-### C. Deliverables & PR Action
-- All changes are staged and committed on branch `chore/phantoms-full-identity-migration`.
-- Pull Request URL: `https://github.com/TheSeifDev/dashboard-phantoms/compare/main...chore/phantoms-full-identity-migration?expand=1`
+### C. Pull Request & CI Verification Runs
+- **Active Pull Request:** [GitHub PR #3](https://github.com/TheSeifDev/dashboard-phantoms/pull/3)
+- **CI Run 42869914096 (Vercel Pipeline):**
+  - Quality Check: `success`
+  - Build: `success`
+  - Deploy Preview: `failure` (Caught missing `VERCEL_TOKEN` early and cleanly, completely preventing invalid URL extraction)
+  - Deploy Production: `skipped` (Guarded by branch rules)
+- **CI Run 42869914504 (Android APK Pipeline):**
+  - Web Bundle & Capacitor Sync: `success`
+  - Keystore Check: `success` (Evaluated `has_keystore=false` safely)
+  - Release Build & Keystore Decode: `skipped` (Protected against unsigned release builds)
+  - Debug QA Build: `success` (Generated valid `phantoms-app-debug.apk`)
+  - Artifact Upload: `success` (`phantoms-app-debug-apk`, 8.27 MB uploaded to workflow run)
+  - Release Publish: `skipped` (No public release overwritten)
 
 ### D. Remaining User Actions
-1. **Configure Vercel Secrets:** Add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` to GitHub Actions Secrets.
-2. **Configure Android Keystore Secrets:** Generate or provide your trusted release keystore and add `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` to GitHub Actions Secrets.
-3. **Review & Merge Draft PR:** Review the draft PR, merge to `main`, and observe the automated signed release build.
+1. **Configure Vercel Secrets:** Add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` in GitHub Repository Settings -> Secrets and variables -> Actions.
+2. **Configure Android Keystore Secrets:** Generate or provide your trusted release keystore and add `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` in GitHub Actions Secrets.
+3. **Review & Merge Draft PR:** Review and merge [PR #3](https://github.com/TheSeifDev/dashboard-phantoms/pull/3) to `main`. On merge to `main`, GitHub Actions will automatically deploy to production and publish the signed official release tagged `latest-apk`.
+
