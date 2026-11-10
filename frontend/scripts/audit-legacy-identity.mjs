@@ -25,6 +25,7 @@ const IGNORED_DIRS = new Set([
   'dist-apk',
   'build',
   '.gradle',
+  'audit',
 ]);
 
 // Dynamically construct search pattern without embedding retired brand strings
