@@ -7,6 +7,12 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/build-apk.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
 permissions:
@@ -48,25 +54,74 @@ jobs:
       - name: Check for Release Keystore Secrets
         id: check-secrets
         run: |
-          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ]; then
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] && [ -n "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ] && [ -n "${{ secrets.ANDROID_KEY_ALIAS }}" ] && [ -n "${{ secrets.ANDROID_KEY_PASSWORD }}" ]; then
             echo "has_keystore=true" >> $GITHUB_OUTPUT
+            echo "All 4 release keystore secrets are configured."
           else
             echo "has_keystore=false" >> $GITHUB_OUTPUT
+            echo "::warning::Android release keystore secrets (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are not fully configured. Building unsigned Debug APK for QA/Testing only."
           fi
 
-      - name: Build PHANTOMS Android APK
+      - name: Decode Release Keystore
+        if: steps.check-secrets.outputs.has_keystore == 'true'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          if [ ! -s "$RUNNER_TEMP/release.keystore" ]; then
+            echo "::error::Failed to decode ANDROID_KEYSTORE_BASE64 to $RUNNER_TEMP/release.keystore"
+            exit 1
+          fi
+
+      - name: Build Signed Release APK
+        if: steps.check-secrets.outputs.has_keystore == 'true'
         working-directory: frontend/android
         run: |
           chmod +x gradlew
-          if [ "${{ steps.check-secrets.outputs.has_keystore }}" = "true" ]; then
-            echo "Building signed Release APK..."
-            ./gradlew assembleRelease
-            cp app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/phantoms-app.apk || cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/phantoms-app.apk
-          else
-            echo "Keystore secrets not configured. Building Debug APK for QA/Testing..."
-            ./gradlew assembleDebug
-            cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/phantoms-app-debug.apk
+          ./gradlew assembleRelease
+
+          BUILT_APK="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$BUILT_APK" ]; then
+            echo "::error::Signed Release APK not found at $BUILT_APK"
+            exit 1
           fi
+
+          cp "$BUILT_APK" app/build/outputs/apk/release/phantoms-app.apk
+
+          echo "Verifying APK signature..."
+          $ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose --print-certs app/build/outputs/apk/release/phantoms-app.apk
+
+          echo "Verifying APK manifest metadata..."
+          $ANDROID_HOME/build-tools/34.0.0/aapt dump badging app/build/outputs/apk/release/phantoms-app.apk | grep -E "package: name='com.phantoms.app'"
+          $ANDROID_HOME/build-tools/34.0.0/aapt dump badging app/build/outputs/apk/release/phantoms-app.apk | grep -E "application-label:'PHANTOMS'"
+
+          echo "SHA-256 Checksum:"
+          sha256sum app/build/outputs/apk/release/phantoms-app.apk
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Build Debug APK for QA
+        if: steps.check-secrets.outputs.has_keystore != 'true'
+        working-directory: frontend/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+          BUILT_DEBUG="app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$BUILT_DEBUG" ]; then
+            echo "::error::Debug APK not found at $BUILT_DEBUG"
+            exit 1
+          fi
+
+          cp "$BUILT_DEBUG" app/build/outputs/apk/debug/phantoms-app-debug.apk
+
+          echo "Verifying Debug APK manifest metadata..."
+          $ANDROID_HOME/build-tools/34.0.0/aapt dump badging app/build/outputs/apk/debug/phantoms-app-debug.apk | grep -E "package: name='com.phantoms.app'"
+          $ANDROID_HOME/build-tools/34.0.0/aapt dump badging app/build/outputs/apk/debug/phantoms-app-debug.apk | grep -E "application-label:'PHANTOMS'"
+
+          echo "SHA-256 Checksum:"
+          sha256sum app/build/outputs/apk/debug/phantoms-app-debug.apk
 
       - name: Upload Debug APK Artifact
         if: steps.check-secrets.outputs.has_keystore != 'true'
@@ -86,7 +141,7 @@ jobs:
 
       - name: Publish Release APK to GitHub Releases
         uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main' && steps.check-secrets.outputs.has_keystore == 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.check-secrets.outputs.has_keystore == 'true'
         with:
           tag_name: latest-apk
           name: "تطبيق PHANTOMS للأندرويد (Release APK)"

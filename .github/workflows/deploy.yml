@@ -151,9 +151,42 @@ jobs:
       - name: Deploy to Vercel (Preview)
         id: deploy
         run: |
-          URL=$(npx vercel --token=${{ secrets.VERCEL_TOKEN }} --yes 2>&1 | grep -E 'https://' | tail -1)
-          echo "preview_url=$URL" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::Missing secret: VERCEL_TOKEN is not configured in GitHub Secrets."
+            exit 1
+          fi
+          if [ -z "${VERCEL_ORG_ID:-}" ]; then
+            echo "::error::Missing secret: VERCEL_ORG_ID is not configured in GitHub Secrets."
+            exit 1
+          fi
+          if [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "::error::Missing secret: VERCEL_PROJECT_ID is not configured in GitHub Secrets."
+            exit 1
+          fi
+
+          URL_FILE="$(mktemp)"
+          ERROR_FILE="$(mktemp)"
+
+          if ! npx vercel deploy --yes >"$URL_FILE" 2>"$ERROR_FILE"; then
+            cat "$ERROR_FILE" >&2
+            echo "::error::Vercel preview deployment failed."
+            exit 1
+          fi
+
+          cat "$ERROR_FILE" >&2
+
+          DEPLOYMENT_URL="$(tr -d '\r\n' < "$URL_FILE")"
+
+          if [[ ! "$DEPLOYMENT_URL" =~ ^https://[A-Za-z0-9.-]+$ ]]; then
+            echo "::error::Vercel returned an invalid preview deployment URL."
+            exit 1
+          fi
+
+          echo "preview_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
@@ -215,9 +248,42 @@ jobs:
       - name: Deploy to Vercel (Production)
         id: deploy
         run: |
-          URL=$(npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes 2>&1 | grep -E 'https://' | tail -1)
-          echo "production_url=$URL" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::Missing secret: VERCEL_TOKEN is not configured in GitHub Secrets."
+            exit 1
+          fi
+          if [ -z "${VERCEL_ORG_ID:-}" ]; then
+            echo "::error::Missing secret: VERCEL_ORG_ID is not configured in GitHub Secrets."
+            exit 1
+          fi
+          if [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "::error::Missing secret: VERCEL_PROJECT_ID is not configured in GitHub Secrets."
+            exit 1
+          fi
+
+          URL_FILE="$(mktemp)"
+          ERROR_FILE="$(mktemp)"
+
+          if ! npx vercel deploy --prod --yes >"$URL_FILE" 2>"$ERROR_FILE"; then
+            cat "$ERROR_FILE" >&2
+            echo "::error::Vercel deployment failed."
+            exit 1
+          fi
+
+          cat "$ERROR_FILE" >&2
+
+          DEPLOYMENT_URL="$(tr -d '\r\n' < "$URL_FILE")"
+
+          if [[ ! "$DEPLOYMENT_URL" =~ ^https://[A-Za-z0-9.-]+$ ]]; then
+            echo "::error::Vercel returned an invalid deployment URL."
+            exit 1
+          fi
+
+          echo "production_url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
@@ -232,13 +298,26 @@ jobs:
 
       - name: Verify security headers on production
         run: |
+          set -euo pipefail
           URL="${{ steps.deploy.outputs.production_url }}"
-          for i in 1 2 3; do
-            HEADERS=$(curl -sSI "$URL/admin/login")
-            echo "$HEADERS"
-            echo "$HEADERS" | grep -qi 'content-security-policy:' && echo "CSP enforced" && exit 0
-            echo "CSP header missing (attempt $i/3) - retrying in 15s..."
-            sleep 15
+
+          if [ -z "$URL" ] || [[ ! "$URL" =~ ^https://[A-Za-z0-9.-]+$ ]]; then
+            echo "::error::Cannot verify security headers: invalid or missing production deployment URL."
+            exit 1
+          fi
+
+          echo "Verifying security headers on $URL/admin/login..."
+          for i in 1 2 3 4 5; do
+            HEADERS=$(curl -sSI -L --max-time 15 "$URL/admin/login" || true)
+            if [ -n "$HEADERS" ]; then
+              echo "$HEADERS"
+              if echo "$HEADERS" | grep -qi 'content-security-policy:'; then
+                echo "✓ Content-Security-Policy verified successfully on $URL/admin/login"
+                exit 0
+              fi
+            fi
+            echo "CSP header missing (attempt $i/5) - retrying in 10s..."
+            sleep 10
           done
-          echo "::error::Content-Security-Policy header missing on production after deploy"
+          echo "::error::Content-Security-Policy header missing on $URL/admin/login after deployment."
           exit 1
