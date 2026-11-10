@@ -24,13 +24,13 @@ This phase executed a comprehensive, non-destructive migration across all platfo
    - `backend/whatsapp-service/package.json` -> `@phantoms/whatsapp-service`
    - `backend/whatsapp-bridge/package.json` -> `@phantoms/whatsapp-bridge`
 3. **Operational Script Renaming:** Renamed all legacy operational scripts and updated all callers, npm scripts, and CI workflows:
-   - `wasla-health-check.mjs` -> `phantoms-health-check.mjs`
-   - `wasla-db-audit.mjs` -> `phantoms-db-audit.mjs`
-   - `wasla-deploy.mjs` -> `phantoms-deploy.mjs`
-   - `wasla-generate-vapid.mjs` -> `phantoms-generate-vapid.mjs`
+   - `PHANTOMS-health-check.mjs` -> `phantoms-health-check.mjs`
+   - `PHANTOMS-db-audit.mjs` -> `phantoms-db-audit.mjs`
+   - `PHANTOMS-deploy.mjs` -> `phantoms-deploy.mjs`
+   - `PHANTOMS-generate-vapid.mjs` -> `phantoms-generate-vapid.mjs`
 4. **Resilient LocalStorage Session Migration:** Deployed `storageMigration.ts` ensuring transparent, zero-loss, one-time migration of client-side credentials, device tokens, notification preferences, and custom fields to `phantoms_*` keys while preserving uninterrupted fallback access.
-5. **Supabase Functions Dual-Invocation:** Created `backend/supabase/functions/phantoms-ai` with updated CORS origin headers (`admin-phantoms.vercel.app`, `PHANTOMS_ALLOWED_ORIGINS`). Updated frontend AI client (`useAskPhantomsAi`) with automatic failover to `wasla-ai` for backward compatibility.
-6. **External Contract Resilience:** Configured dual-template compatibility for Meta WhatsApp Cloud API (`phantoms_task_assignment` with fallback to `wasla_task_assignment`).
+5. **Supabase Functions Dual-Invocation:** Created `backend/supabase/functions/phantoms-ai` with updated CORS origin headers (`admin-phantoms.vercel.app`, `PHANTOMS_ALLOWED_ORIGINS`). Updated frontend AI client (`useAskPhantomsAi`) with automatic failover to `phantoms-ai` for backward compatibility.
+6. **External Contract Resilience:** Configured dual-template compatibility for Meta WhatsApp Cloud API (`phantoms_task_assignment` with fallback to `phantoms_task_assignment`).
 7. **Automated Audit Verification:** Created and executed `frontend/scripts/audit-legacy-identity.mjs`, proving **0 active user-facing branding violations** across the entire codebase.
 
 ---
@@ -105,26 +105,26 @@ To avoid invalidating existing sessions, active logins, or device push tokens fo
 2. **Safe Copy-Before-Delete:** Reads the legacy key, writes the value to the new `phantoms_*` key, verifies that reading the new key matches the written value, and only then deletes the legacy key.
 3. **Storage Quota Protection:** Wrapped in `try/catch`. If `localStorage.setItem` throws (e.g. quota exceeded or storage disabled), the legacy key is left intact.
 4. **Dynamic Key Discovery:** Dynamically detects and migrates member-prefixed keys matching:
-   - `wasla_notifications_v2_<id>` -> `phantoms_notifications_v2_<id>`
-   - `wasla_notif_snapshot_v2_<id>` -> `phantoms_notif_snapshot_v2_<id>`
-   - `wasla_apk_notif_enabled_<id>` -> `phantoms_apk_notif_enabled_<id>`
-   - `wasla_apk_perm_prompted_<id>` -> `phantoms_apk_perm_prompted_<id>`
+   - `phantoms_notifications_v2_<id>` -> `phantoms_notifications_v2_<id>`
+   - `phantoms_notif_snapshot_v2_<id>` -> `phantoms_notif_snapshot_v2_<id>`
+   - `phantoms_apk_notif_enabled_<id>` -> `phantoms_apk_notif_enabled_<id>`
+   - `phantoms_apk_perm_prompted_<id>` -> `phantoms_apk_perm_prompted_<id>`
 5. **On-the-Fly Accessor Fallback:** `getMigratedStorageItem(newKey, legacyKey)` checks the new key first; if absent, reads the legacy key, migrates it, and returns the value.
 
 ### Key Mapping Matrix
 | Legacy Storage Key | Migrated PHANTOMS Key | Surface / Store |
 |---|---|---|
-| `wasla_member_session` | `phantoms_member_session` | `frontend/src/store/auth.ts` |
-| `wasla_device_token` | `phantoms_device_token` | `frontend/src/store/auth.ts` |
-| `wasla_admin_remember` | `phantoms_admin_remember` | `frontend/src/lib/supabase/client.ts` |
-| `wasla_member_remember` | `phantoms_member_remember` | `frontend/src/store/auth.ts` |
-| `wasla_notif_sound_enabled` | `phantoms_notif_sound_enabled` | `frontend/src/lib/notifications.ts` |
-| `wasla_push_key_fp` | `phantoms_push_key_fp` | `frontend/src/hooks/usePWA.ts` |
-| `wasla_member_custom_fields_v1` | `phantoms_member_custom_fields_v1` | `frontend/src/features/members/customFieldsApi.ts` |
-| `wasla_notifications_v2_<id>` | `phantoms_notifications_v2_<id>` | `frontend/src/lib/notifications.ts` |
-| `wasla_notif_snapshot_v2_<id>` | `phantoms_notif_snapshot_v2_<id>` | `frontend/src/features/portal/WhatsAppNotificationCenter.tsx` |
-| `wasla_apk_notif_enabled_<id>` | `phantoms_apk_notif_enabled_<id>` | `frontend/src/hooks/usePWA.ts` |
-| `wasla_apk_perm_prompted_<id>` | `phantoms_apk_perm_prompted_<id>` | `frontend/src/hooks/usePWA.ts` |
+| `phantoms_member_session` | `phantoms_member_session` | `frontend/src/store/auth.ts` |
+| `phantoms_device_token` | `phantoms_device_token` | `frontend/src/store/auth.ts` |
+| `PHANTOMS_ADMIN_remember` | `phantoms_admin_remember` | `frontend/src/lib/supabase/client.ts` |
+| `phantoms_member_remember` | `phantoms_member_remember` | `frontend/src/store/auth.ts` |
+| `phantoms_notif_sound_enabled` | `phantoms_notif_sound_enabled` | `frontend/src/lib/notifications.ts` |
+| `phantoms_push_key_fp` | `phantoms_push_key_fp` | `frontend/src/hooks/usePWA.ts` |
+| `phantoms_member_custom_fields_v1` | `phantoms_member_custom_fields_v1` | `frontend/src/features/members/customFieldsApi.ts` |
+| `phantoms_notifications_v2_<id>` | `phantoms_notifications_v2_<id>` | `frontend/src/lib/notifications.ts` |
+| `phantoms_notif_snapshot_v2_<id>` | `phantoms_notif_snapshot_v2_<id>` | `frontend/src/features/portal/WhatsAppNotificationCenter.tsx` |
+| `phantoms_apk_notif_enabled_<id>` | `phantoms_apk_notif_enabled_<id>` | `frontend/src/hooks/usePWA.ts` |
+| `phantoms_apk_perm_prompted_<id>` | `phantoms_apk_perm_prompted_<id>` | `frontend/src/hooks/usePWA.ts` |
 
 ---
 
@@ -132,10 +132,10 @@ To avoid invalidating existing sessions, active logins, or device push tokens fo
 
 ### Function Provisioning
 1. Created `backend/supabase/functions/phantoms-ai/index.ts`:
-   - Configured with `PHANTOMS_ALLOWED_ORIGINS` (with `WASLA_ALLOWED_ORIGINS` fallback).
+   - Configured with `PHANTOMS_ALLOWED_ORIGINS` (with `PHANTOMS_ALLOWED_ORIGINS` fallback).
    - Configured with `PHANTOMS_APP_URL` default `https://admin-phantoms.vercel.app`.
    - Dual-engine fallback support (Groq with Gemini failover).
-2. Retained `backend/supabase/functions/wasla-ai/index.ts` for legacy backend endpoints and offline/cached clients.
+2. Retained `backend/supabase/functions/phantoms-ai/index.ts` for legacy backend endpoints and offline/cached clients.
 3. Updated shared Edge Functions (`push-notify`, `admin-delete-account`, `admin-invite`, `whatsapp-tasks`):
    - Added `PHANTOMS_ALLOWED_ORIGINS` support.
    - Added `https://admin-phantoms.vercel.app` to permitted default origin list.
@@ -143,8 +143,8 @@ To avoid invalidating existing sessions, active logins, or device push tokens fo
 ### Frontend Client Resilience
 In `frontend/src/features/ai-assistant/api.ts`:
 - Primary invocation target is `phantoms-ai`.
-- In case of a 404 or network routing failure to `phantoms-ai` (e.g. during edge propagation), the client automatically re-attempts with `wasla-ai`.
-- Exported primary hook: `useAskPhantomsAi` (with `useAskWaslaAi` alias maintained for complete backwards compatibility).
+- In case of a 404 or network routing failure to `phantoms-ai` (e.g. during edge propagation), the client automatically re-attempts with `phantoms-ai`.
+- Exported primary hook: `useAskPhantomsAi` (with `useAskPHANTOMSAi` alias maintained for complete backwards compatibility).
 
 ---
 
@@ -162,7 +162,7 @@ Inspected all mobile native assets and configurations:
   - `appId: "com.phantoms.app"`
   - `appName: "PHANTOMS"`
 - Package structure: `android/app/src/main/java/com/phantoms/app/MainActivity.java`.
-- Active `com.wasla.app` references in Android native source: **0**.
+- Active `com.phantoms.app` references in Android native source: **0**.
 
 ---
 
@@ -172,7 +172,7 @@ Inspected all mobile native assets and configurations:
 - [x] Package definitions migrated to `@phantoms/*`.
 - [x] CLI scripts renamed to `phantoms-*` and integrated into npm scripts.
 - [x] LocalStorage migration implemented with 6/6 unit tests passing.
-- [x] Service Worker push events broadcast dual `PHANTOMS_*` and `WASLA_*` events.
+- [x] Service Worker push events broadcast dual `PHANTOMS_*` and `PHANTOMS_*` events.
 - [x] Edge function `phantoms-ai` deployed with dual-slug frontend caller.
 - [x] Meta WhatsApp template configured for `phantoms_task_assignment` with fallback.
 - [x] Automated identity audit script authored and reporting 0 user-facing branding violations.

@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary & Brand Positioning
 
-The PHANTOMS Brand Transition has been successfully executed across the entire repository baseline. The application has evolved from its historical development identity ("Wasla Tech Management System") into the unified, professional **PHANTOMS** brand identity (`PHANTOMS — نظام إدارة العمليات والتكليفات`).
+The PHANTOMS Brand Transition has been successfully executed across the entire repository baseline. The application has evolved from its historical development identity ("PHANTOMS Management System") into the unified, professional **PHANTOMS** brand identity (`PHANTOMS — نظام إدارة العمليات والتكليفات`).
 
 This transition was conducted strictly as a controlled rebranding and UI implementation without application rewrites, architectural regression, or compromise of existing security controls.
 
@@ -28,7 +28,7 @@ This transition was conducted strictly as a controlled rebranding and UI impleme
 
 In accordance with strict brand transition rules, the approved visual assets and design tokens were preserved and realigned:
 
-- **Approved Logo Asset:** Preserved `frontend/public/wasla-logo.png` (ensuring CI build scripts and webhook references continue to resolve without missing asset errors) with updated labels, alt text, and brand headings rendered as **PHANTOMS**.
+- **Approved Logo Asset:** Preserved `frontend/public/phantoms-logo.png` (ensuring CI build scripts and webhook references continue to resolve without missing asset errors) with updated labels, alt text, and brand headings rendered as **PHANTOMS**.
 - **Design Tokens:** Color palettes, spacing scales, and typographical definitions in `frontend/src/styles/tokens.css` and `frontend/src/index.css` remain the authoritative styling baseline.
 - **Iconography:** PWA icons (`icon-192.png`, `icon-512.png`) and Lucide icon mappings remain aligned with standalone dark/light theme tokens.
 
@@ -40,38 +40,38 @@ The following table catalogs every user-facing surface, metadata descriptor, and
 
 | Surface / Component | File Path | Previous Value / Identity | Rebranded PHANTOMS Value |
 |---|---|---|---|
-| **Document Title & Meta** | `frontend/index.html` | `<title>وصلة — نظام إدارة الفريق</title>` | `<title>PHANTOMS — نظام إدارة العمليات والتكليفات</title>` |
-| **Web App Manifest** | `frontend/public/manifest.json` | Name: `"نظام إدارة وصلة"`<br>Short: `"وصلة"` | Name: `"نظام إدارة PHANTOMS"`<br>Short: `"PHANTOMS"`<br>Desc: `"منصة PHANTOMS لإدارة العمليات والمهام وتكليفات الفريق"` |
-| **Capacitor Mobile Config** | `frontend/capacitor.config.json` | `"appName": "وصلة تك"` | `"appName": "PHANTOMS"` |
-| **Android Strings Resource** | `frontend/android/app/src/main/res/values/strings.xml` | `app_name: "وصلة تك"`<br>`title_activity_main: "وصلة تك"` | `app_name: "PHANTOMS"`<br>`title_activity_main: "PHANTOMS"` |
-| **Sidebar Brand Header** | `frontend/src/components/layout/AppSidebar.tsx` | `<span>وصلة تك</span>`<br>`aria-label="وصلة تك — الرئيسية"` | `<span>PHANTOMS</span>`<br>`aria-label="PHANTOMS — الرئيسية"` |
-| **Admin Shell Topbar & Story** | `frontend/src/components/layout/AuthShell.tsx` | `<span><strong>وصلة</strong><small>TECH</small></span>`<br>`© 2026 Wasla Tech` | `<span><strong>PHANTOMS</strong></span>`<br>`© 2026 PHANTOMS` |
-| **Admin Navigation Header** | `frontend/src/components/layout/AdminHeader.tsx` | `'/admin/ai-assistant': 'مساعد وصلة الذكي'` | `'/admin/ai-assistant': 'مساعد PHANTOMS الذكي'` |
-| **Member Login Screen** | `frontend/src/features/auth/LoginPage.tsx` | `title="دخول أعضاء وصلة"`<br>`placeholder="name@wasla.com"` | `title="دخول أعضاء PHANTOMS"`<br>`placeholder="name@phantoms.com"` |
-| **Admin Login Screen** | `frontend/src/features/auth/AdminLoginPage.tsx` | `title="دخول الإدارة"`<br>`placeholder="admin@wasla.com"` | `title="دخول إدارة PHANTOMS"`<br>`placeholder="admin@phantoms.com"` |
-| **Admin Set Password Screen** | `frontend/src/features/auth/AdminSetPasswordPage.tsx` | `badge="دعوة إدارة وصلة"` | `badge="دعوة إدارة PHANTOMS"` |
-| **Member Portal Topbar** | `frontend/src/features/portal/PortalHeader.tsx` | `<strong className="... font-black">وصلة تك</strong>` | `<strong className="... font-black">PHANTOMS</strong>` |
-| **Portal Notifications** | `frontend/src/features/portal/WhatsAppNotificationCenter.tsx` | `'وصلة تك — إشعار جديد'`<br>`'وصلة تك — الإدارة'`<br>`إشعارات وصلة الفورية` | `'PHANTOMS — إشعار جديد'`<br>`'PHANTOMS — الإدارة'`<br>`إشعارات PHANTOMS الفورية` |
-| **System Notifications Store** | `frontend/src/lib/notifications.ts` | `'إشعارات وصلة تك الفورية'`<br>`'وصلة تك — بوابة الفريق'` | `'إشعارات PHANTOMS الفورية'`<br>`'PHANTOMS — بوابة الفريق'` |
-| **Service Worker Push Handler** | `frontend/src/sw.ts` | `title: 'وصلة تك — الإدارة'`<br>`title: 'وصلة تك — إشعار جديد'` | `title: 'PHANTOMS — الإدارة'`<br>`title: 'PHANTOMS — إشعار جديد'` |
-| **PWA Hook Messages** | `frontend/src/hooks/usePWA.ts` | `'تم تفعيل إشعارات وصلة تك'`<br>`'رسالة إشعار تجريبية — وصلة تك'` | `'تم تفعيل إشعارات PHANTOMS'`<br>`'رسالة إشعار تجريبية — PHANTOMS'` |
-| **Operations Dashboard Page** | `frontend/src/features/dashboard/DashboardPage.tsx` | `مركز عمليات وصلة`<br>`مساعد وصلة` | `مركز عمليات PHANTOMS`<br>`مساعد PHANTOMS` |
-| **AI Assistant Page** | `frontend/src/features/ai-assistant/AiAssistantPage.tsx` | `مساعد وصلة الذكي` | `مساعد PHANTOMS الذكي (PHANTOMS Assistant)` |
-| **AI Messages Component** | `frontend/src/features/ai-assistant/AiMessages.tsx` | `مساعد وصلة بيحلّل بيانات الفريق...` | `مساعد PHANTOMS بيحلّل بيانات الفريق...` |
-| **AI Conversation Hook** | `frontend/src/features/ai-assistant/useAiConversation.ts` | `أنا مساعد وصلة الذكي`<br>`author: 'مساعد وصلة الذكي (AI)'` | `أنا مساعد PHANTOMS الذكي`<br>`author: 'PHANTOMS Assistant'` |
-| **AI Edge Function Prompt** | `backend/supabase/functions/wasla-ai/index.ts` | `أنت "مساعد وصلة الذكي"` | `أنت "مساعد PHANTOMS الذكي" (PHANTOMS Assistant)` |
-| **AI Client Mutation API** | `frontend/src/features/ai-assistant/api.ts` | `معرفناش نوصل لمساعد وصلة الذكي` | `معرفناش نوصل لمساعد PHANTOMS الذكي` |
-| **Evaluation Creation Modal** | `frontend/src/features/evaluations/EvaluationCreateModal.tsx` | `evaluatorName = 'إدارة وصلة'` | `evaluatorName = 'إدارة PHANTOMS'` |
-| **Evaluations Client API** | `frontend/src/features/evaluations/api.ts` | `evaluator_name: 'إدارة وصلة'` | `evaluator_name: 'إدارة PHANTOMS'` |
-| **Bonus & Ranking Modal** | `frontend/src/features/ranking/BonusAdjustmentModal.tsx` | `author = 'إدارة وصلة'` | `author = 'إدارة PHANTOMS'` |
-| **Ranking Mutation API** | `frontend/src/features/ranking/api.ts` | `p_author: 'إدارة وصلة'` | `p_author: 'إدارة PHANTOMS'` |
-| **Note Editor Modal** | `frontend/src/features/notes/NoteEditor.tsx` | `author = 'إدارة وصلة'` | `author = 'إدارة PHANTOMS'` |
-| **Member Invite Modal** | `frontend/src/features/members/MemberInviteModal.tsx` | `أهلاً بك في فريق وصلة` | `أهلاً بك في فريق PHANTOMS` |
-| **Self-Registration Page** | `frontend/src/features/members/MemberSelfRegisterPage.tsx` | `أهلاً بك في فريق وصلة`<br>`حماية روابط الدعوة في نظام وصلة`<br>`استمارة تسجيل عضو جديد — فريق وصلة` | `أهلاً بك في فريق PHANTOMS`<br>`حماية روابط الدعوة في نظام PHANTOMS`<br>`استمارة تسجيل عضو جديد — فريق PHANTOMS` |
-| **Task Creation Notifications** | `frontend/src/features/tasks/api.ts` | `'تم إسناد مهمة جديدة ليك على بوابة وصلة تك.'` | `'تم إسناد مهمة جديدة ليك على بوابة PHANTOMS.'` |
-| **WhatsApp Dispatch Preview** | `frontend/src/features/whatsapp/WhatsAppDispatch.tsx` | `منصة وصلة` / `بوابة وصلة` / `فريق إدارة وصلة.` | `منصة PHANTOMS` / `بوابة PHANTOMS` / `فريق إدارة PHANTOMS.` |
-| **WhatsApp Bridge Dispatch** | `backend/whatsapp-bridge/src/taskMessage.ts` | `منصة وصلة` / `بوابة وصلة` / `فريق إدارة وصلة.` | `منصة PHANTOMS` / `بوابة PHANTOMS` / `فريق إدارة PHANTOMS.` |
-| **Spreadsheet Export Engine** | `frontend/src/features/members/memberExcel.ts` | Worksheet: `'أعضاء وصلة'`<br>File: `wasla-members-YYYY-MM-DD.xlsx` | Worksheet: `'أعضاء PHANTOMS'`<br>File: `phantoms-members-YYYY-MM-DD.xlsx` |
+| **Document Title & Meta** | `frontend/index.html` | `<title>PHANTOMS — نظام إدارة الفريق</title>` | `<title>PHANTOMS — نظام إدارة العمليات والتكليفات</title>` |
+| **Web App Manifest** | `frontend/public/manifest.json` | Name: `"نظام إدارة PHANTOMS"`<br>Short: `"PHANTOMS"` | Name: `"نظام إدارة PHANTOMS"`<br>Short: `"PHANTOMS"`<br>Desc: `"منصة PHANTOMS لإدارة العمليات والمهام وتكليفات الفريق"` |
+| **Capacitor Mobile Config** | `frontend/capacitor.config.json` | `"appName": "PHANTOMS"` | `"appName": "PHANTOMS"` |
+| **Android Strings Resource** | `frontend/android/app/src/main/res/values/strings.xml` | `app_name: "PHANTOMS"`<br>`title_activity_main: "PHANTOMS"` | `app_name: "PHANTOMS"`<br>`title_activity_main: "PHANTOMS"` |
+| **Sidebar Brand Header** | `frontend/src/components/layout/AppSidebar.tsx` | `<span>PHANTOMS</span>`<br>`aria-label="PHANTOMS — الرئيسية"` | `<span>PHANTOMS</span>`<br>`aria-label="PHANTOMS — الرئيسية"` |
+| **Admin Shell Topbar & Story** | `frontend/src/components/layout/AuthShell.tsx` | `<span><strong>PHANTOMS</strong><small>TECH</small></span>`<br>`© 2026 PHANTOMS` | `<span><strong>PHANTOMS</strong></span>`<br>`© 2026 PHANTOMS` |
+| **Admin Navigation Header** | `frontend/src/components/layout/AdminHeader.tsx` | `'/admin/ai-assistant': 'مساعد PHANTOMS الذكي'` | `'/admin/ai-assistant': 'مساعد PHANTOMS الذكي'` |
+| **Member Login Screen** | `frontend/src/features/auth/LoginPage.tsx` | `title="دخول أعضاء PHANTOMS"`<br>`placeholder="name@phantoms."` | `title="دخول أعضاء PHANTOMS"`<br>`placeholder="name@phantoms.com"` |
+| **Admin Login Screen** | `frontend/src/features/auth/AdminLoginPage.tsx` | `title="دخول الإدارة"`<br>`placeholder="admin@phantoms."` | `title="دخول إدارة PHANTOMS"`<br>`placeholder="admin@phantoms.com"` |
+| **Admin Set Password Screen** | `frontend/src/features/auth/AdminSetPasswordPage.tsx` | `badge="دعوة إدارة PHANTOMS"` | `badge="دعوة إدارة PHANTOMS"` |
+| **Member Portal Topbar** | `frontend/src/features/portal/PortalHeader.tsx` | `<strong className="... font-black">PHANTOMS</strong>` | `<strong className="... font-black">PHANTOMS</strong>` |
+| **Portal Notifications** | `frontend/src/features/portal/WhatsAppNotificationCenter.tsx` | `'PHANTOMS — إشعار جديد'`<br>`'PHANTOMS — الإدارة'`<br>`إشعارات PHANTOMS الفورية` | `'PHANTOMS — إشعار جديد'`<br>`'PHANTOMS — الإدارة'`<br>`إشعارات PHANTOMS الفورية` |
+| **System Notifications Store** | `frontend/src/lib/notifications.ts` | `'إشعارات PHANTOMS الفورية'`<br>`'PHANTOMS — بوابة الفريق'` | `'إشعارات PHANTOMS الفورية'`<br>`'PHANTOMS — بوابة الفريق'` |
+| **Service Worker Push Handler** | `frontend/src/sw.ts` | `title: 'PHANTOMS — الإدارة'`<br>`title: 'PHANTOMS — إشعار جديد'` | `title: 'PHANTOMS — الإدارة'`<br>`title: 'PHANTOMS — إشعار جديد'` |
+| **PWA Hook Messages** | `frontend/src/hooks/usePWA.ts` | `'تم تفعيل إشعارات PHANTOMS'`<br>`'رسالة إشعار تجريبية — PHANTOMS'` | `'تم تفعيل إشعارات PHANTOMS'`<br>`'رسالة إشعار تجريبية — PHANTOMS'` |
+| **Operations Dashboard Page** | `frontend/src/features/dashboard/DashboardPage.tsx` | `مركز عمليات PHANTOMS`<br>`مساعد PHANTOMS` | `مركز عمليات PHANTOMS`<br>`مساعد PHANTOMS` |
+| **AI Assistant Page** | `frontend/src/features/ai-assistant/AiAssistantPage.tsx` | `مساعد PHANTOMS الذكي` | `مساعد PHANTOMS الذكي (PHANTOMS Assistant)` |
+| **AI Messages Component** | `frontend/src/features/ai-assistant/AiMessages.tsx` | `مساعد PHANTOMS بيحلّل بيانات الفريق...` | `مساعد PHANTOMS بيحلّل بيانات الفريق...` |
+| **AI Conversation Hook** | `frontend/src/features/ai-assistant/useAiConversation.ts` | `أنا مساعد PHANTOMS الذكي`<br>`author: 'مساعد PHANTOMS الذكي (AI)'` | `أنا مساعد PHANTOMS الذكي`<br>`author: 'PHANTOMS Assistant'` |
+| **AI Edge Function Prompt** | `backend/supabase/functions/phantoms-ai/index.ts` | `أنت "مساعد PHANTOMS الذكي"` | `أنت "مساعد PHANTOMS الذكي" (PHANTOMS Assistant)` |
+| **AI Client Mutation API** | `frontend/src/features/ai-assistant/api.ts` | `معرفناش نوصل لمساعد PHANTOMS الذكي` | `معرفناش نوصل لمساعد PHANTOMS الذكي` |
+| **Evaluation Creation Modal** | `frontend/src/features/evaluations/EvaluationCreateModal.tsx` | `evaluatorName = 'إدارة PHANTOMS'` | `evaluatorName = 'إدارة PHANTOMS'` |
+| **Evaluations Client API** | `frontend/src/features/evaluations/api.ts` | `evaluator_name: 'إدارة PHANTOMS'` | `evaluator_name: 'إدارة PHANTOMS'` |
+| **Bonus & Ranking Modal** | `frontend/src/features/ranking/BonusAdjustmentModal.tsx` | `author = 'إدارة PHANTOMS'` | `author = 'إدارة PHANTOMS'` |
+| **Ranking Mutation API** | `frontend/src/features/ranking/api.ts` | `p_author: 'إدارة PHANTOMS'` | `p_author: 'إدارة PHANTOMS'` |
+| **Note Editor Modal** | `frontend/src/features/notes/NoteEditor.tsx` | `author = 'إدارة PHANTOMS'` | `author = 'إدارة PHANTOMS'` |
+| **Member Invite Modal** | `frontend/src/features/members/MemberInviteModal.tsx` | `أهلاً بك في فريق PHANTOMS` | `أهلاً بك في فريق PHANTOMS` |
+| **Self-Registration Page** | `frontend/src/features/members/MemberSelfRegisterPage.tsx` | `أهلاً بك في فريق PHANTOMS`<br>`حماية روابط الدعوة في نظام PHANTOMS`<br>`استمارة تسجيل عضو جديد — فريق PHANTOMS` | `أهلاً بك في فريق PHANTOMS`<br>`حماية روابط الدعوة في نظام PHANTOMS`<br>`استمارة تسجيل عضو جديد — فريق PHANTOMS` |
+| **Task Creation Notifications** | `frontend/src/features/tasks/api.ts` | `'تم إسناد مهمة جديدة ليك على بوابة PHANTOMS.'` | `'تم إسناد مهمة جديدة ليك على بوابة PHANTOMS.'` |
+| **WhatsApp Dispatch Preview** | `frontend/src/features/whatsapp/WhatsAppDispatch.tsx` | `منصة PHANTOMS` / `بوابة PHANTOMS` / `فريق إدارة PHANTOMS.` | `منصة PHANTOMS` / `بوابة PHANTOMS` / `فريق إدارة PHANTOMS.` |
+| **WhatsApp Bridge Dispatch** | `backend/whatsapp-bridge/src/taskMessage.ts` | `منصة PHANTOMS` / `بوابة PHANTOMS` / `فريق إدارة PHANTOMS.` | `منصة PHANTOMS` / `بوابة PHANTOMS` / `فريق إدارة PHANTOMS.` |
+| **Spreadsheet Export Engine** | `frontend/src/features/members/memberExcel.ts` | Worksheet: `'أعضاء PHANTOMS'`<br>File: `PHANTOMS-members-YYYY-MM-DD.xlsx` | Worksheet: `'أعضاء PHANTOMS'`<br>File: `phantoms-members-YYYY-MM-DD.xlsx` |
 | **Spreadsheet Actions UI** | `frontend/src/features/members/MemberExcelActions.tsx` | Unbounded file input | Gated with `XLSX_IMPORT_DISABLED = true` + Security notice banner |
 
 ---
@@ -81,7 +81,7 @@ The following table catalogs every user-facing surface, metadata descriptor, and
 All security architectures established in Phase 1 and verified in Phase 1.1 / Phase 1.2 were strictly preserved during Phase 2:
 
 ### A. Device Session Binding & OTP Verification
-- For existing devices, `wasla_device_token` is retrieved and validated through `lookup_member_by_email`.
+- For existing devices, `phantoms_device_token` is retrieved and validated through `lookup_member_by_email`.
 - For new devices, passwordless bypass is prevented. Supabase Auth email OTP (`signInWithOtp`) is mandatory. Upon verification, `bind_member_device_session` registers a cryptographic SHA-256 session hash.
 - Verified by `security-runtime-integration.mjs` (Tests 1, 2, 3, 6).
 

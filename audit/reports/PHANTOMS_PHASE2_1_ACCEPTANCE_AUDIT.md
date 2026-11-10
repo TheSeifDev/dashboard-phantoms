@@ -12,12 +12,12 @@
 
 ## 1. Executive Summary
 
-This independent acceptance audit evaluated the local repository baseline following the Phase 2 brand transition. The audit verified whether the product identity successfully transitioned from "Wasla Tech Management System" to **PHANTOMS**, whether the untrusted XLSX import surface was securely gated, whether brand assets were properly aligned, whether documentation accurately mirrors reality, and whether any functional or security regressions occurred.
+This independent acceptance audit evaluated the local repository baseline following the Phase 2 brand transition. The audit verified whether the product identity successfully transitioned from "PHANTOMS Management System" to **PHANTOMS**, whether the untrusted XLSX import surface was securely gated, whether brand assets were properly aligned, whether documentation accurately mirrors reality, and whether any functional or security regressions occurred.
 
 ### Final Determination: **ACCEPTED WITH LIMITATIONS**
 
 The core functional, security, and textual rebranding goals of Phase 2 are verified. However, acceptance is subject to specific documented limitations:
-1. **Visual Artwork Limitation:** The underlying image files (`wasla-logo.png`, `icons/icon-192.png`, `icons/icon-512.png`, `splash.png`, `ic_launcher.png`) remain the legacy Wasla graphical assets because no dedicated PHANTOMS graphical assets exist in the repository.
+1. **Visual Artwork Limitation:** The underlying image files (`phantoms-logo.png`, `icons/icon-192.png`, `icons/icon-512.png`, `splash.png`, `ic_launcher.png`) remain the legacy PHANTOMS graphical assets because no dedicated PHANTOMS graphical assets exist in the repository.
 2. **README Accuracy Gaps:** The root `README.md` lists framework version discrepancies (Vite 6 badge vs Vite 8.3.6 installed), an invalid environment copy command (`cp .env.example` where `.env.example` does not exist), an invented placeholder clone URL, and omitted test commands.
 3. **Runtime Environment Limitation:** Verification was conducted via static analysis, typechecking, linters, and synthetic unit/integration test suites; live cloud Supabase and real-device WhatsApp dispatch were not exercised in a production network.
 
@@ -106,9 +106,9 @@ In [`memberExcel.ts:121-216`](file:///C:/projects/phantoms/dashboard/frontend/sr
 ## 3. Brand Assets & Visual Identity Audit
 
 ### Inspected Image Assets:
-- Sidebar logo: `frontend/public/wasla-logo.png`
-- Login topbar logo: `frontend/public/wasla-logo.png`
-- Member portal logo: `frontend/public/wasla-logo.png`
+- Sidebar logo: `frontend/public/phantoms-logo.png`
+- Login topbar logo: `frontend/public/phantoms-logo.png`
+- Member portal logo: `frontend/public/phantoms-logo.png`
 - Favicon / Apple touch icon: `frontend/public/icons/icon-192.png`
 - PWA manifest icons: `frontend/public/icons/icon-192.png`, `frontend/public/icons/icon-512.png`
 - Android launcher mipmaps: `frontend/android/app/src/main/res/mipmap-*/ic_launcher*.png`
@@ -119,22 +119,22 @@ In [`memberExcel.ts:121-216`](file:///C:/projects/phantoms/dashboard/frontend/sr
 > [!WARNING]
 > **CRITICAL ASSET GAP: No PHANTOMS Graphical Artwork Exists in the Repository**
 > The codebase does not contain any approved PHANTOMS logo or icon files (e.g., `phantom-logo.png`, `phantoms-icon.png`).
-> Consequently, the application continues to load `wasla-logo.png` and legacy Wasla PWA/launcher icons:
-> - [`AppSidebar.tsx:184`](file:///C:/projects/phantoms/dashboard/frontend/src/components/layout/AppSidebar.tsx#L184): `<img src="/wasla-logo.png" alt="PHANTOMS" />`
-> - [`AuthShell.tsx:23`](file:///C:/projects/phantoms/dashboard/frontend/src/components/layout/AuthShell.tsx#L23): `<img src="/wasla-logo.png" alt="PHANTOMS" />`
-> - [`PortalHeader.tsx:14`](file:///C:/projects/phantoms/dashboard/frontend/src/features/portal/PortalHeader.tsx#L14): `<img src="/wasla-logo.png" alt="PHANTOMS" className="size-8 object-contain sm:size-9" />`
+> Consequently, the application continues to load `phantoms-logo.png` and legacy PHANTOMS PWA/launcher icons:
+> - [`AppSidebar.tsx:184`](file:///C:/projects/phantoms/dashboard/frontend/src/components/layout/AppSidebar.tsx#L184): `<img src="/phantoms-logo.png" alt="PHANTOMS" />`
+> - [`AuthShell.tsx:23`](file:///C:/projects/phantoms/dashboard/frontend/src/components/layout/AuthShell.tsx#L23): `<img src="/phantoms-logo.png" alt="PHANTOMS" />`
+> - [`PortalHeader.tsx:14`](file:///C:/projects/phantoms/dashboard/frontend/src/features/portal/PortalHeader.tsx#L14): `<img src="/phantoms-logo.png" alt="PHANTOMS" className="size-8 object-contain sm:size-9" />`
 > - [`index.html:18-19`](file:///C:/projects/phantoms/dashboard/frontend/index.html#L18-L19): `<link rel="icon" href="/icons/icon-192.png" />`
 > - [`manifest.json:14-19`](file:///C:/projects/phantoms/dashboard/frontend/public/manifest.json#L14-L19): Points to `/icons/icon-192.png` and `/icons/icon-512.png`.
 
-While the surrounding typography, titles, and text nodes render "PHANTOMS", the actual rendered image files physically display the historical Wasla logo and emblem.
+While the surrounding typography, titles, and text nodes render "PHANTOMS", the actual rendered image files physically display the historical PHANTOMS logo and emblem.
 
-**Remaining Wasla Visual Assets Identified:**
-1. `frontend/public/wasla-logo.png` (used by sidebar, login, member portal)
+**Remaining PHANTOMS Visual Assets Identified:**
+1. `frontend/public/phantoms-logo.png` (used by sidebar, login, member portal)
 2. `frontend/public/icons/icon-192.png` (used by browser favicon and PWA manifest)
 3. `frontend/public/icons/icon-512.png` (used by PWA manifest)
 4. `frontend/android/app/src/main/res/drawable/splash.png` (and `drawable-*/splash.png`)
 5. `frontend/android/app/src/main/res/mipmap-*/ic_launcher*.png`
-6. `legacy/wasla-logo.png`, `legacy/icons/icon-192.png`, `legacy/icons/icon-512.png`
+6. `legacy/phantoms-logo.png`, `legacy/icons/icon-192.png`, `legacy/icons/icon-512.png`
 
 **Recommendation for Future Phase:** Provide approved PHANTOMS vector/raster artwork (`phantom-logo.png`, `icon-192.png`, `icon-512.png`, `splash.png`) and replace the underlying files without breaking CI assertions.
 
@@ -142,40 +142,40 @@ While the surrounding typography, titles, and text nodes render "PHANTOMS", the 
 
 ## 4. Full Branding Search & Categorization
 
-A comprehensive search of the repository yielded occurrences of "Wasla", "وصلة", and related terms. They are classified into five distinct categories:
+A comprehensive search of the repository yielded occurrences of "PHANTOMS", "PHANTOMS", and related terms. They are classified into five distinct categories:
 
 ### A. User-Facing Branding That Must Change (Future Polish)
 - **CI Release Artifact Descriptor:**
   [`build-apk.yml:92, 94`](file:///C:/projects/phantoms/dashboard/.github/workflows/build-apk.yml#L92-L94):
-  `name: "تطبيق وصلة تك للأندرويد (Release APK)"`
-  `نسخة تطبيق الأندرويد الموقعة رسمياً لنظام إدارة فريق وصلة تك.`
+  `name: "تطبيق PHANTOMS للأندرويد (Release APK)"`
+  `نسخة تطبيق الأندرويد الموقعة رسمياً لنظام إدارة فريق PHANTOMS.`
   *(Should be updated to "تطبيق PHANTOMS للأندرويد" in a future CI update).*
 - **Hardcoded Offline Script File Paths:**
   `backend/whatsapp-bridge/import-members.ts:4` and `parse-excel.ts:4`:
-  `C:\Users\aboha\Desktop\بيانات تيم وصلة  (الردود).xlsx` (local author fixture paths).
+  `C:\Users\aboha\Desktop\بيانات تيم PHANTOMS  (الردود).xlsx` (local author fixture paths).
 
 ### B. Historical Migration Names That Must Remain Intact
 These database migrations are immutable architectural records:
-- `backend/migrations/0006_remove_team_concept.sql:3`: `-- إزالة مفهوم الفرق نهائياً — النظام كله وصلة واحدة.`
-- `backend/migrations/0018_task_approval_reversal_and_ratings.sql:270, 280`: `p_author TEXT DEFAULT 'إدارة وصلة'`
-- `backend/migrations/0021_member_evaluations.sql:34`: `evaluator_name TEXT NOT NULL DEFAULT 'إدارة وصلة'`
+- `backend/migrations/0006_remove_team_concept.sql:3`: `-- إزالة مفهوم الفرق نهائياً — النظام كله PHANTOMS واحدة.`
+- `backend/migrations/0018_task_approval_reversal_and_ratings.sql:270, 280`: `p_author TEXT DEFAULT 'إدارة PHANTOMS'`
+- `backend/migrations/0021_member_evaluations.sql:34`: `evaluator_name TEXT NOT NULL DEFAULT 'إدارة PHANTOMS'`
 
 ### C. Internal Compatibility Identifiers That Must Remain
 Renaming these would break active sessions, DB compatibility, or push notifications:
-- `wasla_device_token`: LocalStorage key for member device token.
-- `wasla_member_session`: LocalStorage key for member session caching.
-- `wasla_admin_remember`: LocalStorage key for admin session persistence.
-- `wasla_notif_sound_enabled`: Notification audio preference key.
-- `wasla_notif_snapshot_v2_${memberId}`: Portal notification snapshot key.
-- `wasla_notifications_v2_${memberId}`: Member notification store key.
-- `WASLA_PUSH_RECEIVED` & `WASLA_NOTIFICATION_CLICKED`: Service worker message types.
-- `wasla_whatsapp_alerts_v2`: Android notification channel ID.
-- `wasla-ai`: Supabase Edge Function slug.
-- `wasla_task_assignment`: Meta/WhatsApp Cloud API template slug.
-- `com.wasla.app`: Android package namespace in Gradle and Capacitor.
-- `[[WASLA_EVAL]]`: Compatibility carrier prefix for evaluation tasks.
-- `__wasla_eval: true`: Fallback evaluation JSON marker.
-- `__wasla_invite: true`: Fallback invitation JSON marker.
+- `phantoms_device_token`: LocalStorage key for member device token.
+- `phantoms_member_session`: LocalStorage key for member session caching.
+- `PHANTOMS_ADMIN_remember`: LocalStorage key for admin session persistence.
+- `phantoms_notif_sound_enabled`: Notification audio preference key.
+- `phantoms_notif_snapshot_v2_${memberId}`: Portal notification snapshot key.
+- `phantoms_notifications_v2_${memberId}`: Member notification store key.
+- `PHANTOMS_PUSH_RECEIVED` & `PHANTOMS_NOTIFICATION_CLICKED`: Service worker message types.
+- `PHANTOMS_whatsapp_alerts_v2`: Android notification channel ID.
+- `phantoms-ai`: Supabase Edge Function slug.
+- `phantoms_task_assignment`: Meta/WhatsApp Cloud API template slug.
+- `com.phantoms.app`: Android package namespace in Gradle and Capacitor.
+- `[[PHANTOMS_EVAL]]`: Compatibility carrier prefix for evaluation tasks.
+- `__PHANTOMS_eval: true`: Fallback evaluation JSON marker.
+- `__PHANTOMS_invite: true`: Fallback invitation JSON marker.
 
 ### D. Documentation References
 - `COMPLETION_REPORT.md`
@@ -203,7 +203,7 @@ Inspection of [`README.md`](file:///C:/projects/phantoms/dashboard/README.md) id
 | **TypeScript Version** | `TypeScript-5.9` (L3) | `frontend/package.json`: `"typescript": "~5.9.3"` | **Accurate** |
 | **Tailwind CSS** | `TailwindCSS-v4` (L6, L28) | `@tailwindcss/vite: ^4.1.18` | **Accurate** |
 | **Database Architecture** | Supabase PostgreSQL 15, RLS, `is_admin()`, `bind_member_device_session` | Migration 0022 and RPC definitions | **Accurate** |
-| **Edge Function Slugs** | `wasla-ai`, `push-notify` | `backend/supabase/functions/` | **Accurate** (`whatsapp-tasks` also exists) |
+| **Edge Function Slugs** | `phantoms-ai`, `push-notify` | `backend/supabase/functions/` | **Accurate** (`whatsapp-tasks` also exists) |
 | **ExcelJS Status** | ExcelJS, formula injection sanitization | `exceljs@4.4.0` in `frontend/package.json` | **Accurate** |
 | **XLSX Import Gate** | Gated pending CVE-2026-78206 resolution | `XLSX_IMPORT_DISABLED = true` | **Accurate** |
 | **Clone URL** | `git clone https://github.com/organization/phantoms.git` (L102) | `git remote -v`: `https://github.com/TheSeifDev/dashboard-phantoms.git` | **Inconsistent** (placeholder URL invented) |
@@ -253,7 +253,7 @@ No functional regressions were introduced during the brand transition:
 | Business Logic Area | Implementation File | Verification Finding |
 |---|---|---|
 | **Member OTP Login** | `frontend/src/features/auth/LoginPage.tsx` | Passwordless bypass eliminated; email OTP verified via Supabase Auth; device session bound via `bind_member_device_session`. |
-| **Existing Device Sessions** | `frontend/src/store/auth.ts`, `LoginPage.tsx` | `wasla_device_token` lookup remains functional; existing devices continue without re-authentication. |
+| **Existing Device Sessions** | `frontend/src/store/auth.ts`, `LoginPage.tsx` | `phantoms_device_token` lookup remains functional; existing devices continue without re-authentication. |
 | **AI Destructive Confirmation** | `frontend/src/features/ai-assistant/useAiConversation.ts` | `isDestructive` modal check and strict entity matching (`resolveTargetMember`, `resolveTargetTask`) intact. |
 | **Member Deletion Undo** | `frontend/src/store/memberDeletion.ts` | 5-second persistent undo barrier maintained across route unmounts. |
 | **Admin Permissions & RLS** | `backend/migrations/0022_*.sql`, `AdminLoginPage.tsx` | Dynamic `admin_access` permissions check (`is_admin()`) verified. |
@@ -291,9 +291,9 @@ Commit State of Phase 2 Changes:
 ### Verified Strengths:
 1. **100% Automated Test Pass Rate:** 86/86 automated tests pass across security regression (45), spreadsheet guard (10), security runtime (8), brand transition (9), and backend WhatsApp suites (22).
 2. **Effective Attack Surface Reduction:** Untrusted XLSX importing is fully gated in `MemberExcelActions.tsx`, while hardened export functionality is preserved.
-3. **Clean UI Rebranding:** All textual references to "وصلة" across titles, navigation, login screens, portals, and AI assistance were converted to PHANTOMS.
+3. **Clean UI Rebranding:** All textual references to "PHANTOMS" across titles, navigation, login screens, portals, and AI assistance were converted to PHANTOMS.
 
 ### Outstanding Action Items for Future Phase:
-1. **Artwork Asset Delivery:** Provide official PHANTOMS logo graphics and icon files to replace `wasla-logo.png`, `icon-192.png`, `icon-512.png`, and `splash.png`.
+1. **Artwork Asset Delivery:** Provide official PHANTOMS logo graphics and icon files to replace `phantoms-logo.png`, `icon-192.png`, `icon-512.png`, and `splash.png`.
 2. **README Realignment:** Correct the Vite version badge (v8.3.6), replace the placeholder clone URL with `https://github.com/TheSeifDev/dashboard-phantoms.git`, create `.env.example`, and list `npm run test:brand`.
-3. **CI Descriptor Update:** Rebrand `.github/workflows/build-apk.yml` artifact names from "وصلة تك" to "PHANTOMS".
+3. **CI Descriptor Update:** Rebrand `.github/workflows/build-apk.yml` artifact names from "PHANTOMS" to "PHANTOMS".

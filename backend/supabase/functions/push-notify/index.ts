@@ -3,10 +3,9 @@ import webpush from "npm:web-push@3.6.7";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const allowedOrigins = new Set([
-  ...(Deno.env.get('PHANTOMS_ALLOWED_ORIGINS') ?? Deno.env.get('WASLA_ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()),
-  (Deno.env.get('PHANTOMS_APP_URL') ?? Deno.env.get('WASLA_APP_URL') ?? '').trim().replace(/\/+$/, ''),
+  ...(Deno.env.get('PHANTOMS_ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()),
+  (Deno.env.get('PHANTOMS_APP_URL') ?? '').trim().replace(/\/+$/, ''),
   'https://admin-phantoms.vercel.app',
-  'https://admin-wasla.vercel.app',
   'https://localhost',
   'http://localhost',
   'capacitor://localhost',
@@ -71,7 +70,7 @@ serve(async (req) => {
     const safeIcon = typeof icon === 'string' && icon !== ''
       ? icon.slice(0, 2048)
       : '/branding/phantoms-mark-192.png';
-    if (safeIcon !== '/branding/phantoms-mark-192.png' && safeIcon !== '/branding/phantoms-icon-192.png' && safeIcon !== '/wasla-logo.png' && !/^https:\/\/[^/]+/.test(safeIcon) && !safeIcon.startsWith('/')) {
+    if (safeIcon !== '/branding/phantoms-mark-192.png' && safeIcon !== '/branding/phantoms-icon-192.png' && !/^https:\/\/[^/]+/.test(safeIcon) && !safeIcon.startsWith('/')) {
       return reply({ error: 'أيقونة الإشعار غير صالحة.' }, 400);
     }
     const safeUrl = typeof url === 'string' && url !== '' ? url.slice(0, 2048) : '/portal';

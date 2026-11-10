@@ -3,7 +3,7 @@
 **Date:** November 7, 2026  
 **Auditor:** Application Security Engineer  
 **Target Codebase:** `C:\projects\phantoms\dashboard`  
-**Current Application Identity:** Wasla Tech Management System (v2)  
+**Current Application Identity:** PHANTOMS Management System (v2)  
 **Future Target Identity:** PHANTOMS
 
 ---
@@ -32,8 +32,8 @@ A comprehensive repository scan and Git history review was conducted to verify t
 | `SUPABASE_SERVICE_ROLE_KEY` | Edge Functions & Bridge | **CRITICAL SECRET** | Supabase Vault / Platform Env | Sanitized (Read from `Deno.env` / `process.env`) |
 | `VAPID_PRIVATE_KEY` | Push Notify Edge / Service | **HIGH SECRET** | Platform Secrets | Sanitized (Read from environment only) |
 | `WHATSAPP_ACCESS_TOKEN` | WhatsApp Service / Edge | **HIGH SECRET** | Platform Secrets | Sanitized (Read from environment only) |
-| `GROQ_API_KEY` | Wasla AI Edge Function | **HIGH SECRET** | Supabase Vault / Platform Env | Sanitized (Read from Vault / environment) |
-| `GEMINI_API_KEY` | Wasla AI Edge Function | **HIGH SECRET** | Platform Secrets | Sanitized (Read from environment only) |
+| `GROQ_API_KEY` | PHANTOMS AI Edge Function | **HIGH SECRET** | Supabase Vault / Platform Env | Sanitized (Read from Vault / environment) |
+| `GEMINI_API_KEY` | PHANTOMS AI Edge Function | **HIGH SECRET** | Platform Secrets | Sanitized (Read from environment only) |
 | `PORT` | WhatsApp Service | **Config** | `backend/whatsapp-service/.env` | Tracked (Standard port number 3000) |
 
 ---

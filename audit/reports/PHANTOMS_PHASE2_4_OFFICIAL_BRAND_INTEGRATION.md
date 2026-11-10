@@ -275,7 +275,7 @@ TOTAL TESTS: 95 automated test cases | 0 FAILURES | 0 REGRESSIONS
 
 ### 9.1 Verification Highlights:
 - **XLSX Security Gate:** Confirmed that `XLSX_IMPORT_DISABLED = true` remains hard-locked in `memberExcel.ts` and `MemberExcelActions.tsx`. The defensive ZIP archive guard (`safeXlsxGuard.ts`) blocks Zip Bombs, ZIP64, entry collision attacks, and path traversal with 100% test coverage.
-- **Security & Authorization Invariants:** Verified that member `session_token` is completely inaccessible via anon select, member tasks/announcements updates are strictly device-bound, `wasla_device_token` is validated server-side, and admin permissions are enforced via `is_admin()`.
+- **Security & Authorization Invariants:** Verified that member `session_token` is completely inaccessible via anon select, member tasks/announcements updates are strictly device-bound, `phantoms_device_token` is validated server-side, and admin permissions are enforced via `is_admin()`.
 - **Runtime Integrity:** Successfully generated service worker precache bundle containing 71 entries (`2500.67 KiB`).
 
 ---
@@ -285,9 +285,9 @@ TOTAL TESTS: 95 automated test cases | 0 FAILURES | 0 REGRESSIONS
 In strict compliance with project governance directives:
 1. **Package Identifiers:** The active Android package identifier remains `com.phantoms.app`.
 2. **Compatibility Keys Preserved:**
-   - Client session storage keys: `wasla_member_session`, `wasla_device_token`, `wasla_admin_remember`.
-   - Edge function slug: `wasla-ai` (CORS-restricted, POST-only, admin-scoped).
-   - WhatsApp message template identifier: `wasla_task_assignment`.
+   - Client session storage keys: `phantoms_member_session`, `phantoms_device_token`, `PHANTOMS_ADMIN_remember`.
+   - Edge function slug: `phantoms-ai` (CORS-restricted, POST-only, admin-scoped).
+   - WhatsApp message template identifier: `phantoms_task_assignment`.
    - Database schema & migrations: Intact without modifying previously committed migrations.
 3. **Safe Change Boundaries:**
    - No Git commits, pushes, or resets were executed.

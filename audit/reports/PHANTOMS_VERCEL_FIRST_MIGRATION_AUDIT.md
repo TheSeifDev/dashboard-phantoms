@@ -281,7 +281,7 @@ We evaluate three distinct infrastructure models:
 * **Architecture:**
   - Frontend hosted on Vercel Edge.
   - Both `whatsapp-service` (Express) and `whatsapp-bridge` (Baileys) remain co-located on a dedicated host (Railway or Docker container).
-  - Frontend points `VITE_WHATSAPP_BRIDGE_URL` to the Railway HTTPS URL (`https://admin-wasla-production.up.railway.app` or updated PHANTOMS domain).
+  - Frontend points `VITE_WHATSAPP_BRIDGE_URL` to the Railway HTTPS URL (`https://admin-phantoms-production.up.railway.app` or updated PHANTOMS domain).
 * **Compatibility:** 100% (Exact match with current production architecture).
 * **Reliability:** High. No serverless state mismatches for `mockBaileysManager`.
 * **Operational Complexity:** Low (Zero architectural alterations; separate frontend and backend pipelines).

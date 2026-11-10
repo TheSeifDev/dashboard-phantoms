@@ -5,7 +5,7 @@
 ## قبل التفعيل
 
 1. سجّل رقم الإرسال الثاني كرقم WhatsApp Business في Meta Developer Dashboard واربطه بتطبيق وWhatsApp Business Account.
-2. أنشئ قالب Utility معتمدًا باسم `phantoms_task_assignment` (أو القالب المتوافق السابق `wasla_task_assignment`) وباللغة التي ستضبطها. اجعل نص المتن أربعة متغيرات مرتبة: الاسم، عنوان المهمة، التفاصيل، الموعد النهائي. مثال:
+2. أنشئ قالب Utility معتمدًا باسم `phantoms_task_assignment` وباللغة التي ستضبطها. اجعل نص المتن أربعة متغيرات مرتبة: الاسم، عنوان المهمة، التفاصيل، الموعد النهائي. مثال:
 
    `السلام عليكم {{1}}، تم إسناد مهمة «{{2}}» إليك في PHANTOMS. التفاصيل: {{3}}. الموعد النهائي: {{4}}. يرجى متابعة المهمة من بوابة الأعضاء.`
 
@@ -15,9 +15,9 @@
    - `WHATSAPP_ACCESS_TOKEN`: رمز Meta طويل العمر بصلاحيات الرسائل المطلوبة.
    - `WHATSAPP_PHONE_NUMBER_ID`: معرّف رقم الإرسال في Meta، وليس رقم الهاتف المعروض.
    - `WHATSAPP_GRAPH_API_VERSION`: إصدار Graph API مدعوم في تطبيق Meta لديك، مثل `vXX.0` بعد التحقق من الإصدار النشط.
-   - `WHATSAPP_TEMPLATE_NAME`: اسم القالب، الافتراضي `phantoms_task_assignment` (مع دعم تلقائي لـ `wasla_task_assignment`).
+   - `WHATSAPP_TEMPLATE_NAME`: اسم القالب، الافتراضي `phantoms_task_assignment`.
    - `WHATSAPP_TEMPLATE_LANGUAGE`: رمز لغة القالب، الافتراضي `ar`.
-   - `PHANTOMS_ALLOWED_ORIGINS`: نطاقات منصة PHANTOMS المسموح بها (ويدعم `WASLA_ALLOWED_ORIGINS` للتوافق).
+   - `PHANTOMS_ALLOWED_ORIGINS`: نطاقات منصة PHANTOMS المسموح بها.
 
 5. صلاحية الإرسال تُقرأ من إدارة المشرفين في قاعدة البيانات، فلا تحتاج قائمة بريد منفصلة. انشر Edge Function باسم `whatsapp-tasks` مع التحقق من JWT مفعّلًا. صفحة الإدارة ستبقى في وضع غير متصل حتى تتوفر الأسرار المطلوبة.
 6. طبّق `backend/migrations/0002_whatsapp_settings.sql` على قاعدة موجودة مسبقًا. التثبيت الجديد يحصل على الجدول من `backend/supabase_setup.sql`.

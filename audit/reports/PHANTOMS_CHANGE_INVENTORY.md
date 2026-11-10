@@ -3,7 +3,7 @@
 **Date:** November 8, 2026  
 **Auditor:** Principal Software Engineer & Application Security Engineer  
 **Target Codebase:** `C:\projects\phantoms\dashboard`  
-**Current Application Identity:** Wasla Tech Management System (v2)  
+**Current Application Identity:** PHANTOMS Management System (v2)  
 **Future Target Identity:** PHANTOMS
 
 ---
@@ -36,7 +36,7 @@ During this remediation phase, no UI redesign, design token modifications, or pr
 - **Changes:** Removed static `const OWNER_ID = '8ce17aae...'`. Now verifies `access?.is_owner` from `get_admin_access()` and rejects self-deletion using `userData.user.id`.
 - **Rationale:** Completes dynamic ownership decoupling in Edge Functions (`SEC-CRIT-01`).
 
-#### 3. `backend/supabase/functions/wasla-ai/index.ts`
+#### 3. `backend/supabase/functions/phantoms-ai/index.ts`
 - **Status:** Modified (Lines 86–156)
 - **Changes:** Wrapped untrusted context in `<context>...</context>` XML tags with strict system instructions against prompt injection; restored multi-turn conversation history for Gemini API.
 - **Rationale:** Resolves `SEC-HIGH-03` and `BUG-01`.

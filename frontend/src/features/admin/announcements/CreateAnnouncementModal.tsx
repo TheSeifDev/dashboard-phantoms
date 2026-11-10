@@ -104,7 +104,7 @@ export default function CreateAnnouncementModal({
           mIds = [];
         }
         if (mIds.length === 0) {
-          throw new Error('معرفناش نحدد الأعضاء اللي هيوصلهم الإعلان (القائمة فاضية) — اعمل إعادة تحميل للصفحة وجرّب تاني.');
+          throw new Error('معرفناش نحدد الأعضاء المستهدفين بالإعلان (القائمة فاضية) — اعمل إعادة تحميل للصفحة وجرّب تاني.');
         }
       }
 
@@ -155,9 +155,9 @@ export default function CreateAnnouncementModal({
           if (sent > 0 && failed === 0) {
             toast.success(`الإعلان اتم نشره واتبعث على واتساب لـ ${sent} عضو بنجاح.`);
           } else if (sent > 0) {
-            toast.warning(`الإعلان اتم نشره، وواتساب وصل لـ ${sent} عضو ومجاش لـ ${failed}. راجع "الإحصائيات" للتفاصيل: ${waErrors.slice(0, 2).join('؛ ')}`);
+            toast.warning(`الإعلان اتم نشره، وتم تسليم واتساب لـ ${sent} عضو ومجاش لـ ${failed}. راجع "الإحصائيات" للتفاصيل: ${waErrors.slice(0, 2).join('؛ ')}`);
           } else {
-            toast.error(`الإعلان اتم نشره، بس رسالة الواتساب موصلتش لأي عضو (فشل ${failed}). السبب: ${waErrors.slice(0, 2).join('؛ ') || 'مش معروف — راجع اتصال الواتساب وأرقام التليفونات.'}`);
+            toast.error(`الإعلان اتم نشره، بس تعذر تسليم رسالة الواتساب لأي عضو (فشل ${failed}). السبب: ${waErrors.slice(0, 2).join('؛ ') || 'مش معروف — راجع اتصال الواتساب وأرقام التليفونات.'}`);
           }
         } catch (whatsappErr) {
           toast.error('الإعلان اتم نشره بنجاح، بس حصلت مشكلة وإحنا بنبعت على واتساب: ' + (whatsappErr instanceof Error ? whatsappErr.message : ''));

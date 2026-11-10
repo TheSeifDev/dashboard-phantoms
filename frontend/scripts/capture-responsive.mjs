@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-const origin = process.env.WASLA_URL ?? 'http://127.0.0.1:4173';
+const origin = process.env.PHANTOMS_URL ?? 'http://127.0.0.1:4173';
 const output = path.resolve('../screenshots/mobile-first-after');
 const widths = [360, 390, 412, 768, 1024, 1366, 1440];
 const pages = [
@@ -11,7 +11,7 @@ const pages = [
   ['/admin/ranking', 'ranking'], ['/admin/notes', 'notes'], ['/admin/ai-assistant', 'ai-assistant'],
   ['/admin/whatsapp', 'whatsapp'],
 ];
-const onlyPage = process.env.WASLA_ONLY_PAGE ?? (process.env.WASLA_ONLY_WHATSAPP === 'true' ? 'whatsapp' : '');
+const onlyPage = process.env.PHANTOMS_ONLY_PAGE ?? (process.env.PHANTOMS_ONLY_WHATSAPP === 'true' ? 'whatsapp' : '');
 const adminPages = onlyPage ? pages.filter(([, name]) => name === onlyPage) : pages.slice(3, 10);
 const members = [{ id: 701, created_at: '2026-09-01T12:00:00Z', email: 'demo.member@example.test', full_name: 'سلمى محمود', team: 'التصميم', completion_rank: 86, bio: 'مصممة واجهات', device: 'لابتوب', meeting_attendance: 'منتظم', work_status: 'active', phone: '+201001234567', can_go_alexandria: true }];
 const tasks = [{ id: 801, created_at: '2026-09-10T12:00:00Z', title: 'إعداد واجهة لوحة التحكم', description: 'مراجعة تجربة الاستخدام ودعم الشاشات الصغيرة.', has_deadline: true, deadline_date: '2026-10-12', assigned_to: 'ALL', tracking: { '701': { status: 'under_review', note: 'جاهز للمراجعة', submission_url: 'https://example.test/demo', updated_at: '2026-09-11T12:00:00Z' } } }];
@@ -34,7 +34,7 @@ await page.route('**/rest/v1/**', async (route) => {
 await page.route('**/functions/v1/whatsapp-tasks', async (route) => {
   const payload = route.request().postDataJSON();
   if (payload.action === 'set-enabled') whatsappEnabled = payload.enabled;
-  await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ configured: true, enabled: whatsappEnabled, templateName: 'wasla_task_assignment' }) });
+  await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ configured: true, enabled: whatsappEnabled, templateName: 'phantoms_task_assignment' }) });
 });
 
 for (const width of widths) {

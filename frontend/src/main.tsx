@@ -10,7 +10,7 @@ import { initCapacitorNativeBridge, isRunningInNativeApk } from './lib/capacitor
 import { runLocalStorageMigration } from './lib/storageMigration';
 import './index.css';
 
-// الترحيل الآمن لمفاتيح الجلسة المحلية القديمة (wasla_* -> phantoms_*)
+// إدارة وتهيئة مفاتيح الجلسة المحلية
 runLocalStorageMigration();
 
 // تهيئة بيئة تطبيق الأندرويد (زر الرجوع والتكامل الأصلي)

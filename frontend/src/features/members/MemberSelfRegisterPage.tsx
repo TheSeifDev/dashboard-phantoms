@@ -245,7 +245,7 @@ export default function MemberSelfRegisterPage() {
             <div>
               <h1 className="text-lg font-black text-[var(--text)]">تم تسجيل بياناتك بنجاح</h1>
               <p className="text-xs text-[var(--text-muted)]">
-                أهلاً بك في فريق PHANTOMS — بياناتك وصلت للإدارة واتحفظت بالكامل.
+                أهلاً بك في فريق PHANTOMS — تم استلام بياناتك لدى الإدارة وحفظها بالكامل.
               </p>
             </div>
           </div>

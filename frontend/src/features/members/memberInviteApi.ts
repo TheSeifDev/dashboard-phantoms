@@ -14,9 +14,8 @@ import {
 } from './customFieldsApi';
 
 export const MEMBER_INVITES_KEY = ['member_registration_invites'] as const;
-const PRE0020_TOKEN_PREFIX = 'wsl1_';
+const PRE0020_TOKEN_PREFIX = 'phm1_';
 const INVITE_PLACEHOLDER_DOMAIN = '@invite.phantoms.local';
-const LEGACY_INVITE_PLACEHOLDER_DOMAIN = '@invite.wasla.local';
 
 export interface MemberInviteRecord {
   id: number;
@@ -190,7 +189,7 @@ async function ensureOnboardingCarrierField(): Promise<number> {
 export function isInvitePlaceholderMember(member: Pick<Member, 'email'>): boolean {
   if (!member.email) return false;
   const email = member.email.toLowerCase();
-  return email.endsWith(INVITE_PLACEHOLDER_DOMAIN) || email.endsWith(LEGACY_INVITE_PLACEHOLDER_DOMAIN);
+  return email.endsWith(INVITE_PLACEHOLDER_DOMAIN);
 }
 
 async function applyRegistrationPayloadToMemberRow(
@@ -353,7 +352,6 @@ export function useCreateMemberInvite() {
 
         const metaNote = JSON.stringify({
           __phantoms_invite: true,
-          __wasla_invite: true,
           note: cleanNote,
           expires_at: expiresAt,
         });
@@ -456,7 +454,7 @@ export function usePendingMemberInvites() {
         const placeholders = await supabase
           .from(TABLES.members)
           .select('id, created_at, full_name, email, team_notes')
-          .or(`email.like.%${INVITE_PLACEHOLDER_DOMAIN},email.like.%${LEGACY_INVITE_PLACEHOLDER_DOMAIN}`)
+          .like('email', `%${INVITE_PLACEHOLDER_DOMAIN}`)
           .order('created_at', { ascending: false });
 
         if (placeholders.error || !placeholders.data) return [];

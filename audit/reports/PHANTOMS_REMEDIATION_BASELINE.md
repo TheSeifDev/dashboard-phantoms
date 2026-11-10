@@ -3,7 +3,7 @@
 **Date:** November 7, 2026  
 **Auditor:** Principal Software Engineer, Application Security Engineer & QA Lead  
 **Target Codebase:** `C:\projects\phantoms\dashboard`  
-**Current Application Identity:** Wasla Tech Management System (v2)  
+**Current Application Identity:** PHANTOMS Management System (v2)  
 **Future Target Identity:** PHANTOMS  
 **Node.js Version:** `v24.19.0`  
 **npm Version:** `12.2.1`  
@@ -40,7 +40,7 @@ This baseline validation establishes the technical truth of the codebase prior t
 - **Exit Code:** `0`
 - **Output:**
   ```text
-  npm notice run wasla-v2@0.0.0 npx
+  npm notice run phantoms-v2@0.0.0 npx
   npm notice run tsc --noEmit
   ```
 - **Conclusion:** TypeScript compilation completes cleanly. However, static inspection reveals extensive use of `as any` casts to circumvent missing database types in `src/types/db.ts` for custom fields and evaluations.
@@ -83,8 +83,8 @@ This baseline validation establishes the technical truth of the codebase prior t
      - *Cause:* Regex `/GRANT SELECT \(id, created_at, email, full_name, bio, device/` failed because `0009_member_device_binding.sql` executed `REVOKE ALL ON public.members FROM PUBLIC, anon;` (completely removing direct SELECT, which is stricter than column grants).
   2. `task tracking updates are device-bound server-side > migration revokes anon direct UPDATE on tasks`
      - *Cause:* Regex `/REVOKE ALL ON public\.tasks FROM anon/` failed because the SQL specifies `REVOKE ALL ON public.tasks FROM PUBLIC, anon;`.
-  3. `edge functions and bridge enforce auth > wasla-ai: no wildcard CORS, POST-only, admin fallback to is_admin()`
-     - *Cause:* Regex expects `allowedOrigins.includes(origin)` and `rpc('is_admin')`, but `wasla-ai/index.ts` uses `allowedOrigins.has(origin)` (Set) and `rpc('has_admin_permission', { p_permission: 'ai_assistant' })`.
+  3. `edge functions and bridge enforce auth > phantoms-ai: no wildcard CORS, POST-only, admin fallback to is_admin()`
+     - *Cause:* Regex expects `allowedOrigins.includes(origin)` and `rpc('is_admin')`, but `phantoms-ai/index.ts` uses `allowedOrigins.has(origin)` (Set) and `rpc('has_admin_permission', { p_permission: 'ai_assistant' })`.
   4. `edge functions and bridge enforce auth > push-notify: origin allowlist enforced`
      - *Cause:* Regex expects `allowedOrigins.includes(origin)`, but `push-notify/index.ts` uses `allowedOrigins.has(origin)`.
 
@@ -119,13 +119,13 @@ This baseline validation establishes the technical truth of the codebase prior t
 | **SEC-CRIT-02** | Passwordless Member Account Spoofing | **CRITICAL** | `lookup_member_by_email` in `0013_member_device_sessions.sql` and `LoginPage.tsx` allows anonymous arbitrary email lookup & device binding | **CONFIRMED** |
 | **SEC-HIGH-01** | Incomplete `.gitignore` (Secret Leak Risk) | **HIGH** | `.gitignore` only ignores `backend/whatsapp-service/.env.local`, missing root `.env`, `frontend/.env`, etc. | **CONFIRMED** |
 | **SEC-HIGH-02** | Vulnerable `xlsx` (SheetJS) Dependency | **HIGH** | `xlsx@^0.18.5` in frontend & bridge contains unpatched Prototype Pollution & ReDoS | **CONFIRMED** |
-| **SEC-HIGH-03** | AI Prompt Injection via Raw Context | **HIGH** | `backend/supabase/functions/wasla-ai/index.ts` interpolates context without XML delimiters or untrusted data boundaries | **CONFIRMED** |
-| **BUG-01** | AI Conversation History Dropped | **HIGH** | `useAiConversation.ts` omits history parameter; Gemini branch in `wasla-ai/index.ts` ignores history | **CONFIRMED** |
+| **SEC-HIGH-03** | AI Prompt Injection via Raw Context | **HIGH** | `backend/supabase/functions/phantoms-ai/index.ts` interpolates context without XML delimiters or untrusted data boundaries | **CONFIRMED** |
+| **BUG-01** | AI Conversation History Dropped | **HIGH** | `useAiConversation.ts` omits history parameter; Gemini branch in `phantoms-ai/index.ts` ignores history | **CONFIRMED** |
 | **BUG-02** | AI Action Name Matching Collision / IDOR | **HIGH** | `useAiConversation.ts` uses `.includes(name)` and first-name matching, creating risk of modifying/deleting unintended members | **CONFIRMED** |
 | **BUG-03** | Member Deletion Timer Canceled on Unmount | **MEDIUM** | In `MembersPage.tsx`, state changes or unmounts cancel pending deletions silently | **CONFIRMED** |
 | **BUG-CI-01** | Security Regression Failure in CI/CD | **HIGH** | `deploy.yml` fails at step `npm run test:security` due to brittle regexes on SQL and Set methods | **CONFIRMED** |
-| **DEBT-01** | Member Evaluations Stored in Fake Tasks | **MEDIUM** | Uses carrier prefix `[[WASLA_EVAL]]` inside `tasks` table before migration 0021 was created | **CONFIRMED** |
-| **DEBT-02** | Custom Fields Stored in `team_notes` | **MEDIUM** | Carrier prefix `[[WASLA_CF]]` used in `team_notes` before migration 0020 introduced `custom_fields` column | **CONFIRMED** |
+| **DEBT-01** | Member Evaluations Stored in Fake Tasks | **MEDIUM** | Uses carrier prefix `[[PHANTOMS_EVAL]]` inside `tasks` table before migration 0021 was created | **CONFIRMED** |
+| **DEBT-02** | Custom Fields Stored in `team_notes` | **MEDIUM** | Carrier prefix `[[PHANTOMS_CF]]` used in `team_notes` before migration 0020 introduced `custom_fields` column | **CONFIRMED** |
 | **DEBT-03** | Obsolete `backend/patch.sql` | **HIGH** | Running `patch.sql` reverts `lookup_member_by_email` to obsolete single-device schema, breaking migration 0013 | **CONFIRMED** |
 | **DEBT-04** | `run-migrations.mjs` Missing Migrations | **MEDIUM** | Script only lists up to `0020_member_custom_fields.sql`, omitting `0021_member_evaluations.sql` | **CONFIRMED** |
 | **BUILD-01** | Vite PWA `inlineDynamicImports` Deprecation | **LOW** | Emits rollup warning in production build | **CONFIRMED** |
@@ -148,7 +148,7 @@ This baseline validation establishes the technical truth of the codebase prior t
    - Update `frontend/scripts/security-regression.mjs` to test true security invariants without brittle string regexes.
    - Verify 100% pass rate in local test runner.
 4. **Phase 4: AI Security & Action Safety**
-   - Enforce XML context boundaries and prompt injection defenses in `wasla-ai/index.ts`.
+   - Enforce XML context boundaries and prompt injection defenses in `phantoms-ai/index.ts`.
    - Restore multi-turn conversation history for both Groq and Gemini.
    - Require exact member ID matching for destructive AI actions in `useAiConversation.ts`.
 5. **Phase 5: Technical Debt & Database Maintenance**

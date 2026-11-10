@@ -4,7 +4,7 @@
 **تاريخ التدقيق:** 8 نوفمبر 2026  
 **طبيعة المهمة:** تدقيق مستقل للقراءة فقط (READ-ONLY Independent Verification)  
 **مسار المشروع المحلي:** `C:\projects\phantoms\dashboard`  
-**الهوية الحالية:** Wasla Tech Management System (v2)  
+**الهوية الحالية:** PHANTOMS Management System (v2)  
 **الهوية المستهدفة:** PHANTOMS  
 **الأدوار المنفذة:** مهندس معماري أول للبرمجيات (Senior Software Architect)، مهندس أمن تطبيقات (AppSec Engineer)، ومدقق فني مستقل (Independent Technical Auditor).
 

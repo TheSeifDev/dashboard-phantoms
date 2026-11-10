@@ -8,7 +8,6 @@ import { isMissingRelationError } from '../members/customFieldsApi';
 
 export const EVALUATIONS_QUERY_KEY = ['member_evaluations'] as const;
 export const EVAL_CARRIER_PREFIX = '[[PHANTOMS_EVAL]]';
-export const LEGACY_EVAL_CARRIER_PREFIX = '[[WASLA_EVAL]]';
 
 export type EvaluationGrade =
   | 'excellent'
@@ -52,7 +51,6 @@ export interface CreateEvaluationInput {
 
 interface FallbackEvalContent {
   __phantoms_eval?: boolean;
-  __wasla_eval?: boolean;
   member_id: number;
   grade: EvaluationGrade;
   points: number;
@@ -67,11 +65,8 @@ function normalizeGrade(val: unknown): EvaluationGrade {
 }
 
 function parseFallbackTaskRow(task: Task): MemberEvaluation | null {
-  const isPhantoms = task.title.startsWith(EVAL_CARRIER_PREFIX);
-  const isLegacy = task.title.startsWith(LEGACY_EVAL_CARRIER_PREFIX);
-  if (!isPhantoms && !isLegacy) return null;
-  const prefixLength = isPhantoms ? EVAL_CARRIER_PREFIX.length : LEGACY_EVAL_CARRIER_PREFIX.length;
-  const cleanTitle = task.title.slice(prefixLength).trim() || 'تقييم أداء';
+  if (!task.title.startsWith(EVAL_CARRIER_PREFIX)) return null;
+  const cleanTitle = task.title.slice(EVAL_CARRIER_PREFIX.length).trim() || 'تقييم أداء';
   let parsed: Partial<FallbackEvalContent> = {};
   try {
     parsed = JSON.parse(task.description ?? '{}') as Partial<FallbackEvalContent>;
@@ -256,7 +251,6 @@ export function useCreateEvaluations() {
         if (isMissingRelationError(nativeInsert.error, 'member_evaluations')) {
           const contentPayload: FallbackEvalContent = {
             __phantoms_eval: true,
-            __wasla_eval: true,
             member_id: memberId,
             grade: input.grade,
             points: input.points,

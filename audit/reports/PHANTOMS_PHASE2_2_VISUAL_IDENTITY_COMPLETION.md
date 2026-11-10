@@ -15,19 +15,19 @@ This report documents the execution and empirical verification of **Phase 2.2: V
 
 Building upon the brand transition foundation established in Phase 2 and audited in Phase 2.1, this phase resolved all remaining configuration, mobile package identity, CI workflow, documentation, and visual audit gaps:
 
-1. **Android Package Identity Migration:** Fully migrated mobile package identifiers from legacy `com.wasla.app` to **`com.phantoms.app`** across Capacitor configuration, Android Gradle files (`namespace` and `applicationId`), Android application resource strings, Java package structure (`com/phantoms/app/MainActivity.java`), and Capacitor Android asset synchronization (`npx cap sync android`).
+1. **Android Package Identity Migration:** Fully migrated mobile package identifiers from legacy `com.phantoms.app` to **`com.phantoms.app`** across Capacitor configuration, Android Gradle files (`namespace` and `applicationId`), Android application resource strings, Java package structure (`com/phantoms/app/MainActivity.java`), and Capacitor Android asset synchronization (`npx cap sync android`).
 2. **CI & Release Artifact Branding:** Updated the GitHub Actions Android APK build workflow (`.github/workflows/build-apk.yml`) and build script (`frontend/scripts/build-apk.mjs`) to generate official **`phantoms-app.apk`** and **`phantoms-app-debug.apk`** release artifacts with updated workflow descriptors.
 3. **Root `README.md` Realignment:** Completely reconciled framework version badges (Vite 8.3.6, React 19.2.8, TypeScript 5.9.3), replaced placeholder clone URLs with the real repository (`https://github.com/TheSeifDev/dashboard-phantoms.git`), corrected environment setup instructions (`.env.production`), documented the XLSX import security gate and safe ExcelJS export, and cataloged all 5 test execution suites.
 4. **Visual Surface Audit & Screenshot Capture:** Employed an automated headless Google Chrome test harness to render, inspect, and capture **all 11 core application surfaces** across Desktop (1440px), Tablet (768px), and Mobile (390px) viewports (33 total full-page screenshots stored in `audit/screenshots/phase2_2/`).
 5. **Brand Asset Specification & Integration Architecture:** Conducted a comprehensive audit of all repository visual assets. In strict accordance with engineering directives (*never fabricate or approximate official brand logos*), documented an exact **Missing-Assets Specification** defining dimensions, color spaces, safe zones, transparency requirements, and clean drop-in paths for creative production handover.
-6. **Zero Functional or Security Regression:** Preserved 100% of security remediations, including Supabase Auth OTP verification, device-bound sessions (`wasla_device_token`), dynamic multi-admin owner permissions (`is_admin()`), safe ExcelJS workbook exports, and AI confirmation barriers. 95 automated test cases pass with zero failures.
+6. **Zero Functional or Security Regression:** Preserved 100% of security remediations, including Supabase Auth OTP verification, device-bound sessions (`phantoms_device_token`), dynamic multi-admin owner permissions (`is_admin()`), safe ExcelJS workbook exports, and AI confirmation barriers. 95 automated test cases pass with zero failures.
 
 ---
 
 ## 2. Official Brand Asset Inventory & Integration Specification
 
 ### 2.1 Current Asset Status
-A systematic scan of all image files in `frontend/public/` and `frontend/android/` revealed that no dedicated vector or raster graphical logos for PHANTOMS exist in the repository. The legacy image files (`wasla-logo.png`, `icons/icon-192.png`, `icons/icon-512.png`, `splash.png`, `ic_launcher.png`) remain in place as functional placeholders.
+A systematic scan of all image files in `frontend/public/` and `frontend/android/` revealed that no dedicated vector or raster graphical logos for PHANTOMS exist in the repository. The legacy image files (`phantoms-logo.png`, `icons/icon-192.png`, `icons/icon-512.png`, `splash.png`, `ic_launcher.png`) remain in place as functional placeholders.
 
 Per explicit project directives:
 - **No graphical logos were fabricated or approximated.**
@@ -62,7 +62,7 @@ The codebase references brand imagery through standard abstraction layers:
 ## 3. Android Package Identity Migration
 
 ### 3.1 Namespace & Application ID Transition
-The Android mobile wrapper was previously configured with the legacy package identifier `com.wasla.app`. This was fully transitioned to **`com.phantoms.app`**.
+The Android mobile wrapper was previously configured with the legacy package identifier `com.phantoms.app`. This was fully transitioned to **`com.phantoms.app`**.
 
 #### Configuration Changes:
 1. **Capacitor Configuration (`frontend/capacitor.config.json`):**
@@ -97,7 +97,7 @@ The Android mobile wrapper was previously configured with the legacy package ide
    ```
 4. **Android Java Source Directory Structure:**
    - Created: `frontend/android/app/src/main/java/com/phantoms/app/MainActivity.java` with package declaration `package com.phantoms.app;`.
-   - Removed: Legacy directory `frontend/android/app/src/main/java/com/wasla/app/`.
+   - Removed: Legacy directory `frontend/android/app/src/main/java/com/PHANTOMS/app/`.
 5. **Asset Synchronization:**
    - Executed `npx cap sync android` to ensure Capacitor copied web assets and regenerated native bindings. Verified `frontend/android/app/src/main/assets/capacitor.config.json` reflects `"appId": "com.phantoms.app"`.
 
@@ -142,7 +142,7 @@ The root project `README.md` was overhauled to eliminate all discrepancies and p
 5. **Security Disclosures:**
    - Clearly documented the XLSX Import Gate (`XLSX_IMPORT_DISABLED = true`).
    - Detailed the ExcelJS export hardening (formula injection prefixing and RTL configuration).
-   - Detailed the device-bound OTP session model (`wasla_device_token`).
+   - Detailed the device-bound OTP session model (`phantoms_device_token`).
 
 ---
 
@@ -193,7 +193,7 @@ Every functional feature and security barrier from earlier remediation phases wa
 
 1. **Spreadsheet Security Gate:** Untrusted XLSX uploading remains disabled via `XLSX_IMPORT_DISABLED = true` in `MemberExcelActions.tsx`. The safe ExcelJS workbook exporter (`memberExcel.ts`) continues to escape spreadsheet formula injection tokens (`=`, `+`, `-`, `@`, `\t`, `\r`) and enforces RTL column layout.
 2. **Member OTP Authentication:** Passwords are not accepted on the member portal. Email OTP verification via Supabase Auth creates an authenticated session, which is then bound to a SHA-256 device hash via `bind_member_device_session`.
-3. **Session Continuity for Existing Devices:** Legacy devices storing `wasla_device_token` continue to authenticate without forced session termination.
+3. **Session Continuity for Existing Devices:** Legacy devices storing `phantoms_device_token` continue to authenticate without forced session termination.
 4. **Dynamic Multi-Admin Owner Model:** Administrative routes check `get_admin_access` RPC enforcing `is_admin()`. Individual permissions (`can_manage_members`, `can_manage_tasks`, etc.) are respected.
 5. **AI Safety & Destructive Action Confirmations:** `useAiConversation.ts` requires explicit modal confirmation before executing database modifications and applies strict Levenshtein-based entity resolution to prevent accidental updates.
 6. **Member Deletion Undo:** 5-second resilient undo buffer remains active across route navigation.

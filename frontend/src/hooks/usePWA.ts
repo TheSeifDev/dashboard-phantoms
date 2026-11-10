@@ -14,9 +14,7 @@ import {
 
 /** بصمة المفتاح العام الحالي — لكشف الاشتراكات المبنية على مفتاح قديم بعد تدوير VAPID */
 const PUSH_KEY_FP_STORE = 'phantoms_push_key_fp';
-const LEGACY_PUSH_KEY_FP_STORE = 'wasla_push_key_fp';
 const APK_SUB_PREFIX = 'phantoms_apk_notif_enabled_';
-const LEGACY_APK_SUB_PREFIX = 'wasla_apk_notif_enabled_';
 
 const currentKeyFingerprint = (): string | null => {
   const key = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? '';
@@ -25,7 +23,7 @@ const currentKeyFingerprint = (): string | null => {
 
 const storedKeyFingerprint = (): string | null => {
   try {
-    return localStorage.getItem(PUSH_KEY_FP_STORE) ?? localStorage.getItem(LEGACY_PUSH_KEY_FP_STORE);
+    return localStorage.getItem(PUSH_KEY_FP_STORE);
   } catch {
     return null;
   }
@@ -34,7 +32,6 @@ const storedKeyFingerprint = (): string | null => {
 const storeKeyFingerprint = (fp: string): void => {
   try {
     localStorage.setItem(PUSH_KEY_FP_STORE, fp);
-    try { localStorage.removeItem(LEGACY_PUSH_KEY_FP_STORE); } catch {}
   } catch {
     // ignore
   }
@@ -69,13 +66,11 @@ export function usePWA({ memberId, memberEmail }: { memberId?: number; memberEma
         } else if (memberId) {
           // لو لم يمنح الإذن بعد في أندرويد 13+ نطلبه تلقائياً عند فتح البوابة لأول مرة
           const autoRequestedKey = `phantoms_apk_perm_prompted_${memberId}`;
-          const legacyAutoRequestedKey = `wasla_apk_perm_prompted_${memberId}`;
-          if (!localStorage.getItem(autoRequestedKey) && !localStorage.getItem(legacyAutoRequestedKey)) {
+          if (!localStorage.getItem(autoRequestedKey)) {
             localStorage.setItem(autoRequestedKey, '1');
             const nowGranted = await requestUnifiedNotificationPermission();
             if (nowGranted && mounted) {
               localStorage.setItem(`${APK_SUB_PREFIX}${memberId}`, '1');
-              try { localStorage.removeItem(`${LEGACY_APK_SUB_PREFIX}${memberId}`); } catch {}
               setIsSubscribed(true);
             }
           }
@@ -201,7 +196,6 @@ export function usePWA({ memberId, memberEmail }: { memberId?: number; memberEma
 
       if (Capacitor.isNativePlatform()) {
         localStorage.setItem(`${APK_SUB_PREFIX}${memberId}`, '1');
-        try { localStorage.removeItem(`${LEGACY_APK_SUB_PREFIX}${memberId}`); } catch {}
         setIsSubscribed(true);
         useNotificationStore.getState().pushNotification(
           memberId,

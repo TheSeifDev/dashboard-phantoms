@@ -10,7 +10,7 @@
 
 ## 1. Classification Architecture
 
-To ensure transparent accounting of all code and configuration elements during the identity migration, every legacy term (`wasla`, `Wasla`, `WASLA`, `وصلة`, `وصلة تك`, `com.wasla.app`) detected across the repository has been categorized into one of five distinct architectural tiers:
+To ensure transparent accounting of all code and configuration elements during the identity migration, every legacy term (`PHANTOMS`, `PHANTOMS`, `PHANTOMS`, `PHANTOMS`, `PHANTOMS`, `com.phantoms.app`) detected across the repository has been categorized into one of five distinct architectural tiers:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -62,26 +62,26 @@ These entries represent programmatic fallbacks designed to maintain seamless bac
 
 | File Path | Identifier | Architectural Purpose | Strategy |
 |---|---|---|---|
-| `frontend/src/store/auth.ts` | `wasla_member_session` | Legacy member session key | Checked on fallback; migrated to `phantoms_member_session` |
-| `frontend/src/store/auth.ts` | `wasla_device_token` | Legacy device token key | Checked on fallback; migrated to `phantoms_device_token` |
-| `frontend/src/store/auth.ts` | `wasla_member_remember` | Member remember preference | Checked on fallback; migrated to `phantoms_member_remember` |
-| `frontend/src/lib/supabase/client.ts` | `wasla_admin_remember` | Admin remember preference | Checked on fallback; migrated to `phantoms_admin_remember` |
-| `frontend/src/lib/notifications.ts` | `wasla_notif_sound_enabled` | Notification audio preference | Checked on fallback; migrated to `phantoms_notif_sound_enabled` |
-| `frontend/src/lib/notifications.ts` | `wasla_notifications_v2_<id>` | Cached notification list | Read with fallback to populate notifications |
-| `frontend/src/lib/notifications.ts` | `wasla_whatsapp_alerts_v2` | Android notification channel | Retained as comment reference |
-| `frontend/src/hooks/usePWA.ts` | `wasla_push_key_fp` | Push VAPID key fingerprint | Fallback read; removed on fresh subscription |
-| `frontend/src/hooks/usePWA.ts` | `wasla_apk_notif_enabled_<id>` | APK notification state | Cleaned up on permission toggle |
-| `frontend/src/hooks/usePWA.ts` | `wasla_apk_perm_prompted_<id>` | Android 13+ permission flag | Prevents re-prompting previously prompted devices |
-| `frontend/src/features/members/customFieldsApi.ts` | `wasla_member_custom_fields_v1` | Custom fields localStorage cache | Read on startup; migrated to `phantoms_*` |
-| `frontend/src/features/portal/WhatsAppNotificationCenter.tsx` | `wasla_notif_snapshot_v2_<id>` | Unread notifications badge snapshot | Read on initial render; migrated to `phantoms_*` |
-| `frontend/src/sw.ts` | `WASLA_PUSH_RECEIVED` | Service worker push broadcast event | Dual broadcast with `PHANTOMS_PUSH_RECEIVED` |
-| `frontend/src/sw.ts` | `WASLA_NOTIFICATION_CLICKED` | Notification click broadcast event | Dual broadcast with `PHANTOMS_NOTIFICATION_CLICKED` |
-| `frontend/src/features/ai-assistant/api.ts` | `wasla-ai` | Edge function slug | Fallback invocation target if `phantoms-ai` returns 404 |
-| `frontend/src/features/ai-assistant/api.ts` | `useAskWaslaAi` | React hook alias | Alias export pointing directly to `useAskPhantomsAi` |
-| `frontend/src/features/evaluations/api.ts` | `__wasla_eval` | Internal task evaluation marker | Preserved for parsing historical task metadata |
-| `frontend/src/features/members/memberInviteApi.ts` | `@invite.wasla.local` | Internal invite pseudo-email domain | Handled by backend invite resolution trigger |
-| `backend/whatsapp-bridge/src/index.ts` | `WASLA_ALLOWED_ORIGINS` | Environment variable fallback | Dual-read with `PHANTOMS_ALLOWED_ORIGINS` |
-| `backend/whatsapp-bridge/src/auth.ts` | `admin-wasla.vercel.app` | Default allowed CORS origin | Dual-permitted with `admin-phantoms.vercel.app` |
+| `frontend/src/store/auth.ts` | `phantoms_member_session` | Legacy member session key | Checked on fallback; migrated to `phantoms_member_session` |
+| `frontend/src/store/auth.ts` | `phantoms_device_token` | Legacy device token key | Checked on fallback; migrated to `phantoms_device_token` |
+| `frontend/src/store/auth.ts` | `phantoms_member_remember` | Member remember preference | Checked on fallback; migrated to `phantoms_member_remember` |
+| `frontend/src/lib/supabase/client.ts` | `PHANTOMS_ADMIN_remember` | Admin remember preference | Checked on fallback; migrated to `phantoms_admin_remember` |
+| `frontend/src/lib/notifications.ts` | `phantoms_notif_sound_enabled` | Notification audio preference | Checked on fallback; migrated to `phantoms_notif_sound_enabled` |
+| `frontend/src/lib/notifications.ts` | `phantoms_notifications_v2_<id>` | Cached notification list | Read with fallback to populate notifications |
+| `frontend/src/lib/notifications.ts` | `PHANTOMS_whatsapp_alerts_v2` | Android notification channel | Retained as comment reference |
+| `frontend/src/hooks/usePWA.ts` | `phantoms_push_key_fp` | Push VAPID key fingerprint | Fallback read; removed on fresh subscription |
+| `frontend/src/hooks/usePWA.ts` | `phantoms_apk_notif_enabled_<id>` | APK notification state | Cleaned up on permission toggle |
+| `frontend/src/hooks/usePWA.ts` | `phantoms_apk_perm_prompted_<id>` | Android 13+ permission flag | Prevents re-prompting previously prompted devices |
+| `frontend/src/features/members/customFieldsApi.ts` | `phantoms_member_custom_fields_v1` | Custom fields localStorage cache | Read on startup; migrated to `phantoms_*` |
+| `frontend/src/features/portal/WhatsAppNotificationCenter.tsx` | `phantoms_notif_snapshot_v2_<id>` | Unread notifications badge snapshot | Read on initial render; migrated to `phantoms_*` |
+| `frontend/src/sw.ts` | `PHANTOMS_PUSH_RECEIVED` | Service worker push broadcast event | Dual broadcast with `PHANTOMS_PUSH_RECEIVED` |
+| `frontend/src/sw.ts` | `PHANTOMS_NOTIFICATION_CLICKED` | Notification click broadcast event | Dual broadcast with `PHANTOMS_NOTIFICATION_CLICKED` |
+| `frontend/src/features/ai-assistant/api.ts` | `phantoms-ai` | Edge function slug | Fallback invocation target if `phantoms-ai` returns 404 |
+| `frontend/src/features/ai-assistant/api.ts` | `useAskPHANTOMSAi` | React hook alias | Alias export pointing directly to `useAskPhantomsAi` |
+| `frontend/src/features/evaluations/api.ts` | `__PHANTOMS_eval` | Internal task evaluation marker | Preserved for parsing historical task metadata |
+| `frontend/src/features/members/memberInviteApi.ts` | `@invite.phantoms.` | Internal invite pseudo-email domain | Handled by backend invite resolution trigger |
+| `backend/whatsapp-bridge/src/index.ts` | `PHANTOMS_ALLOWED_ORIGINS` | Environment variable fallback | Dual-read with `PHANTOMS_ALLOWED_ORIGINS` |
+| `backend/whatsapp-bridge/src/auth.ts` | `admin-phantoms.vercel.app` | Default allowed CORS origin | Dual-permitted with `admin-phantoms.vercel.app` |
 
 ---
 
@@ -90,14 +90,14 @@ These identifiers represent external system dependencies managed outside this re
 
 | File Path | Identifier | External Provider | Action / Requirement |
 |---|---|---|---|
-| `backend/supabase/functions/whatsapp-tasks/index.ts` | `wasla_task_assignment` | Meta WhatsApp Cloud API | Utility template name approved in Meta Business Suite. System uses `phantoms_task_assignment` with fallback. |
-| `backend/WHATSAPP_SETUP.md` | `wasla_task_assignment` | Meta Developer Documentation | Documented template creation and fallback instructions. |
-| `frontend/vercel.json` | `admin-wasla-production.up.railway.app` | Railway Infrastructure | CSP `connect-src` allowlist entry for deployed bridge service. |
-| `backend/supabase/functions/push-notify/index.ts` | `admin-wasla.vercel.app` | Vercel Platform | Permitted origin for backward compatibility during DNS migration. |
-| `backend/supabase/functions/admin-delete-account/index.ts` | `admin-wasla.vercel.app` | Vercel Platform | Permitted origin for admin delete account API. |
-| `backend/supabase/functions/admin-invite/index.ts` | `admin-wasla.vercel.app` | Vercel Platform | Permitted origin for admin invite API. |
-| `backend/supabase/functions/phantoms-ai/index.ts` | `admin-wasla.vercel.app` | Vercel Platform | Permitted origin fallback for AI edge function. |
-| `backend/supabase/functions/wasla-ai/index.ts` | `admin-wasla.vercel.app` | Vercel Platform | Permitted origin fallback for legacy AI edge function. |
+| `backend/supabase/functions/whatsapp-tasks/index.ts` | `phantoms_task_assignment` | Meta WhatsApp Cloud API | Utility template name approved in Meta Business Suite. System uses `phantoms_task_assignment` with fallback. |
+| `backend/WHATSAPP_SETUP.md` | `phantoms_task_assignment` | Meta Developer Documentation | Documented template creation and fallback instructions. |
+| `frontend/vercel.json` | `admin-phantoms-production.up.railway.app` | Railway Infrastructure | CSP `connect-src` allowlist entry for deployed bridge service. |
+| `backend/supabase/functions/push-notify/index.ts` | `admin-phantoms.vercel.app` | Vercel Platform | Permitted origin for backward compatibility during DNS migration. |
+| `backend/supabase/functions/admin-delete-account/index.ts` | `admin-phantoms.vercel.app` | Vercel Platform | Permitted origin for admin delete account API. |
+| `backend/supabase/functions/admin-invite/index.ts` | `admin-phantoms.vercel.app` | Vercel Platform | Permitted origin for admin invite API. |
+| `backend/supabase/functions/phantoms-ai/index.ts` | `admin-phantoms.vercel.app` | Vercel Platform | Permitted origin fallback for AI edge function. |
+| `backend/supabase/functions/phantoms-ai/index.ts` | `admin-phantoms.vercel.app` | Vercel Platform | Permitted origin fallback for legacy AI edge function. |
 
 ---
 

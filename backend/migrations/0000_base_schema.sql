@@ -205,3 +205,4 @@ REVOKE ALL ON FUNCTION public.set_groq_key(text) FROM PUBLIC, anon, authenticate
 REVOKE ALL ON FUNCTION public.get_groq_key_from_vault() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.set_groq_key(text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.get_groq_key_from_vault() TO service_role;
+

@@ -45,7 +45,7 @@ export class AnnouncementsAPI {
     }
 
     return (announcements || []).filter(
-      (ann) => !ann.title.startsWith('[[PHANTOMS_EVAL]]') && !ann.title.startsWith('[[WASLA_EVAL]]'),
+      (ann) => !ann.title.startsWith('[[PHANTOMS_EVAL]]'),
     );
   }
 
@@ -147,7 +147,7 @@ export class AnnouncementsAPI {
 
     if (!error) {
       return (announcements || []).filter(
-      (ann) => !ann.title.startsWith('[[PHANTOMS_EVAL]]') && !ann.title.startsWith('[[WASLA_EVAL]]'),
+      (ann) => !ann.title.startsWith('[[PHANTOMS_EVAL]]'),
     );
     }
 
@@ -165,7 +165,7 @@ export class AnnouncementsAPI {
           const nowMs = Date.now();
           return (directRes.data as Announcement[])
             .filter((a) => {
-              if (a.title.startsWith('[[PHANTOMS_EVAL]]') || a.title.startsWith('[[WASLA_EVAL]]')) return false;
+              if (a.title.startsWith('[[PHANTOMS_EVAL]]')) return false;
               if (a.expires_at && new Date(a.expires_at).getTime() <= nowMs) return false;
               const receipt = (a.read_receipts ?? {})[String(memberId)];
               if (receipt?.dismissed_at) return false;

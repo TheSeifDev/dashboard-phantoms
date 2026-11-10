@@ -42,7 +42,6 @@ export interface AskAiResult {
 }
 
 const PRIMARY_FUNCTION_SLUG = import.meta.env.VITE_PHANTOMS_AI_FUNCTION || 'phantoms-ai';
-const FALLBACK_FUNCTION_SLUG = import.meta.env.VITE_WASLA_AI_FUNCTION || 'wasla-ai';
 
 export const useAskPhantomsAi = () => {
   return useMutation({
@@ -50,22 +49,12 @@ export const useAskPhantomsAi = () => {
       let data: AskAiResult | null = null;
       let invokeError: Error | null = null;
 
-      // Try official PHANTOMS function slug first, with resilient fallback to historical slug
       try {
         const res = await supabase.functions.invoke<AskAiResult>(PRIMARY_FUNCTION_SLUG, {
           body: { question, context, history },
         });
-        if (res.error && (res.error.message?.includes('404') || res.error.message?.includes('Not Found'))) {
-          // Attempt legacy slug for unmigrated staging/prod
-          const fallbackRes = await supabase.functions.invoke<AskAiResult>(FALLBACK_FUNCTION_SLUG, {
-            body: { question, context, history },
-          });
-          invokeError = fallbackRes.error ?? null;
-          data = fallbackRes.data ?? null;
-        } else {
-          invokeError = res.error ?? null;
-          data = res.data ?? null;
-        }
+        invokeError = res.error ?? null;
+        data = res.data ?? null;
       } catch (err) {
         invokeError = err instanceof Error ? err : new Error(String(err));
       }
@@ -83,6 +72,3 @@ export const useAskPhantomsAi = () => {
     },
   });
 };
-
-/** Backward compatibility alias */
-export const useAskWaslaAi = useAskPhantomsAi;

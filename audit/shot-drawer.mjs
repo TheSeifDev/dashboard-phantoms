@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.resolve(here, 'redesign', 'after-sidebar');
-const BASE = process.env.WASLA_BASE ?? 'http://127.0.0.1:5173';
+const BASE = process.env.PHANTOMS_BASE ?? 'http://127.0.0.1:5173';
 
 const browser = await chromium.launch();
 try {

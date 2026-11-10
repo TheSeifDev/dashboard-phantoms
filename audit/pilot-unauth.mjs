@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..');
 const outDir = path.join(repoRoot, 'audit', 'members', 'before');
-const BASE = process.env.WASLA_BASE ?? 'http://127.0.0.1:5173';
+const BASE = process.env.PHANTOMS_BASE ?? 'http://127.0.0.1:5173';
 
 const VIEWPORTS = [
   { name: '1440', width: 1440, height: 900 },
