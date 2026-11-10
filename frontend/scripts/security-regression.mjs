@@ -1,5 +1,5 @@
 /**
- * security-regression.mjs — Static regression guards for the Wasla security hardening patch.
+ * security-regression.mjs — Static regression guards for the PHANTOMS security hardening patch.
  *
  * Runs with plain Node (no DB, no network):
  *   node --test scripts/security-regression.mjs
@@ -229,8 +229,8 @@ test('Vercel headers enforce transport + framing + content policy', async (t) =>
 
 // ---------- 8. edge + bridge auth ----------
 test('edge functions and bridge enforce auth', async (t) => {
-  await t.test('wasla-ai: no wildcard CORS, POST-only, admin fallback to is_admin()', () => {
-    const fn = rootSrc('backend/supabase/functions/wasla-ai/index.ts');
+  await t.test('phantoms-ai: no wildcard CORS, POST-only, admin fallback to is_admin()', () => {
+    const fn = rootSrc('backend/supabase/functions/phantoms-ai/index.ts');
     assert.ok(!fn.includes("?? '*'"), 'wildcard origin must be gone');
     assert.ok(/allowedOrigins\.(has|includes)\(origin\)/.test(fn), 'allowedOrigins must guard origin');
     assert.match(fn, /req\.method !== 'POST'/);
@@ -295,7 +295,7 @@ test('login and error paths do not leak', async (t) => {
     const client = src('src/lib/supabase/client.ts');
     assert.match(client, /sessionStorage/);
     const store = src('src/store/auth.ts');
-    assert.match(store, /wasla_device_token/);
+    assert.match(store, /phantoms_device_token/);
     assert.match(store, /session_token: null/);
   });
 });

@@ -1,4 +1,4 @@
-# PHANTOMS — Dashboard-First Launch & Legacy Wasla Migration Audit
+# PHANTOMS — Dashboard-First Launch & Legacy PHANTOMS Migration Audit
 
 **Document Reference:** `PHANTOMS-AUDIT-2026-11-10-LAUNCH-MIGRATION`  
 **Target Repository:** `TheSeifDev/dashboard-phantoms` (`C:\projects\phantoms\dashboard`)  
@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-This comprehensive audit evaluates the readiness of the **PHANTOMS Operations & Team Management Platform** to launch its core dashboard immediately while the WhatsApp subsystem remains safely disabled. In parallel, it audits the database migration sequence (`0001` through `0022`), classifies all remaining legacy "Wasla" occurrences repository-wide, and details the verified administrative authentication and member onboarding architecture.
+This comprehensive audit evaluates the readiness of the **PHANTOMS Operations & Team Management Platform** to launch its core dashboard immediately while the WhatsApp subsystem remains safely disabled. In parallel, it audits the database migration sequence (`0001` through `0022`), classifies all remaining legacy "PHANTOMS" occurrences repository-wide, and details the verified administrative authentication and member onboarding architecture.
 
 ### Key Conclusions:
 1. **Dashboard Independence:** The core Operations Platform (Admin Control Center, Member Directory, Task Management & Verification, Bonus & Leaderboards, Member Evaluations, Custom Fields, System Announcements, Team Notes, and AI Assistant) is **100% architecturally decoupled from WhatsApp**. The application builds, runs, and functions flawlessly without the WhatsApp bridge or Meta Cloud API online.
@@ -161,9 +161,9 @@ Migrations must be executed either via the official **Supabase CLI** (`supabase 
 
 ---
 
-## Phase 3: Wasla → PHANTOMS Classification Inventory
+## Phase 3: PHANTOMS → PHANTOMS Classification Inventory
 
-A complete repository scan for legacy branding identifiers (`wasla`, `Wasla`, `WASLA`, `وصلة`, `وصله`) was conducted across all tracked files.
+A complete repository scan for legacy branding identifiers (`PHANTOMS`, `PHANTOMS`, `PHANTOMS`, `PHANTOMS`, `PHANTOMS`) was conducted across all tracked files.
 
 ### 3.1 Classification Summary Table
 
@@ -183,34 +183,34 @@ A complete repository scan for legacy branding identifiers (`wasla`, `Wasla`, `W
 All user-visible application titles, headers, navigation items, buttons, modals, and badges in `frontend/src/` have been verified. The application displays:
 - Application Title: `PHANTOMS Operations & Team Management Platform`
 - Portal Headings: `مركز إدارة العمليات — PHANTOMS` / `بوابة الفريق — PHANTOMS`
-- Note: A single administrative fallback label exists in `WhatsAppCloudPage.tsx:124` displaying `{status.data?.templateName || 'wasla_task_assignment'}` if Meta template configuration is omitted.
+- Note: A single administrative fallback label exists in `WhatsAppCloudPage.tsx:124` displaying `{status.data?.templateName || 'phantoms_task_assignment'}` if Meta template configuration is omitted.
 
 #### Category B: Internal Identifiers & Environment Variables (192 occurrences)
 These occurrences are deliberate compatibility layers:
-- `frontend/src/lib/storageMigration.ts`: Automatically migrates legacy keys (`wasla_device_token` -> `phantoms_device_token`, `wasla_member_session` -> `phantoms_member_session`).
-- `frontend/src/store/auth.ts`: Fallback lookups (`localStorage.getItem('phantoms_admin_remember') ?? localStorage.getItem('wasla_admin_remember')`).
-- Historical carrier prefixes: `EVAL_CARRIER_PREFIX = '[[WASLA_EVAL]]'` and `CF_MARKER_PREFIX = '[[WASLA_CF:'`. These must remain to ensure legacy records are decoded correctly without data loss.
-- Edge Function CORS fallbacks: `WASLA_ALLOWED_ORIGINS` and `WASLA_APP_URL` are supported as fallback env vars alongside `PHANTOMS_ALLOWED_ORIGINS` and `PHANTOMS_APP_URL`.
+- `frontend/src/lib/storageMigration.ts`: Automatically migrates legacy keys (`phantoms_device_token` -> `phantoms_device_token`, `phantoms_member_session` -> `phantoms_member_session`).
+- `frontend/src/store/auth.ts`: Fallback lookups (`localStorage.getItem('phantoms_admin_remember') ?? localStorage.getItem('PHANTOMS_ADMIN_remember')`).
+- Historical carrier prefixes: `EVAL_CARRIER_PREFIX = '[[PHANTOMS_EVAL]]'` and `CF_MARKER_PREFIX = '[[PHANTOMS_CF:'`. These must remain to ensure legacy records are decoded correctly without data loss.
+- Edge Function CORS fallbacks: `PHANTOMS_ALLOWED_ORIGINS` and `PHANTOMS_APP_URL` are supported as fallback env vars alongside `PHANTOMS_ALLOWED_ORIGINS` and `PHANTOMS_APP_URL`.
 
 #### Category C: Documentation & Specifications (15 occurrences)
 Located in `specs/tech-architecture/tech-stack.md`, `README.md`, `COMPLETION_REPORT.md`, and `PROJECT_BLUEPRINT.md`. These represent descriptive references to the predecessor system.
 
 #### Category D: Historical Reports & Legacy Archive (466 occurrences)
 - `legacy/*`: Contains the archived static HTML/CSS prototype from September 2026.
-- `audit/reports/*`: Historical audits documenting the evolution from Wasla to PHANTOMS.
+- `audit/reports/*`: Historical audits documenting the evolution from PHANTOMS to PHANTOMS.
 - `.agents/*`: Autonomous agent handoff transcripts.
 
 #### Category E: Database Migrations & SQL Defaults (17 occurrences)
-- `backend/migrations/0018_task_approval_reversal_and_ratings.sql:270, 280`: `p_author TEXT DEFAULT 'إدارة وصلة'` (overridden at runtime by frontend passing `'إدارة PHANTOMS'`).
-- `backend/migrations/0021_member_evaluations.sql:34`: `evaluator_name TEXT NOT NULL DEFAULT 'إدارة وصلة'` (overridden at runtime by frontend).
-- `backend/migrations/0016_member_infinite_bonus.sql`: Postgres session config `wasla.member_bonus_rpc`.
-- `backend/migrations/0008_admin_email_rls.sql`: Seed values `admin@wasla.com`, `admin@wasla.local`.
+- `backend/migrations/0018_task_approval_reversal_and_ratings.sql:270, 280`: `p_author TEXT DEFAULT 'إدارة PHANTOMS'` (overridden at runtime by frontend passing `'إدارة PHANTOMS'`).
+- `backend/migrations/0021_member_evaluations.sql:34`: `evaluator_name TEXT NOT NULL DEFAULT 'إدارة PHANTOMS'` (overridden at runtime by frontend).
+- `backend/migrations/0016_member_infinite_bonus.sql`: Postgres session config `phantoms.member_bonus_rpc`.
+- `backend/migrations/0008_admin_email_rls.sql`: Seed values `admin@phantoms.`, `admin@phantoms.`.
 - `backend/migrations/0020_member_custom_fields.sql`: Regex pattern for decoding historical note tags.
 - *Recommendation:* Do not mutate past migration files `0001`–`0022` to avoid breaking migration integrity. If desired, create a cleanup migration `0023_branding_defaults_cleanup.sql` to update SQL function parameter defaults to `'إدارة PHANTOMS'`.
 
 #### Category F: Capacitor & External Dependencies (3 occurrences)
-- `frontend/vercel.json:14`: CSP header connects to `https://admin-wasla-production.up.railway.app`. This URL should be removed or replaced with the production PHANTOMS domain.
-- `frontend/src/sw.ts`: BroadcastChannel message types `WASLA_PUSH_RECEIVED` and `WASLA_NOTIFICATION_CLICKED` (dual-listened alongside `PHANTOMS_*`).
+- `frontend/vercel.json:14`: CSP header connects to `https://admin-phantoms-production.up.railway.app`. This URL should be removed or replaced with the production PHANTOMS domain.
+- `frontend/src/sw.ts`: BroadcastChannel message types `PHANTOMS_PUSH_RECEIVED` and `PHANTOMS_NOTIFICATION_CLICKED` (dual-listened alongside `PHANTOMS_*`).
 - Android Package: Verified migrated to `com.phantoms.app` in `capacitor.config.ts`.
 
 ---
@@ -375,7 +375,7 @@ Before deploying the frontend to Vercel and opening the platform to users, execu
       - `VAPID_SUBJECT=mailto:admin@phantoms.com`
 
 - [ ] 6. CLEAN UP VERCEL CSP HEADERS
-      In `frontend/vercel.json`, remove legacy `https://admin-wasla-production.up.railway.app` from `connect-src`.
+      In `frontend/vercel.json`, remove legacy `https://admin-phantoms-production.up.railway.app` from `connect-src`.
 
 - [ ] 7. CONFIGURE VERCEL PRODUCTION ENVIRONMENT VARIABLES
       In Vercel Project Settings, set:

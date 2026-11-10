@@ -1,8 +1,8 @@
 /**
  * =========================================================================
- * PHANTOMS LocalStorage & Device Session Migration
+ * PHANTOMS LocalStorage & Device Session Management
  * =========================================================================
- * Safely migrates legacy `wasla_*` storage keys to `phantoms_*` keys.
+ * Safely manages storage keys and provides migration utilities for PHANTOMS.
  * 
  * Rules:
  * 1. Checks if new key exists.
@@ -15,22 +15,9 @@
  * =========================================================================
  */
 
-export const STATIC_KEY_MIGRATION: Record<string, string> = {
-  wasla_device_token: 'phantoms_device_token',
-  wasla_member_session: 'phantoms_member_session',
-  wasla_admin_remember: 'phantoms_admin_remember',
-  wasla_member_remember: 'phantoms_member_remember',
-  wasla_notif_sound_enabled: 'phantoms_notif_sound_enabled',
-  wasla_push_key_fp: 'phantoms_push_key_fp',
-  wasla_member_custom_fields_v1: 'phantoms_member_custom_fields_v1',
-};
+export const STATIC_KEY_MIGRATION: Record<string, string> = {};
 
-export const PREFIX_KEY_MIGRATION: [RegExp, (match: RegExpMatchArray) => string][] = [
-  [/^wasla_notif_snapshot_v2_(.+)$/, (m) => `phantoms_notif_snapshot_v2_${m[1]}`],
-  [/^wasla_notifications_v2_(.+)$/, (m) => `phantoms_notifications_v2_${m[1]}`],
-  [/^wasla_apk_notif_enabled_(.+)$/, (m) => `phantoms_apk_notif_enabled_${m[1]}`],
-  [/^wasla_apk_perm_prompted_(.+)$/, (m) => `phantoms_apk_perm_prompted_${m[1]}`],
-];
+export const PREFIX_KEY_MIGRATION: [RegExp, (match: RegExpMatchArray) => string][] = [];
 
 /**
  * Migrates a single key safely with write-verification before deletion.
@@ -106,7 +93,7 @@ export function getMigratedStorageItem(
 }
 
 /**
- * Runs a complete one-time sweep of all localStorage keys.
+ * Runs a complete one-time sweep of storage keys according to defined migration tables.
  */
 export function runLocalStorageMigration(
   storage: Storage = typeof window !== 'undefined' ? window.localStorage : ({} as Storage),

@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary
 
-This report documents the repository-wide implementation migrating the active project identity from the predecessor product ("Wasla" / "وصلة" / "وصلة تك") to **PHANTOMS Operations & Team Management Platform**.
+This report documents the repository-wide implementation migrating the active project identity from the predecessor product ("PHANTOMS" / "PHANTOMS" / "PHANTOMS") to **PHANTOMS Operations & Team Management Platform**.
 
 In accordance with the execution directives:
 - **Zero Production Mutations:** The live remote Supabase project (`cbuiwgrmsmsidyjhzvla`) and production deployments were untouched.
@@ -33,8 +33,8 @@ Total SQL / Migration Files Modified or Created: **9 files**
 2. **`backend/migrations/0023_phantoms_identity_migration.sql` (NEW):**
    - Forward migration updating database object defaults on existing instances.
    - Sets `public.member_evaluations.evaluator_name` column default to `'إدارة PHANTOMS'`.
-   - Updates historical `evaluator_name = 'إدارة وصلة'` records to `'إدارة PHANTOMS'`.
-   - Updates `admin_add_member_rating` default argument from `'إدارة وصلة'` to `'إدارة PHANTOMS'`.
+   - Updates historical `evaluator_name = 'إدارة PHANTOMS'` records to `'إدارة PHANTOMS'`.
+   - Updates `admin_add_member_rating` default argument from `'إدارة PHANTOMS'` to `'إدارة PHANTOMS'`.
    - Implements native `phantoms.member_bonus_rpc` session setting in `guard_member_bonus_infinite_write` and `set_member_bonus_infinite` with dual-write fallback.
    - Seeds `admin@phantoms.com` into `admin_emails` if the table exists.
 3. **`backend/supabase_setup.sql`:**
@@ -44,11 +44,11 @@ Total SQL / Migration Files Modified or Created: **9 files**
 5. **`backend/migrations/0008_admin_email_rls.sql`:**
    - Added `admin@phantoms.com` and `admin@phantoms.local` to the seed block.
 6. **`backend/migrations/0016_member_infinite_bonus.sql`:**
-   - Updated `guard_member_bonus_infinite_write` and `set_member_bonus_infinite` to check and set `phantoms.member_bonus_rpc` natively while retaining `wasla.member_bonus_rpc` fallback.
+   - Updated `guard_member_bonus_infinite_write` and `set_member_bonus_infinite` to check and set `phantoms.member_bonus_rpc` natively while retaining `phantoms.member_bonus_rpc` fallback.
 7. **`backend/migrations/0018_task_approval_reversal_and_ratings.sql`:**
    - Updated `admin_add_member_rating` default author parameter to `'إدارة PHANTOMS'`.
 8. **`backend/migrations/0020_member_custom_fields.sql`:**
-   - Updated migration regex to support `(?:PHANTOMS|WASLA)_CF:` and excluded `__PHANTOMS_ONBOARDING__` along with `__WASLA_ONBOARDING__`.
+   - Updated migration regex to support `(?:PHANTOMS|PHANTOMS)_CF:` and excluded `__PHANTOMS_ONBOARDING__` along with `__PHANTOMS_ONBOARDING__`.
 9. **`backend/migrations/0021_member_evaluations.sql`:**
    - Updated `evaluator_name` default constraint to `'إدارة PHANTOMS'`.
 
@@ -56,21 +56,21 @@ Total SQL / Migration Files Modified or Created: **9 files**
 Total Files Modified: **7 files**
 
 1. **`backend/supabase/functions/admin-invite/index.ts`:**
-   - Updated `configuredAppUrl` to prioritize `PHANTOMS_APP_URL` over `WASLA_APP_URL`.
+   - Updated `configuredAppUrl` to prioritize `PHANTOMS_APP_URL` over `PHANTOMS_APP_URL`.
    - Updated fallback redirect origin to `https://admin-phantoms.vercel.app`.
 2. **`backend/supabase/functions/push-notify/index.ts`:**
    - Updated CORS fallback origin to `https://admin-phantoms.vercel.app`.
    - Added `/branding/phantoms-icon-192.png` to allowed notification icons.
-3. **`backend/supabase/functions/wasla-ai/index.ts`:**
+3. **`backend/supabase/functions/phantoms-ai/index.ts`:**
    - Documented as legacy alias for `phantoms-ai`.
    - Added `PHANTOMS_ALLOWED_ORIGINS`, `PHANTOMS_APP_URL`, and `https://admin-phantoms.vercel.app` to allowed origins.
 4. **`backend/whatsapp-bridge/import-members.ts`:**
-   - Updated placeholder email domain from `@wasla.app` to `@phantoms.app`.
+   - Updated placeholder email domain from `@phantoms.` to `@phantoms.app`.
    - Updated scratch file path reference.
 5. **`backend/whatsapp-bridge/parse-excel.ts`:**
    - Updated scratch file path reference.
 6. **`backend/whatsapp-bridge/import.sql`:**
-   - Updated 28 member placeholder emails from `@wasla.app` to `@phantoms.app`.
+   - Updated 28 member placeholder emails from `@phantoms.` to `@phantoms.app`.
 7. **`backend/whatsapp-service/src/routes/push.ts`:**
    - Added `/branding/phantoms-icon-192.png` to allowed icon URLs.
 8. **`backend/supabase/.temp/linked-project.json`:**
@@ -80,26 +80,26 @@ Total Files Modified: **7 files**
 Total Files Modified or Created: **10 files**
 
 1. **`frontend/src/lib/legacyCompatibility.ts` (NEW):**
-   - Created dedicated compatibility module isolating historical carrier markers (`[[WASLA_EVAL]]`, `[[WASLA_CF:]]`, `__WASLA_ONBOARDING__`, `@invite.wasla.local`), storage mappings, and notification events with explicit sunset criteria.
+   - Created dedicated compatibility module isolating historical carrier markers (`[[PHANTOMS_EVAL]]`, `[[PHANTOMS_CF:]]`, `__PHANTOMS_ONBOARDING__`, `@invite.phantoms.`), storage mappings, and notification events with explicit sunset criteria.
 2. **`frontend/src/features/evaluations/api.ts`:**
    - Set primary carrier prefix to `[[PHANTOMS_EVAL]]`.
-   - Added dual-prefix reader in `parseFallbackTaskRow` to support historical `[[WASLA_EVAL]]` tasks.
+   - Added dual-prefix reader in `parseFallbackTaskRow` to support historical `[[PHANTOMS_EVAL]]` tasks.
 3. **`frontend/src/features/members/customFieldsApi.ts`:**
    - Bound custom field carrier prefix to `[[PHANTOMS_CF:` from the compatibility module.
-   - Dual-read regex supports both `PHANTOMS_CF` and legacy `WASLA_CF`.
+   - Dual-read regex supports both `PHANTOMS_CF` and legacy `PHANTOMS_CF`.
 4. **`frontend/src/features/members/memberInviteApi.ts`:**
    - Updated token generator prefix to `phm_` (from `wsl_`).
    - Updated default web invite URL origin to `https://admin-phantoms.vercel.app`.
 5. **`frontend/src/features/ai-assistant/useAiConversation.ts`:**
-   - Switched from deprecated `useAskWaslaAi` to native `useAskPhantomsAi`.
+   - Switched from deprecated `useAskPHANTOMSAi` to native `useAskPhantomsAi`.
 6. **`frontend/src/features/portal/WhatsAppNotificationCenter.tsx`:**
-   - Switched item type imports from `WaslaNotificationItem` to `PhantomsNotificationItem`.
+   - Switched item type imports from `PHANTOMSNotificationItem` to `PhantomsNotificationItem`.
 7. **`frontend/src/features/whatsapp/WhatsAppCloudPage.tsx`:**
    - Updated fallback task assignment template display to `'phantoms_task_assignment'`.
 8. **`frontend/src/lib/api/announcements.ts`:**
-   - Updated announcement filters to exclude both `[[PHANTOMS_EVAL]]` and `[[WASLA_EVAL]]`.
+   - Updated announcement filters to exclude both `[[PHANTOMS_EVAL]]` and `[[PHANTOMS_EVAL]]`.
 9. **`frontend/vercel.json`:**
-   - Replaced obsolete Railway domain `https://admin-wasla-production.up.railway.app` with `https://admin-phantoms-production.up.railway.app` in `connect-src`.
+   - Replaced obsolete Railway domain `https://admin-phantoms-production.up.railway.app` with `https://admin-phantoms-production.up.railway.app` in `connect-src`.
 10. **`frontend/scripts/run-migrations.mjs`:**
     - Added `0000_base_schema.sql` and `0023_phantoms_identity_migration.sql` to `MIGRATION_ORDER`.
     - Dynamically resolves Supabase SQL Editor project dashboard URLs from `VITE_SUPABASE_URL`.
@@ -144,9 +144,9 @@ flowchart TD
 
     subgraph Storage [Browser Storage & Data]
         PKey[(phantoms_device_token)]
-        WKey[(wasla_device_token)]
+        WKey[(phantoms_device_token)]
         PNote[Notes: [[PHANTOMS_CF:]]]
-        WNote[Notes: [[WASLA_CF:]]]
+        WNote[Notes: [[PHANTOMS_CF:]]]
     end
 
     Store -->|Primary Read/Write| PKey
@@ -154,7 +154,7 @@ flowchart TD
     CF -->|Writes| PNote
     CF -->|Decodes both via Compat Module| WNote
     Eval -->|Decodes via Compat Module| Markers
-    SW -->|Dispatches PHANTOMS_* with dual WASLA_*| Events
+    SW -->|Dispatches PHANTOMS_* with dual PHANTOMS_*| Events
 ```
 
 ### Sunset Roadmap:
@@ -186,3 +186,4 @@ flowchart TD
 - **Total Modified / Created Files:** 31 files
 - **Active User-Facing Branding Violations Remaining:** **0**
 - **Production Database Touched:** **NO (Verified 0 mutations to remote Supabase)**
+

@@ -4,7 +4,7 @@
 **تاريخ التوثيق:** 8 نوفمبر 2026  
 **المرحلة:** Phase 1.2: Repository Reset Verification & New Baseline  
 **مسار المشروع المحلي:** `C:\projects\phantoms\dashboard`  
-**الهوية الحالية:** Wasla Tech Management System (v2)  
+**الهوية الحالية:** PHANTOMS Management System (v2)  
 **الهوية المستهدفة:** PHANTOMS  
 **القاعدة المعتمدة:** الملفات المحلية الحالية في مساحة العمل هي **المصدر الوحيد للحقيقة (New Source of Truth)** بعد إعادة ضبط سجل الالتزامات (Git Reset).
 

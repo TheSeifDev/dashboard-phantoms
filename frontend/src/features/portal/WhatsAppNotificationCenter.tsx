@@ -33,29 +33,10 @@ function snapshotStorageKey(memberId: number): string {
   return `phantoms_notif_snapshot_v2_${memberId}`;
 }
 
-function legacySnapshotStorageKey(memberId: number): string {
-  return `wasla_notif_snapshot_v2_${memberId}`;
-}
-
 function loadSnapshot(memberId: number): KnownPortalSnapshot {
   try {
     const primaryKey = snapshotStorageKey(memberId);
-    let raw = localStorage.getItem(primaryKey);
-    if (!raw) {
-      const legacyKey = legacySnapshotStorageKey(memberId);
-      const legacyRaw = localStorage.getItem(legacyKey);
-      if (legacyRaw) {
-        raw = legacyRaw;
-        try {
-          localStorage.setItem(primaryKey, legacyRaw);
-          if (localStorage.getItem(primaryKey) === legacyRaw) {
-            localStorage.removeItem(legacyKey);
-          }
-        } catch {
-          // ignore quota
-        }
-      }
-    }
+    const raw = localStorage.getItem(primaryKey);
     if (!raw) {
       return { initialized: false, taskStates: {}, evaluationIds: [], announcementIds: [] };
     }
@@ -74,9 +55,6 @@ function loadSnapshot(memberId: number): KnownPortalSnapshot {
 function saveSnapshot(memberId: number, snapshot: KnownPortalSnapshot): void {
   try {
     localStorage.setItem(snapshotStorageKey(memberId), JSON.stringify(snapshot));
-    try {
-      localStorage.removeItem(legacySnapshotStorageKey(memberId));
-    } catch {}
   } catch {
     // ignore
   }
@@ -174,7 +152,7 @@ export function WhatsAppNotificationCenter({
 
       if (!data?.type) return;
 
-      if ((data.type === 'PHANTOMS_PUSH_RECEIVED' || data.type === 'WASLA_PUSH_RECEIVED') && data.payload) {
+      if (data.type === 'PHANTOMS_PUSH_RECEIVED' && data.payload) {
         pushNotification(
           memberId,
           {
@@ -186,7 +164,7 @@ export function WhatsAppNotificationCenter({
           },
           { triggerSystem: false, playSound: true, showBanner: true },
         );
-      } else if ((data.type === 'PHANTOMS_NOTIFICATION_CLICKED' || data.type === 'WASLA_NOTIFICATION_CLICKED') && data.payload?.targetTab) {
+      } else if (data.type === 'PHANTOMS_NOTIFICATION_CLICKED' && data.payload?.targetTab) {
         onSelectTab(data.payload.targetTab);
       }
     };

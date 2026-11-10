@@ -19,9 +19,9 @@ CREATE INDEX IF NOT EXISTS idx_members_custom_fields
 -- ترحيل أي قيم حقول مخصصة كانت محفوظة مؤقتاً قبل تشغيل هذا الـ migration
 UPDATE public.members
 SET
-  custom_fields = COALESCE(custom_fields, '{}'::jsonb) || (substring(team_notes FROM '\[\[(?:PHANTOMS|WASLA)_CF:(\{.*\})\]\]'))::jsonb,
-  team_notes = NULLIF(btrim(regexp_replace(team_notes, '\s*\[\[(?:PHANTOMS|WASLA)_CF:\{.*\}\]\]$', '')), '')
-WHERE team_notes ~ '\[\[(?:PHANTOMS|WASLA)_CF:\{.*\}\]\]$';
+  custom_fields = COALESCE(custom_fields, '{}'::jsonb) || (substring(team_notes FROM '\[\[PHANTOMS_CF:(\{.*\})\]\]'))::jsonb,
+  team_notes = NULLIF(btrim(regexp_replace(team_notes, '\s*\[\[PHANTOMS_CF:\{.*\}\]\]$', '')), '')
+WHERE team_notes ~ '\[\[PHANTOMS_CF:\{.*\}\]\]$';
 
 -- 2. إنشاء جدول تعريفات الحقول المخصصة للأعضاء (member_custom_fields)
 CREATE TABLE IF NOT EXISTS public.member_custom_fields (
@@ -72,7 +72,7 @@ BEGIN
       COALESCE(f.created_at, now()),
       COALESCE(f.updated_at, now())
     FROM public.member_info_fields AS f
-    WHERE f.label NOT IN ('__PHANTOMS_ONBOARDING__', '__WASLA_ONBOARDING__')
+    WHERE f.label NOT IN ('__PHANTOMS_ONBOARDING__')
     ON CONFLICT (id) DO NOTHING;
 
     PERFORM setval(

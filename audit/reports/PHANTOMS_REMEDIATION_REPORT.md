@@ -3,7 +3,7 @@
 **Date:** November 8, 2026  
 **Auditor / Lead Engineer:** Principal Software Engineer, Application Security Engineer & QA Lead  
 **Local Project Directory:** `C:\projects\phantoms\dashboard`  
-**Current Application Identity:** Wasla Tech Management System (v2)  
+**Current Application Identity:** PHANTOMS Management System (v2)  
 **Future Target Identity:** PHANTOMS  
 **Node.js Runtime:** `v24.19.0` | **npm:** `12.2.1` | **OS:** Windows (win32 x64)
 
@@ -74,7 +74,7 @@ An exhaustive security remediation, architectural decoupling, and stability hard
 - **Fix:** Completely uninstalled `xlsx` from all packages; integrated `exceljs`. Retained full Arabic column parsing, duplicate filtering, RTL layout, and `safeCell` formula injection protection.
 
 #### `SEC-HIGH-03`: AI Prompt Injection via Unbounded Context Interpolation
-- **Issue:** Live member data, notes, and task descriptions were interpolated raw into the LLM system prompt in `wasla-ai/index.ts`.
+- **Issue:** Live member data, notes, and task descriptions were interpolated raw into the LLM system prompt in `phantoms-ai/index.ts`.
 - **Fix:** Enclosed context inside `<context>...</context>` XML tags and instructed the model that `<context>` content represents untrusted user data with strict prohibitions against following embedded directives.
 
 ---
@@ -82,8 +82,8 @@ An exhaustive security remediation, architectural decoupling, and stability hard
 ### 3.3. Reliability, Bugs & CI/CD Fixes
 
 #### `BUG-01`: Dropped AI Conversation History
-- **Issue:** `useAiConversation.ts` never sent history; the Gemini branch in `wasla-ai/index.ts` ignored history.
-- **Fix:** Updated `useAiConversation.ts` to pass recent conversation turns; updated `wasla-ai/index.ts` to format multi-turn contents for Gemini API.
+- **Issue:** `useAiConversation.ts` never sent history; the Gemini branch in `phantoms-ai/index.ts` ignored history.
+- **Fix:** Updated `useAiConversation.ts` to pass recent conversation turns; updated `phantoms-ai/index.ts` to format multi-turn contents for Gemini API.
 
 #### `BUG-02`: AI Action IDOR / Name Matching Collision
 - **Issue:** Matching by substring or first name (`m.full_name.split(' ')[0]`) risked deleting or updating the wrong team member.

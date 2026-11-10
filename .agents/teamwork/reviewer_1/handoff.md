@@ -6,9 +6,9 @@
 ## 1. What the prior attempt got wrong
 
 ### Issue 1: Email alignment defect in RTL (Hero section)
-- **Input:** MemberDrawer rendered with member `email = 'user1@wasla.com'` in RTL mode.
+- **Input:** MemberDrawer rendered with member `email = 'user1@phantoms.com'` in RTL mode.
 - **Expected:** In an RTL identity block, the email address must align to the inline-start (right edge), directly beneath the member's full name.
-- **Actual:** The `<p>` tag had `dir="ltr"` applied directly at block level without alignment styling (`text-align: start` in LTR is left). Consequently, `user1@wasla.com` was pushed to the far left margin, completely disconnected from the member's name and status pill on the right.
+- **Actual:** The `<p>` tag had `dir="ltr"` applied directly at block level without alignment styling (`text-align: start` in LTR is left). Consequently, `user1@phantoms.com` was pushed to the far left margin, completely disconnected from the member's name and status pill on the right.
 - **Root cause:** Misplaced block-level `dir="ltr"` on the container `<p>` instead of wrapping the email string in an inline `<span dir="ltr">` within an RTL container.
 
 ### Issue 2: Header title truncation instead of accommodating long names

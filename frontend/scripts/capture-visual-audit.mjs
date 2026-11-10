@@ -374,7 +374,7 @@ async function main() {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ configured: true, enabled: true, templateName: 'wasla_task_assignment' })
+      body: JSON.stringify({ configured: true, enabled: true, templateName: 'phantoms_task_assignment' })
     });
   });
 
@@ -460,9 +460,9 @@ async function main() {
   await page.evaluate((m) => {
     localStorage.clear();
     sessionStorage.clear();
-    localStorage.setItem('wasla_member_session', JSON.stringify(m));
-    localStorage.setItem('wasla_device_token', 'mock-device-token-101');
-    localStorage.setItem('wasla_member_remember', '1');
+    localStorage.setItem('phantoms_member_session', JSON.stringify(m));
+    localStorage.setItem('phantoms_device_token', 'mock-device-token-101');
+    localStorage.setItem('phantoms_member_remember', '1');
   }, mockMemberSession);
   await captureViewports('member-portal', '/portal');
 

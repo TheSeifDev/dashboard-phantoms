@@ -1,6 +1,6 @@
 # FULL TECHNICAL & SECURITY AUDIT REPORT
 **Target Codebase:** `C:\projects\phantoms\dashboard`  
-**Application Identity:** Wasla Tech Management System (v2)  
+**Application Identity:** PHANTOMS Management System (v2)  
 **Document Code:** `PHANTOMS-AUDIT-2026-V1`  
 **Classification:** Confidential / Internal Engineering Audit  
 **Date of Execution:** November 7, 2026  
@@ -11,7 +11,7 @@
 ## 1. EXECUTIVE SUMMARY
 
 ### 1.1 Overview & System Purpose
-The **Wasla Tech Management System (v2)** is a specialized, closed operations management platform and operational intelligence suite engineered for the **Wasla Tech** organization. It facilitates team logistics (device availability, location tracking, field attendance feasibility), task distribution with multi-stage verification, scoreboards/leaderboards with bonus point mechanics, contextual announcements and team notes, and an agentic AI Assistant (Wasla AI). The application is architected as an RTL-native dual-portal web application (Admin Control Center & Member Portal) built with React 19, TypeScript, Tailwind CSS v4, and Supabase (PostgreSQL + RLS + Edge Functions), packaged as both a PWA and an Android APK via Capacitor.
+The **PHANTOMS Management System (v2)** is a specialized, closed operations management platform and operational intelligence suite engineered for the **PHANTOMS** organization. It facilitates team logistics (device availability, location tracking, field attendance feasibility), task distribution with multi-stage verification, scoreboards/leaderboards with bonus point mechanics, contextual announcements and team notes, and an agentic AI Assistant (PHANTOMS AI). The application is architected as an RTL-native dual-portal web application (Admin Control Center & Member Portal) built with React 19, TypeScript, Tailwind CSS v4, and Supabase (PostgreSQL + RLS + Edge Functions), packaged as both a PWA and an Android APK via Capacitor.
 
 ### 1.2 Audit Scope & Methodology
 A comprehensive, non-destructive, evidence-based technical and security audit was conducted on the entire repository at `C:\projects\phantoms\dashboard`. The evaluation included:
@@ -38,7 +38,7 @@ A comprehensive, non-destructive, evidence-based technical and security audit wa
 2. **[CRITICAL] Passwordless Member Authentication Spoofing (`SEC-CRIT-02`):** The `lookup_member_by_email` RPC accepts any email and binds an attacker-provided device token without email verification, OTP, or password. Knowing any member's email grants full access to their portal, assigned tasks, and evaluations.
 3. **[HIGH] Broken GitHub Actions CI Pipeline (`BUG-CI-01`):** The `deploy.yml` workflow fails at the `Security regression tests` step because 7 tests in `security-regression.mjs` fail against modern migrations (0010–0021).
 4. **[HIGH] Vulnerable SheetJS (`xlsx`) Dependency (`SEC-HIGH-02`):** `xlsx@^0.18.5` contains unpatched Prototype Pollution (GHSA-4r6h-8v6p-xvw6) and ReDoS (GHSA-5pgg-2g8v-p4x9) vulnerabilities.
-5. **[HIGH] AI Assistant Statelessness & Prompt Injection (`BUG-01` / `SEC-HIGH-03`):** The frontend never sends conversation history to `wasla-ai`, making chats single-turn only. Furthermore, unsanitized live database context injected into system prompts exposes the LLM to indirect prompt injection.
+5. **[HIGH] AI Assistant Statelessness & Prompt Injection (`BUG-01` / `SEC-HIGH-03`):** The frontend never sends conversation history to `phantoms-ai`, making chats single-turn only. Furthermore, unsanitized live database context injected into system prompts exposes the LLM to indirect prompt injection.
 
 ---
 
@@ -60,7 +60,7 @@ c:\projects\phantoms\dashboard
 ├── backend/
 │   ├── migrations/             # 21 incremental SQL migrations (0001 to 0021)
 │   ├── supabase/
-│   │   └── functions/          # Deno Edge Functions (admin-invite, wasla-ai, etc.)
+│   │   └── functions/          # Deno Edge Functions (admin-invite, phantoms-ai, etc.)
 │   ├── whatsapp-bridge/        # Standalone Baileys WhatsApp QR bridge service
 │   ├── whatsapp-service/       # Express WhatsApp & Web Push microservice
 │   ├── patch.sql               # Obsolete legacy patch file (Risk: schema regression)
@@ -126,7 +126,7 @@ flowchart TD
         end
         
         subgraph EdgeFunctionsList["Edge Functions"]
-            FnAI["wasla-ai (Groq / Gemini LLM)"]
+            FnAI["phantoms-ai (Groq / Gemini LLM)"]
             FnPush["push-notify (Web Push VAPID)"]
             FnInvite["admin-invite (Owner-only Admin Invite)"]
             FnDelAcc["admin-delete-account (Owner-only Auth Delete)"]
@@ -176,7 +176,7 @@ flowchart TD
    - **Stored Procedures:** 28+ `SECURITY DEFINER` RPC functions with schema-scoped search paths enforcing atomic operations.
 3. **Edge Functions (Deno):**
    - Five distinct Edge Functions handling privileged or secret-bearing tasks:
-     - `wasla-ai`: Proxies prompts to Groq (`llama-3.3-70b-versatile`) or Google Gemini (`gemini-2.5-flash`), retrieving secrets from Supabase Vault or environment variables.
+     - `phantoms-ai`: Proxies prompts to Groq (`llama-3.3-70b-versatile`) or Google Gemini (`gemini-2.5-flash`), retrieving secrets from Supabase Vault or environment variables.
      - `push-notify`: Dispatches Web Push payloads signed with server VAPID keys to member endpoints stored in `members.push_subscription`.
      - `admin-invite`: Generates Supabase Auth email invitations for new administrators.
      - `admin-delete-account`: Calls Supabase Auth Admin API using `service_role` key to delete administrator user accounts from `auth.users`.
@@ -187,7 +187,7 @@ flowchart TD
      - **Self-Hosted Bridge Path:** An experimental WebSocket server in `backend/whatsapp-bridge` leveraging `@whiskeysockets/baileys` to mimic a WhatsApp Web client, encrypting session credentials locally using `aes-256-gcm`.
 5. **Mobile & PWA Architecture:**
    - Progressive Web App configured via `vite-plugin-pwa` with `injectManifest` pointing to custom Service Worker `src/sw.ts`.
-   - Android packaging using Capacitor 8.6.0 (`com.wasla.app`). Native hardware back-button listener configured in `src/lib/capacitor.ts`.
+   - Android packaging using Capacitor 8.6.0 (`com.phantoms.app`). Native hardware back-button listener configured in `src/lib/capacitor.ts`.
 
 ---
 
@@ -250,7 +250,7 @@ The following inventory details every feature currently implemented in the repos
 - **Announcement Management (`/admin/announcements`):** Create priority-tagged announcements (`urgent`, `high`, `normal`, `low`) targeted at all members or specific subgroups.
 - **Real-Time Read Analytics:** Stats modal displaying total impressions, read counts, dismiss counts, and detailed per-member engagement logs.
 
-### 3.9 Wasla AI Operational Assistant
+### 3.9 PHANTOMS AI Operational Assistant
 - **Conversational Chat Interface:** Markdown-enabled chat window with quick prompt chips.
 - **Live Database Context Injection:** Automatically computes live operational summary (member count, laptop readiness, overdue tasks) and injects it into prompt context.
 - **Agentic Action Proposals:** Extracts structured JSON actions (`create_task`, `delete_task`, `create_member`, `update_member`, `delete_member`, `add_note`, `delete_note`) and renders interactive confirmation cards in the UI before execution.
@@ -286,7 +286,7 @@ The following inventory details every feature currently implemented in the repos
 | **Infinite Bonus (`∞`)** | `/admin/ranking` | Spec 2026-11-05 | Independent infinite bonus flag + audit log. | **COMPLETE** | Migration 0016, `member_infinite_bonus_events`. |
 | **Operational Notes** | `/admin/notes` | Blueprint §8 | General notes, member notes, bonus notes. | **COMPLETE** | `NotesPage.tsx`. Team notes eliminated in migration 0006. |
 | **Announcements Hub** | `/admin/announcements` | Migration 0005 | Broadcasts, priority tags, read analytics. | **COMPLETE** | `AnnouncementsPage.tsx`, `AnnouncementStatsModal.tsx`. |
-| **Wasla AI Assistant** | `/admin/ai-assistant` | Blueprint §8.7 | Edge function proxy, live context, action cards. | **PARTIALLY IMPLEMENTED** | Multi-turn history is broken (`BUG-01`); name matching in actions is unsafe (`BUG-02`). |
+| **PHANTOMS AI Assistant** | `/admin/ai-assistant` | Blueprint §8.7 | Edge function proxy, live context, action cards. | **PARTIALLY IMPLEMENTED** | Multi-turn history is broken (`BUG-01`); name matching in actions is unsafe (`BUG-02`). |
 | **WhatsApp Meta Cloud API** | `/admin/whatsapp` | Blueprint §2.2 | Official Cloud API integration via Edge Function. | **COMPLETE** | Requires user-provided Meta credentials. |
 | **WhatsApp Baileys QR Bridge** | `/admin/whatsapp` | Setup Runbook | Self-hosted Node server + AES session store. | **PARTIALLY IMPLEMENTED** | Unofficial integration; risk of WhatsApp ban; requires external running daemon. |
 | **Web Push Notifications** | Edge `push-notify` | Blueprint §2.2 | VAPID Web Push dispatch to PWA subscribers. | **COMPLETE** | `push-notify/index.ts`, `sw.ts`. |
@@ -365,7 +365,7 @@ The following inventory details every feature currently implemented in the repos
   ```
 - **Description:** The member portal relies on passwordless email lookup. Any unauthenticated caller holding the public Supabase `anon` key can invoke `lookup_member_by_email(p_email, p_device_token)` with any target member's email address and an arbitrary device token. The database immediately binds that token to the victim's account in `member_device_sessions`.
 - **Impact:**
-  - Complete account takeover of any team member. An attacker knowing a member's email address (or guessing standard phone formats like `010xxxxxxxx@wasla.app`) can immediately:
+  - Complete account takeover of any team member. An attacker knowing a member's email address (or guessing standard phone formats like `010xxxxxxxx@phantoms.`) can immediately:
     - Call `get_member_tasks(member_id, token)` to read all private assigned tasks.
     - Call `get_member_evaluations(member_id, token)` to read confidential managerial appraisals and reprimands.
     - Call `submit_task_status(...)` to submit forged task deliverables or tamper with task workflows.
@@ -376,7 +376,7 @@ The following inventory details every feature currently implemented in the repos
      curl -X POST "https://<supabase-url>/rest/v1/rpc/lookup_member_by_email" \
        -H "apikey: <anon-key>" \
        -H "Content-Type: application/json" \
-       -d '{"p_email": "victim@wasla.app", "p_device_token": "attacker_token_123"}'
+       -d '{"p_email": "victim@phantoms.", "p_device_token": "attacker_token_123"}'
      ```
   2. The database returns the victim's member record and registers `attacker_token_123`.
   3. Call `get_member_tasks` passing `p_member_id: <victim_id>` and `p_device_token: "attacker_token_123"`. The server returns the victim's tasks.
@@ -433,14 +433,14 @@ The following inventory details every feature currently implemented in the repos
 
 ---
 
-### [SEC-HIGH-03] Prompt Injection & Context Leakage in Wasla AI Edge Function
+### [SEC-HIGH-03] Prompt Injection & Context Leakage in PHANTOMS AI Edge Function
 - **Severity:** HIGH
 - **Category:** LLM Security / Indirect Prompt Injection
 - **File Paths & Line Numbers:**
-  - `backend/supabase/functions/wasla-ai/index.ts` (Lines 46, 86–106)
+  - `backend/supabase/functions/phantoms-ai/index.ts` (Lines 46, 86–106)
 - **Evidence:**
   ```typescript
-  // backend/supabase/functions/wasla-ai/index.ts:105-106
+  // backend/supabase/functions/phantoms-ai/index.ts:105-106
   const systemPrompt = `...
   السياق المتوفر:
   ${context}`;
@@ -461,9 +461,9 @@ The following inventory details every feature currently implemented in the repos
   - `frontend/vercel.json` (Line 14)
 - **Evidence:**
   ```json
-  "value": "... connect-src 'self' https://*.supabase.co https://*.supabase.com wss://*.supabase.co wss://*.supabase.com https://admin-wasla-production.up.railway.app; ..."
+  "value": "... connect-src 'self' https://*.supabase.co https://*.supabase.com wss://*.supabase.co wss://*.supabase.com https://admin-phantoms-production.up.railway.app; ..."
   ```
-- **Description:** The CSP header in `vercel.json` hardcodes a specific Railway deployment domain (`https://admin-wasla-production.up.railway.app`).
+- **Description:** The CSP header in `vercel.json` hardcodes a specific Railway deployment domain (`https://admin-phantoms-production.up.railway.app`).
 - **Impact:** If the WhatsApp bridge or backend service is relocated or hosted on a different provider/domain, all client network requests to the bridge are blocked by browser CSP.
 - **Recommended Fix:** Use environment-interpolated CSP headers or reverse-proxy WhatsApp bridge calls through a Vercel rewrite route (e.g., `/api/bridge/*`).
 - **Verification Criteria:** Connecting to a self-hosted WhatsApp bridge under any domain succeeds without CSP violation errors in browser DevTools.
@@ -509,7 +509,7 @@ The following inventory details every feature currently implemented in the repos
 - **Category:** CORS Policy
 - **File Paths & Line Numbers:**
   - `backend/supabase/functions/push-notify/index.ts` (Lines 5–14)
-  - `backend/supabase/functions/wasla-ai/index.ts` (Lines 7–16)
+  - `backend/supabase/functions/phantoms-ai/index.ts` (Lines 7–16)
 - **Evidence:**
   `allowedOrigins` includes `'http://localhost:5173'`, `'http://127.0.0.1:5173'`, `'capacitor://localhost'`, `'https://localhost'`.
 - **Description:** Edge functions contain hardcoded localhost origins in production code without checking environment mode.
@@ -526,7 +526,7 @@ The following inventory details every feature currently implemented in the repos
   - `.github/workflows/build-apk.yml` (Lines 48–51)
   - `frontend/scripts/build-apk.mjs` (Line 25)
 - **Evidence:**
-  `./gradlew assembleDebug` compiles `app-debug.apk` and publishes it as the official release `wasla-app.apk`.
+  `./gradlew assembleDebug` compiles `app-debug.apk` and publishes it as the official release `PHANTOMS-app.apk`.
 - **Description:** The CI workflow builds and distributes a debug-signed APK rather than a release-signed APK using a protected keystore.
 - **Impact:** Debug-signed APKs can be tampered with, unpacked, repackaged, and lack code shrinking/obfuscation (ProGuard/R8).
 - **Recommended Fix:** Configure GitHub Secrets with Android Release Keystore (`KEYSTORE_FILE`, `KEY_ALIAS`, `KEY_PASSWORD`) and build via `./gradlew assembleRelease`.
@@ -557,7 +557,7 @@ The following inventory details every feature currently implemented in the repos
 
 | Bug ID | Title | File Path & Line Numbers | Severity | Impact | Recommended Fix |
 |---|---|---|:---:|---|---|
-| **BUG-01** | Wasla AI Chat History Completely Omitted | `frontend/src/features/ai-assistant/useAiConversation.ts` L54; `backend/supabase/functions/wasla-ai/index.ts` L148 | **HIGH** | Chat is completely stateless; AI forgets previous messages. Gemini branch drops history entirely. | Pass `history: messages.map(...)` in `useAiConversation.ts`; format multi-turn history into Gemini `contents` array. |
+| **BUG-01** | PHANTOMS AI Chat History Completely Omitted | `frontend/src/features/ai-assistant/useAiConversation.ts` L54; `backend/supabase/functions/phantoms-ai/index.ts` L148 | **HIGH** | Chat is completely stateless; AI forgets previous messages. Gemini branch drops history entirely. | Pass `history: messages.map(...)` in `useAiConversation.ts`; format multi-turn history into Gemini `contents` array. |
 | **BUG-02** | Unsafe Partial Name Matching in AI Actions | `frontend/src/features/ai-assistant/useAiConversation.ts` L139, L154 | **HIGH** | AI action execution matches first names or substrings; deleting "أحمد" can delete the wrong member. | Force AI action payload to supply target member ID; require UI disambiguation if multiple members match. |
 | **BUG-03** | Member Deletion Timer Cancelled on Page Unmount | `frontend/src/features/members/MembersPage.tsx` L72-76, L203 | **MEDIUM** | If admin navigates away within 5 seconds of clicking delete, member is NOT deleted from DB. | Execute mutation optimistically on server with undo record, or persist timer globally outside component lifecycle. |
 | **BUG-04** | Outdated `run-migrations.mjs` Omits Migration 0021 | `frontend/scripts/run-migrations.mjs` L49-70 | **MEDIUM** | Running migrations via script skips `0021_member_evaluations.sql`. | Add `0021_member_evaluations.sql` to `MIGRATION_ORDER` array. |
@@ -588,10 +588,10 @@ Despite the blueprint's "zero any types" rule, `(supabase as any)` is used in 19
 
 ### 7.3 High-Risk Technical Debt: "Carrier Hacks" (Table Hijacking)
 The codebase contains extensive dual-mode logic designed to support pre-migration database instances:
-1. **Evaluations Hijacking Tasks:** Before migration 0021, evaluations were stored as dummy tasks prefixed with `[[WASLA_EVAL]]` with JSON metadata in the description. The frontend tasks feed still has to filter `!t.title.startsWith('[[WASLA_EVAL]]')` (`tasks/api.ts` L28, L49).
-2. **Custom Fields Hijacking Notes:** Before migration 0020, custom fields were serialized into `members.team_notes` as `[[WASLA_CF:{...}]]`.
-3. **Invites Hijacking Members:** Before migration 0020, invitation tokens were stored by creating dummy member records with emails ending in `@invite.wasla.local`.
-4. **Local Storage Fallbacks:** `customFieldsApi.ts` maintains a fallback reading from `localStorage.getItem('wasla_member_custom_fields_v1')`.
+1. **Evaluations Hijacking Tasks:** Before migration 0021, evaluations were stored as dummy tasks prefixed with `[[PHANTOMS_EVAL]]` with JSON metadata in the description. The frontend tasks feed still has to filter `!t.title.startsWith('[[PHANTOMS_EVAL]]')` (`tasks/api.ts` L28, L49).
+2. **Custom Fields Hijacking Notes:** Before migration 0020, custom fields were serialized into `members.team_notes` as `[[PHANTOMS_CF:{...}]]`.
+3. **Invites Hijacking Members:** Before migration 0020, invitation tokens were stored by creating dummy member records with emails ending in `@invite.phantoms.`.
+4. **Local Storage Fallbacks:** `customFieldsApi.ts` maintains a fallback reading from `localStorage.getItem('phantoms_member_custom_fields_v1')`.
 
 **Recommendation:** Purge all legacy carrier hacks now that migrations 0020 and 0021 are formalized in PostgreSQL DDL.
 
@@ -692,7 +692,7 @@ The codebase contains extensive dual-mode logic designed to support pre-migratio
    - Failing Tests:
      - `session_token is never anon-readable > migration 0009 grants anon columns without session_token`
      - `task tracking updates are device-bound server-side > migration revokes anon direct UPDATE on tasks`
-     - `edge functions and bridge enforce auth > wasla-ai: no wildcard CORS, POST-only, admin fallback to is_admin()`
+     - `edge functions and bridge enforce auth > phantoms-ai: no wildcard CORS, POST-only, admin fallback to is_admin()`
      - `edge functions and bridge enforce auth > push-notify: origin allowlist enforced`
 6. **WhatsApp Service Unit & Integration Tests:**
    - Command: `npm test` in `backend/whatsapp-service`
@@ -747,17 +747,17 @@ flowchart TD
     subgraph Phase1["Phase 1: Authentication & Access Control Hardening"]
         RemoveHardcodedUUID["Refactor 0014/0015/0019 to remove hardcoded Owner UUID"]
         SecureMemberAuth["Implement OTP / Magic Link for Member Portal authentication"]
-        SanitizeAIPrompt["Add XML delimiter boundaries & sanitization to Wasla AI context"]
+        SanitizeAIPrompt["Add XML delimiter boundaries & sanitization to PHANTOMS AI context"]
     end
 
     subgraph Phase2["Phase 2: Technical Debt & Dependency Purge"]
         ReplaceXLSX["Replace SheetJS (xlsx) with exceljs (lazy-loaded)"]
-        PurgeCarrierHacks["Remove [[WASLA_EVAL]], [[WASLA_CF]], and @invite placeholder logic"]
+        PurgeCarrierHacks["Remove [[PHANTOMS_EVAL]], [[PHANTOMS_CF]], and @invite placeholder logic"]
         SyncDBTypes["Regenerate src/types/db.ts to eliminate all 'as any' casts"]
     end
 
     subgraph Phase3["Phase 3: Product Completion & Stability"]
-        FixAIHistory["Wire multi-turn history into useAiConversation & wasla-ai"]
+        FixAIHistory["Wire multi-turn history into useAiConversation & phantoms-ai"]
         AddPortalLeaderboard["Build privacy-safe Leaderboard RPC and embed in /portal"]
         StandardizeWA["Consolidate WhatsApp Bridge & Express service into single service"]
         SignAPK["Configure Android production keystore signing in GitHub Actions"]
@@ -780,15 +780,15 @@ flowchart TD
   - Replace static UUID `'8ce17aae-84c1-4c89-a020-8b683a0dbabb'` with a dynamic lookup in `admin_accounts` where `role = 'owner'`.
   - Provide an RPC for the first authenticated user to claim ownership on empty installations.
 - **Task 1.2:** Introduce a 6-digit OTP email/WhatsApp confirmation step for member portal logins before issuing device tokens.
-- **Task 1.3:** Enclose Wasla AI injected context within `<untrusted_context>` tags and enforce strict prompt boundaries.
+- **Task 1.3:** Enclose PHANTOMS AI injected context within `<untrusted_context>` tags and enforce strict prompt boundaries.
 
 #### Milestone 2: Technical Debt & Dependency Remediation (Days 5–7)
 - **Task 2.1:** Uninstall `xlsx` and replace with `exceljs` across `frontend` and `backend/whatsapp-bridge`. Use dynamic `import('exceljs')` to trim 400KB from initial bundle.
-- **Task 2.2:** Purge all fallback code supporting `[[WASLA_EVAL]]`, `[[WASLA_CF]]`, and `@invite.wasla.local`.
+- **Task 2.2:** Purge all fallback code supporting `[[PHANTOMS_EVAL]]`, `[[PHANTOMS_CF]]`, and `@invite.phantoms.`.
 - **Task 2.3:** Update `src/types/db.ts` to include full schema definitions for `member_evaluations`, `member_custom_fields`, and `member_registration_invites`. Remove all `as any` casts.
 
 #### Milestone 3: Product Feature Completion (Days 8–10)
-- **Task 3.1:** Fix Wasla AI multi-turn history: pass conversation history array in `useAiConversation.ts` and handle history formatting in `wasla-ai` for both Groq and Gemini.
+- **Task 3.1:** Fix PHANTOMS AI multi-turn history: pass conversation history array in `useAiConversation.ts` and handle history formatting in `phantoms-ai` for both Groq and Gemini.
 - **Task 3.2:** Implement privacy-safe `get_member_leaderboard(p_member_id, p_device_token)` RPC returning masked leaderboard rankings for the Member Portal.
 - **Task 3.3:** Configure Android release keystore secrets in GitHub Actions for production APK signing.
 

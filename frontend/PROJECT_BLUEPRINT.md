@@ -124,4 +124,4 @@ RLS مفعل على الجداول الثلاثة، وصول كامل لـ `auth
 ## 7. مخاطر مفتوحة
 
 - مفاتيح Supabase غير موجودة في `.env` بعد — يجب توفير `VITE_SUPABASE_URL` و `VITE_SUPABASE_ANON_KEY` قبل مرحلة 5.
-- المساعد الذكي يعتمد على `supabase/functions/phantoms-ai/index.ts` (مع توافق `wasla-ai`) — يحتاج نشر مستقل.
+- المساعد الذكي يعتمد على `supabase/functions/phantoms-ai/index.ts` — يحتاج نشر مستقل.

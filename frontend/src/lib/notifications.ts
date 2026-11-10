@@ -16,9 +16,6 @@ export interface PhantomsNotificationItem {
   senderName?: string;
 }
 
-/** Backward compatibility type alias */
-export type WaslaNotificationItem = PhantomsNotificationItem;
-
 interface NotificationState {
   items: PhantomsNotificationItem[];
   activeBanner: PhantomsNotificationItem | null;
@@ -39,38 +36,16 @@ interface NotificationState {
 }
 
 const SOUND_PREF_KEY = 'phantoms_notif_sound_enabled';
-const LEGACY_SOUND_PREF_KEY = 'wasla_notif_sound_enabled';
 const ANDROID_CHANNEL_ID = 'phantoms_whatsapp_alerts_v2';
-// Legacy Android channel: 'wasla_whatsapp_alerts_v2'
 
 function storageKeyForMember(memberId: number): string {
   return `phantoms_notifications_v2_${memberId}`;
 }
 
-function legacyStorageKeyForMember(memberId: number): string {
-  return `wasla_notifications_v2_${memberId}`;
-}
-
 function loadStoredItems(memberId: number): PhantomsNotificationItem[] {
   try {
     const primaryKey = storageKeyForMember(memberId);
-    let raw = localStorage.getItem(primaryKey);
-    if (!raw) {
-      // Check legacy storage key with transparent on-the-fly migration
-      const legacyKey = legacyStorageKeyForMember(memberId);
-      const legacyRaw = localStorage.getItem(legacyKey);
-      if (legacyRaw) {
-        raw = legacyRaw;
-        try {
-          localStorage.setItem(primaryKey, legacyRaw);
-          if (localStorage.getItem(primaryKey) === legacyRaw) {
-            localStorage.removeItem(legacyKey);
-          }
-        } catch {
-          // ignore quota errors
-        }
-      }
-    }
+    const raw = localStorage.getItem(primaryKey);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as PhantomsNotificationItem[]).slice(0, 60) : [];
@@ -82,9 +57,6 @@ function loadStoredItems(memberId: number): PhantomsNotificationItem[] {
 function saveStoredItems(memberId: number, items: PhantomsNotificationItem[]): void {
   try {
     localStorage.setItem(storageKeyForMember(memberId), JSON.stringify(items.slice(0, 60)));
-    try {
-      localStorage.removeItem(legacyStorageKeyForMember(memberId));
-    } catch {}
   } catch {
     // ignore storage quota errors
   }
@@ -94,7 +66,7 @@ function loadSoundPref(): boolean {
   try {
     const primary = localStorage.getItem(SOUND_PREF_KEY);
     if (primary !== null) return primary !== '0';
-    return localStorage.getItem(LEGACY_SOUND_PREF_KEY) !== '0';
+    return true;
   } catch {
     return true;
   }
@@ -443,7 +415,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       return;
     }
 
-    const newItem: WaslaNotificationItem = {
+    const newItem: PhantomsNotificationItem = {
       id,
       title: payload.title,
       body: payload.body,

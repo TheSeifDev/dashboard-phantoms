@@ -20,8 +20,6 @@ CREATE TABLE IF NOT EXISTS public.admin_emails (
 INSERT INTO public.admin_emails (email) VALUES
   ('admin@phantoms.com'),
   ('admin@phantoms.local'),
-  ('admin@wasla.com'),
-  ('admin@wasla.local'),
   ('admin@example.com')
 ON CONFLICT (email) DO NOTHING;
 

@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.resolve(here, 'redesign', 'after');
-const BASE = process.env.WASLA_BASE ?? 'http://127.0.0.1:5173';
-const EMAIL = process.env.WASLA_ADMIN_EMAIL;
-const PASSWORD = process.env.WASLA_ADMIN_PASSWORD;
+const BASE = process.env.PHANTOMS_BASE ?? 'http://127.0.0.1:5173';
+const EMAIL = process.env.PHANTOMS_ADMIN_EMAIL;
+const PASSWORD = process.env.PHANTOMS_ADMIN_PASSWORD;
 if (!EMAIL || !PASSWORD) { console.error('MISSING_CREDS'); process.exit(2); }
 
 const browser = await chromium.launch();

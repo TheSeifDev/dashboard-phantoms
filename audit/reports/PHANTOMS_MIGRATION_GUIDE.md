@@ -3,7 +3,7 @@
 **Date:** November 8, 2026  
 **Author:** Principal Software Engineer & Database Architect  
 **Target Codebase:** `C:\projects\phantoms\dashboard`  
-**Current Application Identity:** Wasla Tech Management System (v2)  
+**Current Application Identity:** PHANTOMS Management System (v2)  
 **Future Target Identity:** PHANTOMS
 
 ---

@@ -3,7 +3,7 @@
 **Date:** November 8, 2026  
 **Auditor:** Principal Software Engineer, Application Security Engineer & QA Lead  
 **Target Codebase:** `C:\projects\phantoms\dashboard`  
-**Current Application Identity:** Wasla Tech Management System (v2)  
+**Current Application Identity:** PHANTOMS Management System (v2)  
 **Future Target Identity:** PHANTOMS  
 **Node.js Runtime:** `v24.19.0` | **npm:** `12.2.1`
 
@@ -39,8 +39,8 @@ This document certifies the complete verification and regression testing outcome
 | **INV-SEC-03** | Existing authenticated member devices continue to resume sessions seamlessly. | `lookup_member_by_email` SHA-256 session check | Single device column overwritten on new logins | Valid hashed sessions in `member_device_sessions` validated & refreshed | **PASS** |
 | **INV-SEC-04** | Vulnerable `xlsx` (SheetJS) with Prototype Pollution & ReDoS is eliminated. | `npm list xlsx`, source grep, build | Installed in frontend & bridge | Completely uninstalled; replaced with `exceljs` | **PASS** |
 | **INV-SEC-05** | Excel exports/imports preserve Arabic column mapping, RTL layout, and formula injection defenses. | `memberExcel.ts` static inspection & build | Used SheetJS utils | Uses `ExcelJS.Workbook`, RTL views, `safeCell` formula escaping | **PASS** |
-| **INV-SEC-06** | AI context cannot execute prompt injection instructions against the LLM system prompt. | `wasla-ai/index.ts` system prompt inspection | Raw string interpolation | Enclosed in `<context>` with strict untrusted data prompt | **PASS** |
-| **INV-SEC-07** | AI Assistant maintains multi-turn conversation history. | `wasla-ai/index.ts` & `useAiConversation.ts` | Frontend omitted history; Gemini dropped history | History passed in frontend and mapped to both Groq & Gemini | **PASS** |
+| **INV-SEC-06** | AI context cannot execute prompt injection instructions against the LLM system prompt. | `phantoms-ai/index.ts` system prompt inspection | Raw string interpolation | Enclosed in `<context>` with strict untrusted data prompt | **PASS** |
+| **INV-SEC-07** | AI Assistant maintains multi-turn conversation history. | `phantoms-ai/index.ts` & `useAiConversation.ts` | Frontend omitted history; Gemini dropped history | History passed in frontend and mapped to both Groq & Gemini | **PASS** |
 | **INV-SEC-08** | AI Action execution rejects ambiguous member names and prevents IDOR / wrong-member mutation. | `useAiConversation.ts` resolution logic | Substring & first-name matching | Exact ID matching prioritized; ambiguous partial matches rejected | **PASS** |
 | **INV-SEC-09** | Member deletion undo timer commits deletion even if user navigates away before timeout. | `MembersPage.tsx` unmount effect | Timeout cleared silently on unmount, canceling deletion | Unmount hook flushes pending deletion immediately | **PASS** |
 | **INV-SEC-10** | Continuous Integration `deploy.yml` pipeline passes security regression stage. | `node --test scripts/security-regression.mjs` | Failed 7 tests, breaking CI | 45 / 45 tests pass cleanly with exit code 0 | **PASS** |
@@ -88,7 +88,7 @@ Executed via: `cmd.exe /c "cd frontend && node --test scripts/security-regressio
   ✔ vercel.json has HSTS + CSP + anti-sniffing, no X-XSS-Protection (0.1595ms)
 ✔ Vercel headers enforce transport + framing + content policy (0.2651ms)
 ▶ edge functions and bridge enforce auth
-  ✔ wasla-ai: no wildcard CORS, POST-only, admin fallback to is_admin() (0.7842ms)
+  ✔ phantoms-ai: no wildcard CORS, POST-only, admin fallback to is_admin() (0.7842ms)
   ✔ push-notify: origin allowlist enforced (0.4493ms)
   ✔ bridge auth: no silent dev fallback (0.4576ms)
   ✔ bridge push dispatch sits behind authMiddleware (0.3635ms)

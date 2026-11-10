@@ -66,11 +66,6 @@ self.addEventListener('push', (event) => {
             type: 'PHANTOMS_PUSH_RECEIVED',
             payload: messagePayload,
           });
-          // Backward compatibility postMessage
-          client.postMessage({
-            type: 'WASLA_PUSH_RECEIVED',
-            payload: messagePayload,
-          });
         }
       }),
     ]),
@@ -88,10 +83,6 @@ self.addEventListener('notificationclick', (event) => {
         if ('focus' in client) {
           client.postMessage({
             type: 'PHANTOMS_NOTIFICATION_CLICKED',
-            payload: event.notification.data || {},
-          });
-          client.postMessage({
-            type: 'WASLA_NOTIFICATION_CLICKED',
             payload: event.notification.data || {},
           });
           return client.focus();

@@ -37,7 +37,7 @@ Every component across the repository that consumes elevated Supabase credential
 │ admin-delete-account     │ SUPABASE_SERVICE_ROLE_KEY   │ supabase-js   │
 │ admin-invite             │ SUPABASE_SERVICE_ROLE_KEY   │ supabase-js   │
 │ phantoms-ai              │ SUPABASE_SERVICE_ROLE_KEY   │ supabase-js   │
-│ wasla-ai                 │ SUPABASE_SERVICE_ROLE_KEY   │ supabase-js   │
+│ phantoms-ai                 │ SUPABASE_SERVICE_ROLE_KEY   │ supabase-js   │
 │ push-notify              │ SUPABASE_SERVICE_ROLE_KEY   │ supabase-js   │
 │ whatsapp-tasks           │ SUPABASE_SERVICE_ROLE_KEY   │ supabase-js   │
 │ whatsapp-service/diag    │ SUPABASE_SERVICE_ROLE_KEY   │ supabase-js   │
@@ -63,7 +63,7 @@ Every component across the repository that consumes elevated Supabase credential
 * **Format Compatibility:** Fully compatible with `sb_secret_` format.
 * **Required Code Changes:** None.
 
-#### 3. `backend/supabase/functions/phantoms-ai/index.ts` (and `wasla-ai`)
+#### 3. `backend/supabase/functions/phantoms-ai/index.ts` (and `phantoms-ai`)
 * **Purpose:** Queries Supabase Vault (`get_groq_key_from_vault` RPC) to retrieve LLM API keys.
 * **Variable:** `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')`
 * **Transmission:** Passed to `createClient(url, serviceKey)`. Invokes PostgreSQL function via `/rest/v1/rpc/get_groq_key_from_vault`. PostgREST validates `service_role` role.

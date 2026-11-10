@@ -58,7 +58,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: {
       getItem: (key: string) => {
         try {
-          const remember = (localStorage.getItem('phantoms_admin_remember') ?? localStorage.getItem('wasla_admin_remember')) !== '0';
+          const remember = localStorage.getItem('phantoms_admin_remember') !== '0';
           if (!remember) {
             try {
               return sessionStorage.getItem(key);
@@ -75,7 +75,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         try {
           let remember = true;
           try {
-            remember = (localStorage.getItem('phantoms_admin_remember') ?? localStorage.getItem('wasla_admin_remember')) !== '0';
+            remember = localStorage.getItem('phantoms_admin_remember') !== '0';
           } catch {
             remember = true;
           }

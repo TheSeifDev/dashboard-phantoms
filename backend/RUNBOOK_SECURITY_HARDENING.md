@@ -41,7 +41,7 @@ SELECT public.get_groq_key_from_vault();
 
 ### 3) أعد نشر الـ Edge Function
 
-الوظيفة `phantoms-ai` (وسابقتها `wasla-ai`) تعُدِّلَت لتقرأ المفتاح بهوية **service_role** (لأن الوصول عبر
+الوظيفة `phantoms-ai` تعُدِّلَت لتقرأ المفتاح بهوية **service_role** (لأن الوصول عبر
 authenticated/anon أُغلق في الخطوة 1). بدون إعادة النشر **سيتوقف المساعد الذكي**.
 
 ```bash

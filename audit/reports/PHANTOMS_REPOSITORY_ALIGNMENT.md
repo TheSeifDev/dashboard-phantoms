@@ -58,9 +58,9 @@
 2. **المخطط الرئيسي للمشروع ([`PROJECT_BLUEPRINT.md`](file:///C:/projects/phantoms/dashboard/PROJECT_BLUEPRINT.md)):**
    - **ادعاء قديم غير دقيق:** سطر 20 يدعي أن دخول الأعضاء يتم عبر *"Passwordless direct email lookup"*. الواقع الحالي: تم تصليبه ليتطلب رمز OTP الموثق للأجهزة الجديدة.
    - **ادعاء قديم غير دقيق:** سطر 24 يدعي أن استيراد الجداول يتم عبر *"SheetJS (xlsx)"*. الواقع الحالي: تم استبدالها بـ ExcelJS مع درع الحماية المسبق `safeXlsxGuard.ts`.
-   - **مسميات الهوية:** يتكرر مسمى "Wasla Tech" و "Wasla AI" في كافة الأقسام، والمطلوب استبدالها تدريجياً بـ "PHANTOMS".
+   - **مسميات الهوية:** يتكرر مسمى "PHANTOMS" و "PHANTOMS AI" في كافة الأقسام، والمطلوب استبدالها تدريجياً بـ "PHANTOMS".
 3. **وثيقة البنية التقنية ([`specs/tech-architecture/tech-stack.md`](file:///C:/projects/phantoms/dashboard/specs/tech-architecture/tech-stack.md)):**
-   - سطر 16 يشير لدالة `backend/supabase/functions/wasla-ai`.
+   - سطر 16 يشير لدالة `backend/supabase/functions/phantoms-ai`.
    - سطر 38-41 يصف دخول الأعضاء كـ "anonymous/anon" بدون إشارة لربط الأجهزة و OTP.
 
 ---
