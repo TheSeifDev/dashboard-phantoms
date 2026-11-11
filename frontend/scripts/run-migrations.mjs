@@ -15,7 +15,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATIONS_DIR = resolve(__dirname, '..', '..', 'backend', 'migrations');
+const MIGRATIONS_DIR = resolve(__dirname, '..', '..', 'backend', 'supabase', 'migrations');
 
 const PRINT_ONLY = process.argv.includes('--print');
 const CHECK_ONLY = process.argv.includes('--check');
@@ -55,30 +55,30 @@ if (!existsSync(MIGRATIONS_DIR)) {
 }
 
 const MIGRATION_ORDER = [
-  { file: '0000_base_schema.sql',                      desc: 'PHANTOMS Base Schema & Baseline Tables' },
-  { file: '0001_security_hardening.sql',               desc: 'RLS + Column Security + Vault' },
-  { file: '0002_whatsapp_settings.sql',                desc: 'WhatsApp Settings Table' },
-  { file: '0003_atomic_approval_and_member_lookup.sql', desc: 'Atomic Approval + Member Lookup RPC' },
-  { file: '0004_push_notifications.sql',               desc: 'Push Subscription Column + RPC' },
-  { file: '0005_announcements_system.sql',             desc: 'Announcements System (6 RPCs)' },
-  { file: '0006_remove_team_concept.sql',              desc: 'Remove Team Concept' },
-  { file: '0007_device_session_token.sql',          desc: 'Single Device Session Token' },
-  { file: '0008_admin_email_rls.sql',                desc: 'Admin Emails RLS restriction' },
-  { file: '0009_member_device_binding.sql',          desc: 'Device-Bound Member RPCs (BOLA fix)' },
-  { file: '0010_announcement_views.sql',             desc: 'Announcement View Tracking + Per-Member Details' },
-  { file: '0011_rogue_policy_cleanup.sql',           desc: 'Remove Rogue Database Policies' },
-  { file: '0012_task_bonus_and_deadline_time.sql',   desc: 'Per-Task Bonus + Deadline Time' },
-  { file: '0013_member_device_sessions.sql',         desc: 'Multi-Device Member Sessions' },
-  { file: '0014_admin_access_control.sql',           desc: 'Immutable Owner + Admin Account Management' },
-  { file: '0015_admin_permissions_and_full_delete.sql', desc: 'Per-Section Permissions + Full Auth Account Deletion' },
-  { file: '0016_member_infinite_bonus.sql',          desc: 'Audited Infinite Member Bonus' },
-  { file: '0017_member_bonus_privacy.sql',           desc: 'Device-Verified Bonus Read + Private Notes' },
-  { file: '0018_task_approval_reversal_and_ratings.sql', desc: 'Permission-Safe Task Approval Reversal + Rating RPC' },
-  { file: '0019_member_information_and_ratings.sql', desc: 'Custom Member Information Forms + Admin Ratings' },
-  { file: '0020_member_custom_fields.sql',        desc: 'Dynamic Member Custom Fields (JSONB + Metadata)' },
-  { file: '0021_member_evaluations.sql',          desc: 'Structured Member Evaluations System' },
-  { file: '0022_dynamic_system_ownership.sql',    desc: 'Dynamic System Ownership + Hardened Auth Sessions' },
-  { file: '0023_phantoms_identity_migration.sql', desc: 'Full PHANTOMS Identity Database Migration' },
+  { file: '20261112000000_base_schema.sql',                      desc: 'PHANTOMS Base Schema & Baseline Tables' },
+  { file: '20261112000001_security_hardening.sql',               desc: 'RLS + Column Security + Vault' },
+  { file: '20261112000002_whatsapp_settings.sql',                desc: 'WhatsApp Settings Table' },
+  { file: '20261112000003_atomic_approval_and_member_lookup.sql', desc: 'Atomic Approval + Member Lookup RPC' },
+  { file: '20261112000004_push_notifications.sql',               desc: 'Push Subscription Column + RPC' },
+  { file: '20261112000005_announcements_system.sql',             desc: 'Announcements System (6 RPCs)' },
+  { file: '20261112000006_remove_team_concept.sql',              desc: 'Remove Team Concept' },
+  { file: '20261112000007_device_session_token.sql',          desc: 'Single Device Session Token' },
+  { file: '20261112000008_admin_email_rls.sql',                desc: 'Admin Emails RLS restriction' },
+  { file: '20261112000009_member_device_binding.sql',          desc: 'Device-Bound Member RPCs (BOLA fix)' },
+  { file: '20261112000010_announcement_views.sql',             desc: 'Announcement View Tracking + Per-Member Details' },
+  { file: '20261112000011_rogue_policy_cleanup.sql',           desc: 'Remove Rogue Database Policies' },
+  { file: '20261112000012_task_bonus_and_deadline_time.sql',   desc: 'Per-Task Bonus + Deadline Time' },
+  { file: '20261112000013_member_device_sessions.sql',         desc: 'Multi-Device Member Sessions' },
+  { file: '20261112000014_admin_access_control.sql',           desc: 'Immutable Owner + Admin Account Management' },
+  { file: '20261112000015_admin_permissions_and_full_delete.sql', desc: 'Per-Section Permissions + Full Auth Account Deletion' },
+  { file: '20261112000016_member_infinite_bonus.sql',          desc: 'Audited Infinite Member Bonus' },
+  { file: '20261112000017_member_bonus_privacy.sql',           desc: 'Device-Verified Bonus Read + Private Notes' },
+  { file: '20261112000018_task_approval_reversal_and_ratings.sql', desc: 'Permission-Safe Task Approval Reversal + Rating RPC' },
+  { file: '20261112000019_member_information_and_ratings.sql', desc: 'Custom Member Information Forms + Admin Ratings' },
+  { file: '20261112000020_member_custom_fields.sql',        desc: 'Dynamic Member Custom Fields (JSONB + Metadata)' },
+  { file: '20261112000021_member_evaluations.sql',          desc: 'Structured Member Evaluations System' },
+  { file: '20261112000022_dynamic_system_ownership.sql',    desc: 'Dynamic System Ownership + Hardened Auth Sessions' },
+  { file: '20261112000023_phantoms_identity_migration.sql', desc: 'Full PHANTOMS Identity Database Migration' },
 ];
 
 // ── قراءة الملفات ──────────────────────────────────────

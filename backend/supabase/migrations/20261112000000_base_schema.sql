@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.members (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     email TEXT UNIQUE NOT NULL,
     full_name TEXT NOT NULL,
+    team TEXT,
     completion_rank INT DEFAULT 0 CHECK (completion_rank >= 0 AND completion_rank <= 100),
     team_notes TEXT,
     residence TEXT,
@@ -83,8 +84,7 @@ CREATE TABLE IF NOT EXISTS public.admin_emails (
 
 INSERT INTO public.admin_emails (email) VALUES
   ('admin@phantoms.com'),
-  ('admin@phantoms.local'),
-  ('admin@example.com')
+  ('admin@phantoms.local')
 ON CONFLICT (email) DO NOTHING;
 
 CREATE OR REPLACE FUNCTION public.is_admin()

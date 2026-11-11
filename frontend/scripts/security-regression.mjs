@@ -66,12 +66,12 @@ test('session_token is never anon-readable', async (t) => {
     assert.ok(cols.includes('email') && cols.includes('full_name'));
   });
   await t.test('migration 0009 grants anon columns without session_token', () => {
-    const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
+    const mig = rootSrc('backend/supabase/migrations/20261112000009_member_device_binding.sql');
     assert.ok(!/GRANT (ALL|SELECT)[^;]*session_token[^;]*ON (TABLE )?public\.members TO [^;]*anon/i.test(mig));
     assert.match(mig, /REVOKE ALL ON public\.members FROM PUBLIC,\s*anon;/);
   });
   await t.test('lookup_member_by_email returns no session_token', () => {
-    const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
+    const mig = rootSrc('backend/supabase/migrations/20261112000009_member_device_binding.sql');
     const block = mig.slice(mig.indexOf('CREATE OR REPLACE FUNCTION public.lookup_member_by_email'));
     const returnsTable = block.slice(0, block.indexOf('LANGUAGE plpgsql'));
     assert.ok(!returnsTable.includes('session_token'), 'RPC return table must not include session_token');
@@ -91,19 +91,19 @@ test('task tracking updates are device-bound server-side', async (t) => {
     assert.ok(!api.includes('.update({ tracking'), 'direct tracking UPDATE must be gone');
   });
   await t.test('migration revokes anon direct UPDATE on tasks', () => {
-    const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
+    const mig = rootSrc('backend/supabase/migrations/20261112000009_member_device_binding.sql');
     assert.match(mig, /REVOKE ALL ON public\.tasks FROM (PUBLIC,\s*)?anon;/);
     assert.ok(!/GRANT UPDATE[^\n]*ON public\.tasks TO anon/.test(mig));
   });
   await t.test('submit_task_status verifies device + assignment + blocks approved', () => {
-    const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
+    const mig = rootSrc('backend/supabase/migrations/20261112000009_member_device_binding.sql');
     assert.match(mig, /assert_member_device\(p_member_id, p_device_token\)/);
     assert.match(mig, /NOT_ASSIGNED/);
     assert.match(mig, /ADMIN_APPROVAL_FORBIDDEN/);
     assert.match(mig, /p_status NOT IN \('pending', 'in_progress', 'under_review', 'revision_requested'\)/);
   });
   await t.test('member A cannot patch member B: only own key is written', () => {
-    const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
+    const mig = rootSrc('backend/supabase/migrations/20261112000009_member_device_binding.sql');
     // Single-key jsonb_set on the caller's own member id — never a client-supplied tracking blob.
     assert.match(mig, /jsonb_set\(v_tracking, ARRAY\[p_member_id::text\]/);
     assert.ok(!mig.includes('p_tracking'), 'RPC must not accept a full tracking blob');
@@ -113,12 +113,12 @@ test('task tracking updates are device-bound server-side', async (t) => {
 // ---------- 3. announcements BOLA ----------
 test('announcement RPCs require device binding', async (t) => {
   await t.test('SQL functions verify device token', () => {
-    const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
+    const mig = rootSrc('backend/supabase/migrations/20261112000009_member_device_binding.sql');
     const count = (mig.match(/PERFORM public\.assert_member_device\(p_member_id, p_device_token\)/g) || []).length;
     assert.ok(count >= 5, `expected >=5 device assertions, found ${count}`);
   });
   await t.test('view tracking RPC is device-bound, details RPC is admin-only', () => {
-    const mig = rootSrc('backend/migrations/0010_announcement_views.sql');
+    const mig = rootSrc('backend/supabase/migrations/20261112000010_announcement_views.sql');
     assert.match(mig, /CREATE OR REPLACE FUNCTION public\.mark_announcement_viewed/);
     assert.match(mig, /PERFORM public\.assert_member_device\(p_member_id, p_device_token\)/);
     assert.match(mig, /ADMIN_ONLY: تفاصيل الإعلان متاحة للإدارة فقط/);
@@ -273,7 +273,7 @@ test('RLS denies by default and scopes admin to is_admin()', async (t) => {
     assert.ok(!/GRANT UPDATE[^\n]*ON public\.tasks TO anon/.test(setup), 'anon direct UPDATE must be gone');
   });
   await t.test('approve_task_submission + stats require is_admin()', () => {
-    const mig = rootSrc('backend/migrations/0009_member_device_binding.sql');
+    const mig = rootSrc('backend/supabase/migrations/20261112000009_member_device_binding.sql');
     assert.match(mig, /ADMIN_ONLY: الاعتماد متاح للحسابات الإدارية فقط/);
     assert.match(mig, /ADMIN_ONLY: إحصاءات الإعلان متاحة للإدارة فقط/);
   });
@@ -313,5 +313,5 @@ test('no privileged secrets in client bundle sources', async (t) => {
 });
 
 test('migration file exists and is registered for review', () => {
-  assert.ok(existsSync(path.join(ROOT, 'backend', 'migrations', '0009_member_device_binding.sql')));
+  assert.ok(existsSync(path.join(ROOT, 'backend', 'supabase', 'migrations', '20261112000009_member_device_binding.sql')));
 });

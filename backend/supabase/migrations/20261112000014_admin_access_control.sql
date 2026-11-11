@@ -21,14 +21,10 @@ INSERT INTO public.admin_accounts (user_id, role)
 SELECT u.id, 'admin'
 FROM public.admin_emails AS old
 JOIN auth.users AS u ON lower(u.email) = lower(trim(old.email))
-WHERE u.id <> '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid
 ON CONFLICT (user_id) DO NOTHING;
 
--- تثبيت مالك النظام بمعرّف Auth، لا بالبريد الذي يمكن تغييره.
-INSERT INTO public.admin_accounts (user_id, role, created_by)
-VALUES ('8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid, 'owner', NULL)
-ON CONFLICT (user_id) DO UPDATE
-SET role = 'owner', created_by = NULL;
+-- ملاحظة: يتم تعيين مالك النظام الأولي عبر إجراء التمهيد الآمن (bootstrap-phantoms-owner)
+-- دون تضمين أي معرّف ثابت داخل كود الـ migrations.
 
 -- is_admin هي بوابة كل سياسات RLS الحالية؛ تعتمد الآن على UUID موثوق.
 CREATE OR REPLACE FUNCTION public.is_admin()
@@ -38,13 +34,12 @@ STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  SELECT coalesce(auth.uid() = '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid, false)
-      OR EXISTS (
-        SELECT 1
-        FROM public.admin_accounts AS a
-        WHERE a.user_id = auth.uid()
-          AND a.role IN ('owner', 'admin')
-      );
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.admin_accounts AS a
+    WHERE a.user_id = auth.uid()
+      AND a.role IN ('owner', 'admin')
+  );
 $$;
 REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
@@ -66,11 +61,7 @@ BEGIN
   END IF;
 
   SELECT u.email INTO v_email FROM auth.users AS u WHERE u.id = v_user_id;
-  IF v_user_id = '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
-    v_role := 'owner';
-  ELSE
-    SELECT a.role INTO v_role FROM public.admin_accounts AS a WHERE a.user_id = v_user_id;
-  END IF;
+  SELECT a.role INTO v_role FROM public.admin_accounts AS a WHERE a.user_id = v_user_id;
 
   RETURN jsonb_build_object(
     'is_admin', coalesce(v_role IN ('owner', 'admin'), false),
@@ -97,7 +88,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  IF auth.uid() IS DISTINCT FROM '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
+  IF NOT EXISTS (SELECT 1 FROM public.admin_accounts WHERE user_id = auth.uid() AND role = 'owner') THEN
     RAISE EXCEPTION 'OWNER_ONLY: إدارة الحسابات متاحة للمالك فقط.';
   END IF;
 
@@ -122,7 +113,7 @@ DECLARE
   v_user_id UUID;
   v_created_at TIMESTAMPTZ;
 BEGIN
-  IF auth.uid() IS DISTINCT FROM '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
+  IF NOT EXISTS (SELECT 1 FROM public.admin_accounts WHERE user_id = auth.uid() AND role = 'owner') THEN
     RAISE EXCEPTION 'OWNER_ONLY: إضافة المشرفين متاحة للمالك فقط.';
   END IF;
   IF v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' THEN
@@ -133,8 +124,7 @@ BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'ADMIN_USER_NOT_FOUND: لازم الحساب يسجل في النظام أولاً قبل إضافته كمشرف.';
   END IF;
-  IF v_user_id = '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid
-     OR EXISTS (SELECT 1 FROM public.admin_accounts AS a WHERE a.user_id = v_user_id) THEN
+  IF EXISTS (SELECT 1 FROM public.admin_accounts AS a WHERE a.user_id = v_user_id) THEN
     RAISE EXCEPTION 'ALREADY_ADMIN: الحساب مضاف للإدارة بالفعل.';
   END IF;
 
@@ -163,10 +153,10 @@ AS $$
 DECLARE
   v_deleted UUID;
 BEGIN
-  IF auth.uid() IS DISTINCT FROM '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
+  IF NOT EXISTS (SELECT 1 FROM public.admin_accounts WHERE user_id = auth.uid() AND role = 'owner') THEN
     RAISE EXCEPTION 'OWNER_ONLY: حذف المشرفين متاح للمالك فقط.';
   END IF;
-  IF p_user_id IS NULL OR p_user_id = '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
+  IF p_user_id IS NULL OR EXISTS (SELECT 1 FROM public.admin_accounts WHERE user_id = p_user_id AND role = 'owner') THEN
     RAISE EXCEPTION 'OWNER_IMMUTABLE: مينفعش حذف مالك النظام.';
   END IF;
 
