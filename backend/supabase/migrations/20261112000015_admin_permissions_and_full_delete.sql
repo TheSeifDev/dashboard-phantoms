@@ -30,14 +30,15 @@ SET search_path = ''
 AS $$
   SELECT CASE
     WHEN p_permission = ANY (ARRAY['dashboard', 'members', 'tasks', 'ranking', 'notes', 'announcements', 'whatsapp', 'ai_assistant'])
-    THEN coalesce(auth.uid() = '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid, false)
-      OR EXISTS (
-        SELECT 1
-        FROM public.admin_accounts AS a
-        WHERE a.user_id = auth.uid()
-          AND a.role = 'admin'
-          AND a.permissions @> jsonb_build_object(p_permission, true)
-      )
+    THEN EXISTS (
+      SELECT 1
+      FROM public.admin_accounts AS a
+      WHERE a.user_id = auth.uid()
+        AND (
+          a.role = 'owner'
+          OR (a.role = 'admin' AND a.permissions @> jsonb_build_object(p_permission, true))
+        )
+    )
     ELSE false
   END;
 $$;
@@ -63,12 +64,10 @@ BEGIN
   END IF;
 
   SELECT u.email INTO v_email FROM auth.users AS u WHERE u.id = v_user_id;
-  IF v_user_id = '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
-    v_role := 'owner';
+  SELECT a.role, a.permissions INTO v_role, v_permissions
+  FROM public.admin_accounts AS a WHERE a.user_id = v_user_id;
+  IF v_role = 'owner' THEN
     v_permissions := v_all_permissions;
-  ELSE
-    SELECT a.role, a.permissions INTO v_role, v_permissions
-    FROM public.admin_accounts AS a WHERE a.user_id = v_user_id;
   END IF;
 
   RETURN jsonb_build_object(
@@ -99,7 +98,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  IF auth.uid() IS DISTINCT FROM '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
+  IF NOT EXISTS (SELECT 1 FROM public.admin_accounts WHERE user_id = auth.uid() AND role = 'owner') THEN
     RAISE EXCEPTION 'OWNER_ONLY: إدارة الحسابات متاحة للمالك فقط.';
   END IF;
 
@@ -125,7 +124,7 @@ DECLARE
   v_created_at TIMESTAMPTZ;
   v_permissions CONSTANT JSONB := '{"dashboard":true,"members":true,"tasks":true,"ranking":true,"notes":true,"announcements":true,"whatsapp":true,"ai_assistant":true}'::jsonb;
 BEGIN
-  IF auth.uid() IS DISTINCT FROM '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
+  IF NOT EXISTS (SELECT 1 FROM public.admin_accounts WHERE user_id = auth.uid() AND role = 'owner') THEN
     RAISE EXCEPTION 'OWNER_ONLY: إضافة المشرفين متاحة للمالك فقط.';
   END IF;
   IF v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' THEN
@@ -136,8 +135,7 @@ BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'ADMIN_USER_NOT_FOUND: لازم الحساب يسجل في النظام أولاً قبل إضافته كمشرف.';
   END IF;
-  IF v_user_id = '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid
-     OR EXISTS (SELECT 1 FROM public.admin_accounts AS a WHERE a.user_id = v_user_id) THEN
+  IF EXISTS (SELECT 1 FROM public.admin_accounts AS a WHERE a.user_id = v_user_id) THEN
     RAISE EXCEPTION 'ALREADY_ADMIN: الحساب مضاف للإدارة بالفعل.';
   END IF;
 
@@ -168,10 +166,10 @@ DECLARE
   v_changed UUID;
   v_keys CONSTANT TEXT[] := ARRAY['dashboard', 'members', 'tasks', 'ranking', 'notes', 'announcements', 'whatsapp', 'ai_assistant'];
 BEGIN
-  IF auth.uid() IS DISTINCT FROM '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
+  IF NOT EXISTS (SELECT 1 FROM public.admin_accounts WHERE user_id = auth.uid() AND role = 'owner') THEN
     RAISE EXCEPTION 'OWNER_ONLY: تعديل الصلاحيات متاح للمالك فقط.';
   END IF;
-  IF p_user_id IS NULL OR p_user_id = '8ce17aae-84c1-4c89-a020-8b683a0dbabb'::uuid THEN
+  IF p_user_id IS NULL OR EXISTS (SELECT 1 FROM public.admin_accounts WHERE user_id = p_user_id AND role = 'owner') THEN
     RAISE EXCEPTION 'OWNER_IMMUTABLE: صلاحيات مالك النظام ثابتة.';
   END IF;
   IF p_permissions IS NULL

@@ -37,6 +37,15 @@ UPDATE public.members
 SET session_token = NULL
 WHERE session_token IS NOT NULL;
 
+-- The legacy session_token is never a readable client column, including for
+-- authenticated admins. Device access is provided only through the hashed
+-- member_device_sessions RPCs below.
+REVOKE SELECT ON public.members FROM PUBLIC, anon, authenticated;
+GRANT SELECT (
+  id, created_at, email, full_name, bio, device, meeting_attendance,
+  work_status, completion_rank, can_go_alexandria
+) ON public.members TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.assert_member_device(p_member_id BIGINT, p_device_token TEXT)
 RETURNS VOID
 LANGUAGE plpgsql

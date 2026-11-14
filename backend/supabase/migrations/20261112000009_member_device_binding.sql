@@ -192,15 +192,15 @@ BEGIN
 
   IF v_role = 'authenticated' THEN
     BEGIN
-      SELECT public.is_admin() INTO v_is_admin;
+      SELECT public.is_admin() AND public.has_admin_permission('tasks') INTO v_is_admin;
     EXCEPTION WHEN undefined_function OR undefined_table THEN
       v_is_admin := true;
     END;
-    IF NOT coalesce(v_is_admin, false) THEN
-      RAISE EXCEPTION 'ADMIN_ONLY: هذا الإجراء متاح للإدارة فقط.';
-    END IF;
-  ELSE
-    -- بوابة الأعضاء: إثبات ملكية السجل عبر رمز الجهاز.
+  END IF;
+
+  IF NOT coalesce(v_is_admin, false) THEN
+    -- OTP members and admins without the tasks permission must prove device
+    -- ownership; only a task-authorized admin gets the bypass.
     PERFORM public.assert_member_device(p_member_id, p_device_token);
   END IF;
 

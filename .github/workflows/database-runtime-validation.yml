@@ -1,0 +1,51 @@
+name: Database Runtime Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/supabase/**'
+      - 'backend/scripts/bootstrap-phantoms-owner.mjs'
+      - 'frontend/scripts/run-migrations.mjs'
+      - '.github/workflows/database-runtime-validation.yml'
+  push:
+    branches: [main, 'fix/**']
+    paths:
+      - 'backend/supabase/**'
+      - 'backend/scripts/bootstrap-phantoms-owner.mjs'
+      - 'frontend/scripts/run-migrations.mjs'
+      - '.github/workflows/database-runtime-validation.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: database-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  disposable-supabase:
+    name: Fresh Supabase migrations + pgTAP
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate migration inventory
+        run: node frontend/scripts/run-migrations.mjs --check
+
+      - name: Start disposable local Supabase database
+        run: |
+          supabase start --workdir backend \
+            -x studio,imgproxy,mailpit,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta,storage-api
+
+      - name: Apply migrations and run pgTAP suite
+        run: supabase test db --workdir backend
+
+      - name: Stop disposable stack
+        if: always()
+        run: supabase stop --workdir backend --no-backup

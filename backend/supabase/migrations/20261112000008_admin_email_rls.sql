@@ -16,12 +16,8 @@ CREATE TABLE IF NOT EXISTS public.admin_emails (
   email TEXT PRIMARY KEY
 );
 
--- 2) بذار آمن (توافق مع قيم افتراضية موجودة في المشروع)
-INSERT INTO public.admin_emails (email) VALUES
-  ('admin@phantoms.com'),
-  ('admin@phantoms.local'),
-  ('admin@example.com')
-ON CONFLICT (email) DO NOTHING;
+-- 2) لا تُزرع هويات إدارية افتراضية هنا.
+-- The compatibility table remains empty; Owner bootstrap is Auth-backed.
 
 -- 3) دالة فحص
 CREATE OR REPLACE FUNCTION public.is_admin()

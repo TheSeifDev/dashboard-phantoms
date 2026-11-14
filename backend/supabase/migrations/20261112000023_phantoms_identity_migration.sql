@@ -59,20 +59,21 @@ BEGIN
     RAISE EXCEPTION 'MEMBER_NOT_FOUND: العضو غير موجود.';
   END IF;
 
-  v_reason := pg_catalog.regexp_replace(v_reason, '\[\[\s*BONUS\s*:[^\]]*\]\]', '', 'gi');
-  v_reason := pg_catalog.btrim(v_reason);
+  -- Strip any caller-supplied bonus tag before adding the authoritative one.
+  v_reason := pg_catalog.btrim(
+    pg_catalog.regexp_replace(v_reason, '\[B:[+-]?[0-9]{1,9}\]', '', 'gi')
+  );
+  IF pg_catalog.char_length(v_reason) < 1 OR pg_catalog.char_length(v_reason) > 1000
+     OR pg_catalog.char_length(v_author) > 100 THEN
+    RAISE EXCEPTION 'RATING_REASON_REQUIRED: اكتب سبباً صحيحاً للتقييم.';
+  END IF;
 
   IF p_points > 0 THEN
-    v_text := 'تقييم إداري: +' || p_points::TEXT || ' نقطة' ||
-              CASE WHEN v_reason <> '' THEN ' — ' || v_reason ELSE '' END ||
-              ' [[BONUS:+' || p_points::TEXT || ']]';
+    v_text := v_reason || ' [B:+' || p_points::TEXT || ']';
   ELSIF p_points < 0 THEN
-    v_text := 'تقييم إداري: ' || p_points::TEXT || ' نقطة' ||
-              CASE WHEN v_reason <> '' THEN ' — ' || v_reason ELSE '' END ||
-              ' [[BONUS:' || p_points::TEXT || ']]';
+    v_text := v_reason || ' [B:' || p_points::TEXT || ']';
   ELSE
-    v_text := 'تقييم إداري: 0 نقطة' ||
-              CASE WHEN v_reason <> '' THEN ' — ' || v_reason ELSE '' END;
+    v_text := v_reason;
   END IF;
 
   INSERT INTO public.notes (
@@ -85,7 +86,7 @@ BEGIN
   ) VALUES (
     v_text,
     v_author,
-    'إدارة PHANTOMS',
+    'Admin',
     pg_catalog.to_char(timezone('Africa/Cairo'::text, now()), 'YYYY-MM-DD"T"HH24:MI:SS'),
     p_member_id,
     v_name
@@ -176,19 +177,7 @@ $$;
 REVOKE ALL ON FUNCTION public.set_member_bonus_infinite(BIGINT, BOOLEAN, TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.set_member_bonus_infinite(BIGINT, BOOLEAN, TEXT) TO authenticated;
 
--- 5) إضافة بريد PHANTOMS إلى جدول admin_emails إن وُجد
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'admin_emails'
-  ) THEN
-    INSERT INTO public.admin_emails (email) VALUES
-      ('admin@phantoms.com'),
-      ('admin@phantoms.local')
-    ON CONFLICT (email) DO NOTHING;
-  END IF;
-END $$;
+-- 5) No administrator email is seeded during identity migration.
+-- The legacy compatibility table, when present, remains empty.
 
 COMMIT;
-

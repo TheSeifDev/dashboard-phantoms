@@ -8,6 +8,10 @@
 -- ========================================================
 
 -- 1) دالة دخول العضو بدون عمود team -----------------------
+-- PostgreSQL cannot change a function's OUT/table return type with
+-- CREATE OR REPLACE. Migration 0003 returned `team`, so remove that exact
+-- signature before recreating the post-team version.
+DROP FUNCTION IF EXISTS public.lookup_member_by_email(text);
 CREATE OR REPLACE FUNCTION public.lookup_member_by_email(p_email text)
 RETURNS TABLE (
     id BIGINT,

@@ -1,0 +1,190 @@
+-- ============================================================================
+-- PHANTOMS pgTAP shared helpers (included by every *.test.sql via \ir).
+--
+-- Everything here is created INSIDE the caller's transaction, which always
+-- ends with ROLLBACK. Nothing persists, and nothing here may ever run against
+-- a remote/production database (`supabase test db` defaults to local; never
+-- pass --remote for this suite).
+--
+-- Identity simulation mirrors what PostgREST does per request:
+--   SET LOCAL role <anon|authenticated>;
+--   request.jwt.claims = {"sub": <uuid>, "email": <email>, "role": ...}
+-- auth.uid() / auth.jwt() read those settings.
+-- Always `RESET ROLE;` before switching identities or writing fixtures.
+-- ============================================================================
+
+CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
+
+CREATE SCHEMA phantoms_test;
+GRANT USAGE ON SCHEMA phantoms_test TO anon, authenticated;
+
+-- Disposable Auth users (never real accounts; domain is reserved by RFC 2606).
+CREATE TABLE phantoms_test.users (
+  name  TEXT PRIMARY KEY,
+  id    UUID NOT NULL,
+  email TEXT NOT NULL
+);
+GRANT SELECT ON phantoms_test.users TO anon, authenticated;
+
+-- Disposable members.
+CREATE TABLE phantoms_test.members (
+  name  TEXT PRIMARY KEY,
+  id    BIGINT NOT NULL,
+  email TEXT NOT NULL,
+  token TEXT NOT NULL
+);
+GRANT SELECT ON phantoms_test.members TO anon, authenticated;
+
+-- Scratch values captured during a test (e.g. returned ids).
+CREATE TABLE phantoms_test.vars (
+  key   TEXT PRIMARY KEY,
+  value TEXT
+);
+GRANT SELECT, INSERT, UPDATE ON phantoms_test.vars TO anon, authenticated;
+
+CREATE FUNCTION phantoms_test.create_user(p_name TEXT, p_confirmed BOOLEAN DEFAULT true)
+RETURNS UUID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_id UUID := extensions.gen_random_uuid();
+  v_email TEXT := pg_catalog.lower(p_name) || '@phantoms-test.example';
+BEGIN
+  INSERT INTO auth.users (id, instance_id, aud, role, email, email_confirmed_at,
+                          raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  VALUES (v_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+          v_email, CASE WHEN p_confirmed THEN now() END,
+          '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now());
+  INSERT INTO phantoms_test.users (name, id, email) VALUES (p_name, v_id, v_email);
+  RETURN v_id;
+END;
+$$;
+
+CREATE FUNCTION phantoms_test.uid(p_name TEXT)
+RETURNS UUID LANGUAGE sql STABLE
+AS $$ SELECT id FROM phantoms_test.users WHERE name = p_name $$;
+
+CREATE FUNCTION phantoms_test.create_member(p_name TEXT, p_email TEXT DEFAULT NULL)
+RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_id BIGINT;
+  v_email TEXT := COALESCE(p_email, pg_catalog.lower(p_name) || '@phantoms-test.example');
+BEGIN
+  INSERT INTO public.members (email, full_name, completion_rank)
+  VALUES (v_email, 'Test ' || p_name, 0)
+  RETURNING id INTO v_id;
+  INSERT INTO phantoms_test.members (name, id, email, token)
+  VALUES (p_name, v_id, v_email, 'device-token-' || pg_catalog.lower(p_name) || '-0123456789abcdef');
+  RETURN v_id;
+END;
+$$;
+
+CREATE FUNCTION phantoms_test.mid(p_name TEXT)
+RETURNS BIGINT LANGUAGE sql STABLE
+AS $$ SELECT id FROM phantoms_test.members WHERE name = p_name $$;
+
+CREATE FUNCTION phantoms_test.tok(p_name TEXT)
+RETURNS TEXT LANGUAGE sql STABLE
+AS $$ SELECT token FROM phantoms_test.members WHERE name = p_name $$;
+
+CREATE FUNCTION phantoms_test.var(p_key TEXT)
+RETURNS TEXT LANGUAGE sql STABLE
+AS $$ SELECT value FROM phantoms_test.vars WHERE key = p_key $$;
+
+-- Directly bind a device session (fixture shortcut, run as postgres).
+CREATE FUNCTION phantoms_test.bind_device(p_name TEXT)
+RETURNS VOID
+LANGUAGE sql
+AS $$
+  INSERT INTO public.member_device_sessions (member_id, token_hash)
+  SELECT m.id,
+         pg_catalog.encode(extensions.digest(pg_catalog.convert_to(m.token, 'UTF8'), 'sha256'), 'hex')
+  FROM phantoms_test.members AS m WHERE m.name = p_name
+  ON CONFLICT DO NOTHING;
+$$;
+
+CREATE FUNCTION phantoms_test.grant_admin(p_user TEXT, p_role TEXT, p_permissions JSONB DEFAULT NULL)
+RETURNS VOID
+LANGUAGE sql
+AS $$
+  INSERT INTO public.admin_accounts (user_id, role, permissions)
+  VALUES (phantoms_test.uid(p_user), p_role,
+          COALESCE(p_permissions,
+            '{"dashboard":true,"members":true,"tasks":true,"ranking":true,"notes":true,"announcements":true,"whatsapp":true,"ai_assistant":true}'::jsonb));
+$$;
+
+-- Build an 8-key permissions object with only the listed keys enabled.
+CREATE FUNCTION phantoms_test.perms(VARIADIC p_enabled TEXT[])
+RETURNS JSONB LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT jsonb_object_agg(k, k = ANY (p_enabled))
+  FROM unnest(ARRAY['dashboard','members','tasks','ranking','notes','announcements','whatsapp','ai_assistant']) AS k
+$$;
+
+-- All eight keys present and false.
+CREATE FUNCTION phantoms_test.perms()
+RETURNS JSONB LANGUAGE sql IMMUTABLE
+AS $$ SELECT phantoms_test.perms(VARIADIC ARRAY[]::TEXT[]) $$;
+
+-- Switch the session to an authenticated Auth user (call after RESET ROLE).
+CREATE FUNCTION phantoms_test.login_as(p_name TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_id UUID;
+  v_email TEXT;
+BEGIN
+  SELECT id, email INTO v_id, v_email FROM phantoms_test.users WHERE name = p_name;
+  IF v_id IS NULL THEN RAISE EXCEPTION 'unknown test user %', p_name; END IF;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_id, 'email', v_email, 'role', 'authenticated', 'aud', 'authenticated')::text, true);
+  PERFORM set_config('request.jwt.claim.sub', v_id::text, true);
+  PERFORM set_config('request.jwt.claim.email', v_email, true);
+  PERFORM set_config('role', 'authenticated', true);
+END;
+$$;
+
+-- Switch the session to the anonymous PostgREST role (call after RESET ROLE).
+CREATE FUNCTION phantoms_test.login_anon()
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claim.email', '', true);
+  PERFORM set_config('role', 'anon', true);
+END;
+$$;
+
+-- Clear request JWT claims (call after RESET ROLE before writing fixtures).
+CREATE FUNCTION phantoms_test.clear_auth()
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  PERFORM set_config('request.jwt.claims', '', true);
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claim.email', '', true);
+END;
+$$;
+
+-- Run a DML statement as the CURRENT role (SECURITY INVOKER) and return the
+-- number of rows it affected. Used to prove RLS silently filters writes.
+CREATE FUNCTION phantoms_test.affected(p_sql TEXT)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_count INT;
+BEGIN
+  EXECUTE p_sql;
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END;
+$$;
+
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA phantoms_test TO anon, authenticated;

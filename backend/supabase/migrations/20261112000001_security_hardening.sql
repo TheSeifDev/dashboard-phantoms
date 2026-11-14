@@ -25,41 +25,15 @@ DROP POLICY IF EXISTS "Anon read members by email" ON public.members;
 DROP POLICY IF EXISTS "Anon update task tracking"   ON public.tasks;
 DROP POLICY IF EXISTS "Anon read notes"            ON public.notes;
 
--- 1) السياسات الجديدة ------------------------------------------
-
--- الإدارة: صلاحيات كاملة
-CREATE POLICY "Admins full access to members"
-ON public.members FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "Admins full access to notes"
-ON public.notes FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "Admins full access to tasks"
-ON public.tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
--- بوابة الأعضاء: قراءة فقط + تحديث tracking فقط
-CREATE POLICY "Anon members login lookup"
-ON public.members FOR SELECT TO anon USING (true);
-
-CREATE POLICY "Anon read tasks"
-ON public.tasks FOR SELECT TO anon USING (true);
-
-CREATE POLICY "Anon update own task tracking"
-ON public.tasks FOR UPDATE TO anon USING (true) WITH CHECK (true);
-
-CREATE POLICY "Anon read notes"
-ON public.notes FOR SELECT TO anon USING (true);
+-- 1) سياسات بوابة الأعضاء -------------------------------------
+-- The canonical portal uses SECURITY DEFINER RPCs. Do not create direct
+-- anonymous table policies here: they would expose broad rows or writes and
+-- would be superseded by the device-bound RPC model later in the chain.
 
 -- 2) تقييد الأعمدة (الحزام الثاني بعد RLS) --------------------
 
 REVOKE ALL ON public.members, public.tasks, public.notes FROM anon;
 
-GRANT SELECT (id, created_at, email, full_name, team, bio, device, meeting_attendance, work_status, completion_rank, can_go_alexandria)
-    ON public.members TO anon;
-
-GRANT SELECT ON public.tasks TO anon;
-GRANT UPDATE (tracking) ON public.tasks TO anon;
-GRANT SELECT ON public.notes TO anon;
 
 -- 3) منع الاعتماد الذاتي (Trigger) ------------------------------
 
