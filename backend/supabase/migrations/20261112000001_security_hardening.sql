@@ -25,19 +25,13 @@ DROP POLICY IF EXISTS "Anon read members by email" ON public.members;
 DROP POLICY IF EXISTS "Anon update task tracking"   ON public.tasks;
 DROP POLICY IF EXISTS "Anon read notes"            ON public.notes;
 
--- 1) السياسات الجديدة ------------------------------------------
-
--- الإدارة: صلاحيات كاملة
-CREATE POLICY "Admins full access to members"
-ON public.members FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "Admins full access to notes"
-ON public.notes FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
-CREATE POLICY "Admins full access to tasks"
-ON public.tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
-
--- بوابة الأعضاء: قراءة فقط + تحديث tracking فقط
+-- 1) سياسات بوابة الأعضاء -------------------------------------
+-- The canonical baseline (0000) already creates the authenticated admin
+-- policies using public.is_admin(). Do not recreate those policies here with
+-- USING/WITH CHECK (true): that both duplicates policy names and would weaken
+-- authorization. This migration only carries forward the historical anon
+-- hardening transition; later migrations replace these policies with the
+-- device-bound RPC model.
 CREATE POLICY "Anon members login lookup"
 ON public.members FOR SELECT TO anon USING (true);
 

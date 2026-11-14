@@ -7,7 +7,7 @@
 --   - public.tasks: المهام والتكليفات والتتبع
 --   - public.notes: الملاحظات الإدارية وتقييمات الأداء
 --   - public.whatsapp_settings: إعدادات خدمة واتساب
---   - public.admin_emails: قائمة البريد المعتمد الأولية
+--   - public.admin_emails: legacy compatibility table, intentionally empty
 -- ========================================================
 
 -- 0) الجداول ------------------------------------------------
@@ -82,10 +82,8 @@ CREATE TABLE IF NOT EXISTS public.admin_emails (
   email TEXT PRIMARY KEY
 );
 
-INSERT INTO public.admin_emails (email) VALUES
-  ('admin@phantoms.com'),
-  ('admin@phantoms.local')
-ON CONFLICT (email) DO NOTHING;
+-- No administrator identity is seeded in migrations. The Owner is provisioned
+-- only by the project-pinned bootstrap procedure after Auth verification.
 
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
@@ -205,4 +203,3 @@ REVOKE ALL ON FUNCTION public.set_groq_key(text) FROM PUBLIC, anon, authenticate
 REVOKE ALL ON FUNCTION public.get_groq_key_from_vault() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.set_groq_key(text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.get_groq_key_from_vault() TO service_role;
-

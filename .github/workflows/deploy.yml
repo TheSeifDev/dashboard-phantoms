@@ -150,6 +150,7 @@ jobs:
 
       - name: Deploy to Vercel (Preview)
         id: deploy
+        working-directory: .
         run: |
           set -euo pipefail
 
@@ -247,6 +248,7 @@ jobs:
 
       - name: Deploy to Vercel (Production)
         id: deploy
+        working-directory: .
         run: |
           set -euo pipefail
 

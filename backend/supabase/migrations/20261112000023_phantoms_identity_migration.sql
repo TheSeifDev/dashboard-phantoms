@@ -176,19 +176,7 @@ $$;
 REVOKE ALL ON FUNCTION public.set_member_bonus_infinite(BIGINT, BOOLEAN, TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.set_member_bonus_infinite(BIGINT, BOOLEAN, TEXT) TO authenticated;
 
--- 5) إضافة بريد PHANTOMS إلى جدول admin_emails إن وُجد
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'admin_emails'
-  ) THEN
-    INSERT INTO public.admin_emails (email) VALUES
-      ('admin@phantoms.com'),
-      ('admin@phantoms.local')
-    ON CONFLICT (email) DO NOTHING;
-  END IF;
-END $$;
+-- 5) No administrator email is seeded during identity migration.
+-- The legacy compatibility table, when present, remains empty.
 
 COMMIT;
-
