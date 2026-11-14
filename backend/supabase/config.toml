@@ -67,10 +67,16 @@ schema_paths = []
 
 [db.seed]
 # If enabled, seeds the database after migrations during a db reset.
-enabled = true
+# [DB-REPAIR P1] Disabled: PHANTOMS ships no seed data. The previous value
+# referenced ./seed.sql which does not exist. Runtime tests create their own
+# disposable fixtures inside a rolled-back transaction
+# (backend/supabase/tests/), and the initial Owner is provisioned only through
+# backend/scripts/bootstrap-phantoms-owner.mjs. Never add real or fake
+# production accounts here.
+enabled = false
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+sql_paths = []
 
 [db.network_restrictions]
 # Enable management of network restrictions.
