@@ -162,6 +162,7 @@ AS $$
 DECLARE
   v_role text := current_setting('role', true);
   v_is_admin boolean := false;
+  v_is_authenticated_member boolean := false;
   v_tracking JSONB;
   v_assigned JSONB;
   v_entry JSONB;
@@ -197,7 +198,19 @@ BEGIN
       v_is_admin := true;
     END;
     IF NOT coalesce(v_is_admin, false) THEN
-      RAISE EXCEPTION 'ADMIN_ONLY: هذا الإجراء متاح للإدارة فقط.';
+      -- A verified OTP session may submit for its own member record. Admins
+      -- bypass the device check below; all other authenticated identities are
+      -- rejected before any task data is read.
+      SELECT EXISTS (
+        SELECT 1
+        FROM public.members AS m
+        JOIN auth.users AS u ON lower(u.email) = lower(m.email)
+        WHERE m.id = p_member_id
+          AND u.id = auth.uid()
+      ) INTO v_is_authenticated_member;
+      IF NOT v_is_authenticated_member THEN
+        RAISE EXCEPTION 'ADMIN_ONLY: هذا الإجراء متاح للإدارة فقط.';
+      END IF;
     END IF;
   ELSE
     -- بوابة الأعضاء: إثبات ملكية السجل عبر رمز الجهاز.

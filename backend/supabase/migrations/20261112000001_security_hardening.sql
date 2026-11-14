@@ -26,34 +26,14 @@ DROP POLICY IF EXISTS "Anon update task tracking"   ON public.tasks;
 DROP POLICY IF EXISTS "Anon read notes"            ON public.notes;
 
 -- 1) سياسات بوابة الأعضاء -------------------------------------
--- The canonical baseline (0000) already creates the authenticated admin
--- policies using public.is_admin(). Do not recreate those policies here with
--- USING/WITH CHECK (true): that both duplicates policy names and would weaken
--- authorization. This migration only carries forward the historical anon
--- hardening transition; later migrations replace these policies with the
--- device-bound RPC model.
-CREATE POLICY "Anon members login lookup"
-ON public.members FOR SELECT TO anon USING (true);
-
-CREATE POLICY "Anon read tasks"
-ON public.tasks FOR SELECT TO anon USING (true);
-
-CREATE POLICY "Anon update own task tracking"
-ON public.tasks FOR UPDATE TO anon USING (true) WITH CHECK (true);
-
-CREATE POLICY "Anon read notes"
-ON public.notes FOR SELECT TO anon USING (true);
+-- The canonical portal uses SECURITY DEFINER RPCs. Do not create direct
+-- anonymous table policies here: they would expose broad rows or writes and
+-- would be superseded by the device-bound RPC model later in the chain.
 
 -- 2) تقييد الأعمدة (الحزام الثاني بعد RLS) --------------------
 
 REVOKE ALL ON public.members, public.tasks, public.notes FROM anon;
 
-GRANT SELECT (id, created_at, email, full_name, team, bio, device, meeting_attendance, work_status, completion_rank, can_go_alexandria)
-    ON public.members TO anon;
-
-GRANT SELECT ON public.tasks TO anon;
-GRANT UPDATE (tracking) ON public.tasks TO anon;
-GRANT SELECT ON public.notes TO anon;
 
 -- 3) منع الاعتماد الذاتي (Trigger) ------------------------------
 

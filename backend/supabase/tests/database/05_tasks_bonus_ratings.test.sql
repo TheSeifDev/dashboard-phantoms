@@ -4,7 +4,7 @@
 BEGIN;
 \ir _helpers.psql
 
-SELECT plan(40);
+SELECT plan(42);
 
 -- Fixtures (as postgres) ------------------------------------------------------
 DO $$

@@ -80,31 +80,23 @@ REVOKE ALL ON public.members FROM anon;
 -- ----------------------------------------------------------
 -- 2.5) سياسات بوابة الأعضاء (tasks/notes) + إصلاح سياسة الإدارة
 -- ----------------------------------------------------------
+-- The baseline already owns the restricted `Admins full access to tasks`
+-- policy. The member portal uses SECURITY DEFINER RPCs, so no direct anon
+-- policies are created in the canonical chain.
 DROP POLICY IF EXISTS "Full access to tasks for authenticated users" ON public.tasks;
 DROP POLICY IF EXISTS "Admins full access to tasks" ON public.tasks;
-CREATE POLICY "Admins full access to tasks"
-ON public.tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Anon read tasks" ON public.tasks;
-CREATE POLICY "Anon read tasks"
-ON public.tasks FOR SELECT TO anon USING (true);
 
 DROP POLICY IF EXISTS "Anon update task tracking" ON public.tasks;
 DROP POLICY IF EXISTS "Anon update own task tracking" ON public.tasks;
-CREATE POLICY "Anon update own task tracking"
-ON public.tasks FOR UPDATE TO anon USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Anon read notes" ON public.notes;
-CREATE POLICY "Anon read notes"
-ON public.notes FOR SELECT TO anon USING (true);
 
 -- ----------------------------------------------------------
 -- 2.6) صلاحيات الأعمدة (الحزام الثاني بعد RLS)
 -- ----------------------------------------------------------
 REVOKE ALL ON public.tasks, public.notes FROM anon;
-GRANT SELECT ON public.tasks TO anon;
-GRANT UPDATE (tracking) ON public.tasks TO anon;
-GRANT SELECT ON public.notes TO anon;
 
 -- ----------------------------------------------------------
 -- 2.7) Trigger: منع الاعتماد الذاتي للعضو على مستوى القاعدة

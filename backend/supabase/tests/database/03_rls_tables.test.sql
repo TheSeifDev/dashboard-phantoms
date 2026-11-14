@@ -54,7 +54,7 @@ SELECT throws_ok($$INSERT INTO public.members (email, full_name) VALUES ('evil@p
   '42501', NULL, 'outsider INSERT into members violates RLS');
 SELECT throws_ok($$INSERT INTO public.notes (text, target_member_id) VALUES ('[B:+50]', phantoms_test.mid('alice'))$$,
   '42501', NULL, 'outsider cannot forge bonus notes');
-SELECT is((WITH u AS (UPDATE public.members SET completion_rank = 100 RETURNING 1) SELECT count(*)::int FROM u), 0,
+SELECT is(phantoms_test.affected('UPDATE public.members SET completion_rank = 100'), 0,
   'outsider UPDATE on members affects no rows');
 SELECT throws_ok($$SELECT 1 FROM public.member_device_sessions LIMIT 1$$, '42501', NULL, 'outsider cannot read device sessions');
 SELECT throws_ok($$SELECT 1 FROM public.whatsapp_settings LIMIT 1$$, '42501', NULL, 'outsider cannot read whatsapp_settings');
@@ -73,9 +73,9 @@ SELECT is((SELECT count(*)::int FROM public.tasks), 1, 'tasks admin reads tasks'
 SELECT is((SELECT count(*)::int FROM public.members), 2, 'tasks admin reads members (needed for assignment)');
 SELECT is((SELECT count(*)::int FROM public.notes), 0, 'tasks admin cannot read notes');
 SELECT is((SELECT count(*)::int FROM public.announcements), 0, 'tasks admin cannot read announcements');
-SELECT is((WITH u AS (UPDATE public.tasks SET description = 'edited' RETURNING 1) SELECT count(*)::int FROM u), 1,
+SELECT is(phantoms_test.affected($sql$UPDATE public.tasks SET description = 'edited'$sql$), 1,
   'tasks admin can update tasks');
-SELECT is((WITH u AS (UPDATE public.members SET bio = 'edited' RETURNING 1) SELECT count(*)::int FROM u), 0,
+SELECT is(phantoms_test.affected($sql$UPDATE public.members SET bio = 'edited'$sql$), 0,
   'tasks admin cannot update members');
 SELECT throws_ok($$INSERT INTO public.members (email, full_name) VALUES ('t@phantoms-test.example', 'T')$$,
   '42501', NULL, 'tasks admin cannot insert members');
