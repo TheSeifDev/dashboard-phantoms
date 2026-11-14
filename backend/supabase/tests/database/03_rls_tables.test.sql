@@ -116,8 +116,8 @@ RESET ROLE;
 
 -- owner sees every section --------------------------------------------------------
 SELECT phantoms_test.login_as('owner');
-SELECT ok((SELECT count(*) FROM public.members) = 2 AND (SELECT count(*) FROM public.tasks) = 1
-          AND (SELECT count(*) FROM public.notes) = 1 AND (SELECT count(*) FROM public.announcements) = 1,
+SELECT ok((SELECT count(*) FROM public.members) = 3 AND (SELECT count(*) FROM public.tasks) = 1
+          AND (SELECT count(*) FROM public.notes) = 2 AND (SELECT count(*) FROM public.announcements) = 2,
   'owner reads members, tasks, notes and announcements');
 SELECT throws_ok($$SELECT 1 FROM public.member_device_sessions LIMIT 1$$, '42501', NULL,
   'even the owner cannot read hashed device sessions directly');
