@@ -71,7 +71,7 @@ if (!SUPABASE_ANON || SUPABASE_ANON.includes('placeholder')) {
 }
 
 if (!VAPID_PUBLIC) {
-  fail('VITE_VAPID_PUBLIC_KEY', 'مفقود — الإشعارات لن تعمل', 'شغّل: npx web-push generate-vapid-keys');
+  warn('VITE_VAPID_PUBLIC_KEY', 'غير مضبوط — إشعارات Push مؤجلة وليست شرطاً لتهيئة قاعدة البيانات');
 } else if (VAPID_PUBLIC.length < 80) {
   warn('VITE_VAPID_PUBLIC_KEY', 'قصير جداً — قد يكون خاطئاً');
 } else {
@@ -123,6 +123,8 @@ if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
     });
     if (tasksRes.ok) {
       pass('جدول tasks موجود');
+    } else if (tasksRes.status === 401 || tasksRes.status === 403) {
+      pass('جدول tasks محمي', 'الوصول المباشر لـ anon مرفوض كما هو مطلوب');
     } else {
       fail('جدول tasks', tasksRes.statusText);
     }
@@ -135,10 +137,10 @@ if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
     const annRes = await fetch(`${SUPABASE_URL}/rest/v1/announcements?select=count&limit=1`, {
       headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` },
     });
-    if (annRes.ok || annRes.status === 401) {
+    if (annRes.ok || annRes.status === 401 || annRes.status === 403) {
       pass('جدول announcements موجود', 'RLS يحجب anon — متوقع ✓');
     } else if (annRes.status === 404) {
-      fail('جدول announcements', 'غير موجود', 'شغّل: backend/migrations/0005_announcements_system.sql');
+      fail('جدول announcements', 'غير موجود', 'راجع: backend/supabase/migrations/20261112000005_announcements_system.sql');
     } else {
       warn('جدول announcements', annRes.statusText);
     }
@@ -149,7 +151,9 @@ if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
 
 // ── 3. فحص Edge Functions ───────────────────────────────
 section('Edge Functions');
-const FUNCTIONS = ['push-notify', 'phantoms-ai', 'whatsapp-tasks', 'admin-invite', 'admin-delete-account'];
+const FUNCTIONS = ['admin-invite', 'admin-delete-account'];
+if (VAPID_PUBLIC) FUNCTIONS.push('push-notify');
+warn('الخدمات الاختيارية', 'WhatsApp معطل وAI مؤجل؛ لا يتم استدعاؤهما أثناء فحص الصحة');
 if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
   for (const fn of FUNCTIONS) {
     try {
@@ -226,17 +230,17 @@ const requiredFiles = [
   ['frontend/public/icons/icon-192.png', 'أيقونة الإشعارات'],
   ['frontend/public/icons/icon-512.png', 'أيقونة التثبيت'],
   ['frontend/src/sw.ts', 'Service Worker'],
-  ['backend/migrations/0005_announcements_system.sql', 'نظام الإعلانات'],
+  ['backend/supabase/migrations/20261112000005_announcements_system.sql', 'نظام الإعلانات'],
 ];
 
-const MIGRATIONS_DIR = resolve(ROOT, '..', 'backend', 'migrations');
+const MIGRATIONS_DIR = resolve(ROOT, '..', 'backend', 'supabase', 'migrations');
 if (existsSync(MIGRATIONS_DIR)) {
   const migrationFiles = readdirSync(MIGRATIONS_DIR)
-    .filter((file) => /^\d{4}_.+\.sql$/.test(file))
+    .filter((file) => /^\d{14}_.+\.sql$/.test(file))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const latestMigration = migrationFiles.at(-1);
   if (latestMigration) {
-    requiredFiles.push([`backend/migrations/${latestMigration}`, `آخر ملف migration من ${migrationFiles.length}`]);
+    requiredFiles.push([`backend/supabase/migrations/${latestMigration}`, `آخر ملف migration من ${migrationFiles.length}`]);
   }
 }
 

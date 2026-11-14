@@ -6,7 +6,7 @@
  * Requires an explicit project reference and a server-side Supabase key.
  * Never use a frontend publishable/anon key with this procedure.
  */
-const EXPECTED_PROJECT_REF = 'cbuiwgrmsmsidyjhzvla';
+const EXPECTED_PROJECT_REF = 'wxwoaputugxwysuhcebv';
 const OWNER_UUID = process.env.PHANTOMS_INITIAL_OWNER_ID?.trim();
 const TARGET_PROJECT = process.env.PHANTOMS_SUPABASE_PROJECT_REF?.trim();
 const SUPABASE_URL = process.env.SUPABASE_URL?.trim() || process.env.VITE_SUPABASE_URL?.trim();
