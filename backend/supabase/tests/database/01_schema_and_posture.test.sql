@@ -10,10 +10,10 @@ SELECT plan(57);
 -- ---------------------------------------------------------------------------
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 24,
   'exactly 24 migrations are recorded');
-SELECT is((SELECT min(version) FROM supabase_migrations.schema_migrations), '20261112000000',
-  'first migration is 20261112000000');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261112000023',
-  'last migration is 20261112000023');
+SELECT is((SELECT min(version) FROM supabase_migrations.schema_migrations), '20261114163426',
+  'first migration is 20261114163426');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261114164006',
+  'last migration is 20261114164006');
 
 -- ---------------------------------------------------------------------------
 -- Tables present / removed
