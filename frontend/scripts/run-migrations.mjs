@@ -9,11 +9,14 @@
  *   PHANTOMS_SUPABASE_PROJECT_REF=<approved-ref> node scripts/run-migrations.mjs --print
  */
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { createHash } from 'node:crypto';
+import { resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATIONS_DIR = resolve(__dirname, '..', '..', 'backend', 'supabase', 'migrations');
+const ROOT = resolve(__dirname, '..', '..');
+const MIGRATIONS_DIR = resolve(ROOT, 'backend', 'supabase', 'migrations');
+const MANIFEST_PATH = resolve(ROOT, 'backend', 'supabase', 'production-initialization-manifest.json');
 const args = process.argv.slice(2);
 const PRINT_ONLY = args.includes('--print');
 const CHECK_ONLY = args.includes('--check');
@@ -26,20 +29,48 @@ if (unknownArgs.length) {
   process.exit(2);
 }
 
-const migrationFiles = [
-  '20261112000000_base_schema.sql', '20261112000001_security_hardening.sql',
-  '20261112000002_whatsapp_settings.sql', '20261112000003_atomic_approval_and_member_lookup.sql',
-  '20261112000004_push_notifications.sql', '20261112000005_announcements_system.sql',
-  '20261112000006_remove_team_concept.sql', '20261112000007_device_session_token.sql',
-  '20261112000008_admin_email_rls.sql', '20261112000009_member_device_binding.sql',
-  '20261112000010_announcement_views.sql', '20261112000011_rogue_policy_cleanup.sql',
-  '20261112000012_task_bonus_and_deadline_time.sql', '20261112000013_member_device_sessions.sql',
-  '20261112000014_admin_access_control.sql', '20261112000015_admin_permissions_and_full_delete.sql',
-  '20261112000016_member_infinite_bonus.sql', '20261112000017_member_bonus_privacy.sql',
-  '20261112000018_task_approval_reversal_and_ratings.sql', '20261112000019_member_information_and_ratings.sql',
-  '20261112000020_member_custom_fields.sql', '20261112000021_member_evaluations.sql',
-  '20261112000022_dynamic_system_ownership.sql', '20261112000023_phantoms_identity_migration.sql',
-];
+function loadMigrationManifest() {
+  if (!existsSync(MANIFEST_PATH)) throw new Error(`Missing migration manifest: ${MANIFEST_PATH}`);
+  let entries;
+  try {
+    entries = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+  } catch (error) {
+    throw new Error(`Invalid migration manifest: ${error.message}`);
+  }
+  if (!Array.isArray(entries) || entries.length === 0) {
+    throw new Error('Migration manifest must contain a non-empty array.');
+  }
+  return entries.map((entry, index) => {
+    const originalSourceVersion = String(entry.original_source_timestamp ?? entry.source_version ?? '').trim();
+    const canonicalRepositoryFilename = entry.canonical_repository_filename ?? entry.source_file;
+    if (!/^\d{14}$/.test(originalSourceVersion) || typeof canonicalRepositoryFilename !== 'string') {
+      throw new Error(`Manifest entry ${index + 1} has no valid original source version or canonical path.`);
+    }
+    const absolutePath = resolve(ROOT, canonicalRepositoryFilename);
+    if (!canonicalRepositoryFilename.startsWith('backend/supabase/migrations/') ||
+        !absolutePath.startsWith(`${MIGRATIONS_DIR}${sep}`)) {
+      throw new Error(`Manifest entry ${originalSourceVersion} points outside backend/supabase/migrations.`);
+    }
+    if (!existsSync(absolutePath)) {
+      throw new Error(`Manifest entry ${originalSourceVersion} is missing: ${canonicalRepositoryFilename}`);
+    }
+    if (entry.sha256) {
+      const actualSha256 = createHash('sha256').update(readFileSync(absolutePath)).digest('hex');
+      if (actualSha256 !== entry.sha256) {
+        throw new Error(`SHA-256 mismatch for ${canonicalRepositoryFilename}: expected ${entry.sha256}, got ${actualSha256}`);
+      }
+    }
+    return { ...entry, originalSourceVersion, canonicalRepositoryFilename, absolutePath };
+  });
+}
+
+let migrationManifest;
+try {
+  migrationManifest = loadMigrationManifest();
+} catch (error) {
+  console.error(`${C.red}✗${C.reset} ${error.message}`);
+  process.exit(1);
+}
 
 console.log(`\n${C.bold}PHANTOMS — Supabase migration inventory${C.reset}\n`);
 if (!existsSync(MIGRATIONS_DIR)) {
@@ -47,22 +78,22 @@ if (!existsSync(MIGRATIONS_DIR)) {
   process.exit(1);
 }
 const missing = [];
-for (const file of migrationFiles) {
-  const path = resolve(MIGRATIONS_DIR, file);
-  if (!existsSync(path)) {
-    missing.push(file);
-    console.log(`  ${C.red}✗${C.reset} ${file} — missing`);
+for (const migration of migrationManifest) {
+  const { canonicalRepositoryFilename, absolutePath } = migration;
+  if (!existsSync(absolutePath)) {
+    missing.push(canonicalRepositoryFilename);
+    console.log(`  ${C.red}✗${C.reset} ${canonicalRepositoryFilename} — missing`);
     continue;
   }
-  const lines = readFileSync(path, 'utf8').split('\n').length;
-  console.log(`  ${C.green}✓${C.reset} ${file} ${C.dim}(${lines} lines)${C.reset}`);
+  const lines = readFileSync(absolutePath, 'utf8').split('\n').length;
+  console.log(`  ${C.green}✓${C.reset} ${canonicalRepositoryFilename} ${C.dim}(${lines} lines)${C.reset}`);
 }
 if (missing.length) {
   console.error(`\n${C.red}${missing.length} migration(s) missing.${C.reset}`);
   process.exit(1);
 }
 if (CHECK_ONLY) {
-  console.log(`\n${C.green}All ${migrationFiles.length} canonical migrations are present.${C.reset}`);
+  console.log(`\n${C.green}All ${migrationManifest.length} canonical migrations are present.${C.reset}`);
   process.exit(0);
 }
 if (PRINT_ONLY) {

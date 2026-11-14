@@ -7,12 +7,15 @@
  *   node scripts/phantoms-health-check.mjs
  *   node scripts/phantoms-health-check.mjs --json   (للـ CI/CD)
  */
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
+const PROJECT_ROOT = resolve(ROOT, '..');
+const MIGRATIONS_DIR = resolve(PROJECT_ROOT, 'backend', 'supabase', 'migrations');
+const MIGRATION_MANIFEST = resolve(PROJECT_ROOT, 'backend', 'supabase', 'production-initialization-manifest.json');
 
 // ── تحميل env ───────────────────────────────────────────
 const ENV_FILE = resolve(ROOT, '.env.local');
@@ -55,6 +58,45 @@ function fatal(msg) {
 function section(name) {
   if (!JSON_MODE) console.log(`\n── ${name} ${'─'.repeat(50 - name.length)}`);
 }
+
+function loadMigrationManifest() {
+  if (!existsSync(MIGRATION_MANIFEST)) throw new Error(`مفقود: ${MIGRATION_MANIFEST}`);
+  let entries;
+  try {
+    entries = JSON.parse(readFileSync(MIGRATION_MANIFEST, 'utf8'));
+  } catch (error) {
+    throw new Error(`manifest migrations غير صالح: ${error.message}`);
+  }
+  if (!Array.isArray(entries) || entries.length === 0) {
+    throw new Error('manifest migrations يجب أن يحتوي على قائمة غير فارغة');
+  }
+  return entries.map((entry, index) => {
+    const originalSourceVersion = String(entry.original_source_timestamp ?? entry.source_version ?? '').trim();
+    const canonicalRepositoryFilename = entry.canonical_repository_filename ?? entry.source_file;
+    if (!/^\d{14}$/.test(originalSourceVersion) || typeof canonicalRepositoryFilename !== 'string') {
+      throw new Error(`مدخل migration رقم ${index + 1} يفتقد الإصدار الأصلي أو المسار canonical`);
+    }
+    const absolutePath = resolve(PROJECT_ROOT, canonicalRepositoryFilename);
+    if (!canonicalRepositoryFilename.startsWith('backend/supabase/migrations/') ||
+        !absolutePath.startsWith(`${MIGRATIONS_DIR}/`)) {
+      throw new Error(`مسار migration ${originalSourceVersion} خارج مجلد migrations`);
+    }
+    return { ...entry, originalSourceVersion, canonicalRepositoryFilename, absolutePath };
+  });
+}
+
+let migrationManifest;
+try {
+  migrationManifest = loadMigrationManifest();
+} catch (error) {
+  fatal(error.message);
+}
+const migrationByVersion = new Map(migrationManifest.map((entry) => [entry.originalSourceVersion, entry]));
+const migrationPath = (version) => {
+  const entry = migrationByVersion.get(String(version));
+  if (!entry) throw new Error(`لا يوجد migration ${version} في manifest`);
+  return entry.canonicalRepositoryFilename;
+};
 
 // ── 1. فحص متغيرات البيئة ───────────────────────────────
 section('متغيرات البيئة');
@@ -140,7 +182,7 @@ if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
     if (annRes.ok || annRes.status === 401 || annRes.status === 403) {
       pass('جدول announcements موجود', 'RLS يحجب anon — متوقع ✓');
     } else if (annRes.status === 404) {
-      fail('جدول announcements', 'غير موجود', 'راجع: backend/supabase/migrations/20261112000005_announcements_system.sql');
+      fail('جدول announcements', 'غير موجود', `راجع: ${migrationPath('20261112000005')}`);
     } else {
       warn('جدول announcements', annRes.statusText);
     }
@@ -176,25 +218,25 @@ if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
       name: 'get_member_bonus_infinite',
       params: { p_member_id: 0, p_device_token: '' },
       expectedStatuses: [400, 422],
-      migration: '0016_member_infinite_bonus.sql',
+      migration: migrationPath('20261112000016'),
     },
     {
       name: 'set_member_bonus_infinite',
       params: { p_member_id: 0, p_enabled: false, p_reason: '' },
       expectedStatuses: [401, 403],
-      migration: '0016_member_infinite_bonus.sql',
+      migration: migrationPath('20261112000016'),
     },
     {
       name: 'get_member_bonus_total',
       params: { p_member_id: 0, p_device_token: '' },
       expectedStatuses: [400, 422],
-      migration: '0017_member_bonus_privacy.sql',
+      migration: migrationPath('20261112000017'),
     },
     {
       name: 'revoke_task_approval',
       params: { p_task_id: 0, p_member_id: 0, p_reason: '' },
       expectedStatuses: [401, 403],
-      migration: '0018_task_approval_reversal_and_ratings.sql',
+      migration: migrationPath('20261112000018'),
     },
   ];
   for (const check of RPC_CHECKS) {
@@ -230,17 +272,15 @@ const requiredFiles = [
   ['frontend/public/icons/icon-192.png', 'أيقونة الإشعارات'],
   ['frontend/public/icons/icon-512.png', 'أيقونة التثبيت'],
   ['frontend/src/sw.ts', 'Service Worker'],
-  ['backend/supabase/migrations/20261112000005_announcements_system.sql', 'نظام الإعلانات'],
+  [migrationPath('20261112000005'), 'نظام الإعلانات'],
 ];
 
-const MIGRATIONS_DIR = resolve(ROOT, '..', 'backend', 'supabase', 'migrations');
 if (existsSync(MIGRATIONS_DIR)) {
-  const migrationFiles = readdirSync(MIGRATIONS_DIR)
-    .filter((file) => /^\d{14}_.+\.sql$/.test(file))
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  const latestMigration = migrationFiles.at(-1);
+  const sortedMigrations = [...migrationManifest]
+    .sort((a, b) => a.originalSourceVersion.localeCompare(b.originalSourceVersion, undefined, { numeric: true }));
+  const latestMigration = sortedMigrations.at(-1);
   if (latestMigration) {
-    requiredFiles.push([`backend/supabase/migrations/${latestMigration}`, `آخر ملف migration من ${migrationFiles.length}`]);
+    requiredFiles.push([latestMigration.canonicalRepositoryFilename, `آخر ملف migration من ${migrationManifest.length}`]);
   }
 }
 

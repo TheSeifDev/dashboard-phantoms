@@ -1,4 +1,9 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "fix/phantoms-production-init-wxwo": false
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",
