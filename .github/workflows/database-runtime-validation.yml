@@ -7,6 +7,8 @@ on:
       - 'backend/supabase/**'
       - 'backend/scripts/bootstrap-phantoms-owner.mjs'
       - 'frontend/scripts/run-migrations.mjs'
+      - 'frontend/scripts/supabase-cli-safety.test.mjs'
+      - '.gitignore'
       - '.github/workflows/database-runtime-validation.yml'
   push:
     branches: [main, 'fix/**']
@@ -14,6 +16,8 @@ on:
       - 'backend/supabase/**'
       - 'backend/scripts/bootstrap-phantoms-owner.mjs'
       - 'frontend/scripts/run-migrations.mjs'
+      - 'frontend/scripts/supabase-cli-safety.test.mjs'
+      - '.gitignore'
       - '.github/workflows/database-runtime-validation.yml'
   workflow_dispatch:
 
@@ -37,6 +41,9 @@ jobs:
 
       - name: Validate migration inventory
         run: node frontend/scripts/run-migrations.mjs --check
+
+      - name: Validate Supabase cache and target safety
+        run: node --test frontend/scripts/supabase-cli-safety.test.mjs
 
       - name: Start disposable local Supabase database
         run: |

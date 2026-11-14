@@ -6,7 +6,7 @@
  *
  * Usage:
  *   node scripts/run-migrations.mjs --check
- *   node scripts/run-migrations.mjs --print
+ *   PHANTOMS_SUPABASE_PROJECT_REF=<approved-ref> node scripts/run-migrations.mjs --print
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -17,6 +17,7 @@ const MIGRATIONS_DIR = resolve(__dirname, '..', '..', 'backend', 'supabase', 'mi
 const args = process.argv.slice(2);
 const PRINT_ONLY = args.includes('--print');
 const CHECK_ONLY = args.includes('--check');
+const APPROVED_PROJECT_REF = 'wxwoaputugxwysuhcebv';
 const unknownArgs = args.filter((arg) => !['--print', '--check'].includes(arg));
 const C = { green: '\x1b[32m', red: '\x1b[31m', yellow: '\x1b[33m', cyan: '\x1b[36m', bold: '\x1b[1m', reset: '\x1b[0m', dim: '\x1b[2m' };
 
@@ -65,10 +66,18 @@ if (CHECK_ONLY) {
   process.exit(0);
 }
 if (PRINT_ONLY) {
-  const projectRef = process.env.PHANTOMS_SUPABASE_PROJECT_REF || 'cbuiwgrmsmsidyjhzvla';
-  console.log(`\n${C.bold}Supported application commands:${C.reset}`);
-  console.log('  supabase db push --workdir backend');
+  const projectRef = process.env.PHANTOMS_SUPABASE_PROJECT_REF?.trim();
+  if (!projectRef) {
+    console.error(`${C.red}✗${C.reset} Set PHANTOMS_SUPABASE_PROJECT_REF explicitly before printing remote commands.`);
+    process.exit(2);
+  }
+  if (!/^[a-z]{20}$/.test(projectRef) || projectRef !== APPROVED_PROJECT_REF) {
+    console.error(`${C.red}✗${C.reset} Refusing to print commands for an unapproved project target.`);
+    process.exit(2);
+  }
+  console.log(`\n${C.bold}Read-only inventory and dry-run commands for ${projectRef}:${C.reset}`);
   console.log(`  supabase migration list --workdir backend --remote=${projectRef}`);
+  console.log(`  supabase db push --dry-run --workdir backend --remote=${projectRef} --skip-vault`);
   console.log(`\n${C.yellow}No SQL was executed by this helper.${C.reset}\n`);
   process.exit(0);
 }
