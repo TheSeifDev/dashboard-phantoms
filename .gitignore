@@ -30,6 +30,8 @@
 # Platform temporary / secret cache
 **/.vercel/
 **/.supabase/.temp/
+# Supabase CLI cache and local remote-link metadata
+/backend/supabase/.temp/
 
 # WhatsApp Bridge local session storage
 backend/whatsapp-bridge/data/
