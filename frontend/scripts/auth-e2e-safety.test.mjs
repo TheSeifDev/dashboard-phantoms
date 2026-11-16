@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { isExactLoopbackHttpOrigin, isExactLoopbackPostgresUrl, differentOtp, sanitizeAuthEvidence, closeHttpServer } from './auth-e2e-helpers.mjs';
+import { isExactLoopbackHttpOrigin, isExactLoopbackPostgresUrl, scopedMailpitDeleteOptions, differentOtp, sanitizeAuthEvidence, closeHttpServer } from './auth-e2e-helpers.mjs';
 
 test('loopback guard accepts only exact local HTTP origins', () => {
   assert.equal(isExactLoopbackHttpOrigin('http://127.0.0.1:54321'), true);
@@ -17,6 +17,15 @@ test('database preflight accepts both CLI Postgres schemes without weakening loo
   assert.equal(isExactLoopbackPostgresUrl('postgresql://127.0.0.1:54323/postgres', 54322), false);
   assert.equal(isExactLoopbackPostgresUrl('postgresql://db.example:54322/postgres', 54322), false);
   assert.equal(isExactLoopbackPostgresUrl('https://127.0.0.1:54322/postgres', 54322), false);
+});
+
+test('Mailpit deletion always supplies nonempty exact IDs and rejects mailbox-wide requests', () => {
+  const request = scopedMailpitDeleteOptions(['local-message-1', 'local-message-1']);
+  assert.equal(request.method, 'DELETE');
+  assert.deepEqual(JSON.parse(request.body), { IDs: ['local-message-1'] });
+  assert.throws(() => scopedMailpitDeleteOptions([]));
+  assert.throws(() => scopedMailpitDeleteOptions(['']));
+  assert.throws(() => scopedMailpitDeleteOptions([null]));
 });
 
 test('differentOtp always returns a different valid eight-digit value without exposing input', () => {

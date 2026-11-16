@@ -24,6 +24,18 @@ export function isExactLoopbackPostgresUrl(value, selectedPort) {
   }
 }
 
+export function scopedMailpitDeleteOptions(messageIds) {
+  if (!Array.isArray(messageIds) || messageIds.length === 0
+    || messageIds.some((id) => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(id))) {
+    throw new Error('Mail cleanup requires nonempty exact message IDs.');
+  }
+  return {
+    method: 'DELETE',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ IDs: [...new Set(messageIds)] }),
+  };
+}
+
 export function differentOtp(code) {
   if (!/^\d{8}$/.test(code)) throw new Error('OTP must be an eight-digit string.');
   const next = String((Number(code) + 1) % 100_000_000).padStart(8, '0');

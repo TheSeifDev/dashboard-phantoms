@@ -21,6 +21,7 @@ import {
   finalizeAuthEvidence,
   isExactLoopbackHttpOrigin,
   isExactLoopbackPostgresUrl,
+  scopedMailpitDeleteOptions,
 } from './auth-e2e-helpers.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -291,6 +292,7 @@ async function cleanupFixtures(service, admin, fixture, messageIds) {
       failures.push('local cleanup operation failed');
     }
   };
+  await attempt(() => trackFixtureMessages(fixture, messageIds));
   if (fixture.memberIds.length) await attempt(() => service.from('members').delete().in('id', fixture.memberIds));
   if (fixture.adminUserIds.length) await attempt(() => service.from('admin_accounts').delete().in('user_id', fixture.adminUserIds));
   let discoveredUserIds = new Set();
@@ -303,13 +305,21 @@ async function cleanupFixtures(service, admin, fixture, messageIds) {
   for (const userId of exactFixtureUserIds) await attempt(() => admin.deleteUser(userId));
   for (const messageId of messageIds) {
     try {
-      const response = await fetch(`${MAILPIT_ORIGIN}/api/v1/messages/${encodeURIComponent(messageId)}`, {
-        method: 'DELETE', signal: AbortSignal.timeout(3_000),
+      const response = await fetch(`${MAILPIT_ORIGIN}/api/v1/messages`, {
+        ...scopedMailpitDeleteOptions([messageId]), signal: AbortSignal.timeout(3_000),
       });
-      if (!response.ok && response.status !== 404) failures.push('local mail cleanup failed');
+      if (!response.ok) failures.push('local mail cleanup failed');
     } catch {
       failures.push('local mail cleanup failed');
     }
+  }
+  try {
+    const remaining = await mailpitJson('/api/v1/messages?limit=100');
+    if ((remaining.messages ?? []).some((message) => messageIds.has(message.ID))) {
+      failures.push('fixture messages remain after cleanup');
+    }
+  } catch {
+    failures.push('mail cleanup verification failed');
   }
   if (failures.length) fail(`fixture cleanup failed (${failures.length} bounded operations).`);
 }
