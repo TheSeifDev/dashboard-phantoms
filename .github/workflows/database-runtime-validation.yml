@@ -49,6 +49,7 @@ jobs:
         run: |
           node backend/scripts/migration-manifest.mjs
           node --test backend/scripts/migration-manifest.test.mjs
+          node --test backend/scripts/forward-migrations.test.mjs
           node --test backend/scripts/migration-deployment-safety.test.mjs
           node frontend/scripts/run-migrations.mjs --check
 
@@ -116,7 +117,7 @@ jobs:
           npm run test:security
           npm run test:runtime
           npm run test:brand
-          npx --yes tsx --test scripts/test-storage-migration.ts scripts/safe-xlsx-test.ts
+          npx --yes tsx --test scripts/test-storage-migration.ts scripts/safe-xlsx-test.ts scripts/member-projections.test.ts
 
       - name: TypeScript and lint
         run: |

@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, relative, basename, dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateForwardMigrations } from './forward-migrations.mjs';
 
 export const EXPECTED_MIGRATION_COUNT = 24;
 export const FIRST_ORIGINAL_VERSION = '20261112000000';
@@ -108,6 +109,15 @@ export function validateMigrationManifest(options = {}) {
     addError(errors, 'Manifest must be a JSON array of migration entries.');
   }
 
+  const forward = validateForwardMigrations({
+    rootDir: root,
+    lastInitializationVersion: Array.isArray(manifest) ? manifest.at(-1)?.remote_version : null,
+    initializationFiles: Array.isArray(manifest)
+      ? manifest.map((entry) => typeof entry?.canonical_repository_filename === 'string'
+        ? basename(entry.canonical_repository_filename) : '') : [],
+  });
+  errors.push(...forward.errors);
+
   let migrationFiles = [];
   if (migrationsDir) {
     try {
@@ -119,8 +129,9 @@ export function validateMigrationManifest(options = {}) {
       addError(errors, `Could not read migrations directory ${migrationsDir}: ${error.message}`);
     }
   }
-  if (migrationFiles.length !== EXPECTED_MIGRATION_COUNT) {
-    addError(errors, `Expected exactly ${EXPECTED_MIGRATION_COUNT} SQL migration files; found ${migrationFiles.length}.`);
+  const expectedFileCount = EXPECTED_MIGRATION_COUNT + forward.entries.length;
+  if (migrationFiles.length !== expectedFileCount) {
+    addError(errors, `Expected exactly ${expectedFileCount} SQL migration files (${EXPECTED_MIGRATION_COUNT} initialization + ${forward.entries.length} registered forward); found ${migrationFiles.length}.`);
   }
 
   if (Array.isArray(manifest)) {
@@ -132,7 +143,7 @@ export function validateMigrationManifest(options = {}) {
     const seenRemoteVersions = new Set();
     const seenCanonicalPaths = new Set();
     let previousRemoteVersion = null;
-    const expectedCanonicalFiles = new Set();
+    const expectedCanonicalFiles = new Set(forward.files);
 
     for (let index = 0; index < manifest.length; index += 1) {
       const entry = manifest[index];
@@ -260,6 +271,8 @@ export function validateMigrationManifest(options = {}) {
     errors,
     entryCount: Array.isArray(manifest) ? manifest.length : 0,
     migrationFiles,
+    forwardEntryCount: forward.entries.length,
+    forwardFiles: forward.files,
   };
 }
 
@@ -298,7 +311,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       for (const error of result.errors) console.error(`- ${error}`);
       process.exitCode = 1;
     } else {
-      console.log(`Migration manifest valid: ${result.entryCount} entries and ${result.migrationFiles.length} canonical SQL files.`);
+      console.log(`Migration manifest valid: ${result.entryCount} entries and ${result.migrationFiles.length} canonical SQL files (${result.forwardEntryCount} registered forward, not claimed applied).`);
     }
   } catch (error) {
     console.error(`Migration manifest check failed: ${error.message}`);

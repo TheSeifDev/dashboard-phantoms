@@ -3,20 +3,24 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const root = new URL('../../', import.meta.url);
-const branch = 'fix/phantoms-production-init-wxwo';
+const branches = ['fix/phantoms-production-init-wxwo', 'fix/phantoms-member-projections-wxwo'];
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 
-test('Git integration deployment is disabled only for the database-only branch at both project roots', () => {
+test('Git integration deployment is disabled only for both approved no-deployment branches at both roots', () => {
   for (const path of ['vercel.json', 'frontend/vercel.json']) {
     const config = JSON.parse(read(path));
-    assert.deepEqual(config.git.deploymentEnabled, { [branch]: false });
+    assert.deepEqual(config.git.deploymentEnabled, Object.fromEntries(branches.map((branch) => [branch, false])));
   }
 });
 
 test('legacy deployment workflow excludes this PR from health and preview paths', () => {
   const workflow = read('.github/workflows/deploy.yml');
-  assert.match(workflow, /quality:\s*#[^\n]*\n\s*if: github\.head_ref != 'fix\/phantoms-production-init-wxwo'/);
-  assert.match(workflow, /if: github\.event_name == 'pull_request' && github\.head_ref != 'fix\/phantoms-production-init-wxwo'/);
+  const qualityGuard = workflow.match(/quality:\s*#[^\n]*\n\s*if: ([^\n]+)/)?.[1];
+  const previewGuard = workflow.match(/if: github\.event_name == 'pull_request'([^\n]+)/)?.[1];
+  for (const branch of branches) {
+    assert.ok(qualityGuard?.includes(`github.head_ref != '${branch}'`));
+    assert.ok(previewGuard?.includes(`github.head_ref != '${branch}'`));
+  }
 });
 
 test('disposable workflow has no production credentials, remote database commands, repair, push, or deployment steps', () => {

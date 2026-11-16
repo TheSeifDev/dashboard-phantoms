@@ -46,11 +46,12 @@ function assertInvalid(result, pattern) {
   assert.match(result.errors.join('\n'), pattern);
 }
 
-test('the production repository has exactly 24 valid canonical migrations', () => {
+test('the repository preserves exactly 24 initialization migrations plus registered forward files', () => {
   const result = validateMigrationManifest({ rootDir: repositoryRoot });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, EXPECTED_MIGRATION_COUNT);
-  assert.equal(result.migrationFiles.length, EXPECTED_MIGRATION_COUNT);
+  assert.equal(result.migrationFiles.length, EXPECTED_MIGRATION_COUNT + result.forwardEntryCount);
+  assert.equal(result.forwardFiles.length, result.forwardEntryCount);
 });
 
 test('new manifest provenance is anchored to the historical 85a36fc manifest and canonical bytes', () => {

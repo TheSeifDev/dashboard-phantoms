@@ -1,7 +1,8 @@
 {
   "git": {
     "deploymentEnabled": {
-      "fix/phantoms-production-init-wxwo": false
+      "fix/phantoms-production-init-wxwo": false,
+      "fix/phantoms-member-projections-wxwo": false
     }
   },
   "rewrites": [

@@ -1,0 +1,10 @@
+[
+  {
+    "version": "20261116061247",
+    "name": "admin_member_column_access",
+    "canonical_repository_filename": "backend/supabase/migrations/20261116061247_admin_member_column_access.sql",
+    "sha256": "c3ec586e6fc50bc31733fcffbb8e3903eb87fe2979ee2fc8906f725168916be6",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null
+  }
+]

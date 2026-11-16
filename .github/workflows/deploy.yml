@@ -30,7 +30,7 @@ jobs:
   # ─────────────────────────────────────────────────────────
   quality:
     # This database-only branch is validated by the disposable workflow, never deployed.
-    if: github.head_ref != 'fix/phantoms-production-init-wxwo'
+    if: github.head_ref != 'fix/phantoms-production-init-wxwo' && github.head_ref != 'fix/phantoms-member-projections-wxwo'
     name: Quality Check
     runs-on: ubuntu-latest
     defaults:
@@ -124,7 +124,7 @@ jobs:
     name: Deploy Preview
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'pull_request' && github.head_ref != 'fix/phantoms-production-init-wxwo'
+    if: github.event_name == 'pull_request' && github.head_ref != 'fix/phantoms-production-init-wxwo' && github.head_ref != 'fix/phantoms-member-projections-wxwo'
     defaults:
       run:
         working-directory: ${{ env.WORKING_DIR }}

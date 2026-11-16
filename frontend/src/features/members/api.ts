@@ -16,6 +16,8 @@ import {
   sanitizeCustomFieldsMap,
 } from './customFieldsApi';
 import { isInvitePlaceholderMember, syncPendingPre0020Invites } from './memberInviteApi';
+import { ADMIN_MEMBER_COLUMNS, PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS } from './memberColumns';
+export { ADMIN_MEMBER_COLUMNS } from './memberColumns';
 
 /**
   * الأعمدة العامة المسموح للـ anon بقراءتها (مطابقة لـ GRANT في
@@ -68,7 +70,7 @@ const getMembers = async (): Promise<Member[]> => {
   const query = supabase.from(TABLES.members);
 
   if (sessionData.session) {
-    const { data, error } = await query.select('*').order('full_name', { ascending: true });
+    const { data, error } = await query.select(ADMIN_MEMBER_COLUMNS).order('full_name', { ascending: true });
     if (error) throw toAppError(error, 'حصلت مشكلة وإحنا بنحمّل الأعضاء.');
     const extracted = (data ?? []).map((row) => extractMemberCustomFields(row as Member));
     return syncPendingPre0020Invites(extracted);
@@ -108,7 +110,7 @@ export const useAddMember = () => {
       const { data, error } = await supabase
         .from(TABLES.members)
         .insert(payload)
-        .select()
+        .select(ADMIN_MEMBER_COLUMNS)
         .single();
 
       if (!error && data) {
@@ -124,7 +126,7 @@ export const useAddMember = () => {
         const fallback = await supabase
           .from(TABLES.members)
           .insert(fallbackPayload)
-          .select()
+          .select(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS)
           .single();
         if (fallback.error) throw toAppError(fallback.error, 'حصلت مشكلة في إضافة العضو.');
         return extractMemberCustomFields(fallback.data as Member);
@@ -145,7 +147,7 @@ export const useUpdateMember = () => {
         .from(TABLES.members)
         .update(sanitized)
         .eq('id', member.id)
-        .select()
+        .select(ADMIN_MEMBER_COLUMNS)
         .single();
 
       if (!error && data) {
@@ -162,7 +164,7 @@ export const useUpdateMember = () => {
           .from(TABLES.members)
           .update(fallbackPayload)
           .eq('id', member.id)
-          .select()
+          .select(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS)
           .single();
         if (fallback.error) throw toAppError(fallback.error, 'حصلت مشكلة في تحديث بيانات العضو.');
         return extractMemberCustomFields(fallback.data as Member);
@@ -209,7 +211,7 @@ export const useBulkUpsertMembers = () => {
       const { data, error } = await supabase
         .from(TABLES.members)
         .upsert(normalized, { onConflict: 'email' })
-        .select();
+        .select(ADMIN_MEMBER_COLUMNS);
 
       if (!error) {
         return ((data ?? []) as Member[]).map(extractMemberCustomFields);
@@ -223,7 +225,7 @@ export const useBulkUpsertMembers = () => {
         const fallback = await supabase
           .from(TABLES.members)
           .upsert(fallbackRows, { onConflict: 'email' })
-          .select();
+          .select(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS);
         if (fallback.error) throw toAppError(fallback.error, 'معرفناش نستورد الدفعة — مفيش حاجة اتحفظت.');
         return ((fallback.data ?? []) as Member[]).map(extractMemberCustomFields);
       }
