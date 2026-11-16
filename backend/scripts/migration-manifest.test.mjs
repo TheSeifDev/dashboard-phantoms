@@ -14,6 +14,7 @@ const manifestPath = join(repositoryRoot, 'backend/supabase/production-initializ
 const baselinePath = fileURLToPath(new URL('./fixtures/production-initialization-baseline.json', import.meta.url));
 const currentManifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 const baselineManifest = JSON.parse(readFileSync(baselinePath, 'utf8'));
+const forwardManifestPath = join(repositoryRoot, 'backend/supabase/forward-migration-manifest.json');
 
 function makeFixture() {
   const rootDir = mkdtempSync(join(tmpdir(), 'phantoms-migration-manifest-'));
@@ -52,6 +53,21 @@ test('the repository preserves exactly 24 initialization migrations plus registe
   assert.equal(result.entryCount, EXPECTED_MIGRATION_COUNT);
   assert.equal(result.migrationFiles.length, EXPECTED_MIGRATION_COUNT + result.forwardEntryCount);
   assert.equal(result.forwardFiles.length, result.forwardEntryCount);
+});
+
+test('the reconciled forward migration preserves original provenance and canonical bytes outside initialization history', () => {
+  const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
+  assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
+  assert.equal(forward.length, 1);
+  const [entry] = forward;
+  assert.equal(entry.version, '20261116100646');
+  assert.equal(entry.production_status, 'applied');
+  assert.equal(entry.remote_applied_timestamp, entry.version);
+  assert.equal(entry.original_source_version, '20261116061247');
+  assert.equal(entry.original_source_filename, 'backend/supabase/migrations/20261116061247_admin_member_column_access.sql');
+  assert.equal(entry.canonical_repository_filename, 'backend/supabase/migrations/20261116100646_admin_member_column_access.sql');
+  assert.equal(existsSync(join(repositoryRoot, entry.original_source_filename)), false);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, entry.canonical_repository_filename))).digest('hex'), entry.sha256);
 });
 
 test('new manifest provenance is anchored to the historical 85a36fc manifest and canonical bytes', () => {

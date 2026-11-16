@@ -10,7 +10,8 @@ import { FORWARD_MANIFEST_PATH } from './forward-migrations.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const initial = JSON.parse(readFileSync(join(root, 'backend/supabase/production-initialization-manifest.json'), 'utf8'));
-const forwardVersion = '20261116061247';
+const forwardVersion = '20261116100646';
+const originalVersion = '20261116061247';
 const forwardName = 'admin_member_column_access';
 
 function fixture() {
@@ -29,6 +30,8 @@ function fixture() {
     sha256: createHash('sha256').update(sql).digest('hex'),
     production_status: 'not_applied',
     remote_applied_timestamp: null,
+    original_source_version: originalVersion,
+    original_source_filename: `backend/supabase/migrations/${originalVersion}_${forwardName}.sql`,
   };
   writeFileSync(join(dir, entry.canonical_repository_filename), sql);
   const entries = [entry];
@@ -49,7 +52,7 @@ function withFixture(body) {
   try { body(f); } finally { f.cleanup(); }
 }
 
-test('repository retains 24 initialized files and exactly one registered unapplied forward correction', () => {
+test('repository retains 24 initialized files and exactly one registered applied forward correction', () => {
   const result = validateMigrationManifest({ rootDir: root });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, 24);
@@ -57,8 +60,13 @@ test('repository retains 24 initialized files and exactly one registered unappli
   assert.equal(result.migrationFiles.length, 25);
   assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`]);
   const entries = JSON.parse(readFileSync(join(root, FORWARD_MANIFEST_PATH), 'utf8'));
-  assert.equal(entries[0].production_status, 'not_applied');
-  assert.equal(entries[0].remote_applied_timestamp, null);
+  assert.equal(entries[0].version, forwardVersion);
+  assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
+  assert.equal(entries[0].production_status, 'applied');
+  assert.equal(entries[0].remote_applied_timestamp, forwardVersion);
+  assert.equal(entries[0].original_source_version, originalVersion);
+  assert.equal(entries[0].original_source_filename, `backend/supabase/migrations/${originalVersion}_${forwardName}.sql`);
+  assert.equal(entries[0].sha256, 'c3ec586e6fc50bc31733fcffbb8e3903eb87fe2979ee2fc8906f725168916be6');
 });
 
 test('a valid separate forward registration does not change initialization provenance', () => {
@@ -116,12 +124,37 @@ test('path traversal, mismatched names and invalid timestamps are rejected', () 
   });
 });
 
-test('a prepared forward registration cannot claim remote application', () => {
+test('an applied registration with a mismatched timestamp is rejected', () => {
+  withFixture((f) => {
+    f.entry.production_status = 'applied';
+    f.entry.remote_applied_timestamp = '20261116110000';
+    invalid(f, /production_status\/remote_applied_timestamp/);
+  });
+});
+
+test('an applied registration with matching version and timestamp is accepted', () => {
   withFixture((f) => {
     f.entry.production_status = 'applied';
     f.entry.remote_applied_timestamp = forwardVersion;
-    invalid(f, /must not claim production application/);
+    const result = validateMigrationManifest({ rootDir: f.dir });
+    assert.equal(result.valid, true, result.errors.join('\n'));
   });
+});
+
+test('inconsistent forward status and timestamp pairs are rejected fail-closed', () => {
+  for (const [status, remote] of [
+    ['pending', null],
+    ['applied', null],
+    ['applied', '20261116110000'],
+    ['applied', 'not-a-timestamp'],
+    ['not_applied', '20261116110000'],
+  ]) {
+    withFixture((f) => {
+      f.entry.production_status = status;
+      f.entry.remote_applied_timestamp = remote;
+      invalid(f, /production_status\/remote_applied_timestamp/);
+    });
+  }
 });
 
 test('a malformed forward manifest is rejected rather than ignored', () => {

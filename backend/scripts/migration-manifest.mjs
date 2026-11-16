@@ -273,6 +273,7 @@ export function validateMigrationManifest(options = {}) {
     migrationFiles,
     forwardEntryCount: forward.entries.length,
     forwardFiles: forward.files,
+    forwardEntries: forward.entries,
   };
 }
 
@@ -311,7 +312,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       for (const error of result.errors) console.error(`- ${error}`);
       process.exitCode = 1;
     } else {
-      console.log(`Migration manifest valid: ${result.entryCount} entries and ${result.migrationFiles.length} canonical SQL files (${result.forwardEntryCount} registered forward, not claimed applied).`);
+      const pendingForwardCount = result.forwardEntries?.filter((entry) => entry.production_status === 'not_applied').length ?? 0;
+      const appliedForwardCount = result.forwardEntries?.filter((entry) => entry.production_status === 'applied').length ?? 0;
+      console.log(`Migration manifest valid: ${result.entryCount} entries and ${result.migrationFiles.length} canonical SQL files (${pendingForwardCount} pending forward, ${appliedForwardCount} applied forward).`);
     }
   } catch (error) {
     console.error(`Migration manifest check failed: ${error.message}`);
