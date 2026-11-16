@@ -207,7 +207,7 @@ test.describe('disposable local dashboard', () => {
     await expect(page.getByTestId('dashboard-widgets')).toBeVisible();
     await expect(page.getByTestId('dashboard-metrics').getByText('2', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Disposable local dashboard task').first()).toBeVisible();
-    await expect(page.getByText('Disposable local dashboard note').first()).toBeVisible();
+    await expect(page.getByText('Disposable owner ضاف ملاحظة لـ Disposable member one').first()).toBeVisible();
     await expect(page.getByText('+12', { exact: true }).first()).toBeVisible();
     await expect(page.getByTestId('dashboard-widgets').locator('li').filter({ hasText: 'تحت المراجعة' }).first()).toBeVisible();
     await expect(page.getByTestId('dashboard-widgets').locator('li').filter({ hasText: 'متأخر' }).first()).toBeVisible();
