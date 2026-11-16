@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { sendPushNotificationWithClient } from '../src/lib/api/push.ts';
+import { sendPushNotificationWithClient } from '../src/lib/api/push-dispatch.ts';
 import { isVapidPublicKeyReady } from '../src/lib/api/vapid.ts';
 import type { supabase } from '../src/lib/supabase/client.ts';
 
@@ -11,7 +11,7 @@ type PushClient = typeof supabase;
 const here = path.dirname(fileURLToPath(import.meta.url));
 const source = (relativePath: string) => readFileSync(path.resolve(here, '..', relativePath), 'utf8');
 const taskApi = source('src/features/tasks/api.ts');
-const pushApi = source('src/lib/api/push.ts');
+const pushApi = source('src/lib/api/push-dispatch.ts');
 
 const validVapidKey = Buffer.from([4, ...Array.from({ length: 64 }, (_, index) => index + 1)])
   .toString('base64url');
