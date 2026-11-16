@@ -19,9 +19,15 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(HERE, '..');
 const ROOT = path.resolve(FRONTEND, '..');
 const BACKEND = path.join(ROOT, 'backend');
-const API_ORIGIN = 'http://127.0.0.1:54321';
-const DB_PORT = 54322;
-const PREVIEW_ORIGIN = 'http://127.0.0.1:4173';
+function localPort(name, fallback) {
+  const value = process.env[name] ?? String(fallback);
+  if (!/^\d{4,5}$/.test(value) || Number(value) < 1024 || Number(value) > 65535) throw new Error('Invalid disposable loopback port.');
+  return Number(value);
+}
+const API_ORIGIN = `http://127.0.0.1:${localPort('PHANTOMS_LOCAL_API_PORT', 54321)}`;
+const DB_PORT = localPort('PHANTOMS_LOCAL_DB_PORT', 54322);
+const PREVIEW_PORT = localPort('PHANTOMS_LOCAL_PREVIEW_PORT', 4173);
+const PREVIEW_ORIGIN = `http://127.0.0.1:${PREVIEW_PORT}`;
 const ENV_LOCAL = path.join(FRONTEND, '.env.local');
 const PROJECT_REF_FILE = path.join(BACKEND, 'supabase', '.temp', 'project-ref');
 const SAFE_DOMAIN = 'phantoms-test.example';
@@ -105,12 +111,12 @@ function readLocalStatus() {
   const db = values.DB_URL || values.DATABASE_URL;
   const anonKey = values.ANON_KEY || values.SUPABASE_ANON_KEY;
   const serviceKey = values.SERVICE_ROLE_KEY || values.SUPABASE_SERVICE_ROLE_KEY;
-  if (api !== API_ORIGIN) fail('Supabase status did not report exact local API http://127.0.0.1:54321.');
+  if (api !== API_ORIGIN) fail('Supabase status did not report the selected exact loopback API.');
   if (!db || !anonKey || !serviceKey) fail('local Supabase status omitted required local API credentials.');
   let dbUrl;
   try { dbUrl = new URL(db); } catch { fail('local Supabase status returned an invalid DB_URL.'); }
   if (dbUrl.hostname !== '127.0.0.1' || dbUrl.port !== String(DB_PORT)) {
-    fail('refusing a database target other than 127.0.0.1:54322.');
+    fail('refusing a database target other than the selected exact loopback database port.');
   }
   PRIVATE_VALUES.add(anonKey);
   PRIVATE_VALUES.add(serviceKey);
@@ -173,7 +179,7 @@ async function waitForPreview(preview) {
 }
 
 function spawnPreview(env) {
-  const preview = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'], {
+  const preview = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', String(PREVIEW_PORT), '--strictPort'], {
     cwd: FRONTEND,
     env,
     stdio: ['ignore', 'ignore', 'ignore'],

@@ -38,7 +38,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
@@ -51,6 +51,7 @@ jobs:
           node --test backend/scripts/migration-manifest.test.mjs
           node --test backend/scripts/forward-migrations.test.mjs
           node --test backend/scripts/migration-deployment-safety.test.mjs
+          node --test backend/scripts/configure-disposable-stack.test.mjs
           node frontend/scripts/run-migrations.mjs --check
 
       - name: Validate bootstrap and Supabase cache safety
@@ -68,6 +69,9 @@ jobs:
           test -z "${SUPABASE_DB_URL:-}"
           supabase --version
           echo "No remote project link or production connection credentials; Docker-local stack only."
+
+      - name: Isolate disposable container namespace and loopback ports
+        run: node backend/scripts/configure-disposable-stack.mjs
 
       - name: Start disposable local Supabase database
         run: |

@@ -4,7 +4,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ADMIN_MEMBER_COLUMNS } from '../src/features/members/memberColumns';
 
-const API_ORIGIN = 'http://127.0.0.1:54321';
+const apiPort = process.env.PHANTOMS_LOCAL_API_PORT ?? '54321';
+const previewPort = process.env.PHANTOMS_LOCAL_PREVIEW_PORT ?? '4173';
+if (![apiPort, previewPort].every((port) => /^\d{4,5}$/.test(port) && Number(port) >= 1024 && Number(port) <= 65535)) throw new Error('Invalid disposable loopback ports.');
+const API_ORIGIN = `http://127.0.0.1:${apiPort}`;
+const PREVIEW_ORIGIN = `http://127.0.0.1:${previewPort}`;
 const SAFE_MEMBER_COLUMNS = ADMIN_MEMBER_COLUMNS;
 const ownerEmail = process.env.PHANTOMS_DASHBOARD_OWNER_EMAIL ?? '';
 const ownerPassword = process.env.PHANTOMS_DASHBOARD_OWNER_PASSWORD ?? '';
@@ -47,7 +51,7 @@ async function loginInBrowser(page: Page): Promise<void> {
 
 function requestIsAllowed(url: URL): boolean {
   if (url.protocol === 'data:' || url.protocol === 'blob:') return true;
-  if (url.origin === 'http://localhost:4173' || url.origin === 'http://127.0.0.1:4173') return true;
+  if (url.origin === PREVIEW_ORIGIN) return true;
   if (url.origin === API_ORIGIN) return true;
   // The app already declares these font assets; they are the only remote assets permitted.
   return url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com';

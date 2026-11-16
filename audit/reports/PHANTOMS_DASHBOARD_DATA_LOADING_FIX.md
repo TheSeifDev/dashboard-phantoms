@@ -40,3 +40,9 @@ Because production modification is explicitly prohibited, these are **disposable
 ## Remaining production gate
 
 Do not merge PR #8, deploy it, apply the prepared grant, replay old SQL or create production test records as part of this task. Separate explicit production approval and subsequent real authenticated application persistence verification remain necessary before declaring PHANTOMS operationally ready. WhatsApp, AI and Push remain deferred.
+
+## CI infrastructure correction
+
+The first extended PR run stopped before migrations because the default local database port was occupied. The parallel push run successfully initialized all25 files and passed pgTAP, but then stopped before browser fixtures because the locked Supabase SDK requires Node22+ native WebSocket while the database job used Node20. Neither failure involved production.
+
+The disposable database job now uses Node22 and a per-run `phantoms-disposable-<GitHub run ID>` container namespace. A CI-only configurator checks four available loopback ports and updates only the ephemeral checkout's local API/database/shadow configuration; committed Supabase configuration and migration SQL are unchanged. Runner and browser verify the actual local status against those exact selected ports. The earlier fixed54321/54322/4173 references describe defaults, not the isolated run ports. Three temporary-directory regressions verify valid configuration, non-CI/credential rejection, and remote-link rejection before writes. Fresh exact-commit CI remains authoritative for final browser results.
