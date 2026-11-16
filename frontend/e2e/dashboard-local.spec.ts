@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ADMIN_MEMBER_COLUMNS } from '../src/features/members/memberColumns';
+import { formatSigned } from '../src/lib/arabic';
 
 const apiPort = process.env.PHANTOMS_LOCAL_API_PORT ?? '54321';
 const previewPort = process.env.PHANTOMS_LOCAL_PREVIEW_PORT ?? '4173';
@@ -208,7 +209,7 @@ test.describe('disposable local dashboard', () => {
     await expect(page.getByTestId('dashboard-metrics').getByText('2', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Disposable local dashboard task').first()).toBeVisible();
     await expect(page.getByText('Disposable owner ضاف ملاحظة لـ Disposable member one').first()).toBeVisible();
-    await expect(page.getByText('+12', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(formatSigned(12), { exact: true }).first()).toBeVisible();
     await expect(page.getByTestId('dashboard-widgets').locator('li').filter({ hasText: 'تحت المراجعة' }).first()).toBeVisible();
     await expect(page.getByTestId('dashboard-widgets').locator('li').filter({ hasText: 'متأخر' }).first()).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
