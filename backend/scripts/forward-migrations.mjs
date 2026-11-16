@@ -7,7 +7,7 @@ const TIMESTAMP = /^\d{14}$/;
 const HASH = /^[a-f0-9]{64}$/;
 const NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
-/** Local inventory only. Registration is never evidence of remote application. */
+/** Local inventory only. Status metadata records whether production application was independently reconciled. */
 export function validateForwardMigrations({ rootDir, lastInitializationVersion, initializationFiles = [] }) {
   const root = resolve(rootDir);
   const manifestPath = resolve(root, FORWARD_MANIFEST_PATH);
@@ -34,11 +34,22 @@ export function validateForwardMigrations({ rootDir, lastInitializationVersion, 
       continue;
     }
     const { version, name, canonical_repository_filename: path, sha256,
-      production_status: status, remote_applied_timestamp: remote } = entry;
+      production_status: status, remote_applied_timestamp: remote,
+      original_source_version: originalVersion, original_source_filename: originalPath } = entry;
     if (typeof version !== 'string' || !TIMESTAMP.test(version)) errors.push(`${label}: invalid 14-digit version.`);
     if (typeof name !== 'string' || !NAME.test(name)) errors.push(`${label}: invalid migration name.`);
     if (typeof sha256 !== 'string' || !HASH.test(sha256)) errors.push(`${label}: invalid SHA-256.`);
-    if (status !== 'not_applied' || remote !== null) errors.push(`${label}: forward registration must not claim production application.`);
+    const pendingState = status === 'not_applied' && remote === null;
+    const appliedState = status === 'applied' && typeof remote === 'string' && TIMESTAMP.test(remote) && remote === version;
+    if (!pendingState && !appliedState) {
+      errors.push(`${label}: production_status/remote_applied_timestamp must be either not_applied/null or applied with a timestamp equal to version.`);
+    }
+    if (typeof originalVersion !== 'string' || !TIMESTAMP.test(originalVersion)) {
+      errors.push(`${label}: invalid original source version.`);
+    }
+    if (typeof originalPath !== 'string' || !originalPath.startsWith('backend/supabase/migrations/')) {
+      errors.push(`${label}: invalid original source filename.`);
+    }
     if (typeof version === 'string' && previousVersion && version <= previousVersion) {
       errors.push(`${label}: versions must be unique, strictly increasing and later than initialization.`);
     }
@@ -47,6 +58,10 @@ export function validateForwardMigrations({ rootDir, lastInitializationVersion, 
     if (path !== expectedPath || !TIMESTAMP.test(version ?? '') || !NAME.test(name ?? '')) {
       errors.push(`${label}: canonical path must exactly match the safe version and name.`);
       continue;
+    }
+    const expectedOriginalPath = `backend/supabase/migrations/${originalVersion}_${name}.sql`;
+    if (originalPath !== expectedOriginalPath) {
+      errors.push(`${label}: original source filename must preserve the original version and name.`);
     }
     const filename = `${version}_${name}.sql`;
     if (seen.has(filename)) errors.push(`${label}: duplicate registered migration filename.`);

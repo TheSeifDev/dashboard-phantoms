@@ -20,6 +20,21 @@ function runInventory(projectRef) {
   });
 }
 
+function runCheck() {
+  return spawnSync(process.execPath, [inventoryHelper, '--check'], {
+    cwd: repoRoot,
+    env: { ...process.env },
+    encoding: 'utf8',
+  });
+}
+
+test('local inventory check reports no pending forward migrations after reconciliation', () => {
+  const result = runCheck();
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /0 pending forward/);
+  assert.doesNotMatch(result.stdout, /not claimed applied/);
+});
+
 test('remote commands are not printed when target is omitted', () => {
   const result = runInventory();
   assert.equal(result.status, 2);

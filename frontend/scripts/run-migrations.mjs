@@ -48,7 +48,7 @@ function loadMigrationManifest() {
   const forwardEntries = existsSync(forwardPath) ? JSON.parse(readFileSync(forwardPath, 'utf8')) : [];
   entries = [...entries, ...forwardEntries.map((entry) => ({
     ...entry,
-    original_source_timestamp: entry.version,
+    original_source_timestamp: entry.original_source_version ?? entry.version,
   }))];
   return entries.map((entry, index) => {
     const originalSourceVersion = String(entry.original_source_timestamp ?? entry.source_version ?? '').trim();
@@ -104,7 +104,8 @@ if (missing.length) {
 }
 if (CHECK_ONLY) {
   const pending = migrationManifest.filter((entry) => entry.production_status === 'not_applied').length;
-  console.log(`\n${C.green}All ${migrationManifest.length} canonical migrations are present (${pending} registered forward, not claimed applied).${C.reset}`);
+  const applied = migrationManifest.filter((entry) => entry.production_status === 'applied').length;
+  console.log(`\n${C.green}All ${migrationManifest.length} canonical migrations are present (${pending} pending forward, ${applied} applied forward).${C.reset}`);
   process.exit(0);
 }
 if (PRINT_ONLY) {

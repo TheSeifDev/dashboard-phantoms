@@ -24,8 +24,8 @@ END $$;
 -- Migration history: disposable applies 25 while the historical cohort remains 24.
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 25,
   'local migration history records 25 migrations including the member projection grant');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261116061247',
-  'local migration history ends at 20261116061247');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261116100646',
+  'local migration history ends at 20261116100646');
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
            WHERE version <= '20261114164006'), 24,
   'historical migration cohort through 20261114164006 remains exactly 24 migrations');
