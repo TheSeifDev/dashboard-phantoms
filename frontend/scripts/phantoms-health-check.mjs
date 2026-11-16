@@ -10,6 +10,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { isVapidPublicKeyReady } from '../src/lib/api/vapid-readiness.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -38,6 +39,8 @@ const results = [];
 let exitCode = 0;
 
 // ── helpers ─────────────────────────────────────────────
+const vapidReady = isVapidPublicKeyReady(VAPID_PUBLIC);
+
 function pass(label, detail = '') {
   results.push({ status: 'PASS', label, detail });
   if (!JSON_MODE) console.log(`  ✓  ${label}${detail ? `  →  ${detail}` : ''}`);
@@ -112,10 +115,10 @@ if (!SUPABASE_ANON || SUPABASE_ANON.includes('placeholder')) {
   pass('VITE_SUPABASE_ANON_KEY', `${SUPABASE_ANON.slice(0, 20)}…`);
 }
 
-if (!VAPID_PUBLIC) {
+if (!VAPID_PUBLIC || !VAPID_PUBLIC.trim()) {
   warn('VITE_VAPID_PUBLIC_KEY', 'غير مضبوط — إشعارات Push مؤجلة وليست شرطاً لتهيئة قاعدة البيانات');
-} else if (VAPID_PUBLIC.length < 80) {
-  warn('VITE_VAPID_PUBLIC_KEY', 'قصير جداً — قد يكون خاطئاً');
+} else if (!vapidReady) {
+  warn('VITE_VAPID_PUBLIC_KEY', 'غير صالح — إشعارات Push مؤجلة وليست شرطاً لتهيئة قاعدة البيانات');
 } else {
   pass('VITE_VAPID_PUBLIC_KEY', `${VAPID_PUBLIC.slice(0, 20)}…`);
 }
@@ -194,7 +197,7 @@ if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
 // ── 3. فحص Edge Functions ───────────────────────────────
 section('Edge Functions');
 const FUNCTIONS = ['admin-invite', 'admin-delete-account'];
-if (VAPID_PUBLIC) FUNCTIONS.push('push-notify');
+if (vapidReady) FUNCTIONS.push('push-notify');
 warn('الخدمات الاختيارية', 'WhatsApp معطل وAI مؤجل؛ لا يتم استدعاؤهما أثناء فحص الصحة');
 if (SUPABASE_URL && !SUPABASE_URL.includes('placeholder')) {
   for (const fn of FUNCTIONS) {
@@ -339,19 +342,10 @@ if (existsSync(manifestPath)) {
 
 // ── 7. فحص VAPID Key Format ─────────────────────────────
 section('VAPID Key Validation');
-if (VAPID_PUBLIC) {
-  try {
-    const padding = '='.repeat((4 - (VAPID_PUBLIC.length % 4)) % 4);
-    const base64 = (VAPID_PUBLIC + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = Buffer.from(base64, 'base64');
-    if (decoded.length === 65) {
-      pass('VAPID public key format', '65 bytes — صالح (uncompressed EC point)');
-    } else {
-      fail('VAPID public key format', `${decoded.length} bytes — يجب 65`, 'أعد توليد المفاتيح: npx web-push generate-vapid-keys');
-    }
-  } catch (e) {
-    fail('VAPID public key decode', e.message);
-  }
+if (vapidReady) {
+  pass('VAPID public key format', '65 bytes — صالح (uncompressed EC point)');
+} else {
+  warn('VAPID public key format', 'غير مضبوط أو غير صالح — إشعارات Push مؤجلة؛ لا يتم استدعاء push-notify');
 }
 
 // ── تقرير نهائي ──────────────────────────────────────────

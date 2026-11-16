@@ -2,9 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../../types/db';
 
 // متغيرات env قد تكون غائبة — نمثلها بأمانة (string | undefined) ثم نفرق
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)
+// Optional access also lets pure Node regression tests exercise API guards
+// without requiring Vite's import.meta.env runtime shim.
+const runtimeEnv = (import.meta as ImportMeta & { env?: Record<string, unknown> }).env;
+const supabaseUrl = (runtimeEnv?.VITE_SUPABASE_URL as string | undefined)
   ?? 'https://placeholder.supabase.co';
-const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)
+const supabaseAnonKey = (runtimeEnv?.VITE_SUPABASE_ANON_KEY as string | undefined)
   ?? 'placeholder-anon-key';
 
 const signInTimeoutMs = 12_000;
@@ -38,7 +41,7 @@ const fetchWithSignInTimeout: typeof fetch = async (input, init) => {
   }
 };
 
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+if (!runtimeEnv?.VITE_SUPABASE_URL || !runtimeEnv?.VITE_SUPABASE_ANON_KEY) {
   // تنبيه واضح للمطور بدل فشل صامت
   console.warn(
     '[supabase] مفاتيح Supabase غير مضبوطة.\n' +

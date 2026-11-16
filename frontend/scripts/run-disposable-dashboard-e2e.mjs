@@ -39,6 +39,9 @@ const OUTSIDER_EMAIL = `dashboard-outsider@${SAFE_DOMAIN}`;
 const CUSTOM_FIELD_LABEL = 'Disposable dashboard custom field';
 const INVITE_NOTE = 'Disposable dashboard invite';
 const TASK_TITLE = 'Disposable local dashboard task';
+const UI_SPECIFIC_TASK_TITLE = 'Disposable UI selected member task';
+const UI_ALL_TASK_TITLE = 'Disposable UI all members task';
+const UI_RESTORED_TASK_TITLE = 'Disposable UI restored task';
 const NOTE_TEXT = 'Disposable local dashboard note [B:+12]';
 const FORBIDDEN_ENV_NAMES = [
   'SUPABASE_ACCESS_TOKEN', 'DATABASE_URL', 'SUPABASE_DB_URL', 'SUPABASE_DB_PASSWORD',
@@ -142,6 +145,7 @@ function childEnvironment(status, extra = {}) {
     ...env,
     VITE_SUPABASE_URL: status?.api ?? API_ORIGIN,
     VITE_SUPABASE_ANON_KEY: status?.anonKey ?? 'local-build-only-placeholder',
+    VITE_VAPID_PUBLIC_KEY: 'your-vapid-public-key',
     VITE_PUBLIC_WEB_URL: PREVIEW_ORIGIN,
     ...extra,
   };
@@ -188,6 +192,23 @@ function spawnPreview(env) {
   return preview;
 }
 
+async function stopPreview(preview) {
+  if (!preview || preview.exitCode !== null || preview.signalCode !== null) return;
+  await new Promise((resolve, reject) => {
+    const forceTimer = setTimeout(() => preview.kill('SIGKILL'), 5_000);
+    const deadline = setTimeout(() => {
+      clearTimeout(forceTimer);
+      reject(new Error('Disposable preview did not exit within the bounded shutdown period.'));
+    }, 10_000);
+    preview.once('exit', () => {
+      clearTimeout(forceTimer);
+      clearTimeout(deadline);
+      resolve();
+    });
+    preview.kill('SIGTERM');
+  });
+}
+
 async function cleanupFixtures(service, admin, createdUserIds = []) {
   const failures = [];
   const attempt = async (label, operation) => {
@@ -202,7 +223,13 @@ async function cleanupFixtures(service, admin, createdUserIds = []) {
   await attempt('custom field cleanup', () => service.from('member_custom_fields').delete().eq('label', CUSTOM_FIELD_LABEL));
   await attempt('target note cleanup', () => service.from('notes').delete().eq('text', NOTE_TEXT));
   await attempt('general note cleanup', () => service.from('notes').delete().eq('text', 'Disposable local dashboard general note'));
-  await attempt('task cleanup', () => service.from('tasks').delete().eq('title', TASK_TITLE));
+  await attempt('approval source note cleanup', async () => {
+    const taskRows = await service.from('tasks').select('id').in('title', [TASK_TITLE, UI_SPECIFIC_TASK_TITLE, UI_ALL_TASK_TITLE, UI_RESTORED_TASK_TITLE]).limit(10);
+    if (taskRows.error) return taskRows;
+    const taskIds = (taskRows.data ?? []).map((row) => row.id);
+    return taskIds.length ? service.from('notes').delete().in('source_task_id', taskIds) : { error: null };
+  });
+  await attempt('task cleanup', () => service.from('tasks').delete().in('title', [TASK_TITLE, UI_SPECIFIC_TASK_TITLE, UI_ALL_TASK_TITLE, UI_RESTORED_TASK_TITLE]));
   await attempt('member cleanup', () => service.from('members').delete().in('email', [MEMBER_ONE_EMAIL, MEMBER_TWO_EMAIL]));
   let users;
   try {
@@ -299,27 +326,37 @@ async function main() {
     return;
   }
   const status = readLocalStatus();
-  const buildEnv = childEnvironment(status);
-  console.log('[dashboard-e2e] building frontend against the captured local public key…');
-  await runChild('npm', ['run', 'build'], { env: buildEnv });
-  const fixtures = await seedFixtures(status);
-  let preview;
-  try {
-    preview = spawnPreview(buildEnv);
-    await waitForPreview(preview);
-    const testEnv = childEnvironment(status, {
-      PHANTOMS_DASHBOARD_OWNER_EMAIL: OWNER_EMAIL,
-      PHANTOMS_DASHBOARD_OWNER_PASSWORD: PASSWORD,
-      PHANTOMS_DASHBOARD_OUTSIDER_EMAIL: OUTSIDER_EMAIL,
-      PHANTOMS_DASHBOARD_OUTSIDER_PASSWORD: PASSWORD,
-      PHANTOMS_DASHBOARD_MEMBER_ONE_EMAIL: MEMBER_ONE_EMAIL,
-      PHANTOMS_DASHBOARD_MEMBER_TWO_EMAIL: MEMBER_TWO_EMAIL,
-    });
-    console.log('[dashboard-e2e] running local Chromium dashboard checks…');
-    await runChild(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.dashboard.config.ts'], { env: testEnv });
-  } finally {
-    if (preview && !preview.killed) preview.kill('SIGTERM');
-    await fixtures.cleanup();
+  const vapidVariants = [
+    { name: 'missing', key: '' },
+    { name: 'invalid', key: 'invalid-vapid-public-key' },
+  ];
+  for (const variant of vapidVariants) {
+    const buildEnv = childEnvironment(status, { VITE_VAPID_PUBLIC_KEY: variant.key });
+    console.log(`[dashboard-e2e] building frontend with ${variant.name} VAPID readiness…`);
+    await runChild('npm', ['run', 'build'], { env: buildEnv });
+    const fixtures = await seedFixtures(status);
+    let preview;
+    try {
+      preview = spawnPreview(buildEnv);
+      await waitForPreview(preview);
+      const testEnv = childEnvironment(status, {
+        PHANTOMS_VAPID_MODE: variant.name,
+        PHANTOMS_DASHBOARD_OWNER_EMAIL: OWNER_EMAIL,
+        PHANTOMS_DASHBOARD_OWNER_PASSWORD: PASSWORD,
+        PHANTOMS_DASHBOARD_OUTSIDER_EMAIL: OUTSIDER_EMAIL,
+        PHANTOMS_DASHBOARD_OUTSIDER_PASSWORD: PASSWORD,
+        PHANTOMS_DASHBOARD_MEMBER_ONE_EMAIL: MEMBER_ONE_EMAIL,
+        PHANTOMS_DASHBOARD_MEMBER_TWO_EMAIL: MEMBER_TWO_EMAIL,
+      });
+      console.log(`[dashboard-e2e] running local Chromium dashboard checks (${variant.name} VAPID)…`);
+      await runChild(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.dashboard.config.ts', `--output=test-results/dashboard-${variant.name}-artifacts`], { env: testEnv });
+    } finally {
+      try {
+        await stopPreview(preview);
+      } finally {
+        await fixtures.cleanup();
+      }
+    }
   }
   console.log('[dashboard-e2e] completed; only sanitized dashboard PNG/JSON evidence remains.');
 }

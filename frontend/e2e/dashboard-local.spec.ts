@@ -19,8 +19,13 @@ const memberEmails = [
   process.env.PHANTOMS_DASHBOARD_MEMBER_ONE_EMAIL ?? '',
   process.env.PHANTOMS_DASHBOARD_MEMBER_TWO_EMAIL ?? '',
 ];
+const UI_SPECIFIC_TASK_TITLE = 'Disposable UI selected member task';
+const UI_ALL_TASK_TITLE = 'Disposable UI all members task';
+const UI_FAILURE_TASK_TITLE = 'Disposable UI failed task';
+const UI_RESTORED_TASK_TITLE = 'Disposable UI restored task';
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const evidenceDir = path.resolve('test-results');
+const vapidMode = process.env.PHANTOMS_VAPID_MODE ?? 'unknown';
 
 function requireFixtureEnv(): void {
   for (const [name, value] of Object.entries({ ownerEmail, ownerPassword, outsiderEmail, outsiderPassword, anonKey, ...Object.fromEntries(memberEmails.map((value, index) => [`member${index}`, value])) })) {
@@ -58,8 +63,10 @@ function requestIsAllowed(url: URL): boolean {
   return url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com';
 }
 
-async function installRequestGate(page: Page): Promise<{ blocked: string[]; setResource403: (resource: 'members' | 'tasks' | 'notes', value: boolean) => void; getResource403Count: (resource: 'members' | 'tasks' | 'notes') => number }> {
+async function installRequestGate(page: Page): Promise<{ blocked: string[]; pushRequests: string[]; setResource403: (resource: 'members' | 'tasks' | 'notes', value: boolean) => void; setTaskInsertFailure: (title: string | null) => void; getResource403Count: (resource: 'members' | 'tasks' | 'notes') => number }> {
   const blocked: string[] = [];
+  const pushRequests: string[] = [];
+  let taskInsertFailureTitle: string | null = null;
   const failures = { members: false, tasks: false, notes: false };
   const failureCounts = { members: 0, tasks: 0, notes: 0 };
   await page.route('**/*', async (route: Route) => {
@@ -68,6 +75,21 @@ async function installRequestGate(page: Page): Promise<{ blocked: string[]; setR
       blocked.push(`${route.request().method()} ${url.origin}${url.pathname}`);
       await route.abort('blockedbyclient');
       return;
+    }
+    if (url.origin === API_ORIGIN && url.pathname === '/functions/v1/push-notify') {
+      pushRequests.push(`${route.request().method()} ${url.pathname}`);
+    }
+    if (url.origin === API_ORIGIN && url.pathname === '/rest/v1/tasks' && route.request().method() === 'POST' && taskInsertFailureTitle) {
+      const payload = route.request().postDataJSON() as { title?: string } | Array<{ title?: string }> | null;
+      const title = Array.isArray(payload) ? payload[0]?.title : payload?.title;
+      if (title === taskInsertFailureTitle) {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({ code: '23514', message: 'controlled task insert regression denial' }),
+        });
+        return;
+      }
     }
     const resource = url.origin === API_ORIGIN && url.pathname.match(/^\/rest\/v1\/(members|tasks|notes)$/)?.[1] as 'members' | 'tasks' | 'notes' | undefined;
     if (resource && failures[resource] && route.request().method() === 'GET') {
@@ -83,7 +105,9 @@ async function installRequestGate(page: Page): Promise<{ blocked: string[]; setR
   });
   return {
     blocked,
+    pushRequests,
     setResource403: (resource, value) => { failures[resource] = value; },
+    setTaskInsertFailure: (title) => { taskInsertFailureTitle = title; },
     getResource403Count: (resource) => failureCounts[resource],
   };
 }
@@ -109,6 +133,10 @@ test.describe('disposable local dashboard', () => {
     expect(memberError).toBeNull();
     expect(members).toHaveLength(2);
     expect(new Set((members ?? []).map((row) => row.email))).toEqual(new Set(memberEmails));
+    const firstMember = members?.find((row) => row.email === memberEmails[0]);
+    const secondMember = members?.find((row) => row.email === memberEmails[1]);
+    expect(firstMember?.id).toEqual(expect.any(Number));
+    expect(secondMember?.id).toEqual(expect.any(Number));
 
     const protectedRead = await owner.from('members').select('session_token').limit(1);
     expect(protectedRead.data).toBeNull();
@@ -250,7 +278,7 @@ test.describe('disposable local dashboard', () => {
         await expect(page.locator('.recharts-pie-sector')).toHaveCount(2);
         const nonzeroBars = await page.locator('.recharts-bar-rectangle').evaluateAll((elements) => elements.filter((element) => element.getBoundingClientRect().height > 10).length);
         expect(nonzeroBars).toBeGreaterThanOrEqual(2);
-        const screenshotPath = path.join(evidenceDir, `dashboard-${theme}-${viewport.name}.png`);
+        const screenshotPath = path.join(evidenceDir, `dashboard-${vapidMode}-${theme}-${viewport.name}.png`);
         await page.screenshot({ path: screenshotPath, fullPage: true });
         screenshots.push({ theme, viewport: viewport.name, path: screenshotPath });
       }
@@ -263,6 +291,89 @@ test.describe('disposable local dashboard', () => {
     await page.keyboard.press('Escape');
     await assertCorePage(page, '/admin/tasks', /إدارة وتكليف المهام/);
     await expect(page.getByText('Disposable local dashboard task').first()).toBeVisible();
+
+    const seededTaskCard = page.locator('article').filter({ hasText: 'Disposable local dashboard task' }).first();
+    await seededTaskCard.getByRole('button', { name: 'مراجعة تسليم Disposable member one' }).click();
+    const reviewDialog = page.getByRole('dialog', { name: 'مراجعة تسليم المهمة' });
+    await expect(reviewDialog).toBeVisible();
+    await expect(reviewDialog).toContainText('Disposable member one');
+    await reviewDialog.getByRole('button', { name: /اعتمد/ }).click();
+    await expect(reviewDialog).toHaveCount(0);
+    const approvedRead = await owner.from('tasks').select('id,tracking').eq('title', 'Disposable local dashboard task').limit(2);
+    expect(approvedRead.error).toBeNull();
+    expect(approvedRead.data).toHaveLength(1);
+    expect((approvedRead.data?.[0]?.tracking as Record<string, { status?: string }> | null)?.[String(firstMember?.id)]?.status).toBe('approved');
+    expect(gate.pushRequests).toEqual([]);
+
+    // This is the real assignment UI path, not an SDK-only insert. VAPID is a
+    // local placeholder, so every task must persist without a push request.
+    await page.getByRole('button', { name: 'اعمل مهمة جديدة' }).click();
+    let assignmentDialog = page.getByRole('dialog', { name: 'تكليف مهمة جديدة' });
+    await expect(assignmentDialog).toBeVisible();
+    await assignmentDialog.getByLabel('عنوان المهمة').fill(UI_SPECIFIC_TASK_TITLE);
+    await assignmentDialog.getByText('أعضاء محددين', { exact: true }).click();
+    await assignmentDialog.locator('label').filter({ hasText: 'Disposable member one' }).getByRole('checkbox').check();
+    await assignmentDialog.getByRole('button', { name: 'اعمل المهمة' }).click();
+    await expect(assignmentDialog).toHaveCount(0);
+    await expect(page.getByText(UI_SPECIFIC_TASK_TITLE, { exact: true })).toBeVisible();
+    const specificCard = page.locator('article').filter({ hasText: UI_SPECIFIC_TASK_TITLE }).first();
+    await expect(specificCard).toContainText('Disposable member one');
+    await expect(specificCard).not.toContainText('Disposable member two');
+    const specificRead = await owner.from('tasks').select('id,title,assigned_to,tracking').eq('title', UI_SPECIFIC_TASK_TITLE).limit(2);
+    expect(specificRead.error).toBeNull();
+    expect(specificRead.data).toHaveLength(1);
+    expect(specificRead.data?.[0]?.assigned_to).toEqual([String(firstMember?.id)]);
+    expect(Object.keys((specificRead.data?.[0]?.tracking ?? {}) as Record<string, unknown>)).toEqual([String(firstMember?.id)]);
+    expect(specificRead.data?.[0]?.tracking).toMatchObject({ [String(firstMember?.id)]: { status: 'pending', note: '', submission_url: '', updated_at: expect.any(String) } });
+    await page.screenshot({ path: path.join(evidenceDir, `dashboard-task-specific-${vapidMode}.png`), fullPage: true });
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByText(UI_SPECIFIC_TASK_TITLE, { exact: true })).toBeVisible();
+
+    gate.setTaskInsertFailure(UI_FAILURE_TASK_TITLE);
+    await page.getByRole('button', { name: 'اعمل مهمة جديدة' }).click();
+    assignmentDialog = page.getByRole('dialog', { name: 'تكليف مهمة جديدة' });
+    await assignmentDialog.getByLabel('عنوان المهمة').fill(UI_FAILURE_TASK_TITLE);
+    await assignmentDialog.getByRole('button', { name: 'اعمل المهمة' }).click();
+    await expect(assignmentDialog).toBeVisible();
+    await expect(assignmentDialog.getByRole('alert')).toContainText('controlled task insert regression denial');
+    const failedRead = await owner.from('tasks').select('id').eq('title', UI_FAILURE_TASK_TITLE).limit(2);
+    expect(failedRead.error).toBeNull();
+    expect(failedRead.data).toEqual([]);
+    expect(gate.pushRequests).toEqual([]);
+    gate.setTaskInsertFailure(null);
+    await assignmentDialog.getByLabel('عنوان المهمة').fill(UI_RESTORED_TASK_TITLE);
+    await assignmentDialog.getByRole('button', { name: 'اعمل المهمة' }).click();
+    await expect(assignmentDialog).toHaveCount(0);
+    const restoredRead = await owner.from('tasks').select('id').eq('title', UI_RESTORED_TASK_TITLE).limit(2);
+    expect(restoredRead.error).toBeNull();
+    expect(restoredRead.data).toHaveLength(1);
+
+    await page.getByRole('button', { name: 'اعمل مهمة جديدة' }).click();
+    assignmentDialog = page.getByRole('dialog', { name: 'تكليف مهمة جديدة' });
+    await expect(assignmentDialog).toBeVisible();
+    await assignmentDialog.getByLabel('عنوان المهمة').fill(UI_ALL_TASK_TITLE);
+    await assignmentDialog.getByText('كل الفريق', { exact: true }).click();
+    await assignmentDialog.getByRole('button', { name: 'اعمل المهمة' }).click();
+    await expect(assignmentDialog).toHaveCount(0);
+    await expect(page.getByText(UI_ALL_TASK_TITLE, { exact: true })).toBeVisible();
+    const allCard = page.locator('article').filter({ hasText: UI_ALL_TASK_TITLE }).first();
+    await expect(allCard).toContainText('Disposable member one');
+    await expect(allCard).toContainText('Disposable member two');
+    const allRead = await owner.from('tasks').select('id,title,assigned_to,tracking').eq('title', UI_ALL_TASK_TITLE).limit(2);
+    expect(allRead.error).toBeNull();
+    expect(allRead.data).toHaveLength(1);
+    expect(allRead.data?.[0]?.assigned_to).toBe('ALL');
+    expect(new Set(Object.keys((allRead.data?.[0]?.tracking ?? {}) as Record<string, unknown>))).toEqual(new Set([String(firstMember?.id), String(secondMember?.id)]));
+    for (const memberId of [firstMember?.id, secondMember?.id]) {
+      expect(allRead.data?.[0]?.tracking).toMatchObject({ [String(memberId)]: { status: 'pending', note: '', submission_url: '', updated_at: expect.any(String) } });
+    }
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByText(UI_SPECIFIC_TASK_TITLE, { exact: true })).toBeVisible();
+    await expect(page.getByText(UI_ALL_TASK_TITLE, { exact: true })).toBeVisible();
+    await page.screenshot({ path: path.join(evidenceDir, `dashboard-task-all-persisted-${vapidMode}.png`), fullPage: true });
+    expect(gate.pushRequests).toEqual([]);
     await assertCorePage(page, '/admin/notes', /سجل الملاحظات/);
     await expect(page.getByText('Disposable local dashboard note').first()).toBeVisible();
     await assertCorePage(page, '/admin/ranking', /ترتيب الفريق/);
@@ -271,8 +382,13 @@ test.describe('disposable local dashboard', () => {
     // A genuinely empty authorized database is distinct from any failed query.
     const fixtureNotesDelete = await owner.from('notes').delete().in('text', ['Disposable local dashboard note [B:+12]', 'Disposable local dashboard general note']);
     expect(fixtureNotesDelete.error).toBeNull();
-    const fixtureTasksDelete = await owner.from('tasks').delete().eq('title', 'Disposable local dashboard task');
+    const approvalNotesDelete = await owner.from('notes').delete().eq('source_task_id', approvedRead.data?.[0]?.id);
+    expect(approvalNotesDelete.error).toBeNull();
+    const fixtureTasksDelete = await owner.from('tasks').delete().in('title', ['Disposable local dashboard task', UI_SPECIFIC_TASK_TITLE, UI_ALL_TASK_TITLE, UI_RESTORED_TASK_TITLE]);
     expect(fixtureTasksDelete.error).toBeNull();
+    const tasksAfterCleanup = await owner.from('tasks').select('id').in('title', ['Disposable local dashboard task', UI_SPECIFIC_TASK_TITLE, UI_ALL_TASK_TITLE, UI_RESTORED_TASK_TITLE]).limit(5);
+    expect(tasksAfterCleanup.error).toBeNull();
+    expect(tasksAfterCleanup.data).toEqual([]);
     const fixtureMembersDelete = await owner.from('members').delete().in('email', memberEmails);
     expect(fixtureMembersDelete.error).toBeNull();
     await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
@@ -283,12 +399,15 @@ test.describe('disposable local dashboard', () => {
     await expect(page.getByText('لسه مفيش بونص متسجل')).toBeVisible();
 
     await mkdir(evidenceDir, { recursive: true });
-    await writeFile(path.join(evidenceDir, 'dashboard-contract.json'), JSON.stringify({
-      schema: 'phantoms-dashboard-disposable-evidence/v1',
+    await writeFile(path.join(evidenceDir, `dashboard-contract-${vapidMode}.json`), JSON.stringify({
+      schema: 'phantoms-dashboard-disposable-evidence/v2',
       localApi: API_ORIGIN,
-      fixtures: { members: 2, tasks: 1, notes: 2, customFields: 1, pendingInvites: 1 },
-      screenshots: screenshots.map(({ theme, viewport }) => ({ theme, viewport })),
-      security: { protectedColumnsDenied: true, anonDenied: true, outsiderRows: 0, blockedRemoteRequests: gate.blocked.length },
+      vapidMode,
+      fixtures: { members: 2, tasks: 4, notes: 2, customFields: 1, pendingInvites: 1 },
+      workflows: { seededApprovalPersisted: true, failedTaskInsertVisibleAndNotPersisted: true, restoredUiCreationPersisted: true },
+      assignments: { specific: specificRead.data?.[0], all: allRead.data?.[0], visibleAfterReload: true, exactTestTasksRemainingAfterCleanup: tasksAfterCleanup.data?.length },
+      screenshots: screenshots.map(({ theme, viewport, path: screenshotPath }) => ({ theme, viewport, path: screenshotPath })),
+      security: { protectedColumnsDenied: true, anonDenied: true, outsiderRows: 0, blockedRemoteRequests: gate.blocked.length, pushRequestsWhileVapidDeferred: gate.pushRequests.length },
       recovery: { controlled403Observed: (['members', 'tasks', 'notes'] as const).every((resource) => gate.getResource403Count(resource) > 0), recoveredWithLiveData: true },
       genuineEmptyStateVerified: true,
       pageErrorCount: pageErrors.length,
@@ -296,7 +415,9 @@ test.describe('disposable local dashboard', () => {
     }, null, 2) + '\n', { encoding: 'utf8' });
     expect(gate.blocked).toEqual([]);
     expect(pageErrors).toEqual([]);
-    expect(requestEvidence.filter((r) => r.status === 401 || r.status >= 400 && !(r.status === 403 && ['/rest/v1/members', '/rest/v1/tasks', '/rest/v1/notes'].includes(r.endpoint)))).toEqual([]);
+    const injectedTaskErrors = requestEvidence.filter((r) => r.status === 400 && r.method === 'POST' && r.endpoint === '/rest/v1/tasks');
+    expect(injectedTaskErrors).toHaveLength(1);
+    expect(requestEvidence.filter((r) => r.status === 401 || r.status >= 400 && !(r.status === 403 && ['/rest/v1/members', '/rest/v1/tasks', '/rest/v1/notes'].includes(r.endpoint)) && !injectedTaskErrors.includes(r))).toEqual([]);
     await owner.auth.signOut();
   });
 });
