@@ -4,6 +4,7 @@
 // =====================================================
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase/client';
+import { memberSupabase } from '../../lib/supabase/member-client';
 import { toAppError } from '../../lib/supabase/errors';
 import { TABLES } from '../../types/db';
 import type { RevokeTaskApprovalResult, Task, TaskInsert, TaskStatus, TaskTrackingEntry } from '../../types/db';
@@ -40,7 +41,7 @@ export const useMemberTasks = (memberId: number | undefined) => {
       if (!memberId || !deviceToken) {
         throw new Error('DEVICE_REQUIRED: سجّل دخولك من جديد للتحقق من جلسة الجهاز.');
       }
-      const { data, error } = await supabase.rpc('get_member_tasks', {
+      const { data, error } = await memberSupabase.rpc('get_member_tasks', {
         p_member_id: memberId,
         p_device_token: deviceToken,
       });
@@ -139,7 +140,9 @@ export const useUpdateTaskStatus = () => {
       }
       // الخادم يرقّع مفتاح هذا العضو فقط بعد التحقق من جهازه وتكليفه —
       // لا نرسل tracking كاملاً من العميل (منع الكتابة فوق مفاتيح الآخرين).
-      const { error } = await supabase.rpc('submit_task_status', {
+      const memberSession = useAuthStore.getState().currentMember?.id === memberId;
+      const taskClient = memberSession ? memberSupabase : supabase;
+      const { error } = await taskClient.rpc('submit_task_status', {
         p_task_id: taskId,
         p_member_id: memberId,
         p_device_token: getDeviceToken(),
@@ -152,7 +155,7 @@ export const useUpdateTaskStatus = () => {
       if (useAuthStore.getState().currentMember?.id === memberId) {
         const deviceToken = getDeviceToken();
         if (!deviceToken) throw new Error('DEVICE_REQUIRED: سجّل دخولك من جديد للتحقق من جلسة الجهاز.');
-        const { data: memberTasks, error: memberFetchError } = await supabase.rpc('get_member_tasks', {
+        const { data: memberTasks, error: memberFetchError } = await memberSupabase.rpc('get_member_tasks', {
           p_member_id: memberId,
           p_device_token: deviceToken,
         });

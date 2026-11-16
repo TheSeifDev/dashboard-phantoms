@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, Mail, KeyRound, CheckCircle2 } from 'lucide-react';
 import { AuthShell } from '../../components/layout/AuthShell';
-import { useAuthStore, getDeviceToken, setDeviceToken, getMemberRemember, setMemberRemember } from '../../store/auth';
-import { supabase } from '../../lib/supabase/client';
+import { useAuthStore, setDeviceToken, getMemberRemember, setMemberRemember } from '../../store/auth';
+import { memberSupabase } from '../../lib/supabase/member-client';
 import { fetchMemberByEmail, bindMemberDeviceSession } from '../members/api';
 import { isValidEmail } from '../../lib/validators';
+import { isValidMemberOtp, MEMBER_OTP_LENGTH, normalizeAuthEmail, safeMemberAuthError } from './auth-flow';
 
 function generateDeviceToken(): string {
   const deviceBytes = new Uint8Array(16);
@@ -25,43 +26,36 @@ export default function LoginPage() {
   const setMember = useAuthStore((state) => state.setMember);
   const navigate = useNavigate();
 
-  // If already logged in as member, redirect to portal
-  if (currentMember) {
-    return <Navigate to="/portal" replace />;
-  }
-
-  // Handle incoming Magic Link authentication redirect
-  useEffect(() => {
-    let active = true;
-    void supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!active || !user?.email) return;
-      const verifiedEmail = user.email.toLowerCase();
-      try {
-        const deviceToken = generateDeviceToken();
-        await bindMemberDeviceSession(verifiedEmail, deviceToken);
-        const member = await fetchMemberByEmail(verifiedEmail, deviceToken);
-        if (member && active) {
-          setMemberRemember(remember);
-          setDeviceToken(deviceToken, remember);
-          setMember(member, remember);
-          navigate('/portal');
-        }
-      } catch {
-        // Not a member or session error
+  const requestOtp = async (cleanEmail: string) => {
+    setLoading(true);
+    setError('');
+    setInfo('');
+    setMemberRemember(remember);
+    try {
+      // Keep first-time identity signup enabled, but never request a redirect URL.
+      const { error: otpError } = await memberSupabase.auth.signInWithOtp({ email: cleanEmail });
+      if (otpError) {
+        setError(safeMemberAuthError('send'));
+        return;
       }
-    });
-    return () => { active = false; };
-  }, [navigate, remember, setMember]);
+      setStep('otp_required');
+      setOtpCode('');
+      setInfo(`أرسلنا رمزاً مكوناً من ${MEMBER_OTP_LENGTH} أرقام إلى بريدك الإلكتروني. اكتب الرمز لتأكيد هويتك وربط هذا الجهاز.`);
+    } catch {
+      setError(safeMemberAuthError('send'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleMemberLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = normalizeAuthEmail(email);
 
     if (cleanEmail === 'admin') {
       navigate('/admin/login');
       return;
     }
-
     if (!cleanEmail) {
       setError('اكتب بريدك الإلكتروني.');
       return;
@@ -70,82 +64,53 @@ export default function LoginPage() {
       setError('صيغة البريد الإلكتروني مش صحيحة. مثال: name@phantoms.com');
       return;
     }
-
-    setLoading(true);
-    setError('');
-    setInfo('');
-
-    try {
-      // 1. Check if device is already recognized & bound
-      const existingToken = getDeviceToken();
-      if (existingToken) {
-        const existingMember = await fetchMemberByEmail(cleanEmail, existingToken);
-        if (existingMember) {
-          setMemberRemember(remember);
-          setDeviceToken(existingToken, remember);
-          setMember(existingMember, remember);
-          navigate('/portal');
-          return;
-        }
-      }
-
-      // 2. New or unrecognized device: require email OTP verification
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: cleanEmail,
-        options: {
-          emailRedirectTo: window.location.origin + '/login',
-        },
-      });
-
-      if (otpError) {
-        // Reject insecure anonymous fallback: email verification is strictly required
-        setError(
-          otpError.message
-            ? `تعذر إرسال رمز التحقق: ${otpError.message}. التحقق من البريد إلزامي لربط هذا الجهاز والتأكد من هويتك.`
-            : 'تعذر إرسال رمز التحقق إلى بريدك الإلكتروني. التحقق من البريد إلزامي لربط هذا الجهاز والتأكد من هويتك. تأكد من الاتصال أو راجع الإدارة وأعد المحاولة.'
-        );
-      } else {
-        setStep('otp_required');
-        setInfo('أرسلنا رمز التحقق إلى بريدك الإلكتروني. اكتب الرمز لتأكيد هويتك وربط هذا الجهاز.');
-      }
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'حصلت مشكلة وإحنا بنتصل. جرّب تاني.');
-    } finally {
-      setLoading(false);
-    }
+    await requestOtp(cleanEmail);
   };
 
   const handleVerifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = normalizeAuthEmail(email);
     const cleanOtp = otpCode.trim();
 
-    if (!cleanOtp) {
-      setError('اكتب رمز التحقق المكون من 6 أرقام.');
+    if (!isValidMemberOtp(cleanOtp)) {
+      setError(`اكتب رمز التحقق المكون من ${MEMBER_OTP_LENGTH} أرقام.`);
       return;
     }
 
     setLoading(true);
     setError('');
-
     try {
-      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+      const { data, error: verifyError } = await memberSupabase.auth.verifyOtp({
         email: cleanEmail,
         token: cleanOtp,
         type: 'email',
       });
 
       if (verifyError || !data.user) {
-        setError('رمز التحقق غير صحيح أو انتهت صلاحيته. أعد المحاولة.');
+        await memberSupabase.auth.signOut({ scope: 'local' });
+        setError(safeMemberAuthError('verify'));
+        return;
+      }
+
+      const verifiedEmail = normalizeAuthEmail(data.user.email ?? '');
+      if (!verifiedEmail || verifiedEmail !== cleanEmail) {
+        await memberSupabase.auth.signOut({ scope: 'local' });
+        setError(safeMemberAuthError('verify'));
         return;
       }
 
       const newDeviceToken = generateDeviceToken();
-      await bindMemberDeviceSession(cleanEmail, newDeviceToken);
-      const member = await fetchMemberByEmail(cleanEmail, newDeviceToken);
-
-      if (!member) {
-        setError('تم التحقق من البريد لكن الحساب غير مسجل كعضو في الفريق.');
+      const bound = await bindMemberDeviceSession(verifiedEmail, newDeviceToken);
+      if (!bound) {
+        await memberSupabase.auth.signOut({ scope: 'local' });
+        setError('تعذر ربط هذا الجهاز بعضويتك. حاول مرة أخرى.');
+        return;
+      }
+      const member = await fetchMemberByEmail(verifiedEmail, newDeviceToken);
+      if (!member || normalizeAuthEmail(member.email) !== verifiedEmail) {
+        // Clean only the new member-auth session; do not delete independent device tokens.
+        await memberSupabase.auth.signOut({ scope: 'local' });
+        setError(safeMemberAuthError('member'));
         return;
       }
 
@@ -153,12 +118,17 @@ export default function LoginPage() {
       setDeviceToken(newDeviceToken, remember);
       setMember(member, remember);
       navigate('/portal');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'حصلت مشكلة أثناء التحقق. جرّب تاني.');
+    } catch {
+      await memberSupabase.auth.signOut({ scope: 'local' });
+      setError(safeMemberAuthError('verify'));
     } finally {
       setLoading(false);
     }
   };
+
+  if (currentMember) {
+    return <Navigate to="/portal" replace />;
+  }
 
   return (
     <AuthShell
@@ -177,18 +147,13 @@ export default function LoginPage() {
       )}
 
       {step === 'email' ? (
-        <form onSubmit={handleMemberLogin} method="post" className="auth-form" noValidate>
+        <form onSubmit={(event) => void handleMemberLogin(event)} method="post" className="auth-form" noValidate>
           <label className="auth-field" htmlFor="member-email">البريد الإلكتروني للعضو
             <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="member-email" type="email" dir="ltr" autoComplete="email" required placeholder="name@phantoms.com" value={email} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(error) || undefined} aria-describedby={error ? 'member-email-error' : undefined} /></span>
           </label>
-          {email.trim() && !isValidEmail(email.trim().toLowerCase()) && <p className="text-xs font-bold text-amber-700 dark:text-amber-300" role="note">اتأكد من الصيغة: لازم يبقى فيه @ ونطاق صحيح.</p>}
+          {email.trim() && !isValidEmail(normalizeAuthEmail(email)) && <p className="text-xs font-bold text-amber-700 dark:text-amber-300" role="note">اتأكد من الصيغة: لازم يبقى فيه @ ونطاق صحيح.</p>}
           <label className="auth-remember" htmlFor="member-remember">
-            <input
-              id="member-remember"
-              type="checkbox"
-              checked={remember}
-              onChange={(event) => setRemember(event.target.checked)}
-            />
+            <input id="member-remember" type="checkbox" checked={remember} onChange={(event) => { setRemember(event.target.checked); setMemberRemember(event.target.checked); }} />
             <span className="auth-remember-box" aria-hidden="true" />
             <span>احفظ تسجيل الدخول على الجهاز ده</span>
           </label>
@@ -198,19 +163,18 @@ export default function LoginPage() {
           </button>
         </form>
       ) : (
-        <form onSubmit={handleVerifyOtp} method="post" className="auth-form" noValidate>
+        <form onSubmit={(event) => void handleVerifyOtp(event)} method="post" className="auth-form" noValidate>
           <label className="auth-field" htmlFor="member-otp">رمز التحقق (OTP)
-            <span className="auth-input-wrap"><KeyRound size={17} aria-hidden="true" /><input id="member-otp" type="text" dir="ltr" inputMode="numeric" pattern="[0-9]*" maxLength={8} autoComplete="one-time-code" required placeholder="123456" value={otpCode} onChange={(event) => { setOtpCode(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(error) || undefined} /></span>
+            <span className="auth-input-wrap"><KeyRound size={17} aria-hidden="true" /><input id="member-otp" type="text" dir="ltr" inputMode="numeric" pattern="[0-9]{8}" minLength={MEMBER_OTP_LENGTH} maxLength={MEMBER_OTP_LENGTH} autoComplete="one-time-code" required placeholder="12345678" value={otpCode} onChange={(event) => { setOtpCode(event.target.value.replace(/\D/g, '').slice(0, MEMBER_OTP_LENGTH)); if (error) setError(''); }} aria-invalid={Boolean(error) || undefined} /></span>
           </label>
           <button type="submit" className="auth-submit" disabled={loading} aria-busy={loading || undefined}>
             {loading ? 'جاري التحقق...' : 'تأكيد الرمز وربط الجهاز'}
             {!loading && <ArrowLeft size={18} aria-hidden="true" />}
           </button>
-          <button
-            type="button"
-            onClick={() => { setStep('email'); setOtpCode(''); setError(''); setInfo(''); }}
-            className="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text)] transition-colors py-1"
-          >
+          <button type="button" disabled={loading} onClick={() => void requestOtp(normalizeAuthEmail(email))} className="text-xs font-bold text-[var(--link)] hover:text-[var(--text)] transition-colors py-1">
+            إرسال رمز جديد
+          </button>
+          <button type="button" onClick={() => { setStep('email'); setOtpCode(''); setError(''); setInfo(''); }} className="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text)] transition-colors py-1">
             الرجوع لتعديل البريد الإلكتروني
           </button>
         </form>

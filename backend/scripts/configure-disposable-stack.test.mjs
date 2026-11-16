@@ -37,6 +37,8 @@ test('CI allocates a unique local namespace and four available ports without tou
     assert.match(configText, new RegExp(`\\[api\\][\\s\\S]*?\\nport = ${api}`));
     assert.match(configText, new RegExp(`\\[db\\][\\s\\S]*?\\nport = ${api + 1}`));
     assert.match(configText, new RegExp(`shadow_port = ${api + 2}`));
+    assert.match(configText, new RegExp(`site_url = "http://127\\.0\\.0\\.1:${api + 3}"`));
+    assert.match(configText, new RegExp(`additional_redirect_urls = \\["http://127\\.0\\.0\\.1:${api + 3}", "http://127\\.0\\.0\\.1:${api + 3}/\\*\\*"\\]`));
   } finally { rmSync(f.root, { recursive: true, force: true }); }
 });
 

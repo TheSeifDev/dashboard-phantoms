@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Bell, CheckSquare, ClipboardCheck, Layers } from 'lucide-react';
 import { getDeviceToken, useAuthStore } from '../../store/auth';
+import { memberSupabase } from '../../lib/supabase/member-client';
 import { useMemberTasks, useUpdateTaskStatus } from '../tasks/api';
 import { logoutMemberDevice, updateMemberReadiness } from '../members/api';
 import type { Task } from '../../types/db';
@@ -69,6 +70,7 @@ export default function MemberPortalPage() {
     } catch (cause) {
       toast.error(handleSupabaseError(cause).message || 'حصلت مشكلة وإحنا بنسجّل خروج الجهاز.');
     } finally {
+      await memberSupabase.auth.signOut({ scope: 'local' });
       logoutMember();
       navigate('/login');
     }

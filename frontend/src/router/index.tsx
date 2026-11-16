@@ -9,10 +9,13 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
 import { firstAllowedAdminPath } from '../features/admin/access/permissions';
 import type { AdminPermission } from '../types/db';
+import { clearAdminSetupIntent, inspectAdminCallback } from '../features/auth/auth-flow';
 
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 const AdminLoginPage = lazy(() => import('../features/auth/AdminLoginPage'));
 const AdminSetPasswordPage = lazy(() => import('../features/auth/AdminSetPasswordPage'));
+const AdminRecoveryCallbackPage = lazy(() => import('../features/auth/AdminSetPasswordPage').then((module) => ({ default: module.AdminRecoveryCallbackPage })));
+const AdminForgotPasswordPage = lazy(() => import('../features/auth/AdminForgotPasswordPage'));
 const MemberPortalPage = lazy(() => import('../features/portal/MemberPortalPage'));
 const MemberSelfRegisterPage = lazy(() => import('../features/members/MemberSelfRegisterPage'));
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
@@ -34,6 +37,10 @@ function Page({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageFallback />}>{children}</Suspense>;
 }
 
+function hasAdminCallbackMaterial(): boolean {
+  return inspectAdminCallback('/', window.location.search, window.location.hash).kind !== 'none';
+}
+
 /** حارس لوحة الإدارة — ينتظر فحص الجلسة الأولي قبل الحسم */
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
@@ -43,6 +50,7 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     clear();
+    clearAdminSetupIntent();
   };
   // لا تحسم قبل اكتمال فحص supabase.auth.getSession — وإلا وَمَضت
   // إعادة التوجيه إلى تسجيل الدخول مع كل تحديث للصفحة
@@ -82,6 +90,7 @@ function NoAdminSections() {
   const logout = async () => {
     await supabase.auth.signOut();
     clear();
+    clearAdminSetupIntent();
   };
   return (
     <div className="grid min-h-64 place-items-center">
@@ -128,6 +137,7 @@ function RootRedirect() {
   const member = useAuthStore((s) => s.currentMember);
   const user = useAuthStore((s) => s.user);
   const ready = useAuthStore((s) => s.ready);
+  if (hasAdminCallbackMaterial()) return <Page><AdminRecoveryCallbackPage /></Page>;
   if (member) return <Navigate to="/portal" replace />;
   if (!ready) {
     return (
@@ -169,6 +179,14 @@ export const router = createBrowserRouter([
   {
     path: '/admin/login',
     element: <Page><AdminLoginPage /></Page>,
+  },
+  {
+    path: '/admin/forgot-password',
+    element: <Page><AdminForgotPasswordPage /></Page>,
+  },
+  {
+    path: '/admin/recovery/callback',
+    element: <Page><AdminRecoveryCallbackPage /></Page>,
   },
   {
     path: '/admin/set-password',

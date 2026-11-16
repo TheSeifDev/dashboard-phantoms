@@ -52,7 +52,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    // URL sessions are accepted only by the explicit admin invite/recovery callback
+    // routes. This prevents a member OTP/magic-link URL from becoming an admin session.
+    detectSessionInUrl: false,
     // حفظ الجلسة حسب اختيار "تذكرني": localStorage للدائم، sessionStorage للمؤقت.
     // يُقرأ العلم في كل عملية (وليس مرة واحدة) حتى يبدّل المستخدم اختياره قبل الدخول.
     storage: {

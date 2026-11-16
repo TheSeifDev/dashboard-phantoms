@@ -75,8 +75,14 @@ jobs:
 
       - name: Start disposable local Supabase database
         run: |
-          supabase start --workdir backend \
-            -x studio,imgproxy,mailpit,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta,storage-api
+          if ! supabase start --workdir backend \
+            -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta,storage-api \
+            >/dev/null 2>&1; then
+            echo "Disposable Supabase stack failed to start."
+            docker ps --format 'table {{.Names}}\t{{.Status}}'
+            exit 1
+          fi
+          echo "Disposable Supabase stack ready (local loopback namespace; credentials withheld)."
 
       - name: Verify local migration timestamps
         run: supabase migration list --workdir backend
@@ -96,6 +102,14 @@ jobs:
           PHANTOMS_DISPOSABLE_E2E: '1'
         run: node scripts/run-disposable-dashboard-e2e.mjs
 
+      - name: Test real Auth OTP, session isolation, invite, and recovery workflows
+        working-directory: frontend
+        env:
+          PHANTOMS_DISPOSABLE_E2E: '1'
+        run: |
+          node scripts/run-disposable-auth-e2e.mjs --list
+          node scripts/run-disposable-auth-e2e.mjs
+
       - name: Upload synthetic dashboard screenshots and sanitized request evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -105,6 +119,7 @@ jobs:
             frontend/test-results/dashboard-*.png
             frontend/test-results/dashboard-*.json
             frontend/test-results/dashboard-*/test-failed-*.png
+            frontend/test-results/auth-*.json
           if-no-files-found: warn
           retention-days: 7
 
@@ -145,12 +160,14 @@ jobs:
           npm run test:security
           npm run test:runtime
           npm run test:brand
+          node --test scripts/auth-e2e-safety.test.mjs
           npx --yes tsx --test scripts/test-storage-migration.ts scripts/safe-xlsx-test.ts scripts/member-projections.test.ts scripts/dashboard-state.test.ts
 
       - name: TypeScript and lint
         run: |
           npx tsc -b --noEmit
           npx tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2022 --types node e2e/dashboard-local.spec.ts playwright.dashboard.config.ts
+          npx tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2022 --types node e2e/auth-local.spec.ts playwright.auth.config.ts
           npm run lint
 
       - name: Production build and credential scan (no deployment)

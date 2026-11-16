@@ -5,6 +5,7 @@
 // =====================================================
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase/client';
+import { memberSupabase } from '../../lib/supabase/member-client';
 import { toAppError } from '../../lib/supabase/errors';
 import { TABLES } from '../../types/db';
 import type { Member, MemberInsert, MemberUpdate } from '../../types/db';
@@ -244,7 +245,7 @@ export const useBulkUpsertMembers = () => {
   */
 export const fetchMemberByEmail = async (email: string, deviceToken?: string): Promise<Member | null> => {
   const cleanEmail = email.trim().toLowerCase();
-  const { data, error } = await supabase
+  const { data, error } = await memberSupabase
     .rpc('lookup_member_by_email', {
       p_email: cleanEmail,
       p_device_token: deviceToken || null,
@@ -263,7 +264,7 @@ export const fetchMemberByEmail = async (email: string, deviceToken?: string): P
 
 export const bindMemberDeviceSession = async (email: string, deviceToken: string): Promise<boolean> => {
   const cleanEmail = email.trim().toLowerCase();
-  const { data, error } = await supabase.rpc('bind_member_device_session', {
+  const { data, error } = await memberSupabase.rpc('bind_member_device_session', {
     p_email: cleanEmail,
     p_device_token: deviceToken,
   });
@@ -272,7 +273,7 @@ export const bindMemberDeviceSession = async (email: string, deviceToken: string
 };
 
 export const logoutMemberDevice = async (memberId: number, deviceToken: string): Promise<void> => {
-  const { error } = await supabase.rpc('logout_member_device', {
+  const { error } = await memberSupabase.rpc('logout_member_device', {
     p_member_id: memberId,
     p_device_token: deviceToken,
   });
@@ -281,7 +282,7 @@ export const logoutMemberDevice = async (memberId: number, deviceToken: string):
 
 /** جاهزية الميدان — خدمة ذاتية للعضو عبر RPC (عمود واحد، برمز الجهاز) */
 export const updateMemberReadiness = async (memberId: number, canGo: boolean): Promise<boolean> => {
-  const { data, error } = await supabase.rpc('update_member_readiness', {
+  const { data, error } = await memberSupabase.rpc('update_member_readiness', {
     p_member_id: memberId,
     p_device_token: getDeviceToken() ?? '',
     p_can_go: canGo,
