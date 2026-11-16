@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { isExactLoopbackHttpOrigin, differentOtp, sanitizeAuthEvidence, closeHttpServer } from './auth-e2e-helpers.mjs';
+import { isExactLoopbackHttpOrigin, isExactLoopbackPostgresUrl, differentOtp, sanitizeAuthEvidence, closeHttpServer } from './auth-e2e-helpers.mjs';
 
 test('loopback guard accepts only exact local HTTP origins', () => {
   assert.equal(isExactLoopbackHttpOrigin('http://127.0.0.1:54321'), true);
@@ -9,6 +9,14 @@ test('loopback guard accepts only exact local HTTP origins', () => {
   assert.equal(isExactLoopbackHttpOrigin('http://localhost:54321'), false);
   assert.equal(isExactLoopbackHttpOrigin('http://127.0.0.1:54321/?token=secret'), true);
   assert.equal(isExactLoopbackHttpOrigin('http://127.0.0.1.evil.example:54321'), false);
+});
+
+test('database preflight accepts both CLI Postgres schemes without weakening loopback or port checks', () => {
+  assert.equal(isExactLoopbackPostgresUrl('postgres://127.0.0.1:54322/postgres', 54322), true);
+  assert.equal(isExactLoopbackPostgresUrl('postgresql://127.0.0.1:54322/postgres', 54322), true);
+  assert.equal(isExactLoopbackPostgresUrl('postgresql://127.0.0.1:54323/postgres', 54322), false);
+  assert.equal(isExactLoopbackPostgresUrl('postgresql://db.example:54322/postgres', 54322), false);
+  assert.equal(isExactLoopbackPostgresUrl('https://127.0.0.1:54322/postgres', 54322), false);
 });
 
 test('differentOtp always returns a different valid eight-digit value without exposing input', () => {

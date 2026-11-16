@@ -20,6 +20,7 @@ import {
   closeHttpServer,
   finalizeAuthEvidence,
   isExactLoopbackHttpOrigin,
+  isExactLoopbackPostgresUrl,
 } from './auth-e2e-helpers.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -126,9 +127,7 @@ function readLocalStatus() {
   const serviceKey = values.SERVICE_ROLE_KEY || values.SUPABASE_SERVICE_ROLE_KEY;
   if (api !== API_ORIGIN) fail('Supabase status did not report the exact loopback API.');
   if (!db || !anonKey || !serviceKey) fail('local Supabase status omitted required credentials.');
-  let dbUrl;
-  try { dbUrl = new URL(db); } catch { fail('local Supabase status returned an invalid DB_URL.'); }
-  if (dbUrl.protocol !== 'postgres:' || dbUrl.hostname !== '127.0.0.1' || dbUrl.port !== String(DB_PORT)) {
+  if (!isExactLoopbackPostgresUrl(db, DB_PORT)) {
     fail('refusing a database target other than the selected loopback database.');
   }
   PRIVATE_VALUES.add(anonKey);

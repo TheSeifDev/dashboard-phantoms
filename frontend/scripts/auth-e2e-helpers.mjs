@@ -13,6 +13,17 @@ export function isExactLoopbackHttpOrigin(value) {
   }
 }
 
+export function isExactLoopbackPostgresUrl(value, selectedPort) {
+  try {
+    const parsed = new URL(value);
+    return ['postgres:', 'postgresql:'].includes(parsed.protocol)
+      && parsed.hostname === '127.0.0.1'
+      && parsed.port === String(selectedPort);
+  } catch {
+    return false;
+  }
+}
+
 export function differentOtp(code) {
   if (!/^\d{8}$/.test(code)) throw new Error('OTP must be an eight-digit string.');
   const next = String((Number(code) + 1) % 100_000_000).padStart(8, '0');
