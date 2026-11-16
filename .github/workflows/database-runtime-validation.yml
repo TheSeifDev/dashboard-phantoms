@@ -80,6 +80,29 @@ jobs:
       - name: Run all existing pgTAP suites on the local database
         run: supabase test db --workdir backend
 
+      - name: Install locked browser-test dependencies
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Test real dashboard and member workflows against the disposable stack
+        working-directory: frontend
+        env:
+          PHANTOMS_DISPOSABLE_E2E: '1'
+        run: node scripts/run-disposable-dashboard-e2e.mjs
+
+      - name: Upload synthetic dashboard screenshots and sanitized request evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-disposable-evidence-${{ github.event_name }}
+          path: |
+            frontend/test-results/dashboard-*.png
+            frontend/test-results/dashboard-*.json
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Revalidate SQL checksums after disposable execution
         run: node backend/scripts/migration-manifest.mjs
 
@@ -117,11 +140,12 @@ jobs:
           npm run test:security
           npm run test:runtime
           npm run test:brand
-          npx --yes tsx --test scripts/test-storage-migration.ts scripts/safe-xlsx-test.ts scripts/member-projections.test.ts
+          npx --yes tsx --test scripts/test-storage-migration.ts scripts/safe-xlsx-test.ts scripts/member-projections.test.ts scripts/dashboard-state.test.ts
 
       - name: TypeScript and lint
         run: |
           npx tsc -b --noEmit
+          npx tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2022 --types node e2e/dashboard-local.spec.ts playwright.dashboard.config.ts
           npm run lint
 
       - name: Production build and credential scan (no deployment)

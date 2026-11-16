@@ -60,6 +60,10 @@ pnpm-debug.log*
 
 # --- 5. Editor & Agent Directories ---
 .playwright-mcp/
+# Disposable browser evidence is uploaded selectively by CI, never committed.
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
 .claude/
 .vscode/*
 !.vscode/extensions.json

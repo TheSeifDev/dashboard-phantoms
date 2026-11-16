@@ -33,3 +33,12 @@ test('disposable workflow has no production credentials, remote database command
   assert.match(workflow, /supabase stop --workdir backend --no-backup/);
   assert.match(workflow, /VITE_SUPABASE_URL: http:\/\/127\.0\.0\.1:54321/);
 });
+
+test('dashboard browser evidence is generated only against the disposable stack and excludes credential-bearing traces', () => {
+  const workflow = read('.github/workflows/database-runtime-validation.yml');
+  assert.match(workflow, /PHANTOMS_DISPOSABLE_E2E: '1'/);
+  assert.match(workflow, /node scripts\/run-disposable-dashboard-e2e\.mjs/);
+  assert.match(workflow, /frontend\/test-results\/dashboard-\*\.png/);
+  assert.match(workflow, /frontend\/test-results\/dashboard-\*\.json/);
+  assert.doesNotMatch(workflow, /playwright-report|trace\.zip|storageState/);
+});
