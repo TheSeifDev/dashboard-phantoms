@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, Plus, UserRoundPlus } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -10,32 +9,52 @@ import { useNotes } from '../notes/api';
 import { DashboardMetricsGrid } from './DashboardMetrics';
 import { DashboardWidgets } from './DashboardWidgets';
 import { getDashboardMetrics } from './metrics';
+import { resolveDashboardQueryState } from './dashboardqueryState';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const membersQuery = useMembers();
   const tasksQuery = useTasks();
   const notesQuery = useNotes();
-  
-  const members = membersQuery.data ?? [];
-  const tasks = tasksQuery.data ?? [];
-  const notes = notesQuery.data ?? [];
-  
-  const metrics = useMemo(() => getDashboardMetrics(members, tasks, notes), [members, tasks, notes]);
+
+  const dashboardState = resolveDashboardQueryState({
+    members: membersQuery,
+    tasks: tasksQuery,
+    notes: notesQuery,
+  });
+  const metrics = dashboardState.status === 'ready'
+    ? getDashboardMetrics(dashboardState.data.members, dashboardState.data.tasks, dashboardState.data.notes)
+    : undefined;
 
   const retry = () => {
     void Promise.all([membersQuery.refetch(), tasksQuery.refetch(), notesQuery.refetch()]);
   };
 
-  const isLoading = membersQuery.isLoading || tasksQuery.isLoading || notesQuery.isLoading;
-  const isError = membersQuery.isError || tasksQuery.isError || notesQuery.isError;
+  if (dashboardState.status === 'loading') {
+    return <div data-testid="dashboard-loading"><CardSkeletons /></div>;
+  }
 
-  if (isLoading) return <CardSkeletons />;
+  if (dashboardState.status === 'error') {
+    const message = dashboardState.reason === 'missing-data'
+      ? 'بيانات لوحة التحكم رجعت ناقصة. أعد المحاولة قبل عرض المؤشرات.'
+      : 'معرفناش نحمّل بيانات لوحة التحكم. أعد المحاولة قبل عرض المؤشرات.';
+    return (
+      <div data-testid="dashboard-error">
+        <ErrorState message={message} onRetry={retry} />
+      </div>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <div data-testid="dashboard-error">
+        <ErrorState message="بيانات لوحة التحكم مش جاهزة للعرض. أعد المحاولة." onRetry={retry} />
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-5" dir="rtl">
-      {isError && <ErrorState message="معرفناش نحمّل بعض بيانات لوحة التحكم." onRetry={retry} />}
-      
       {/* Hero Section — Official PHANTOMS Art Direction */}
       <section className="relative overflow-hidden grid gap-4 rounded-[var(--radius-lg)] bg-[var(--phantom-black)] border border-white/10 border-s-4 border-s-[var(--primary)] p-5 text-white sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center shadow-lg">
         {/* Subtle brutalist geometric technical reticle in background */}
@@ -71,7 +90,7 @@ export default function DashboardPage() {
       <DashboardMetricsGrid metrics={metrics} />
 
       {/* Advanced Widgets Grid */}
-      <DashboardWidgets metrics={metrics} tasks={tasks} />
+      <DashboardWidgets metrics={metrics} tasks={dashboardState.data.tasks} />
     </div>
   );
 }

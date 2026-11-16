@@ -12,6 +12,7 @@ import {
   packTeamNotesWithCustomFields,
   sanitizeCustomFieldsMap,
 } from './customFieldsApi';
+import { ADMIN_MEMBER_COLUMNS, PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS } from './memberColumns';
 
 export const MEMBER_INVITES_KEY = ['member_registration_invites'] as const;
 const PRE0020_TOKEN_PREFIX = 'phm1_';
@@ -216,7 +217,7 @@ async function applyRegistrationPayloadToMemberRow(
     .from(TABLES.members)
     .update(updateBody)
     .eq('id', memberId)
-    .select()
+    .select(ADMIN_MEMBER_COLUMNS)
     .maybeSingle();
 
   if (!primary.error && primary.data) {
@@ -232,7 +233,7 @@ async function applyRegistrationPayloadToMemberRow(
         team_notes: packTeamNotesWithCustomFields(null, cleanCustom),
       })
       .eq('id', memberId)
-      .select()
+      .select(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS)
       .maybeSingle();
 
     if (!fallback.error && fallback.data) {
@@ -444,7 +445,7 @@ export function usePendingMemberInvites() {
       if (isMissingRelationError(native.error, 'member_registration_invites')) {
         const allMembersRes = await supabase
           .from(TABLES.members)
-          .select('*')
+          .select(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS)
           .order('created_at', { ascending: false });
 
         if (!allMembersRes.error && allMembersRes.data) {

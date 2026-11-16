@@ -12,6 +12,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateMigrationManifest } from '../../backend/scripts/migration-manifest.mjs';
+import { FORWARD_MANIFEST_PATH } from '../../backend/scripts/forward-migrations.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
@@ -30,6 +32,8 @@ if (unknownArgs.length) {
 }
 
 function loadMigrationManifest() {
+  const validation = validateMigrationManifest({ rootDir: ROOT });
+  if (!validation.valid) throw new Error(validation.errors.join('\n'));
   if (!existsSync(MANIFEST_PATH)) throw new Error(`Missing migration manifest: ${MANIFEST_PATH}`);
   let entries;
   try {
@@ -40,6 +44,12 @@ function loadMigrationManifest() {
   if (!Array.isArray(entries) || entries.length === 0) {
     throw new Error('Migration manifest must contain a non-empty array.');
   }
+  const forwardPath = resolve(ROOT, FORWARD_MANIFEST_PATH);
+  const forwardEntries = existsSync(forwardPath) ? JSON.parse(readFileSync(forwardPath, 'utf8')) : [];
+  entries = [...entries, ...forwardEntries.map((entry) => ({
+    ...entry,
+    original_source_timestamp: entry.version,
+  }))];
   return entries.map((entry, index) => {
     const originalSourceVersion = String(entry.original_source_timestamp ?? entry.source_version ?? '').trim();
     const canonicalRepositoryFilename = entry.canonical_repository_filename ?? entry.source_file;
@@ -93,7 +103,8 @@ if (missing.length) {
   process.exit(1);
 }
 if (CHECK_ONLY) {
-  console.log(`\n${C.green}All ${migrationManifest.length} canonical migrations are present.${C.reset}`);
+  const pending = migrationManifest.filter((entry) => entry.production_status === 'not_applied').length;
+  console.log(`\n${C.green}All ${migrationManifest.length} canonical migrations are present (${pending} registered forward, not claimed applied).${C.reset}`);
   process.exit(0);
 }
 if (PRINT_ONLY) {

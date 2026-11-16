@@ -76,7 +76,7 @@ export function DashboardWidgets({ metrics }: { metrics: DashboardMetrics; tasks
   const activity = (metrics.recentActivity ?? []).slice(0, 6);
 
   return (
-    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-5">
+    <div data-testid="dashboard-widgets" className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-5">
       {/* 1. حالة المهام */}
       <Panel title="حالة التكليفات" icon={<PieChartIcon size={18} className="shrink-0 text-[var(--link)]" aria-hidden="true" />} action={{ label: 'إدارة المهام', onClick: () => navigate('/admin/tasks') }}>
         {tasksData.length > 0 ? (

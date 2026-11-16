@@ -23,7 +23,7 @@ const cards: Card[] = [
 export function DashboardMetricsGrid({ metrics }: { metrics: DashboardMetrics }) {
   const navigate = useNavigate();
   return (
-    <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="مؤشرات الفريق">
+    <section data-testid="dashboard-metrics" className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="مؤشرات الفريق">
       {cards.map(({ key, title, icon: Icon, color, to, value, detail, alert }) => (
         <button
           key={key}

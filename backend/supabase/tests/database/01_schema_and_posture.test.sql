@@ -1,19 +1,23 @@
 -- 01 — Final schema, signatures, constraints, indexes, triggers, RLS posture and
--- RPC grants after applying the full 24-migration chain on a fresh database.
+-- RPC grants for the original 24-migration historical cohort.
 BEGIN;
 \ir _helpers.psql
 
 SELECT plan(57);
 
 -- ---------------------------------------------------------------------------
--- Migration history
+-- Migration history: retain the original 24-migration cohort assertions even
+-- when the disposable database also applies a later forward migration.
 -- ---------------------------------------------------------------------------
-SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 24,
-  'exactly 24 migrations are recorded');
-SELECT is((SELECT min(version) FROM supabase_migrations.schema_migrations), '20261114163426',
-  'first migration is 20261114163426');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261114164006',
-  'last migration is 20261114164006');
+SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
+           WHERE version <= '20261114164006'), 24,
+  'historical cohort through 20261114164006 contains exactly 24 migrations');
+SELECT is((SELECT min(version) FROM supabase_migrations.schema_migrations
+           WHERE version <= '20261114164006'), '20261114163426',
+  'historical cohort first migration is 20261114163426');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations
+           WHERE version <= '20261114164006'), '20261114164006',
+  'historical cohort last migration is 20261114164006');
 
 -- ---------------------------------------------------------------------------
 -- Tables present / removed
