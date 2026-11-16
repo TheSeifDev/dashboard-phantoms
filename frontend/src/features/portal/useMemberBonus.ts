@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabase/client';
+import { memberSupabase } from '../../lib/supabase/member-client';
 import { toAppError } from '../../lib/supabase/errors';
 import { getDeviceToken } from '../../store/auth';
 
@@ -16,7 +16,7 @@ export function useMemberBonus(memberId: number | null | undefined) {
     queryFn: async () => {
       const deviceToken = getDeviceToken();
       if (!deviceToken) throw new Error('DEVICE_REQUIRED: سجّل دخولك من جديد للتحقق من جلسة الجهاز.');
-      const { data, error } = await supabase.rpc('get_member_bonus_total', {
+      const { data, error } = await memberSupabase.rpc('get_member_bonus_total', {
         p_member_id: memberId as number,
         p_device_token: deviceToken,
       });
@@ -36,7 +36,7 @@ export function useMemberInfiniteBonus(memberId: number | null | undefined) {
     queryFn: async () => {
       const deviceToken = getDeviceToken();
       if (!deviceToken) throw new Error('DEVICE_REQUIRED: سجّل دخولك من جديد للتحقق من جلسة الجهاز.');
-      const { data, error } = await supabase.rpc('get_member_bonus_infinite', {
+      const { data, error } = await memberSupabase.rpc('get_member_bonus_infinite', {
         p_member_id: memberId as number,
         p_device_token: deviceToken,
       });

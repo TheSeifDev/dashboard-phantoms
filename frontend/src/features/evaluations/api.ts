@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase/client';
+import { memberSupabase } from '../../lib/supabase/member-client';
 import { toAppError } from '../../lib/supabase/errors';
 import { getDeviceToken } from '../../store/auth';
 import { TABLES } from '../../types/db';
@@ -346,7 +347,7 @@ export function useMemberEvaluations(memberId: number | null | undefined) {
       const deviceToken = getDeviceToken() ?? '';
       const results: MemberEvaluation[] = [];
 
-      const nativeRes = await (supabase as any).rpc('get_member_evaluations', {
+      const nativeRes = await (memberSupabase as any).rpc('get_member_evaluations', {
         p_member_id: targetId,
         p_device_token: deviceToken,
       });
@@ -371,7 +372,7 @@ export function useMemberEvaluations(memberId: number | null | undefined) {
       }
 
       // جلب التقييمات المحفوظة في قناة التوافق عبر get_member_tasks (VOLATILE)
-      const tasksRes = await supabase.rpc('get_member_tasks', {
+      const tasksRes = await memberSupabase.rpc('get_member_tasks', {
         p_member_id: targetId,
         p_device_token: deviceToken,
       });
@@ -382,7 +383,7 @@ export function useMemberEvaluations(memberId: number | null | undefined) {
           if (parsed) {
             results.push(parsed);
             if (!parsed.viewed_at) {
-              void supabase
+              void memberSupabase
                 .rpc('submit_task_status', {
                   p_task_id: task.id,
                   p_member_id: targetId,
@@ -418,7 +419,7 @@ export function useMarkEvaluationRead() {
     }) => {
       const deviceToken = getDeviceToken() ?? '';
       if (mode === 'fallback') {
-        const { error } = await supabase.rpc('submit_task_status', {
+        const { error } = await memberSupabase.rpc('submit_task_status', {
           p_task_id: evaluationId,
           p_member_id: memberId,
           p_device_token: deviceToken,
@@ -430,7 +431,7 @@ export function useMarkEvaluationRead() {
         return evaluationId;
       }
 
-      const { error } = await (supabase as any).rpc('mark_member_evaluation_read', {
+      const { error } = await (memberSupabase as any).rpc('mark_member_evaluation_read', {
         p_evaluation_id: evaluationId,
         p_member_id: memberId,
         p_device_token: deviceToken,

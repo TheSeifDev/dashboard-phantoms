@@ -8,6 +8,7 @@ import { supabase, syncAdminSessionStorage } from '../../lib/supabase/client';
 import { toAppError } from '../../lib/supabase/errors';
 import { isValidEmail } from '../../lib/validators';
 import { useAdminAccess } from '../admin/access/api';
+import { clearAdminSetupIntent } from './auth-flow';
 
 export default function AdminLoginPage() {
   const sessionUser = useAuthStore((state) => state.user);
@@ -40,6 +41,7 @@ export default function AdminLoginPage() {
     const signOutAndRetry = async () => {
       await supabase.auth.signOut();
       clearSession();
+      clearAdminSetupIntent();
     };
     return (
       <AuthShell
@@ -77,6 +79,7 @@ export default function AdminLoginPage() {
     // ملاحظة: تنظيف المخزن المقابل يتم بعد نجاح الدخول فقط — حتى لا تضيع
     // جلسة صالحة قديمة عند فشل محاولة دخول جديدة.
     setAdminRemember(remember);
+    clearAdminSetupIntent();
     try {
       const { data, error: loginError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
@@ -101,6 +104,7 @@ export default function AdminLoginPage() {
         const { data: accessData, error: accessError } = await supabase.rpc('get_admin_access');
         if (accessError || !accessData?.is_admin) {
           await supabase.auth.signOut();
+          clearAdminSetupIntent();
           setError(accessError
             ? 'معرفناش نتحقق من صلاحيات الحساب. جرّب تاني بعد شوية.'
             : 'الحساب ده مش مضاف للإدارة. اطلب من مالك النظام إضافته.');
@@ -157,6 +161,9 @@ export default function AdminLoginPage() {
           {loading ? 'جارٍ تسجيل الدخول...' : 'ادخل مركز الإدارة'}
           {!loading && <ArrowLeft size={18} aria-hidden="true" />}
         </button>
+        <Link to="/admin/forgot-password" className="text-center text-xs font-bold text-[var(--link)] hover:text-[var(--text)] transition-colors py-1">
+          نسيت كلمة المرور؟
+        </Link>
       </form>
     </AuthShell>
   );

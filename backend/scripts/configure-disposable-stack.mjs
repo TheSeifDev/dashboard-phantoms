@@ -29,6 +29,9 @@ config = config.replace(/^project_id\s*=.*$/m, `project_id = "phantoms-disposabl
 config = config.replace(/(\[api\][\s\S]*?\nport\s*=\s*)\d+/, (_, prefix) => `${prefix}${base}`);
 config = config.replace(/(\[db\][\s\S]*?\nport\s*=\s*)\d+/, (_, prefix) => `${prefix}${base + 1}`);
 config = config.replace(/(shadow_port\s*=\s*)\d+/, (_, prefix) => `${prefix}${base + 2}`);
+const previewOrigin = `http://127.0.0.1:${base + 3}`;
+config = config.replace(/(site_url\s*=\s*)"[^"]*"/, (_, prefix) => `${prefix}"${previewOrigin}"`);
+config = config.replace(/additional_redirect_urls\s*=\s*\[[^\]]*\]/, `additional_redirect_urls = ["${previewOrigin}", "${previewOrigin}/**"]`);
 writeFileSync(configPath, config);
 appendFileSync(process.env.GITHUB_ENV, `PHANTOMS_LOCAL_API_PORT=${base}\nPHANTOMS_LOCAL_DB_PORT=${base + 1}\nPHANTOMS_LOCAL_PREVIEW_PORT=${base + 3}\n`);
 console.log('Configured isolated disposable namespace and checked available loopback ports; no production connection.');

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase/client';
+import { memberSupabase } from '../../lib/supabase/member-client';
 import { toAppError } from '../../lib/supabase/errors';
 import { TABLES } from '../../types/db';
 import type { Member, MemberCustomField } from '../../types/db';
@@ -529,7 +530,7 @@ export async function fetchMemberInviteContext(token: string): Promise<MemberInv
       return { valid: false, reason: 'EXPIRED', custom_fields: [] };
     }
 
-    const formRes = await (supabase as any).rpc('get_member_info_form', {
+    const formRes = await (memberSupabase as any).rpc('get_member_info_form', {
       p_member_id: fallbackParsed.m,
       p_device_token: fallbackParsed.s,
     });
@@ -564,7 +565,7 @@ export async function fetchMemberInviteContext(token: string): Promise<MemberInv
     };
   }
 
-  const nativeRes = await (supabase as any).rpc('get_member_invite_context', {
+  const nativeRes = await (memberSupabase as any).rpc('get_member_invite_context', {
     p_token: cleanToken,
   });
 
@@ -616,7 +617,7 @@ export async function submitMemberRegistrationInvite(
     }
 
     // التحقق من عدم تكرار البريد الإلكتروني
-    const existingLookup = await supabase.rpc('lookup_member_by_email', {
+    const existingLookup = await memberSupabase.rpc('lookup_member_by_email', {
       p_email: cleanEmail,
       p_device_token: null,
     });
@@ -624,7 +625,7 @@ export async function submitMemberRegistrationInvite(
       throw new Error('البريد الإلكتروني ده مسجّل بالفعل في الفريق.');
     }
 
-    const formRes = await (supabase as any).rpc('get_member_info_form', {
+    const formRes = await (memberSupabase as any).rpc('get_member_info_form', {
       p_member_id: fallbackParsed.m,
       p_device_token: fallbackParsed.s,
     });
@@ -643,7 +644,7 @@ export async function submitMemberRegistrationInvite(
     }
 
     const cleanCustomMap = sanitizeCustomFieldsMap(payload.custom_fields);
-    const submitRes = await (supabase as any).rpc('submit_member_info', {
+    const submitRes = await (memberSupabase as any).rpc('submit_member_info', {
       p_member_id: fallbackParsed.m,
       p_device_token: fallbackParsed.s,
       p_values: {
@@ -662,7 +663,7 @@ export async function submitMemberRegistrationInvite(
     }
 
     // إبطال رمز الجلسة فوراً بحيث يصبح الرابط صالحاً لمرة واحدة فقط ولا يمكن إعادة فتحه
-    await supabase.rpc('logout_member_device', {
+    await memberSupabase.rpc('logout_member_device', {
       p_member_id: fallbackParsed.m,
       p_device_token: fallbackParsed.s,
     });
@@ -676,7 +677,7 @@ export async function submitMemberRegistrationInvite(
     return;
   }
 
-  const nativeRes = await (supabase as any).rpc('submit_member_registration_invite', {
+  const nativeRes = await (memberSupabase as any).rpc('submit_member_registration_invite', {
     p_token: cleanToken,
     p_payload: {
       ...payload,

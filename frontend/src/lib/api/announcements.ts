@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { memberSupabase } from '../supabase/member-client';
 import { toAppError } from '../supabase/errors';
 import { getDeviceToken } from '../../store/auth';
 import { isPositiveId } from '../validators';
@@ -142,7 +143,7 @@ export class AnnouncementsAPI {
    */
   static async getMemberAnnouncements(memberId: number): Promise<MemberAnnouncement[]> {
     if (!isPositiveId(memberId)) throw toAppError(new Error('INVALID_ID'), 'رقم العضو مش صالح.');
-    const { data: announcements, error } = await supabase
+    const { data: announcements, error } = await memberSupabase
       .rpc('get_member_announcements', { p_member_id: memberId, p_device_token: getDeviceToken() });
 
     if (!error) {
@@ -153,9 +154,9 @@ export class AnnouncementsAPI {
 
     const msg = String(error.message ?? '').toLowerCase();
     if (msg.includes('read-only transaction')) {
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData } = await memberSupabase.auth.getSession();
       if (sessionData.session) {
-        const directRes = await supabase
+        const directRes = await memberSupabase
           .from('announcements')
           .select('*')
           .eq('is_active', true)
@@ -206,7 +207,7 @@ export class AnnouncementsAPI {
     if (!isPositiveId(announcementId) || !isPositiveId(memberId)) {
       throw toAppError(new Error('INVALID_ID'), 'أرقام الإعلان والعضو مش صالحة.');
     }
-    const { data: result, error } = await supabase
+    const { data: result, error } = await memberSupabase
       .rpc('mark_announcement_viewed', {
         p_announcement_id: announcementId,
         p_member_id: memberId,
@@ -230,7 +231,7 @@ export class AnnouncementsAPI {
     if (!isPositiveId(announcementId) || !isPositiveId(memberId)) {
       throw toAppError(new Error('INVALID_ID'), 'أرقام الإعلان والعضو مش صالحة.');
     }
-    const { data: result, error } = await supabase
+    const { data: result, error } = await memberSupabase
       .rpc('mark_announcement_read', {
         p_announcement_id: announcementId,
         p_member_id: memberId,
@@ -254,7 +255,7 @@ export class AnnouncementsAPI {
     if (!isPositiveId(announcementId) || !isPositiveId(memberId)) {
       throw toAppError(new Error('INVALID_ID'), 'أرقام الإعلان والعضو مش صالحة.');
     }
-    const { data: result, error } = await supabase
+    const { data: result, error } = await memberSupabase
       .rpc('dismiss_announcement', {
         p_announcement_id: announcementId,
         p_member_id: memberId,

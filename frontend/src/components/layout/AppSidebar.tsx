@@ -18,6 +18,7 @@ import { supabase } from '../../lib/supabase/client';
 import { Drawer } from '../ui/Drawer';
 import { PhantomsLogo } from '../brand/PhantomsLogo';
 import type { AdminPermission, AdminPermissions } from '../../types/db';
+import { clearAdminSetupIntent } from '../../features/auth/auth-flow';
 
 interface SidebarLink {
   to: string;
@@ -174,6 +175,7 @@ export function AppSidebar({
   const logout = async () => {
     await supabase.auth.signOut();
     clear();
+    clearAdminSetupIntent();
     onCloseDrawer();
     navigate('/admin/login');
   };
