@@ -4,6 +4,23 @@ import path from 'node:path';
 const SAFE_STATUSES = new Set(['passed', 'failed', 'timedOut', 'skipped', 'interrupted']);
 const SAFE_CLEANUP_STATUSES = new Set(['passed', 'failed', 'not-started']);
 
+export const AUTH_TEST_TITLE = 'real numeric OTP, isolated member/admin sessions, rejection, retry, invite, and recovery';
+export const AUTH_STAGE_TITLES = Object.freeze([
+  'admin login',
+  'same-account member OTP and scoped member logout',
+  'real invalid eight-digit OTP and retry',
+  'expired OTP and resend retry',
+  'first-time member OTP',
+  'non-member rejection and local cleanup',
+  'delivered invite action link and local admin session',
+  'delivered recovery action link and local admin session',
+]);
+export const AUTH_ALLOWED_LABELS = Object.freeze([AUTH_TEST_TITLE, ...AUTH_STAGE_TITLES]);
+
+export function sanitizeAuthLabel(value) {
+  return typeof value === 'string' && AUTH_ALLOWED_LABELS.includes(value) ? value : '[redacted]';
+}
+
 export function isExactLoopbackHttpOrigin(value) {
   try {
     const parsed = new URL(value);
@@ -42,26 +59,17 @@ export function differentOtp(code) {
   return next === code ? '00000000' : next;
 }
 
-function safeLabel(value) {
-  const label = [...String(value ?? '')].filter((character) => {
-    const code = character.charCodeAt(0);
-    return code >= 32 && code !== 127;
-  }).join('').slice(0, 200);
-  if (/https?:\/\/|[?#]|\b(?:token|password|secret|otp|code)\b/i.test(label)) return '[redacted]';
-  return label;
-}
-
 function safeStatus(value) {
   return SAFE_STATUSES.has(value) ? value : 'interrupted';
 }
 
 function safeStep(step) {
-  return { name: safeLabel(step?.name), status: safeStatus(step?.status), passed: step?.status === 'passed' };
+  return { name: sanitizeAuthLabel(step?.name), status: safeStatus(step?.status), passed: step?.status === 'passed' };
 }
 
 export function sanitizeAuthEvidence(raw, cleanupStatus = 'not-started') {
   const tests = Array.isArray(raw?.tests)
-    ? raw.tests.map((test) => ({ name: safeLabel(test?.name), status: safeStatus(test?.status), passed: test?.status === 'passed' }))
+    ? raw.tests.map((test) => ({ name: sanitizeAuthLabel(test?.name), status: safeStatus(test?.status), passed: test?.status === 'passed' }))
     : [];
   const steps = Array.isArray(raw?.steps) ? raw.steps.map(safeStep) : [];
   const statusCounts = {};
@@ -92,7 +100,7 @@ export function writeSanitizedAuthEvidence(filePath, raw, cleanupStatus = 'not-s
   return evidence;
 }
 
-export function finalizeAuthEvidence(filePath, cleanupStatus) {
+export function finalizeAuthEvidence(filePath, cleanupStatus = 'not-started') {
   let raw = {};
   try {
     raw = JSON.parse(readFileSync(filePath, 'utf8'));

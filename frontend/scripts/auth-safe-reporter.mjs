@@ -1,23 +1,16 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { sanitizeAuthEvidence, writeSanitizedAuthEvidence } from './auth-e2e-helpers.mjs';
+import {
+  AUTH_ALLOWED_LABELS,
+  AUTH_STAGE_TITLES,
+  AUTH_TEST_TITLE,
+  sanitizeAuthEvidence,
+  sanitizeAuthLabel,
+  writeSanitizedAuthEvidence,
+} from './auth-e2e-helpers.mjs';
 
 function safeStatus(status) {
   return ['passed', 'failed', 'timedOut', 'skipped', 'interrupted'].includes(status) ? status : 'interrupted';
-}
-
-function safeName(value) {
-  const text = [...String(value ?? '')].filter((character) => {
-    const code = character.charCodeAt(0);
-    return code >= 32 && code !== 127;
-  }).join('').slice(0, 200);
-  return /https?:\/\/|[?#]|\b(?:token|password|secret|otp|code)\b/i.test(text) ? '[redacted]' : text;
-}
-
-function collectSteps(step, target) {
-  const children = Array.isArray(step?.steps) ? step.steps : [];
-  for (const child of children) collectSteps(child, target);
-  target.push({ name: safeName(step?.title), status: step?.error ? 'failed' : 'passed' });
 }
 
 function readBooleanMetadata(test) {
@@ -46,8 +39,11 @@ export default class AuthSafeReporter {
   }
 
   onTestEnd(test, result) {
-    this.tests.push({ name: safeName(test.title), status: safeStatus(result.status) });
-    for (const step of result.steps ?? []) collectSteps(step, this.steps);
+    this.tests.push({ name: sanitizeAuthLabel(test?.title), status: safeStatus(result?.status) });
+    for (const step of Array.isArray(result?.steps) ? result.steps : []) {
+      if (step?.category !== 'test.step') continue;
+      this.steps.push({ name: sanitizeAuthLabel(step?.title), status: step?.error ? 'failed' : 'passed' });
+    }
     this.metadata.push(...readBooleanMetadata(test));
   }
 
@@ -61,4 +57,10 @@ export default class AuthSafeReporter {
   }
 }
 
-export { sanitizeAuthEvidence };
+export {
+  AUTH_ALLOWED_LABELS,
+  AUTH_STAGE_TITLES,
+  AUTH_TEST_TITLE,
+  sanitizeAuthEvidence,
+  sanitizeAuthLabel,
+};
