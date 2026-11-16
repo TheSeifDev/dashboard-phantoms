@@ -244,6 +244,12 @@ test.describe('disposable local dashboard', () => {
         await expect(page.getByTestId('dashboard-metrics')).toBeVisible();
         await expect(page.getByRole('alert')).toHaveCount(0);
         await assertNoHorizontalOverflow(page);
+        // Recharts uses 1500ms data-entry animations; capture settled real charts,
+        // not the transient zero-height bars/empty sectors immediately after resize.
+        await page.waitForTimeout(1800);
+        await expect(page.locator('.recharts-pie-sector')).toHaveCount(2);
+        const nonzeroBars = await page.locator('.recharts-bar-rectangle').evaluateAll((elements) => elements.filter((element) => element.getBoundingClientRect().height > 10).length);
+        expect(nonzeroBars).toBeGreaterThanOrEqual(2);
         const screenshotPath = path.join(evidenceDir, `dashboard-${theme}-${viewport.name}.png`);
         await page.screenshot({ path: screenshotPath, fullPage: true });
         screenshots.push({ theme, viewport: viewport.name, path: screenshotPath });
@@ -252,7 +258,7 @@ test.describe('disposable local dashboard', () => {
 
     await assertCorePage(page, '/admin/members', /دليل الأعضاء/);
     await expect(page.getByText('Disposable member one')).toBeVisible();
-    await page.getByRole('button', { name: 'Disposable member one' }).click();
+    await page.getByRole('button', { name: 'Disposable member one', exact: true }).click();
     await expect(page.getByRole('dialog')).toContainText('Projection verification');
     await page.keyboard.press('Escape');
     await assertCorePage(page, '/admin/tasks', /إدارة وتكليف المهام/);
