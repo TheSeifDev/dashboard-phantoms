@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -28,11 +29,17 @@ function runCheck() {
   });
 }
 
-test('local inventory check reports no pending forward migrations after reconciliation', () => {
+test('local inventory check reports the password migration pending and never claims it applied', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /0 pending forward/);
-  assert.doesNotMatch(result.stdout, /not claimed applied/);
+  const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
+  const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
+  const applied = entries.length - pending;
+  assert.ok(pending >= 1);
+  assert.ok(result.stdout.includes(`All ${24 + entries.length} canonical migrations are present (${pending} pending forward, ${applied} applied forward)`));
+  const password = entries.find((entry) => entry.version === '20261116234800');
+  assert.equal(password.production_status, 'not_applied');
+  assert.equal(password.remote_applied_timestamp, null);
 });
 
 test('remote commands are not printed when target is omitted', () => {

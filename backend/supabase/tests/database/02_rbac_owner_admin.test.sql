@@ -58,8 +58,8 @@ SELECT throws_ok($$SELECT public.admin_add_account('x@phantoms-test.example')$$,
   'anon cannot execute admin_add_account');
 SELECT throws_ok($$SELECT public.admin_update_permissions(gen_random_uuid(), '{}'::jsonb)$$, '42501', NULL,
   'anon cannot execute admin_update_permissions');
-SELECT is((SELECT public.get_member_invite_context(NULL) ->> 'valid'), 'false',
-  'sanity: anon still reaches public invite RPCs');
+SELECT throws_ok($$SELECT public.get_member_invite_context(NULL)$$, '42501', NULL,
+  'retired legacy invite context is not reachable by anon');
 RESET ROLE;
 
 -- has_admin_permission / is_admin / is_owner -------------------------------

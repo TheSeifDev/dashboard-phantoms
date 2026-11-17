@@ -87,7 +87,11 @@ test('failed or ambiguous callbacks produce a retryable state and do not accept 
 
 test('member/admin auth storage identifiers remain separate and admin intent stores no session data', () => {
   const memberClientSource = readFileSync(new URL('../src/lib/supabase/member-client.ts', import.meta.url), 'utf8');
-  assert.match(memberClientSource, /phantoms-member-auth/);
+  const memberStorageSource = readFileSync(new URL('../src/lib/supabase/member-auth-storage.ts', import.meta.url), 'utf8');
+  assert.match(memberStorageSource, /MEMBER_AUTH_STORAGE_KEY\s*=\s*['"]phantoms-member-auth['"]/);
+  assert.match(memberClientSource, /import \{ MEMBER_AUTH_STORAGE_KEY, memberAuthStorage \} from '\.\/member-auth-storage'/);
+  assert.match(memberClientSource, /storageKey:\s*MEMBER_AUTH_STORAGE_KEY/);
+  assert.match(memberClientSource, /storage:\s*memberAuthStorage/);
   assert.match(memberClientSource, /detectSessionInUrl:\s*false/);
   assert.equal(memberClientSource.includes("storageKey: 'sb-"), false);
   assert.notEqual(ADMIN_SETUP_INTENT_STORAGE_KEY, 'phantoms-member-auth');

@@ -9,7 +9,7 @@ import { memberSupabase } from '../../lib/supabase/member-client';
 import { toAppError } from '../../lib/supabase/errors';
 import { TABLES } from '../../types/db';
 import type { Member, MemberInsert, MemberUpdate } from '../../types/db';
-import { getDeviceToken, setDeviceToken } from '../../store/auth';
+import { getDeviceToken } from '../../store/auth';
 import {
   extractMemberCustomFields,
   isMissingCustomFieldsColumnError,
@@ -258,7 +258,6 @@ export const fetchMemberByEmail = async (email: string, deviceToken?: string): P
     }
     throw toAppError(error, 'معرفناش نتحقق من البريد الإلكتروني.');
   }
-  if (data && deviceToken) setDeviceToken(deviceToken);
   return (data as Member | null) ?? null;
 };
 

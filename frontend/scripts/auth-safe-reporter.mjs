@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import {
   AUTH_ALLOWED_LABELS,
+  AUTH_REQUIRED_METADATA,
   AUTH_STAGE_TITLES,
   AUTH_TEST_TITLE,
   sanitizeAuthEvidence,
@@ -14,7 +15,7 @@ function safeStatus(status) {
 }
 
 function readBooleanMetadata(test) {
-  const allowed = new Set(['noVerifyBeforeCode', 'noEmailRedirectTo', 'memberLogoutScoped', 'nonmemberLogoutScoped']);
+  const allowed = new Set(AUTH_REQUIRED_METADATA);
   const values = [];
   for (const annotation of test?.annotations ?? []) {
     if (annotation.type !== 'auth-safety') continue;
@@ -59,6 +60,7 @@ export default class AuthSafeReporter {
 
 export {
   AUTH_ALLOWED_LABELS,
+  AUTH_REQUIRED_METADATA,
   AUTH_STAGE_TITLES,
   AUTH_TEST_TITLE,
   sanitizeAuthEvidence,

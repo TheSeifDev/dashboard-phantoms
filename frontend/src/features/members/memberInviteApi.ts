@@ -1,495 +1,163 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase/client';
-import { memberSupabase } from '../../lib/supabase/member-client';
-import { toAppError } from '../../lib/supabase/errors';
-import { TABLES } from '../../types/db';
-import type { Member, MemberCustomField } from '../../types/db';
+import type { Member } from '../../types/db';
 import {
-  ONBOARDING_CARRIER_LABEL,
-  extractMemberCustomFields,
-  isMissingCustomFieldsColumnError,
-  isMissingRelationError,
-  normalizeFieldRow,
-  packTeamNotesWithCustomFields,
-  sanitizeCustomFieldsMap,
-} from './customFieldsApi';
-import { ADMIN_MEMBER_COLUMNS, PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS } from './memberColumns';
+  buildTrustedMemberInviteUrl,
+  isMemberInviteId,
+  isMemberInviteToken,
+  memberAuthErrorMessage,
+  normalizeAuthEmail,
+  readMemberEndpointCode,
+} from '../auth/member-password';
 
-export const MEMBER_INVITES_KEY = ['member_registration_invites'] as const;
-const PRE0020_TOKEN_PREFIX = 'phm1_';
-const INVITE_PLACEHOLDER_DOMAIN = '@invite.phantoms.local';
+export const MEMBER_INVITES_KEY = ['member_password_invites'] as const;
+export type MemberInvitePurpose = 'enroll' | 'reset';
+export type MemberInviteStatus = 'pending' | 'reserved' | 'review_required';
 
 export interface MemberInviteRecord {
-  id: number;
+  id: string;
+  member_id: number;
+  email: string;
+  purpose: MemberInvitePurpose;
+  status: MemberInviteStatus;
   note: string | null;
   expires_at: string;
-  used_at: string | null;
-  is_revoked: boolean;
   created_at: string;
-  mode: 'native' | 'fallback';
 }
 
-export interface CreatedMemberInvite {
-  id: number;
+export interface CreatedMemberInvite extends MemberInviteRecord {
   token: string;
   url: string;
-  note: string;
-  expires_at: string;
 }
 
-export interface MemberInviteContext {
-  valid: boolean;
-  reason?: string;
-  note?: string;
-  expires_at?: string;
-  custom_fields: MemberCustomField[];
-}
-
-export interface MemberSelfRegistrationPayload {
-  full_name: string;
+export interface MemberInviteMemberOption {
+  id: number;
   email: string;
-  phone: string;
-  residence: string;
-  work_conditions: string;
-  device: string;
-  gender: string;
-  bio: string;
-  can_go_alexandria: boolean;
-  custom_fields: Record<string, string | number | boolean | null>;
+  full_name: string;
+  work_status: string | null;
 }
 
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function bytesToBase64Url(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 1) {
-    binary += String.fromCharCode(bytes[i]);
+export class MemberInviteApiError extends Error {
+  readonly code: string;
+  constructor(code: string) {
+    super(memberAuthErrorMessage(code, 'تعذر تنفيذ إجراء الدعوة. راجع صلاحياتك وحاول مرة أخرى.'));
+    this.name = 'MemberInviteApiError';
+    this.code = code;
   }
-  return window
-    .btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
 }
 
-function encodeUtf8Base64Url(json: string): string {
-  const bytes = new TextEncoder().encode(json);
-  return bytesToBase64Url(bytes);
-}
-
-function decodeUtf8Base64Url(encoded: string): string {
-  const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-  const binary = window.atob(padded);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return new TextDecoder().decode(bytes);
-}
-
-/**
- * يولّد رمز دعوة عشوائي طويل جداً ومؤمّن تشفيرياً (96+ حرفاً)
- */
-export function generateLongInviteToken(): string {
-  const bytes = new Uint8Array(72);
-  window.crypto.getRandomValues(bytes);
-  return `phm_${bytesToBase64Url(bytes)}`;
+function mapInviteRow(value: unknown): MemberInviteRecord | null {
+  if (!value || typeof value !== 'object') return null;
+  const row = value as Record<string, unknown>;
+  if (
+    typeof row.id !== 'string' || !isMemberInviteId(row.id)
+    || typeof row.member_id !== 'number' || !Number.isSafeInteger(row.member_id) || row.member_id <= 0
+    || typeof row.email !== 'string'
+    || (row.purpose !== 'enroll' && row.purpose !== 'reset')
+    || (row.status !== 'pending' && row.status !== 'reserved' && row.status !== 'review_required')
+    || typeof row.expires_at !== 'string' || typeof row.created_at !== 'string'
+  ) return null;
+  return {
+    id: row.id,
+    member_id: row.member_id,
+    email: normalizeAuthEmail(row.email),
+    purpose: row.purpose,
+    status: row.status,
+    note: typeof row.note === 'string' ? row.note : null,
+    expires_at: row.expires_at,
+    created_at: row.created_at,
+  };
 }
 
 export function buildMemberInviteUrl(token: string): string {
-  const configuredWebUrl = (
-    (import.meta.env.VITE_PUBLIC_WEB_URL as string | undefined) ||
-    'https://admin-phantoms.vercel.app'
-  ).replace(/\/+$/, '');
-
-  const rawOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-  const isNativeContainerOrigin =
-    !rawOrigin ||
-    rawOrigin === 'https://localhost' ||
-    rawOrigin === 'http://localhost' ||
-    rawOrigin.startsWith('capacitor://');
-
-  const baseOrigin = isNativeContainerOrigin ? configuredWebUrl : rawOrigin;
-  return `${baseOrigin}/join/${encodeURIComponent(token)}`;
-}
-
-interface FallbackTokenPayload {
-  m: number;
-  s: string;
-  x: string;
-  n: string;
-  r: string;
-}
-
-function parseFallbackToken(token: string): FallbackTokenPayload | null {
-  if (!token.startsWith(PRE0020_TOKEN_PREFIX)) return null;
   try {
-    const rawJson = decodeUtf8Base64Url(token.slice(PRE0020_TOKEN_PREFIX.length));
-    const parsed = JSON.parse(rawJson) as Partial<FallbackTokenPayload>;
-    if (
-      typeof parsed.m !== 'number' ||
-      typeof parsed.s !== 'string' ||
-      parsed.s.length < 16 ||
-      typeof parsed.x !== 'string'
-    ) {
-      return null;
-    }
-    return {
-      m: parsed.m,
-      s: parsed.s,
-      x: parsed.x,
-      n: typeof parsed.n === 'string' ? parsed.n : '',
-      r: typeof parsed.r === 'string' ? parsed.r : '',
-    };
+    return buildTrustedMemberInviteUrl(token, import.meta.env.VITE_PUBLIC_WEB_URL as string | undefined);
   } catch {
-    return null;
+    throw new MemberInviteApiError(isMemberInviteToken(token) ? 'SERVER_CONFIG' : 'INVALID_TOKEN');
   }
 }
 
-async function ensureOnboardingCarrierField(): Promise<number> {
-  const existing = await (supabase as any)
-    .from('member_info_fields')
-    .select('id, is_active')
-    .eq('label', ONBOARDING_CARRIER_LABEL)
-    .maybeSingle();
-
-  if (!existing.error && existing.data?.id) {
-    if (!existing.data.is_active) {
-      await (supabase as any)
-        .from('member_info_fields')
-        .update({ is_active: true })
-        .eq('id', existing.data.id);
-    }
-    return Number(existing.data.id);
-  }
-
-  const inserted = await (supabase as any)
-    .from('member_info_fields')
-    .insert({
-      label: ONBOARDING_CARRIER_LABEL,
-      field_type: 'json',
-      options: [],
-      help_text: '',
-      is_required: false,
-      is_active: true,
-      sort_order: -9999,
-    })
-    .select('id')
-    .single();
-
-  if (inserted.error || !inserted.data?.id) {
-    throw toAppError(inserted.error, 'معرفناش نجهّز قناة رابط الدعوة.');
-  }
-  return Number(inserted.data.id);
-}
-
+/** Historical placeholders are filtered without promotion, deletion or any account writes. */
 export function isInvitePlaceholderMember(member: Pick<Member, 'email'>): boolean {
-  if (!member.email) return false;
-  const email = member.email.toLowerCase();
-  return email.endsWith(INVITE_PLACEHOLDER_DOMAIN);
+  return typeof member.email === 'string' && member.email.toLowerCase().endsWith('@invite.phantoms.local');
+}
+export function syncPendingPre0020Invites(rawMembers: Member[]): Member[] {
+  return rawMembers.filter((member) => !isInvitePlaceholderMember(member));
 }
 
-async function applyRegistrationPayloadToMemberRow(
-  memberId: number,
-  payload: MemberSelfRegistrationPayload,
-): Promise<Member | null> {
-  const cleanCustom = sanitizeCustomFieldsMap(payload.custom_fields);
-  const updateBody = {
-    full_name: payload.full_name.trim(),
-    email: payload.email.trim().toLowerCase(),
-    phone: payload.phone.trim() || null,
-    residence: payload.residence.trim() || null,
-    work_conditions: payload.work_conditions.trim() || null,
-    device: payload.device.trim() || 'لابتوب',
-    gender: payload.gender.trim() || null,
-    bio: payload.bio.trim() || null,
-    can_go_alexandria: Boolean(payload.can_go_alexandria),
-    work_status: 'active',
-    team_notes: null,
-    custom_fields: cleanCustom,
-  };
-
-  const primary = await supabase
-    .from(TABLES.members)
-    .update(updateBody)
-    .eq('id', memberId)
-    .select(ADMIN_MEMBER_COLUMNS)
-    .maybeSingle();
-
-  if (!primary.error && primary.data) {
-    return extractMemberCustomFields(primary.data as Member);
-  }
-
-  if (isMissingCustomFieldsColumnError(primary.error)) {
-    const { custom_fields: _cf, ...rest } = updateBody;
-    const fallback = await supabase
-      .from(TABLES.members)
-      .update({
-        ...rest,
-        team_notes: packTeamNotesWithCustomFields(null, cleanCustom),
-      })
-      .eq('id', memberId)
-      .select(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS)
-      .maybeSingle();
-
-    if (!fallback.error && fallback.data) {
-      return extractMemberCustomFields(fallback.data as Member);
-    }
-  }
-
-  return null;
+export async function fetchApprovedMembersForInvite(): Promise<MemberInviteMemberOption[]> {
+  const { data, error } = await supabase.from('members')
+    .select('id, email, full_name, work_status').eq('work_status', 'active')
+    .order('full_name', { ascending: true }).limit(500);
+  if (error || !data) throw new MemberInviteApiError('SERVER_UNAVAILABLE');
+  return (data as Array<Record<string, unknown>>)
+    .filter((row) => typeof row.id === 'number' && typeof row.email === 'string' && typeof row.full_name === 'string')
+    .map((row) => ({
+      id: Number(row.id), email: normalizeAuthEmail(String(row.email)), full_name: String(row.full_name),
+      work_status: typeof row.work_status === 'string' ? row.work_status : null,
+    }));
 }
 
-/**
- * يزامن الدعوات المسجّلة في وضع التوافق (قبل تطبيق 0020) ويرقّيها تلقائياً إلى أعضاء حقيقيين
- */
-export async function syncPendingPre0020Invites(rawMembers: Member[]): Promise<Member[]> {
-  const placeholders = rawMembers.filter(isInvitePlaceholderMember);
-  const regularMembers = rawMembers.filter((m) => !isInvitePlaceholderMember(m));
-
-  if (placeholders.length === 0) {
-    return regularMembers;
-  }
-
-  try {
-    const placeholderIds = placeholders.map((p) => p.id);
-    const submissionsRes = await (supabase as any)
-      .from('member_info_submissions')
-      .select('member_id, values')
-      .in('member_id', placeholderIds);
-
-    if (submissionsRes.error || !Array.isArray(submissionsRes.data) || submissionsRes.data.length === 0) {
-      return regularMembers;
-    }
-
-    const promotedMembers: Member[] = [];
-    for (const sub of submissionsRes.data as Array<{ member_id: number; values: Record<string, unknown> }>) {
-      const valuesObj = sub.values && typeof sub.values === 'object' ? sub.values : {};
-      let foundPayload: MemberSelfRegistrationPayload | null = null;
-
-      for (const val of Object.values(valuesObj)) {
-        if (val && typeof val === 'object' && !Array.isArray(val)) {
-          const candidate = val as Partial<MemberSelfRegistrationPayload>;
-          if (typeof candidate.email === 'string' && typeof candidate.full_name === 'string') {
-            foundPayload = {
-              full_name: candidate.full_name,
-              email: candidate.email,
-              phone: typeof candidate.phone === 'string' ? candidate.phone : '',
-              residence: typeof candidate.residence === 'string' ? candidate.residence : '',
-              work_conditions: typeof candidate.work_conditions === 'string' ? candidate.work_conditions : '',
-              device: typeof candidate.device === 'string' ? candidate.device : 'لابتوب',
-              gender: typeof candidate.gender === 'string' ? candidate.gender : '',
-              bio: typeof candidate.bio === 'string' ? candidate.bio : '',
-              can_go_alexandria: Boolean(candidate.can_go_alexandria),
-              custom_fields: sanitizeCustomFieldsMap(candidate.custom_fields),
-            };
-            break;
-          }
-        }
-      }
-
-      if (foundPayload) {
-        const promoted = await applyRegistrationPayloadToMemberRow(Number(sub.member_id), foundPayload);
-        if (promoted) {
-          promotedMembers.push(promoted);
-        }
-      }
-    }
-
-    return [...regularMembers, ...promotedMembers].sort((a, b) =>
-      a.full_name.localeCompare(b.full_name, 'ar'),
-    );
-  } catch {
-    return regularMembers;
-  }
+interface IssueInput {
+  memberId: number;
+  email: string;
+  purpose: MemberInvitePurpose;
+  expectedAuthUserId?: string;
+  associationEvidence?: string;
+  expiresInHours: number;
+  note?: string;
 }
 
 export function useCreateMemberInvite() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      note = '',
-      expiresInHours = 168,
-    }: {
-      note?: string;
-      expiresInHours?: number;
-    }): Promise<CreatedMemberInvite> => {
-      const cleanNote = note.trim();
-      const rawToken = generateLongInviteToken();
-
-      const nativeRes = await (supabase as any).rpc('create_member_invite', {
-        p_token: rawToken,
-        p_note: cleanNote || null,
-        p_expires_in_hours: expiresInHours,
+    gcTime: 0,
+    mutationFn: async (input: IssueInput): Promise<CreatedMemberInvite> => {
+      const email = normalizeAuthEmail(input.email);
+      if (!Number.isSafeInteger(input.memberId) || input.memberId <= 0 || !email
+        || (input.purpose !== 'enroll' && input.purpose !== 'reset')) {
+        throw new MemberInviteApiError('INVALID_INPUT');
+      }
+      const { data, error } = await supabase.functions.invoke<{
+        invite?: { id?: string; token?: string; email?: string; member_id?: number; purpose?: MemberInvitePurpose; note?: string | null; expires_at?: string };
+        code?: string;
+      }>('member-password-enrollment', {
+        body: {
+          action: 'issue', memberId: input.memberId, email, purpose: input.purpose,
+          ...(input.expectedAuthUserId?.trim() ? { expectedAuthUserId: input.expectedAuthUserId.trim() } : {}),
+          ...(input.associationEvidence?.trim() ? { associationEvidence: input.associationEvidence.trim() } : {}),
+          expiresInHours: input.expiresInHours, note: input.note?.trim() || '',
+        },
       });
-
-      if (!nativeRes.error && nativeRes.data) {
-        const data = nativeRes.data as { id: number; expires_at: string; note?: string | null };
-        return {
-          id: Number(data.id),
-          token: rawToken,
-          url: buildMemberInviteUrl(rawToken),
-          note: data.note ?? cleanNote,
-          expires_at: data.expires_at,
-        };
+      if (error) throw new MemberInviteApiError(await readMemberEndpointCode(error));
+      const invite = data?.invite;
+      if (!invite || typeof invite.id !== 'string' || !isMemberInviteId(invite.id)
+        || typeof invite.token !== 'string' || !isMemberInviteToken(invite.token)
+        || invite.member_id !== input.memberId || typeof invite.email !== 'string'
+        || normalizeAuthEmail(invite.email) !== email || invite.purpose !== input.purpose
+        || typeof invite.expires_at !== 'string') {
+        throw new MemberInviteApiError(await readMemberEndpointCode(data));
       }
-
-      if (isMissingRelationError(nativeRes.error, 'create_member_invite')) {
-        await ensureOnboardingCarrierField();
-
-        const deviceBytes = new Uint8Array(32);
-        const saltBytes = new Uint8Array(18);
-        window.crypto.getRandomValues(deviceBytes);
-        window.crypto.getRandomValues(saltBytes);
-
-        const deviceToken = bytesToHex(deviceBytes);
-        const saltHex = bytesToHex(saltBytes);
-        const expiresAt = new Date(Date.now() + expiresInHours * 3600_000).toISOString();
-        const placeholderEmail = `invite.${Date.now()}.${saltHex.slice(0, 12)}${INVITE_PLACEHOLDER_DOMAIN}`;
-
-        const metaNote = JSON.stringify({
-          __phantoms_invite: true,
-          note: cleanNote,
-          expires_at: expiresAt,
-        });
-
-        const insertedMember = await supabase
-          .from(TABLES.members)
-          .insert({
-            email: placeholderEmail,
-            full_name: `[دعوة معلقة] ${cleanNote || 'عضو جديد'}`,
-            completion_rank: null,
-            residence: null,
-            work_conditions: null,
-            bio: null,
-            phone: null,
-            device: null,
-            gender: null,
-            meeting_attendance: null,
-            work_status: 'inactive',
-            can_go_alexandria: false,
-            team_notes: metaNote,
-          })
-          .select('id')
-          .single();
-
-        if (insertedMember.error || !insertedMember.data) {
-          throw toAppError(insertedMember.error, 'معرفناش ننشئ رابط الدعوة المحمي.');
-        }
-
-        const memberId = Number(insertedMember.data.id);
-        const bindRes = await supabase.rpc('lookup_member_by_email', {
-          p_email: placeholderEmail,
-          p_device_token: deviceToken,
-        });
-
-        if (bindRes.error) {
-          await supabase.from(TABLES.members).delete().eq('id', memberId);
-          throw toAppError(bindRes.error, 'معرفناش نفعّل حماية رابط الدعوة.');
-        }
-
-        const fallbackPayload: FallbackTokenPayload = {
-          m: memberId,
-          s: deviceToken,
-          x: expiresAt,
-          n: cleanNote,
-          r: saltHex,
-        };
-
-        const encodedToken = `${PRE0020_TOKEN_PREFIX}${encodeUtf8Base64Url(JSON.stringify(fallbackPayload))}`;
-        return {
-          id: memberId,
-          token: encodedToken,
-          url: buildMemberInviteUrl(encodedToken),
-          note: cleanNote,
-          expires_at: expiresAt,
-        };
-      }
-
-      throw toAppError(nativeRes.error, 'معرفناش ننشئ رابط التسجيل.');
+      return {
+        id: invite.id, member_id: input.memberId, email, purpose: input.purpose, status: 'pending',
+        note: typeof invite.note === 'string' ? invite.note : null, expires_at: invite.expires_at,
+        created_at: new Date().toISOString(), token: invite.token, url: buildMemberInviteUrl(invite.token),
+      };
     },
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: MEMBER_INVITES_KEY });
-    },
+    onSettled: () => { void qc.invalidateQueries({ queryKey: MEMBER_INVITES_KEY }); },
   });
 }
 
-export function usePendingMemberInvites() {
+export function usePendingMemberInvites(enabled = true) {
   return useQuery({
-    queryKey: MEMBER_INVITES_KEY,
+    queryKey: MEMBER_INVITES_KEY, enabled,
     queryFn: async (): Promise<MemberInviteRecord[]> => {
-      const native = await (supabase as any)
-        .from('member_registration_invites')
-        .select('id, note, expires_at, used_at, is_revoked, created_at')
-        .eq('is_revoked', false)
-        .is('used_at', null)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
-
-      if (!native.error) {
-        return ((native.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-          id: Number(row.id),
-          note: typeof row.note === 'string' ? row.note : null,
-          expires_at: String(row.expires_at),
-          used_at: typeof row.used_at === 'string' ? row.used_at : null,
-          is_revoked: Boolean(row.is_revoked),
-          created_at: String(row.created_at),
-          mode: 'native' as const,
-        }));
-      }
-
-      if (isMissingRelationError(native.error, 'member_registration_invites')) {
-        const allMembersRes = await supabase
-          .from(TABLES.members)
-          .select(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS)
-          .order('created_at', { ascending: false });
-
-        if (!allMembersRes.error && allMembersRes.data) {
-          await syncPendingPre0020Invites(allMembersRes.data as Member[]);
-        }
-
-        const placeholders = await supabase
-          .from(TABLES.members)
-          .select('id, created_at, full_name, email, team_notes')
-          .like('email', `%${INVITE_PLACEHOLDER_DOMAIN}`)
-          .order('created_at', { ascending: false });
-
-        if (placeholders.error || !placeholders.data) return [];
-
-        const records: MemberInviteRecord[] = [];
-        for (const row of placeholders.data) {
-          let note: string | null = null;
-          let expiresAt = new Date(Date.now() + 86400_000).toISOString();
-          if (row.team_notes) {
-            try {
-              const parsed = JSON.parse(row.team_notes) as { note?: string; expires_at?: string };
-              note = parsed.note || null;
-              if (parsed.expires_at) expiresAt = parsed.expires_at;
-            } catch {
-              note = null;
-            }
-          }
-          if (new Date(expiresAt).getTime() > Date.now()) {
-            records.push({
-              id: row.id,
-              note,
-              expires_at: expiresAt,
-              used_at: null,
-              is_revoked: false,
-              created_at: row.created_at,
-              mode: 'fallback',
-            });
-          }
-        }
-        return records;
-      }
-
-      return [];
+      const { data, error } = await supabase.functions.invoke<{ invites?: unknown[]; code?: string }>(
+        'member-password-enrollment', { body: { action: 'list' } },
+      );
+      if (error) throw new MemberInviteApiError(await readMemberEndpointCode(error));
+      if (!Array.isArray(data?.invites)) throw new MemberInviteApiError(await readMemberEndpointCode(data));
+      return data.invites.map(mapInviteRow).filter((row): row is MemberInviteRecord => row !== null);
     },
   });
 }
@@ -497,210 +165,15 @@ export function usePendingMemberInvites() {
 export function useRevokeMemberInvite() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (invite: Pick<MemberInviteRecord, 'id' | 'mode'>): Promise<number> => {
-      if (invite.mode === 'fallback') {
-        const { error } = await supabase.from(TABLES.members).delete().eq('id', invite.id);
-        if (error) throw toAppError(error, 'معرفناش نلغي رابط الدعوة.');
-        return invite.id;
-      }
-
-      const { error } = await (supabase as any)
-        .from('member_registration_invites')
-        .update({ is_revoked: true })
-        .eq('id', invite.id);
-      if (error) throw toAppError(error, 'معرفناش نلغي رابط الدعوة.');
-      return invite.id;
+    mutationFn: async (inviteId: string): Promise<string> => {
+      if (!isMemberInviteId(inviteId)) throw new MemberInviteApiError('INVALID_INPUT');
+      const { data, error } = await supabase.functions.invoke<{ ok?: boolean; code?: string }>(
+        'member-password-enrollment', { body: { action: 'revoke', inviteId } },
+      );
+      if (error) throw new MemberInviteApiError(await readMemberEndpointCode(error));
+      if (data?.ok !== true) throw new MemberInviteApiError(await readMemberEndpointCode(data));
+      return inviteId;
     },
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: MEMBER_INVITES_KEY });
-      void qc.invalidateQueries({ queryKey: ['members'] });
-    },
+    onSettled: () => { void qc.invalidateQueries({ queryKey: MEMBER_INVITES_KEY }); },
   });
-}
-
-export async function fetchMemberInviteContext(token: string): Promise<MemberInviteContext> {
-  const cleanToken = token.trim();
-  if (!cleanToken || cleanToken.length < 24) {
-    return { valid: false, reason: 'INVALID_TOKEN', custom_fields: [] };
-  }
-
-  const fallbackParsed = parseFallbackToken(cleanToken);
-  if (fallbackParsed) {
-    if (new Date(fallbackParsed.x).getTime() <= Date.now()) {
-      return { valid: false, reason: 'EXPIRED', custom_fields: [] };
-    }
-
-    const formRes = await (memberSupabase as any).rpc('get_member_info_form', {
-      p_member_id: fallbackParsed.m,
-      p_device_token: fallbackParsed.s,
-    });
-
-    if (formRes.error || !formRes.data) {
-      const msg = String(formRes.error?.message ?? '');
-      if (msg.includes('INVALID_MEMBER_SESSION') || msg.includes('DEVICE_REQUIRED')) {
-        return { valid: false, reason: 'ALREADY_USED', custom_fields: [] };
-      }
-      return { valid: false, reason: 'INVALID_TOKEN', custom_fields: [] };
-    }
-
-    const rawFields = Array.isArray(formRes.data.fields)
-      ? (formRes.data.fields as Array<Record<string, unknown>>)
-      : [];
-    const submissions = Array.isArray(formRes.data.submissions)
-      ? (formRes.data.submissions as Array<Record<string, unknown>>)
-      : [];
-    if (submissions.length > 0) {
-      return { valid: false, reason: 'ALREADY_USED', custom_fields: [] };
-    }
-
-    const customFields = rawFields
-      .filter((f) => String(f.label ?? '') !== ONBOARDING_CARRIER_LABEL)
-      .map((f) => normalizeFieldRow(f));
-
-    return {
-      valid: true,
-      note: fallbackParsed.n,
-      expires_at: fallbackParsed.x,
-      custom_fields: customFields,
-    };
-  }
-
-  const nativeRes = await (memberSupabase as any).rpc('get_member_invite_context', {
-    p_token: cleanToken,
-  });
-
-  if (nativeRes.error || !nativeRes.data) {
-    return { valid: false, reason: 'INVALID_TOKEN', custom_fields: [] };
-  }
-
-  const data = nativeRes.data as {
-    valid?: boolean;
-    reason?: string;
-    note?: string;
-    expires_at?: string;
-    custom_fields?: Array<Record<string, unknown>>;
-  };
-
-  if (!data.valid) {
-    return {
-      valid: false,
-      reason: data.reason ?? 'INVALID_TOKEN',
-      custom_fields: [],
-    };
-  }
-
-  const customFields = Array.isArray(data.custom_fields)
-    ? data.custom_fields
-        .map((f) => normalizeFieldRow(f))
-        .filter((f) => f.label !== ONBOARDING_CARRIER_LABEL)
-    : [];
-
-  return {
-    valid: true,
-    note: data.note ?? '',
-    expires_at: data.expires_at,
-    custom_fields: customFields,
-  };
-}
-
-export async function submitMemberRegistrationInvite(
-  token: string,
-  payload: MemberSelfRegistrationPayload,
-): Promise<void> {
-  const cleanToken = token.trim();
-  const cleanEmail = payload.email.trim().toLowerCase();
-
-  const fallbackParsed = parseFallbackToken(cleanToken);
-  if (fallbackParsed) {
-    if (new Date(fallbackParsed.x).getTime() <= Date.now()) {
-      throw new Error('انتهت صلاحية رابط التسجيل. اطلب رابط جديد من الإدارة.');
-    }
-
-    // التحقق من عدم تكرار البريد الإلكتروني
-    const existingLookup = await memberSupabase.rpc('lookup_member_by_email', {
-      p_email: cleanEmail,
-      p_device_token: null,
-    });
-    if (!existingLookup.error && Array.isArray(existingLookup.data) && existingLookup.data.length > 0) {
-      throw new Error('البريد الإلكتروني ده مسجّل بالفعل في الفريق.');
-    }
-
-    const formRes = await (memberSupabase as any).rpc('get_member_info_form', {
-      p_member_id: fallbackParsed.m,
-      p_device_token: fallbackParsed.s,
-    });
-
-    if (formRes.error || !formRes.data) {
-      throw new Error('الرابط ده تم استخدامه بالفعل أو تم إلغاؤه.');
-    }
-
-    const rawFields = Array.isArray(formRes.data.fields)
-      ? (formRes.data.fields as Array<Record<string, unknown>>)
-      : [];
-    const carrierField = rawFields.find((f) => String(f.label ?? '') === ONBOARDING_CARRIER_LABEL);
-
-    if (!carrierField?.id) {
-      throw new Error('حصلت مشكلة في قناة استلام البيانات. تواصل مع الإدارة.');
-    }
-
-    const cleanCustomMap = sanitizeCustomFieldsMap(payload.custom_fields);
-    const submitRes = await (memberSupabase as any).rpc('submit_member_info', {
-      p_member_id: fallbackParsed.m,
-      p_device_token: fallbackParsed.s,
-      p_values: {
-        ...cleanCustomMap,
-        [String(carrierField.id)]: {
-          ...payload,
-          email: cleanEmail,
-          full_name: payload.full_name.trim(),
-          custom_fields: cleanCustomMap,
-        },
-      },
-    });
-
-    if (submitRes.error) {
-      throw toAppError(submitRes.error, 'معرفناش نسجّل البيانات. حاول تاني.');
-    }
-
-    // إبطال رمز الجلسة فوراً بحيث يصبح الرابط صالحاً لمرة واحدة فقط ولا يمكن إعادة فتحه
-    await memberSupabase.rpc('logout_member_device', {
-      p_member_id: fallbackParsed.m,
-      p_device_token: fallbackParsed.s,
-    });
-
-    // إذا كان المشرف يجرب الرابط من نفس المتصفح، رقِّ السجل فوراً
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData.session) {
-      await applyRegistrationPayloadToMemberRow(fallbackParsed.m, payload);
-    }
-
-    return;
-  }
-
-  const nativeRes = await (memberSupabase as any).rpc('submit_member_registration_invite', {
-    p_token: cleanToken,
-    p_payload: {
-      ...payload,
-      email: cleanEmail,
-      full_name: payload.full_name.trim(),
-      custom_fields: sanitizeCustomFieldsMap(payload.custom_fields),
-    },
-  });
-
-  if (nativeRes.error) {
-    const msg = String(nativeRes.error.message ?? '');
-    if (msg.includes('EMAIL_EXISTS')) {
-      throw new Error('البريد الإلكتروني ده مسجّل بالفعل في الفريق.');
-    }
-    if (msg.includes('ALREADY_USED')) {
-      throw new Error('الرابط ده تم استخدامه قبل كده ومقفول دلوقتي.');
-    }
-    if (msg.includes('EXPIRED')) {
-      throw new Error('انتهت صلاحية رابط التسجيل. اطلب رابط جديد من الإدارة.');
-    }
-    if (msg.includes('REVOKED') || msg.includes('INVALID_TOKEN')) {
-      throw new Error('رابط التسجيل غير صالح أو تم إلغاؤه.');
-    }
-    throw toAppError(nativeRes.error, 'معرفناش نسجّل البيانات.');
-  }
 }

@@ -27,18 +27,20 @@ test('disposable workflow has no production credentials, remote database command
   const workflow = read('.github/workflows/database-runtime-validation.yml');
   assert.doesNotMatch(workflow, /secrets\.|--remote|--linked|--db-url|migration repair|db push|vercel deploy/);
   assert.match(workflow, /test ! -e backend\/supabase\/\.temp\/project-ref/);
-  assert.match(workflow, /test -z "\$\{SUPABASE_ACCESS_TOKEN:-\}"/);
+  assert.match(workflow, /for name in \\\n[\s\S]*?SUPABASE_ACCESS_TOKEN[\s\S]*?; do\s+test -z "\$\{!name:-\}"/);
   assert.match(workflow, /supabase start --workdir backend/);
   assert.match(workflow, /supabase test db --workdir backend/);
   assert.match(workflow, /supabase stop --workdir backend --no-backup/);
   assert.match(workflow, /VITE_SUPABASE_URL: http:\/\/127\.0\.0\.1:54321/);
 });
 
-test('dashboard browser evidence is generated only against the disposable stack and excludes credential-bearing traces', () => {
+test('dashboard browser evidence is local-only and uploads only fixed sanitized JSON without screenshots or traces', () => {
   const workflow = read('.github/workflows/database-runtime-validation.yml');
   assert.match(workflow, /PHANTOMS_DISPOSABLE_E2E: '1'/);
   assert.match(workflow, /node scripts\/run-disposable-dashboard-e2e\.mjs/);
-  assert.match(workflow, /frontend\/test-results\/dashboard-\*\.png/);
-  assert.match(workflow, /frontend\/test-results\/dashboard-\*\.json/);
+  const uploadBlock = workflow.match(/name: Upload only fixed sanitized JSON evidence after owned stack cleanup[\s\S]*?retention-days: 7/)?.[0] ?? '';
+  assert.match(uploadBlock, /frontend\/test-results\/dashboard-contract-missing\.json/);
+  assert.match(uploadBlock, /frontend\/test-results\/dashboard-contract-invalid\.json/);
+  assert.doesNotMatch(uploadBlock, /dashboard-.*\.png|playwright-report|trace\.zip|storageState/);
   assert.doesNotMatch(workflow, /playwright-report|trace\.zip|storageState/);
 });

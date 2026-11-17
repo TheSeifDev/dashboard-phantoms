@@ -9,27 +9,56 @@ if (![apiPort, previewPort].every((port) => /^\d{4,5}$/.test(port) && Number(por
 const API_ORIGIN = `http://127.0.0.1:${apiPort}`;
 const PREVIEW_ORIGIN = `http://127.0.0.1:${previewPort}`;
 const bridgeOrigin = process.env.PHANTOMS_LOCAL_FIXTURE_BRIDGE_URL ?? '';
+const anonKey = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const adminEmail = process.env.PHANTOMS_AUTH_ADMIN_EMAIL ?? '';
 const adminPassword = process.env.PHANTOMS_AUTH_ADMIN_PASSWORD ?? '';
 const existingMemberEmail = process.env.PHANTOMS_AUTH_EXISTING_MEMBER_EMAIL ?? '';
 const firstTimeMemberEmail = process.env.PHANTOMS_AUTH_FIRST_TIME_MEMBER_EMAIL ?? '';
 const outsiderEmail = process.env.PHANTOMS_AUTH_OUTSIDER_EMAIL ?? '';
+const existingMemberId = Number(process.env.PHANTOMS_AUTH_EXISTING_MEMBER_ID ?? '0');
+const firstTimeMemberId = Number(process.env.PHANTOMS_AUTH_FIRST_TIME_MEMBER_ID ?? '0');
+const existingMemberAuthUserId = process.env.PHANTOMS_AUTH_EXISTING_MEMBER_AUTH_USER_ID ?? '';
+
+// Disposable fixture values only. They are never written to evidence or emitted by the reporter.
+const EXISTING_MEMBER_PASSWORD = 'Disposable-Existing-Member-2026!';
+const FIRST_TIME_MEMBER_PASSWORD = 'Disposable-First-Time-Member-2026!';
+const RESET_MEMBER_PASSWORD = 'Disposable-Reset-Member-2026!';
+
+if (anonKey && /secret|service|sbp_/i.test(anonKey)) throw new Error('Disposable browser key must not be a service credential.');
 
 type AuthSafetyMetadata = {
-  noVerifyBeforeCode: boolean;
-  noEmailRedirectTo: boolean;
+  noMemberOtpCalls: boolean;
+  noBrowserSignup: boolean;
   memberLogoutScoped: boolean;
   nonmemberLogoutScoped: boolean;
 };
 
 type RequestGate = {
   blocked: string[];
-  markCodeEntered: () => void;
+};
+
+type EnrollmentResponse = {
+  status: number;
+  ok: boolean;
+  code?: string;
+  invite?: { id: string; token: string };
 };
 
 function requireFixtureEnv(): void {
-  for (const [name, value] of Object.entries({ bridgeOrigin, adminEmail, adminPassword, existingMemberEmail, firstTimeMemberEmail, outsiderEmail })) {
+  for (const [name, value] of Object.entries({
+    bridgeOrigin,
+    anonKey,
+    adminEmail,
+    adminPassword,
+    existingMemberEmail,
+    firstTimeMemberEmail,
+    outsiderEmail,
+    existingMemberAuthUserId,
+  })) {
     if (!value) throw new Error(`Missing disposable Auth fixture environment value: ${name}`);
+  }
+  if (![existingMemberId, firstTimeMemberId].every((value) => Number.isSafeInteger(value) && value > 0)) {
+    throw new Error('Missing disposable member fixture IDs.');
   }
   const parsedBridge = new URL(bridgeOrigin);
   if (parsedBridge.protocol !== 'http:' || parsedBridge.hostname !== '127.0.0.1') {
@@ -42,50 +71,34 @@ function memberEmailInput(page: Page) {
   return page.locator('#member-email, input[type="email"]').first();
 }
 
-function memberOtpInput(page: Page) {
-  return page.locator('#member-otp, input[autocomplete="one-time-code"], input[inputmode="numeric"]').first();
+function memberPasswordInput(page: Page) {
+  return page.locator('#member-password, input[autocomplete="current-password"], input[type="password"]').first();
+}
+
+function memberJoinPasswordInputs(page: Page) {
+  return page.locator('#member-join-password, #join-password, input[autocomplete="new-password"], input[type="password"]');
 }
 
 function memberSubmit(page: Page) {
-  return page.getByRole('button', { name: /ادخل مساحة العمل|دخول|continue|sign in/i }).first();
+  return page.getByRole('button', { name: /ادخل مساحة العمل|دخول|sign in|log in/i }).first();
 }
 
-function verifySubmit(page: Page) {
-  return page.getByRole('button', { name: /تأكيد|تحقق|ربط الجهاز|verify|confirm/i }).first();
+function joinSubmit(page: Page) {
+  return page.getByRole('button', { name: /إنشاء|تسجيل|تأكيد|انضمام|enroll|join|create password/i }).last();
 }
 
 function alert(page: Page) {
   return page.getByRole('alert').first();
 }
 
-function differentEightDigitOtp(code: string): string {
-  const next = String((Number(code) + 1) % 100_000_000).padStart(8, '0');
-  return next === code ? '00000000' : next;
-}
-
 async function installRequestGate(page: Page, metadata: AuthSafetyMetadata): Promise<RequestGate> {
   const blocked: string[] = [];
   const bridge = new URL(bridgeOrigin);
-  let codeEntered = false;
   await page.route('**/*', async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (url.origin === API_ORIGIN && url.pathname.endsWith('/auth/v1/verify') && !codeEntered) {
-      metadata.noVerifyBeforeCode = false;
-    }
-    if (url.origin === API_ORIGIN && url.pathname.endsWith('/auth/v1/otp')) {
-      let hasRedirect = url.searchParams.has('redirect_to');
-      const body = request.postData();
-      if (!hasRedirect && body) {
-        try {
-          const payload = JSON.parse(body) as { redirect_to?: unknown };
-          hasRedirect = typeof payload.redirect_to === 'string' && payload.redirect_to.length > 0;
-        } catch {
-          // The request body is not retained or reported.
-        }
-      }
-      if (hasRedirect) metadata.noEmailRedirectTo = false;
-    }
+    if (url.origin === API_ORIGIN && url.pathname.endsWith('/auth/v1/otp')) metadata.noMemberOtpCalls = false;
+    if (url.origin === API_ORIGIN && url.pathname.endsWith('/auth/v1/signup')) metadata.noBrowserSignup = false;
     const allowed = url.protocol === 'data:'
       || url.protocol === 'blob:'
       || url.origin === PREVIEW_ORIGIN
@@ -100,44 +113,7 @@ async function installRequestGate(page: Page, metadata: AuthSafetyMetadata): Pro
     }
     await route.continue();
   });
-  return { blocked, markCodeEntered: () => { codeEntered = true; } };
-}
-
-async function bridgeOtp(email: string): Promise<string> {
-  const deadline = Date.now() + 25_000;
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`${bridgeOrigin}/otp?email=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(3_000) });
-      if (response.ok) {
-        const payload = await response.json() as { code?: unknown };
-        const code = typeof payload.code === 'string' ? payload.code : '';
-        expect(/^\d{8}$/.test(code)).toBe(true);
-        return code;
-      }
-    } catch {
-      // A bounded bridge request can abort while Mailpit is still delivering; retry until the overall deadline.
-    }
-    const remaining = deadline - Date.now();
-    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, Math.min(250, remaining)));
-  }
-  throw new Error('Disposable OTP email was not delivered by the local mail service.');
-}
-
-async function requestOtp(page: Page, email: string): Promise<void> {
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1_100);
-  await memberEmailInput(page).fill(email);
-  await memberSubmit(page).click();
-  await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
-  await expect(memberOtpInput(page)).toBeVisible();
-  await expect(page.getByRole('status')).toBeVisible();
-}
-
-async function verifyOtp(page: Page, email: string, gate: RequestGate): Promise<void> {
-  const code = await bridgeOtp(email);
-  gate.markCodeEntered();
-  await memberOtpInput(page).fill(code);
-  await verifySubmit(page).click();
+  return { blocked };
 }
 
 async function loginAdmin(page: Page): Promise<void> {
@@ -148,6 +124,13 @@ async function loginAdmin(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
 }
 
+async function loginMember(page: Page, email: string, password: string): Promise<void> {
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await memberEmailInput(page).fill(email);
+  await memberPasswordInput(page).fill(password);
+  await memberSubmit(page).click();
+}
+
 async function logoutMember(page: Page): Promise<void> {
   await page.getByRole('button', { name: /خروج|تسجيل الخروج|logout/i }).click();
   await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
@@ -155,13 +138,92 @@ async function logoutMember(page: Page): Promise<void> {
 
 async function memberStorageMetadata(page: Page): Promise<{ adminSessionPresent: boolean; memberSessionPresent: boolean; memberStatePresent: boolean }> {
   return page.evaluate(() => {
-    const keys = [...Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)), ...Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index))].filter((key): key is string => Boolean(key));
+    const keys = [...Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)), ...Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index))]
+      .filter((key): key is string => Boolean(key));
     return {
       adminSessionPresent: keys.some((key) => key.startsWith('sb-')),
       memberSessionPresent: keys.includes('phantoms-member-auth'),
       memberStatePresent: keys.includes('phantoms_member_session') || keys.includes('phantoms_device_token'),
     };
   });
+}
+
+async function browserFunctionRequest(page: Page, body: Record<string, unknown>, useAdminSession = true): Promise<EnrollmentResponse> {
+  return page.evaluate(async ({ origin, key, requestBody, includeAdmin }) => {
+    const tokenKeys = [...Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index)), ...Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index))]
+      .filter((value): value is string => typeof value === 'string' && value.startsWith('sb-'));
+    let accessToken = '';
+    for (const storageKey of tokenKeys) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(storageKey) ?? sessionStorage.getItem(storageKey) ?? '{}') as { access_token?: unknown };
+        if (typeof parsed.access_token === 'string' && parsed.access_token) accessToken = parsed.access_token;
+      } catch {
+        // Ignore non-session storage values without retaining them.
+      }
+    }
+    const response = await fetch(`${origin}/functions/v1/member-password-enrollment`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        authorization: includeAdmin && accessToken ? `Bearer ${accessToken}` : `Bearer ${key}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+    let payload: Record<string, unknown> = {};
+    try {
+      const parsed = await response.json() as unknown;
+      if (parsed && typeof parsed === 'object') payload = parsed as Record<string, unknown>;
+    } catch {
+      // Keep only the status when the local function has no JSON response.
+    }
+    const invite = payload.invite;
+    const safeInvite = invite && typeof invite === 'object'
+      ? {
+        id: typeof (invite as { id?: unknown }).id === 'string' ? (invite as { id: string }).id : '',
+        token: typeof (invite as { token?: unknown }).token === 'string' ? (invite as { token: string }).token : '',
+      }
+      : undefined;
+    return {
+      status: response.status,
+      ok: payload.ok === true,
+      code: typeof payload.code === 'string' ? payload.code : undefined,
+      invite: safeInvite && safeInvite.id && safeInvite.token ? safeInvite : undefined,
+    };
+  }, { origin: API_ORIGIN, key: anonKey, requestBody: body, includeAdmin: useAdminSession });
+}
+
+async function issueInvite(page: Page, input: { memberId: number; email: string; purpose: 'enroll' | 'reset'; expectedAuthUserId?: string }): Promise<{ id: string; token: string }> {
+  const response = await browserFunctionRequest(page, {
+    action: 'issue',
+    memberId: input.memberId,
+    email: input.email,
+    purpose: input.purpose,
+    ...(input.expectedAuthUserId ? { expectedAuthUserId: input.expectedAuthUserId, associationEvidence: 'local-disposable-admin-reviewed-existing-identity' } : {}),
+    expiresInHours: 24,
+    note: 'local disposable password migration fixture',
+  });
+  expect(response.status).toBe(200);
+  expect(response.ok).toBe(false);
+  expect(response.invite?.token ?? '').toMatch(/^phpw_[0-9a-f]{64}$/);
+  return response.invite as { id: string; token: string };
+}
+
+async function publicEnrollmentRequest(page: Page, input: { email: string; token: string; password: string; confirmPassword: string }): Promise<EnrollmentResponse> {
+  return browserFunctionRequest(page, { action: 'enroll', ...input }, false);
+}
+
+async function enrollFromJoin(page: Page, email: string, token: string, password: string): Promise<void> {
+  await page.goto(`/join#invite=${encodeURIComponent(token)}`, { waitUntil: 'domcontentloaded' });
+  const emailInput = page.locator('#member-join-email, #join-email, input[type="email"]').first();
+  await expect(emailInput).toBeVisible({ timeout: 30_000 });
+  await emailInput.fill(email);
+  const passwords = memberJoinPasswordInputs(page);
+  await expect(passwords).toHaveCount(2, { timeout: 10_000 });
+  await passwords.nth(0).fill(password);
+  await passwords.nth(1).fill(password);
+  await joinSubmit(page).click();
+  await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
 }
 
 async function setPasswordFromActionLink(page: Page, action: 'invite' | 'recovery'): Promise<void> {
@@ -175,12 +237,34 @@ async function setPasswordFromActionLink(page: Page, action: 'invite' | 'recover
   await expect.poll(() => new URL(page.url()).pathname).toMatch(/\/admin\/dashboard$/);
 }
 
+async function fixtureIdentity(email: string, expectedUserId?: string): Promise<{ count: number; idMatches: boolean }> {
+  const params = new URLSearchParams({ email });
+  if (expectedUserId) params.set('expectedAuthUserId', expectedUserId);
+  const response = await fetch(`${bridgeOrigin}/identity-check?${params}`, { signal: AbortSignal.timeout(3_000) });
+  if (!response.ok) throw new Error('Disposable fixture identity check failed.');
+  const payload = await response.json() as { count?: unknown; idMatches?: unknown };
+  return {
+    count: typeof payload.count === 'number' ? payload.count : -1,
+    idMatches: payload.idMatches === true,
+  };
+}
+
+async function assertPublicSignupRejected(): Promise<void> {
+  const response = await fetch(`${API_ORIGIN}/auth/v1/signup`, {
+    method: 'POST',
+    headers: { apikey: anonKey, authorization: `Bearer ${anonKey}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ email: `public-signup-${Date.now()}@phantoms-test.example`, password: 'Disposable-Public-Signup-2026!' }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  expect(response.status).toBeGreaterThanOrEqual(400);
+}
+
 test.describe('disposable local Auth', () => {
-  test('real numeric OTP, isolated member/admin sessions, rejection, retry, invite, and recovery', async ({ page, browser }) => {
+  test('real member password migration, isolated sessions, invitations, and recovery', async ({ page, browser }) => {
     requireFixtureEnv();
     const metadata: AuthSafetyMetadata = {
-      noVerifyBeforeCode: true,
-      noEmailRedirectTo: true,
+      noMemberOtpCalls: true,
+      noBrowserSignup: true,
       memberLogoutScoped: false,
       nonmemberLogoutScoped: false,
     };
@@ -188,22 +272,35 @@ test.describe('disposable local Auth', () => {
     try {
       const primaryGate = await installRequestGate(page, metadata);
       gates.push(primaryGate);
+      let existingInvite!: { id: string; token: string };
+      let firstTimeInvite!: { id: string; token: string };
+
       await test.step('admin login', async () => {
         await loginAdmin(page);
         await expect(page.getByRole('heading', { name: /مركز عمليات PHANTOMS|dashboard/i }).first()).toBeVisible();
+        existingInvite = await issueInvite(page, {
+          memberId: existingMemberId,
+          email: existingMemberEmail,
+          purpose: 'enroll',
+          expectedAuthUserId: existingMemberAuthUserId,
+        });
+        firstTimeInvite = await issueInvite(page, {
+          memberId: firstTimeMemberId,
+          email: firstTimeMemberEmail,
+          purpose: 'enroll',
+        });
       });
 
-      await test.step('same-account member OTP and scoped member logout', async () => {
-        await requestOtp(page, existingMemberEmail);
-        await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
-        await expect(memberOtpInput(page)).toHaveCount(1);
-        await verifyOtp(page, existingMemberEmail, primaryGate);
+      await test.step('existing member password enrollment and scoped member logout', async () => {
+        await enrollFromJoin(page, existingMemberEmail, existingInvite.token, EXISTING_MEMBER_PASSWORD);
+        await loginMember(page, existingMemberEmail, EXISTING_MEMBER_PASSWORD);
         await expect(page).toHaveURL(/\/portal$/);
-        await expect(page.getByText(/Disposable existing OTP member/)).toBeVisible();
+        await expect(page.getByText(/Disposable existing password member/i)).toBeVisible();
         const beforeLogout = await memberStorageMetadata(page);
         await logoutMember(page);
         const afterLogout = await memberStorageMetadata(page);
         metadata.memberLogoutScoped = beforeLogout.adminSessionPresent
+          && beforeLogout.memberSessionPresent
           && !afterLogout.memberSessionPresent
           && !afterLogout.memberStatePresent
           && afterLogout.adminSessionPresent;
@@ -214,84 +311,49 @@ test.describe('disposable local Auth', () => {
         await expect(page).toHaveURL(/\/admin\/dashboard$/);
       });
 
-      await test.step('real invalid eight-digit OTP and retry', async () => {
+      await test.step('wrong password retry', async () => {
         const invalidContext = await browser.newContext();
         const invalidPage = await invalidContext.newPage();
         try {
           const gate = await installRequestGate(invalidPage, metadata);
           gates.push(gate);
-          await requestOtp(invalidPage, existingMemberEmail);
-          const actualCode = await bridgeOtp(existingMemberEmail);
-          const invalidCode = differentEightDigitOtp(actualCode);
-          const verifyFailure = invalidPage.waitForResponse((response) => {
-            const url = new URL(response.url());
-            return url.origin === API_ORIGIN && url.pathname.endsWith('/auth/v1/verify');
-          }).then((response) => response.status() >= 400);
-          gate.markCodeEntered();
-          await memberOtpInput(invalidPage).fill(invalidCode);
-          await verifySubmit(invalidPage).click();
-          expect(await verifyFailure).toBe(true);
+          await loginMember(invalidPage, existingMemberEmail, 'Disposable-Wrong-Password-2026!');
           await expect(invalidPage).toHaveURL(/\/login(?:[?#].*)?$/);
-          await expect(memberOtpInput(invalidPage)).toBeVisible();
           await expect(alert(invalidPage)).toBeVisible();
-          gate.markCodeEntered();
-          await memberOtpInput(invalidPage).fill(actualCode);
-          await verifySubmit(invalidPage).click();
+          await memberPasswordInput(invalidPage).fill(EXISTING_MEMBER_PASSWORD);
+          await memberSubmit(invalidPage).click();
           await expect(invalidPage).toHaveURL(/\/portal$/);
         } finally {
           await invalidContext.close();
         }
       });
 
-      await test.step('expired OTP and resend retry', async () => {
-        const expiredContext = await browser.newContext();
-        const expiredPage = await expiredContext.newPage();
-        try {
-          const gate = await installRequestGate(expiredPage, metadata);
-          gates.push(gate);
-          await requestOtp(expiredPage, existingMemberEmail);
-          const expiredCode = await bridgeOtp(existingMemberEmail);
-          await expiredPage.waitForTimeout(16_000);
-          gate.markCodeEntered();
-          await memberOtpInput(expiredPage).fill(expiredCode);
-          await verifySubmit(expiredPage).click();
-          await expect(expiredPage).toHaveURL(/\/login(?:[?#].*)?$/);
-          await expect(memberOtpInput(expiredPage)).toBeVisible();
-          await expect(alert(expiredPage)).toBeVisible();
-          const resend = expiredPage.getByRole('button', { name: 'إرسال رمز جديد', exact: true });
-          await expect(resend).toBeVisible();
-          await resend.click();
-          await expect(memberOtpInput(expiredPage)).toBeVisible();
-          await verifyOtp(expiredPage, existingMemberEmail, gate);
-          await expect(expiredPage).toHaveURL(/\/portal$/);
-        } finally {
-          await expiredContext.close();
-        }
+      await test.step('existing passwordless identity preserves UID without duplicate', async () => {
+        const identity = await fixtureIdentity(existingMemberEmail, existingMemberAuthUserId);
+        expect(identity.count).toBe(1);
+        expect(identity.idMatches).toBe(true);
       });
 
-      await test.step('first-time member OTP', async () => {
-        const firstTimeContext = await browser.newContext();
-        const firstTimePage = await firstTimeContext.newPage();
-        try {
-          const gate = await installRequestGate(firstTimePage, metadata);
-          gates.push(gate);
-          await requestOtp(firstTimePage, firstTimeMemberEmail);
-          await verifyOtp(firstTimePage, firstTimeMemberEmail, gate);
-          await expect(firstTimePage).toHaveURL(/\/portal$/);
-          await expect(firstTimePage.getByText(/Disposable first-time OTP member/)).toBeVisible();
-        } finally {
-          await firstTimeContext.close();
-        }
+      await test.step('new member enrollment and no auto-login', async () => {
+        const before = await fixtureIdentity(firstTimeMemberEmail);
+        expect(before.count).toBe(0);
+        await enrollFromJoin(page, firstTimeMemberEmail, firstTimeInvite.token, FIRST_TIME_MEMBER_PASSWORD);
+        await expect(page).not.toHaveURL(/\/portal$/);
+        await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
+        const after = await fixtureIdentity(firstTimeMemberEmail);
+        expect(after.count).toBe(1);
+        await loginMember(page, firstTimeMemberEmail, FIRST_TIME_MEMBER_PASSWORD);
+        await expect(page).toHaveURL(/\/portal$/);
+        await expect(page.getByText(/Disposable first-time password member/i)).toBeVisible();
       });
 
-      await test.step('non-member rejection and local cleanup', async () => {
+      await test.step('non-member password rejection and local cleanup', async () => {
         const outsiderContext = await browser.newContext();
         const outsiderPage = await outsiderContext.newPage();
         try {
           const gate = await installRequestGate(outsiderPage, metadata);
           gates.push(gate);
-          await requestOtp(outsiderPage, outsiderEmail);
-          await verifyOtp(outsiderPage, outsiderEmail, gate);
+          await loginMember(outsiderPage, outsiderEmail, 'Disposable-Auth-Local-2026!');
           await expect(outsiderPage).toHaveURL(/\/login(?:[?#].*)?$/);
           await expect(alert(outsiderPage)).toBeVisible();
           const storage = await memberStorageMetadata(outsiderPage);
@@ -300,6 +362,49 @@ test.describe('disposable local Auth', () => {
         } finally {
           await outsiderContext.close();
         }
+      });
+
+      await test.step('public signup disabled', async () => {
+        await assertPublicSignupRejected();
+      });
+
+      let resetInvite!: { id: string; token: string };
+      await test.step('invalid invitation email and token states', async () => {
+        resetInvite = await issueInvite(page, {
+          memberId: existingMemberId,
+          email: existingMemberEmail,
+          purpose: 'reset',
+          expectedAuthUserId: existingMemberAuthUserId,
+        });
+        const wrongEmail = await publicEnrollmentRequest(page, {
+          email: firstTimeMemberEmail,
+          token: resetInvite.token,
+          password: RESET_MEMBER_PASSWORD,
+          confirmPassword: RESET_MEMBER_PASSWORD,
+        });
+        expect(wrongEmail.code).toBe('WRONG_EMAIL');
+        const malformed = await publicEnrollmentRequest(page, {
+          email: existingMemberEmail,
+          token: 'phpw_' + '0'.repeat(64),
+          password: RESET_MEMBER_PASSWORD,
+          confirmPassword: RESET_MEMBER_PASSWORD,
+        });
+        expect(malformed.code).toMatch(/INVALID_TOKEN|ALREADY_USED/);
+      });
+
+      await test.step('reset invitation exact ID and one-use', async () => {
+        expect(resetInvite.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+        await enrollFromJoin(page, existingMemberEmail, resetInvite.token, RESET_MEMBER_PASSWORD);
+        await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
+        const reused = await publicEnrollmentRequest(page, {
+          email: existingMemberEmail,
+          token: resetInvite.token,
+          password: EXISTING_MEMBER_PASSWORD,
+          confirmPassword: EXISTING_MEMBER_PASSWORD,
+        });
+        expect(reused.code).toBe('ALREADY_USED');
+        await loginMember(page, existingMemberEmail, RESET_MEMBER_PASSWORD);
+        await expect(page).toHaveURL(/\/portal$/);
       });
 
       await test.step('delivered invite action link and local admin session', async () => {
@@ -327,8 +432,8 @@ test.describe('disposable local Auth', () => {
       });
 
       expect(gates.flatMap((gate) => gate.blocked)).toEqual([]);
-      expect(metadata.noVerifyBeforeCode).toBe(true);
-      expect(metadata.noEmailRedirectTo).toBe(true);
+      expect(metadata.noMemberOtpCalls).toBe(true);
+      expect(metadata.noBrowserSignup).toBe(true);
     } finally {
       test.info().annotations.push({ type: 'auth-safety', description: JSON.stringify(metadata) });
     }

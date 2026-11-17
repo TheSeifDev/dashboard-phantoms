@@ -16,6 +16,7 @@ import { MemberEvaluations } from './MemberEvaluations';
 import { SubmissionModal } from './SubmissionModal';
 import MemberAnnouncements from './announcements/MemberAnnouncements';
 import { SubmissionSuccessModal, type SubmissionCelebration } from './SubmissionSuccessModal';
+import { logoutMemberWithCleanup } from './member-logout';
 import { useMemberBonus, useMemberInfiniteBonus } from './useMemberBonus';
 import { useMemberEvaluations } from '../evaluations/api';
 import { taskBonus } from '../tasks/taskMeta';
@@ -65,15 +66,19 @@ export default function MemberPortalPage() {
 
   const logout = async () => {
     const deviceToken = getDeviceToken();
-    try {
-      if (deviceToken) await logoutMemberDevice(member.id, deviceToken);
-    } catch (cause) {
-      toast.error(handleSupabaseError(cause).message || 'حصلت مشكلة وإحنا بنسجّل خروج الجهاز.');
-    } finally {
-      await memberSupabase.auth.signOut({ scope: 'local' });
-      logoutMember();
-      navigate('/login');
-    }
+    await logoutMemberWithCleanup({
+      deviceLogout: deviceToken ? () => logoutMemberDevice(member.id, deviceToken) : undefined,
+      localSignOut: async () => {
+        const { error } = await memberSupabase.auth.signOut({ scope: 'local' });
+        if (error) throw error;
+      },
+      clearMemberState: logoutMember,
+      navigateToLogin: () => navigate('/login'),
+      onDeviceLogoutFailure: () =>
+        toast.error('حصلت مشكلة وإحنا بنسجّل خروج الجهاز، لكن تم تنظيف الجلسة المحلية.'),
+      onLocalSignOutFailure: () =>
+        toast.error('حصلت مشكلة في إنهاء جلسة العضو، لكن تم تنظيف بيانات التطبيق.'),
+    });
   };
 
   const startTask = async (task: Task) => {

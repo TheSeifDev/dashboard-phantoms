@@ -8,7 +8,7 @@
 --
 -- Identity simulation mirrors what PostgREST does per request:
 --   SET LOCAL role <anon|authenticated>;
---   request.jwt.claims = {"sub": <uuid>, "email": <email>, "role": ...}
+--   request.jwt.claims = {"sub": <uuid>, "email": <email>, "role": ..., "session_id": <uuid>}
 -- auth.uid() / auth.jwt() read those settings.
 -- Always `RESET ROLE;` before switching identities or writing fixtures.
 -- ============================================================================
@@ -16,7 +16,7 @@
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 CREATE SCHEMA phantoms_test;
-GRANT USAGE ON SCHEMA phantoms_test TO anon, authenticated;
+GRANT USAGE ON SCHEMA phantoms_test TO anon, authenticated, service_role;
 
 -- Disposable Auth users (never real accounts; domain is reserved by RFC 2606).
 CREATE TABLE phantoms_test.users (
@@ -64,19 +64,40 @@ CREATE FUNCTION phantoms_test.uid(p_name TEXT)
 RETURNS UUID LANGUAGE sql STABLE
 AS $$ SELECT id FROM phantoms_test.users WHERE name = p_name $$;
 
-CREATE FUNCTION phantoms_test.create_member(p_name TEXT, p_email TEXT DEFAULT NULL)
+CREATE FUNCTION phantoms_test.create_member(
+  p_name TEXT,
+  p_email TEXT DEFAULT NULL,
+  p_enrolled BOOLEAN DEFAULT false
+)
 RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
 DECLARE
   v_id BIGINT;
   v_email TEXT := COALESCE(p_email, pg_catalog.lower(p_name) || '@phantoms-test.example');
+  v_auth_id UUID := extensions.gen_random_uuid();
 BEGIN
   INSERT INTO public.members (email, full_name, completion_rank)
   VALUES (v_email, 'Test ' || p_name, 0)
   RETURNING id INTO v_id;
   INSERT INTO phantoms_test.members (name, id, email, token)
   VALUES (p_name, v_id, v_email, 'device-token-' || pg_catalog.lower(p_name) || '-0123456789abcdef');
+  IF p_enrolled THEN
+    -- This is a synthetic, exact Auth identity for member-RPC fixtures only.
+    -- It is never a public-signup path and carries no real password material.
+    INSERT INTO auth.users (
+      id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
+      raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    ) VALUES (
+      v_auth_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+      v_email, 'fixture-password-hash-' || v_auth_id::text, now(),
+      '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now()
+    );
+    INSERT INTO phantoms_test.users (name, id, email)
+    VALUES (p_name, v_auth_id, v_email);
+    INSERT INTO public.member_auth_bindings (member_id, auth_user_id, normalized_email, password_ready)
+    VALUES (v_id, v_auth_id, pg_catalog.lower(pg_catalog.btrim(v_email)), true);
+  END IF;
   RETURN v_id;
 END;
 $$;
@@ -136,13 +157,19 @@ AS $$
 DECLARE
   v_id UUID;
   v_email TEXT;
+  v_session_id UUID := extensions.gen_random_uuid();
 BEGIN
   SELECT id, email INTO v_id, v_email FROM phantoms_test.users WHERE name = p_name;
   IF v_id IS NULL THEN RAISE EXCEPTION 'unknown test user %', p_name; END IF;
+  INSERT INTO auth.sessions (id, user_id, not_after)
+  VALUES (v_session_id, v_id, pg_catalog.now() + INTERVAL '1 day');
+  PERFORM set_config('request.jwt.claim',
+    json_build_object('sub', v_id, 'email', v_email, 'role', 'authenticated', 'aud', 'authenticated', 'session_id', v_session_id)::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', v_id, 'email', v_email, 'role', 'authenticated', 'aud', 'authenticated')::text, true);
+    json_build_object('sub', v_id, 'email', v_email, 'role', 'authenticated', 'aud', 'authenticated', 'session_id', v_session_id)::text, true);
   PERFORM set_config('request.jwt.claim.sub', v_id::text, true);
   PERFORM set_config('request.jwt.claim.email', v_email, true);
+  PERFORM set_config('request.jwt.claim.session_id', v_session_id::text, true);
   PERFORM set_config('role', 'authenticated', true);
 END;
 $$;
@@ -153,9 +180,11 @@ RETURNS VOID
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  PERFORM set_config('request.jwt.claim', '{"role":"anon"}', true);
   PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
   PERFORM set_config('request.jwt.claim.sub', '', true);
   PERFORM set_config('request.jwt.claim.email', '', true);
+  PERFORM set_config('request.jwt.claim.session_id', '', true);
   PERFORM set_config('role', 'anon', true);
 END;
 $$;
@@ -166,9 +195,11 @@ RETURNS VOID
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  PERFORM set_config('request.jwt.claim', '', true);
   PERFORM set_config('request.jwt.claims', '', true);
   PERFORM set_config('request.jwt.claim.sub', '', true);
   PERFORM set_config('request.jwt.claim.email', '', true);
+  PERFORM set_config('request.jwt.claim.session_id', '', true);
 END;
 $$;
 
@@ -187,4 +218,5 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA phantoms_test TO anon, authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA phantoms_test TO service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA phantoms_test TO anon, authenticated, service_role;
