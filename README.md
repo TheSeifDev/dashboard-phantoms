@@ -175,8 +175,12 @@ dashboard-phantoms/
 │   │   └── tests/database/       # Database security and pgTAP suites
 │   ├── whatsapp-service/         # WhatsApp notification API service
 │   └── whatsapp-bridge/          # Baileys WhatsApp client gateway
+├── docs/
+│   └── member-password/          # Operator runbook and existing-account migration guide
 └── audit/reports/                # Independent technical & security audit reports
 ```
+
+Member-password operations: [operator runbook](docs/member-password/operator-runbook.md) · [existing-account migration guide](docs/member-password/existing-account-migration.md).
 
 ---
 
