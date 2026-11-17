@@ -35,7 +35,8 @@
 │                                       Backend Infrastructure                                           │
 │   • Supabase PostgreSQL (Schema & Row Level Security)                                                  │
 │   • RPC Security Functions (`is_admin`, `bind_member_device_session`, `admin_add_member_rating`)        │
-│   • Edge Functions (`phantoms-ai`, `push-notify`, `whatsapp-tasks`)                                    │
+│   • Edge Functions: `phantoms-ai`, `push-notify`, `whatsapp-tasks`                                     │
+│     `member-password-enrollment` (invitation-only member auth)                                         │
 │   • WhatsApp Integration Service (Baileys Bridge / Multi-Device Protocol)                              │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -167,8 +168,11 @@ dashboard-phantoms/
 │   │   └── types/                # TypeScript schema & entity definitions
 │   └── scripts/                  # Security tests, APK builders, audit scripts
 ├── backend/
-│   ├── migrations/               # PostgreSQL schema migrations (0000 - 0023)
-│   ├── supabase/functions/       # Supabase Edge Functions (phantoms-ai, push-notify, whatsapp-tasks)
+│   ├── scripts/                  # Migration manifest, runtime validation, and operator inventory
+│   ├── supabase/
+│   │   ├── migrations/           # Canonical SQL (24 historical + 9 forward; see forward manifest)
+│   │   ├── functions/            # Edge Functions, including member-password-enrollment
+│   │   └── tests/database/       # Database security and pgTAP suites
 │   ├── whatsapp-service/         # WhatsApp notification API service
 │   └── whatsapp-bridge/          # Baileys WhatsApp client gateway
 └── audit/reports/                # Independent technical & security audit reports
