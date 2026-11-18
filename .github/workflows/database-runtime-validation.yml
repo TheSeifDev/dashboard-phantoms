@@ -168,6 +168,10 @@ jobs:
           set -euo pipefail
           test "$(node --version)" = "v${NODE_VERSION}"
 
+      - name: Install locked frontend dependencies for runtime and evidence validation
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
       - name: Install official pinned Supabase CLI 3.1.0
         uses: supabase/setup-cli@v1
         with:
@@ -178,7 +182,7 @@ jobs:
           set -euo pipefail
           test "$(supabase --version 2>/dev/null | head -n 1)" = "${SUPABASE_CLI_VERSION}"
 
-      - name: Lock owned GitHub runner Docker published ports to loopback
+      - name: Lock default and user-defined Docker bridge ports to loopback
         run: |
           set -euo pipefail
           test "$(docker context show)" = default
@@ -200,6 +204,15 @@ jobs:
               config = {}
               mode = 0o644
           config['ip'] = '127.0.0.1'
+          network_defaults = config.get('default-network-opts', {})
+          if not isinstance(network_defaults, dict):
+              raise SystemExit('Docker default-network-opts must be a JSON object.')
+          bridge_defaults = network_defaults.get('bridge', {})
+          if not isinstance(bridge_defaults, dict):
+              raise SystemExit('Docker default bridge options must be a JSON object.')
+          bridge_defaults['com.docker.network.bridge.host_binding_ipv4'] = '127.0.0.1'
+          network_defaults['bridge'] = bridge_defaults
+          config['default-network-opts'] = network_defaults
           directory = os.path.dirname(path)
           fd, temporary = tempfile.mkstemp(prefix='.daemon.json.', dir=directory, text=True)
           try:
@@ -362,6 +375,7 @@ jobs:
           import json, sys
           containers = json.load(sys.stdin)
           safe = []
+          non_loopback = []
           for container in containers:
               name = container.get("Name", "").lstrip("/")
               bindings = []
@@ -369,9 +383,13 @@ jobs:
                   for entry in entries or []:
                       host_ip = entry.get("HostIp", "")
                       if host_ip not in ("127.0.0.1", "::1"):
-                          raise SystemExit("owned Supabase binding is not loopback")
-                      bindings.append({"containerPort": port, "hostIp": host_ip, "hostPort": entry.get("HostPort", "")})
+                          non_loopback.append({"name": name, "containerPort": port, "hostIp": host_ip})
+                      else:
+                          bindings.append({"containerPort": port, "hostIp": host_ip, "hostPort": entry.get("HostPort", "")})
               safe.append({"name": name, "bindings": bindings})
+          if non_loopback:
+              print(json.dumps({"nonLoopbackBindings": non_loopback}, sort_keys=True), file=sys.stderr)
+              raise SystemExit("owned Supabase binding is not loopback")
           if not safe:
               raise SystemExit("owned Supabase container inspection was empty")
           print(json.dumps({"containers": safe}, sort_keys=True))
@@ -417,7 +435,6 @@ jobs:
       - name: Install locked browser dependencies
         working-directory: frontend
         run: |
-          npm ci --no-audit --no-fund
           npx --no-install playwright install --with-deps chromium
 
       - name: Test Auth fixture lifecycle and native process ownership

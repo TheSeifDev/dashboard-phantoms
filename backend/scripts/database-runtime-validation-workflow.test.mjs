@@ -27,6 +27,24 @@ test('runtime workflow keeps the required branch and pinned toolchain contract',
   assert.match(workflow, /docker context show/);
 });
 
+test('Docker loopback lock covers default and Supabase user-defined bridge networks without relaxing validation', () => {
+  const lockStart = position('- name: Lock default and user-defined Docker bridge ports to loopback');
+  const stackStart = position('- name: Start fresh disposable local Supabase stack');
+  const migrationStart = position('- name: Validate migration manifest, immutable checksums, and local-only safety');
+  const healthStart = position('- name: Verify owned stack health, PG17, and exact loopback bindings');
+  const migrationHistory = position('- name: Verify local migration history and run entire history all pgTAP suites including 09 operator and 10 guards');
+  const dockerLock = workflow.slice(lockStart, migrationStart);
+  const healthCheck = workflow.slice(healthStart, migrationHistory);
+  assert.ok(lockStart < stackStart, 'Docker default bridge options must be in place before Supabase creates its network');
+  assert.match(dockerLock, /config\['ip'\] = '127\.0\.0\.1'/);
+  assert.match(dockerLock, /default-network-opts/);
+  assert.match(dockerLock, /com\.docker\.network\.bridge\.host_binding_ipv4/);
+  assert.match(dockerLock, /bridge_defaults\['com\.docker\.network\.bridge\.host_binding_ipv4'\] = '127\.0\.0\.1'/);
+  assert.match(healthCheck, /host_ip not in \("127\.0\.0\.1", "::1"\)/);
+  assert.match(healthCheck, /nonLoopbackBindings/);
+  assert.match(healthCheck, /containerPort/);
+});
+
 test('runtime workflow uses local migration history and retains every SQL suite', () => {
   assert.match(workflow, /supabase migration list --local --workdir backend/);
   for (const suite of [
@@ -45,6 +63,19 @@ test('runtime workflow uses local migration history and retains every SQL suite'
   ]) {
     assert.match(workflow, new RegExp(suite));
   }
+});
+
+test('disposable job installs locked frontend dependencies before runtime and always-on evidence validation', () => {
+  const install = position('- name: Install locked frontend dependencies for runtime and evidence validation');
+  const stackStart = position('- name: Start fresh disposable local Supabase stack');
+  const finalValidator = position('- name: Validate sanitized evidence and remove forbidden runtime files');
+  const browserInstall = position('- name: Install locked browser dependencies');
+  const authLifecycle = position('- name: Test Auth fixture lifecycle and native process ownership');
+  assert.ok(install < stackStart && install < finalValidator);
+  assert.match(workflow.slice(install, stackStart), /working-directory: frontend/);
+  assert.match(workflow.slice(install, stackStart), /run: npm ci --no-audit --no-fund/);
+  assert.doesNotMatch(workflow.slice(browserInstall, authLifecycle), /npm ci/);
+  assert.match(workflow, /cache-dependency-path: frontend\/package-lock\.json/);
 });
 
 test('bounded inventory integration runs after pgTAP, before browser fixtures, and retains only exact evidence', () => {
