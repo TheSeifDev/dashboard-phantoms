@@ -257,6 +257,7 @@ export interface Database {
       get_member_bonus_infinite: { Args: { p_member_id: number; p_device_token: string }; Returns: boolean };
       get_admin_access: { Args: never; Returns: AdminAccess };
       get_member_password_access: { Args: never; Returns: { member_id: number; email: string; auth_user_id: string; active: boolean; password_ready: boolean } | null };
+      get_member_pending_review: { Args: never; Returns: { status: string } | null };
       admin_list_accounts: { Args: never; Returns: AdminAccount[] };
       admin_add_account: { Args: { p_email: string }; Returns: AdminAccount };
       admin_update_permissions: { Args: { p_user_id: string; p_permissions: AdminPermissions }; Returns: boolean };

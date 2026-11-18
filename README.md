@@ -51,7 +51,7 @@
 
 2. **Member Directory & Profile Management**
    - Comprehensive member profiles: hardware readiness, geographic availability, role tags.
-   - Administrator-issued, manually distributed one-time password invitations bound to an existing member and exact email.
+   - Administrator-issued, manually shared one-time links: new members enter their own profile and password and wait inactive for Admin review; existing members receive a first-password setup or password-only reset link.
    - Resilient member deletion lifecycle with a 5-second persistent undo barrier.
 
 3. **Task & Assignment Lifecycle**
@@ -80,14 +80,14 @@
 
 ## Security Architecture & Authorization Model
 
-- **Invitation-Only Member Password Auth:** Join validates a hashed, member/email-bound credential on the server and provisions through Supabase Admin API. Enrollment redirects to Login without a session. Public signup is disabled in local configuration; global email confirmation stays enabled. Normal member login and administrator-issued reset invitations do not require OTP, SMTP or invitation emails.
+- **Invitation-Only Member Password Auth:** An Admin issues a one-time link and shares it out-of-band; no manual Auth UUID or Admin-entered member password is required. A new-member join validates the hashed credential server-side, lets the member enter their profile and password, then keeps the new membership inactive pending Admin review without opening the portal. Existing-member first-password setup and reset are distinct exact-member operations; reset accepts a new password only and cannot edit profile data. Enrollment redirects to Login without a session. Public signup remains disabled; global email confirmation stays enabled. Normal login and reset do not require OTP, SMTP or application-sent invitation email.
 - **Verified-Device Session Binding:** The isolated member client signs in with a password. `get_member_password_access` must verify the exact Auth UUID, normalized email, active membership and completed password enrollment before device binding and portal access. Cryptographic device tokens remain a second authorization requirement, not authentication by themselves. Old unbound invitation/device credentials are not password-enrollment authority.
 - **Dynamic Multi-Admin & Owner Authorization:** Administrative access is governed by the `admin_access` table and PostgreSQL `is_admin()` RPC checks (migration `0022`), decoupling authorization from hardcoded UUIDs and supporting granular administrative permissions.
 - **Destructive Mutation Guards:** AI assistant actions that perform deletions cannot execute autonomously; they require explicit operator confirmation through dedicated UI modals.
 - **Spreadsheet Security:** Archive validation safeguards (`safeXlsxGuard.ts`) enforce total decompress size bounds, entry caps, and compression ratio limits. Untrusted file uploads remain feature-gated.
 - **Secret Isolation:** Environment secrets (`.env`) are untracked and excluded from version control.
 
-The password-auth forward migration is a **local, not-applied production candidate**. It does not silently map existing users, change Owner/Admin credentials or configure production signup/SMTP. Reserved or uncertain Auth writes are quarantined without automatic retry/release. Run real disposable Supabase/GoTrue, Edge and browser tests and obtain independent review plus explicit approval before any production installation; SQL fixtures and mounted mocks are not real Auth validation.
+The password-auth forward migrations are **local, not-applied production candidates**. They do not silently map existing users, change Owner/Admin credentials or configure production signup/SMTP. Reserved or uncertain Auth writes are quarantined without automatic retry/release. Run real disposable Supabase/GoTrue, Edge and browser tests and obtain independent review plus explicit approval before any production installation; SQL fixtures and mounted mocks are not real Auth validation.
 
 ---
 

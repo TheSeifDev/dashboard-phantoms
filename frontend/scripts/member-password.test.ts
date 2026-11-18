@@ -84,6 +84,8 @@ test('private invitation links use only an explicit validated application origin
   const token = `phpw_${'c3'.repeat(32)}`;
   assert.equal(buildTrustedMemberInviteUrl(token), `https://dashboard-phantoms.vercel.app/join#invite=${token}`);
   assert.equal(buildTrustedMemberInviteUrl(token, 'http://localhost:5173'), `http://localhost:5173/join#invite=${token}`);
+  assert.equal(buildTrustedMemberInviteUrl(token, undefined, 'reset'), `https://dashboard-phantoms.vercel.app/reset#invite=${token}`);
+  assert.equal(buildTrustedMemberInviteUrl(token, 'http://localhost:5173', 'enroll'), `http://localhost:5173/join#invite=${token}`);
   for (const origin of ['http://unapproved.example', 'https://user:password@example.com', 'https://example.com/path', 'https://example.com?invite=x', 'javascript:alert(1)']) {
     assert.throws(() => buildTrustedMemberInviteUrl(token, origin));
   }

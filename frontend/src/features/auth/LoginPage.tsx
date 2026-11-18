@@ -14,7 +14,7 @@ import { memberSupabase } from '../../lib/supabase/member-client';
 import { fetchMemberByEmail, bindMemberDeviceSession } from '../members/api';
 import { isValidEmail } from '../../lib/validators';
 import { generateMemberDeviceToken, memberAuthErrorMessage, normalizeAuthEmail } from './member-password';
-import { getMemberPasswordAccess } from './member-password-access';
+import { getMemberPasswordAccess, isMemberPendingReview } from './member-password-access';
 
 class MemberLoginError extends Error {
   readonly code: string;
@@ -27,6 +27,7 @@ class MemberLoginError extends Error {
 }
 
 function loginErrorMessage(code: string): string {
+  if (code === 'MEMBER_PENDING_REVIEW') return memberAuthErrorMessage(code);
   if (code === 'MEMBER_DISABLED') return memberAuthErrorMessage(code);
   if (code === 'IDENTITY_CONFLICT' || code === 'MEMBER_NOT_FOUND') return 'الحساب غير مرتبط بعضوية PHANTOMS مفعّلة.';
   if (code === 'DEVICE_CONFLICT') return 'الحساب ده مفتوح من متصفح أو جهاز تاني. اخرج من الجهاز الأول وجرّب تاني.';
@@ -52,8 +53,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState(() => {
-    const state = location.state as { enrollmentComplete?: boolean } | null;
-    return state?.enrollmentComplete ? 'تم إنشاء الحساب بنجاح. سجّل الدخول الآن بكلمة المرور الجديدة.' : '';
+    const state = location.state as { enrollmentComplete?: boolean; registrationPending?: boolean } | null;
+    if (state?.registrationPending) return 'تم استلام بياناتك وكلمة مرورك. عضويتك الآن بانتظار مراجعة الإدارة وتفعيلها؛ لن تتمكن من الدخول قبل ذلك.';
+    return state?.enrollmentComplete ? 'تم إعداد الحساب بنجاح. يمكنك تسجيل الدخول الآن بكلمة المرور الجديدة.' : '';
   });
   const liveRef = useRef(true);
   const submitLatchRef = useRef<Promise<void> | null>(null);
@@ -106,7 +108,10 @@ export default function LoginPage() {
         }
 
         const access = await getMemberPasswordAccess();
-        if (!access) throw new MemberLoginError('MEMBER_NOT_FOUND');
+        if (!access) {
+          if (await isMemberPendingReview()) throw new MemberLoginError('MEMBER_PENDING_REVIEW');
+          throw new MemberLoginError('MEMBER_NOT_FOUND');
+        }
         if (!access.active) throw new MemberLoginError('MEMBER_DISABLED');
         if (!access.password_ready || access.auth_user_id !== data.user.id || access.email !== authEmail) {
           throw new MemberLoginError('IDENTITY_CONFLICT');

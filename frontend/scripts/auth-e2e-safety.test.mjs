@@ -249,6 +249,13 @@ test('finalizeAuthEvidence preserves final passed results after re-sanitizing', 
   }
 });
 
+test('Auth runner lists the discovered suite and rejects incomplete final evidence', () => {
+  const runner = readFileSync(new URL('./run-disposable-auth-e2e.mjs', import.meta.url), 'utf8');
+  assert.match(runner, /'--list', '--reporter=list'/);
+  assert.match(runner, /if \(!isCompleteAuthEvidence\(finalized\)\)/);
+  assert.match(runner, /prepareJoinFixtureCleanup\(service, fixture\)/);
+});
+
 test('HTTP bridge shutdown closes real connections within the bounded path', async () => {
   const server = createServer((_request, response) => response.end('ok'));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));

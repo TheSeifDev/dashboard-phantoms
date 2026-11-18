@@ -172,6 +172,14 @@ export const router = createBrowserRouter([
     element: <Page><MemberSelfRegisterPage /></Page>,
   },
   {
+    path: '/reset',
+    element: <Page><MemberSelfRegisterPage /></Page>,
+  },
+  {
+    path: '/reset/:token',
+    element: <Page><MemberSelfRegisterPage /></Page>,
+  },
+  {
     path: '/portal',
     element: (
       <ProtectedMemberRoute>

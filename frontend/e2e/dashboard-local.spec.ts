@@ -248,6 +248,81 @@ test.describe('disposable local dashboard', () => {
     }
     expect(requestEvidence.some((r) => r.endpoint === '/rest/v1/members' && r.columns === SAFE_MEMBER_COLUMNS && r.status === 200)).toBe(true);
 
+    await test.step('Admin invitation UI sends a link and never asks for a manual Auth ID', async () => {
+      const invitationEndpoint = `${API_ORIGIN}/functions/v1/member-password-enrollment`;
+      let joinIssuePayload: { action?: string; memberId?: number | null; purpose?: string; email?: string } | null = null;
+      const mockJoinIssue = async (route: Route) => {
+        if (route.request().method() !== 'POST') {
+          await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ code: 'INVALID_INPUT' }) });
+          return;
+        }
+        const payload = route.request().postDataJSON() as { action?: string; memberId?: number | null; purpose?: string; email?: string };
+        if (payload.action === 'list') {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ invites: [] }) });
+          return;
+        }
+        if (payload.action !== 'issue' || payload.memberId !== null || payload.purpose !== 'join' || typeof payload.email !== 'string') {
+          await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'INVALID_INPUT' }) });
+          return;
+        }
+        joinIssuePayload = payload;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ invite: {
+            id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+            token: `phpw_${'a'.repeat(64)}`,
+            email: payload.email,
+            member_id: null,
+            purpose: 'join',
+            note: null,
+            expires_at: '2099-12-31T00:00:00.000Z',
+          } }),
+        });
+      };
+      await page.route(invitationEndpoint, mockJoinIssue);
+      try {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto('/admin/members', { waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: 'إضافة عضو', exact: true }).click();
+        await page.getByRole('button', { name: 'توليد رابط تسجيل للعضو', exact: true }).click();
+        const purpose = page.locator('#member-invite-purpose');
+        const inviteEmail = page.locator('#member-invite-email');
+        await expect(purpose).toHaveValue('join');
+        await expect(page.getByText('أنت ترسل الرابط فقط — العضو يكتب بياناته وكلمة مروره')).toBeVisible();
+        await expect(inviteEmail).toBeVisible();
+        await assertNoHorizontalOverflow(page);
+        await expect(page.locator('#member-invite-auth-id')).toHaveCount(0);
+        await inviteEmail.fill('dashboard-ui-join@phantoms-test.example');
+        await page.getByRole('button', { name: 'إنشاء رابط خاص', exact: true }).click();
+        await expect(page.getByText(/#invite=phpw_a{64}$/)).toBeVisible();
+        await expect(page.getByRole('button', { name: 'نسخ الرابط', exact: true })).toBeVisible();
+        await expect(page.locator('details')).toHaveCount(0);
+        await expect(page.getByText(/الكود اليدوي/)).toHaveCount(0);
+        await assertNoHorizontalOverflow(page);
+        expect(joinIssuePayload).toMatchObject({ action: 'issue', memberId: null, purpose: 'join', email: 'dashboard-ui-join@phantoms-test.example' });
+        if (typeof firstMember?.id !== 'number') throw new Error('owned invite member fixture is unavailable');
+        await purpose.selectOption('enroll');
+        const existingMember = page.locator('#member-invite-member');
+        await expect(existingMember).toBeVisible();
+        await existingMember.selectOption(String(firstMember.id));
+        await expect(inviteEmail).toHaveAttribute('readonly', '');
+        await expect(inviteEmail).toHaveValue(memberEmails[0]);
+        await purpose.selectOption('reset');
+        await expect(existingMember).toBeVisible();
+        await existingMember.selectOption(String(firstMember.id));
+        await expect(inviteEmail).toHaveValue(memberEmails[0]);
+        await purpose.selectOption('join');
+        await expect(inviteEmail).not.toHaveAttribute('readonly', '');
+        await page.getByRole('button', { name: 'إغلاق', exact: true }).last().click();
+        await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
+        await expect(page.getByTestId('dashboard-metrics')).toBeVisible();
+        await page.setViewportSize({ width: 1440, height: 1000 });
+      } finally {
+        await page.unroute(invitationEndpoint, mockJoinIssue);
+      }
+    });
+
     for (const resource of ['members', 'tasks', 'notes'] as const) {
       gate.setResource403(resource, true);
       await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });

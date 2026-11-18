@@ -398,13 +398,14 @@ jobs:
           python3 -c 'import json,sys; print(json.dumps({"supabaseCli": sys.argv[1]}, sort_keys=True))' "$cli_version"
           unset status_env
 
-      - name: Verify local migration history and run entire history all pgTAP suites including 09 operator and 10 guards
+      - name: Verify local migration history and run the entire pgTAP history including self-service join
         run: |
           set -euo pipefail
           test -f backend/supabase/tests/database/09_member_password_operator.test.sql
           test -f backend/supabase/tests/database/10_member_password_runtime_guards.test.sql
           test -f backend/supabase/tests/database/11_member_password_session_guards.test.sql
           test -f backend/supabase/tests/database/12_member_password_limiter_storage_guards.test.sql
+          test -f backend/supabase/tests/database/13_member_password_self_service_join.test.sql
           for suite in \
             01_schema_and_posture \
             02_rbac_owner_admin \
@@ -413,7 +414,8 @@ jobs:
             05_tasks_bonus_ratings \
             06_invites_evaluations \
             07_admin_member_projection \
-            08_member_password_auth; do
+            08_member_password_auth \
+            13_member_password_self_service_join; do
             test -f "backend/supabase/tests/database/${suite}.test.sql"
           done
           supabase migration list --local --workdir backend

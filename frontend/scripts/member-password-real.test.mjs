@@ -90,6 +90,8 @@ function emptyBoundaryObservations() {
 const fixture = {
   emails: new Set(),
   memberIds: [],
+  joinEmails: new Set(),
+  resetTokens: new Set(),
   authUserIds: [],
   adminUserIds: [],
   invitationIds: [],
@@ -411,6 +413,10 @@ async function enrollRequest(email, token, password, confirmPassword = password,
   if (typeof email === 'string') rememberRateKey('member-password:email:', email.trim().toLowerCase());
   if (typeof token === 'string') rememberRateKey('member-password:token:', token);
   const body = { action: 'enroll', email, token, password, confirmPassword };
+  if (!fixture.resetTokens.has(token)) body.profile = {
+    fullName: 'Self Service HTTP Member', phone: '+201100000001', residence: 'Alexandria',
+    workConditions: 'Remote', bio: 'Owned disposable fixture', device: 'لابتوب', gender: 'ذكر',
+  };
   if (extra) Object.assign(body, extra);
   const response = await bounded(fetch(`${API_ORIGIN}${FUNCTION_PATH}`, {
     method: 'POST', headers: { 'content-type': 'application/json', Origin: PREVIEW_ORIGIN }, body: JSON.stringify(body), signal,
@@ -452,14 +458,15 @@ async function createMember(service, email, label) {
   fixture.memberIds.push(result.data.id); fixture.emails.add(email);
   return result.data;
 }
-async function issue(accessToken, memberId, email, purpose = 'enroll', expectedAuthUserId = null, evidenceText = 'operator-reviewed disposable fixture') {
+async function issue(accessToken, memberId, email, purpose = 'enroll') {
+  const normalizedEmail = String(email).trim().toLowerCase();
+  if (purpose === 'join') { fixture.joinEmails.add(normalizedEmail); fixture.emails.add(normalizedEmail); }
+  rememberRateKey('member-password:email:', normalizedEmail);
   const body = { action: 'issue', memberId, email, purpose, expiresInHours: 24, note: 'owned real HTTP fixture' };
-  if (expectedAuthUserId) body.expectedAuthUserId = expectedAuthUserId;
-  if (evidenceText !== null) body.associationEvidence = evidenceText;
   const result = await adminAction(body, accessToken);
   if (result.status !== 200 || !result.payload.invite?.id || !result.payload.invite?.token) fail('invitation issue failed');
   fixture.invitationIds.push(result.payload.invite.id);
-  rememberRateKey('member-password:email:', String(email).trim().toLowerCase());
+  if (purpose === 'reset') fixture.resetTokens.add(result.payload.invite.token);
   rememberRateKey('member-password:token:', result.payload.invite.token);
   return result.payload.invite;
 }
@@ -514,10 +521,12 @@ async function seedFixtures() {
   members.passworded = await createMember(service, email('passworded'), 'passworded');
   members.reset2 = await createMember(service, email('reset2'), 'reset2');
   members.fault = await createMember(service, email('fault'), 'fault');
-  const bind = async (member, user) => {
-    const result = await service.from('member_auth_bindings').insert({ member_id: member.id, auth_user_id: user.id, normalized_email: member.email, password_ready: true });
+  const bind = async (member, user, passwordReady = true) => {
+    const result = await service.from('member_auth_bindings').insert({ member_id: member.id, auth_user_id: user.id, normalized_email: member.email, password_ready: passwordReady });
     assertRpc(result, 'existing binding fixture');
   };
+  await bind(members.unconfirmed, users.unconfirmed, false);
+  await bind(members.passwordless, users.passwordless, false);
   await bind(members.passworded, users.passworded);
   await bind(members.reset2, users.reset2);
   await bind(members.fault, users.fault);
@@ -555,13 +564,60 @@ async function newMemberLifecycle(ctx) {
   if (signup.data?.user?.id) fixture.authUserIds.push(signup.data.user.id);
   return { authUserId: authUser.id, adminSession: session.data.session, memberSession: memberSession.data.session };
 }
+async function selfServiceJoinLifecycle(ctx) {
+  const email = emailFor('self-join', ctx.suffix);
+  const password = validPassword('self-service-join');
+  const adminSession = await signIn(ctx.fixtureEmail, ctx.passwords.admin);
+  assert.equal(adminSession.error, null);
+  const existingAuth = await countUsersByEmail(ctx.admin, email);
+  assert.equal(existingAuth.length, 0, 'self-service join email is collision-checked before invitation');
+  const existingMember = await ctx.service.from('members').select('id').eq('email', email).limit(1);
+  assertRpc(existingMember, 'self-service join collision check');
+  assert.equal(existingMember.data?.length, 0);
+  const existingJoinInvite = await ctx.service.from('member_password_invitations').select('id').eq('normalized_email', email).eq('purpose', 'join').limit(1);
+  assertRpc(existingJoinInvite, 'self-service join invitation collision check');
+  assert.equal(existingJoinInvite.data?.length, 0, 'self-service join email must not already have an invitation');
+  const invite = await issue(adminSession.data.session.access_token, null, email, 'join');
+  const completion = await enrollRequest(email, invite.token, password);
+  assert.equal(completion.status, 200);
+  assert.deepEqual(completion.payload, { ok: true, membership: 'pending_review' });
+  const authUsers = await countUsersByEmail(ctx.admin, email);
+  assert.equal(authUsers.length, 1, 'join provisions exactly one confirmed Auth identity');
+  fixture.authUserIds.push(authUsers[0].id);
+  const memberResult = await ctx.service.from('members').select('id,email,full_name,work_status').eq('email', email).limit(2);
+  assertRpc(memberResult, 'self-service member row');
+  assert.equal(memberResult.data?.length, 1);
+  const member = memberResult.data[0];
+  fixture.memberIds.push(member.id);
+  assert.equal(member.full_name, 'Self Service HTTP Member');
+  assert.equal(member.work_status, 'inactive');
+  const binding = await selectOwned(ctx.service, 'member_auth_bindings', 'member_id,auth_user_id,password_ready', 'member_id', [member.id]);
+  assert.equal(binding.length, 1);
+  assert.equal(binding[0].auth_user_id, authUsers[0].id);
+  assert.equal(binding[0].password_ready, true);
+  const session = await signIn(email, password);
+  assert.equal(session.error, null, 'the newly provisioned identity can authenticate without opening member portal access');
+  const memberClient = createClient(status.api, status.anonKey, {
+    global: { headers: { Authorization: `Bearer ${session.data.session.access_token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const pending = await memberClient.rpc('get_member_pending_review');
+  assert.equal(pending.error, null);
+  assert.deepEqual(pending.data, { status: 'pending_review' });
+  const access = await memberClient.rpc('get_member_password_access');
+  assert.equal(access.error, null);
+  assert.equal(access.data, null, 'pending member receives no active portal access');
+  const directProfile = await memberClient.from('members').select('id').eq('id', member.id).limit(1);
+  assert.equal(directProfile.error, null);
+  assert.equal(directProfile.data?.length, 0, 'RLS hides the pending profile from its own session');
+}
 async function existingPasswordless(ctx, kind, confirmed) {
   const { service, users, members, passwords } = ctx;
   assert.equal(Boolean(users[kind].email_confirmed_at), confirmed);
   const user = users[kind]; const member = members[kind];
   const adminSession = await signIn(ctx.fixtureEmail, passwords.admin);
   assert.equal(adminSession.error, null);
-  const invite = await issue(adminSession.data.session.access_token, member.id, member.email, 'enroll', user.id, `reviewed ${kind} identity`);
+  const invite = await issue(adminSession.data.session.access_token, member.id, member.email, 'enroll');
   const result = await enrollRequest(member.email.toUpperCase(), invite.token, validPassword(kind));
   assert.equal(result.status, 200);
   const listed = await countUsersByEmail(ctx.admin, member.email);
@@ -637,7 +693,7 @@ async function resetAndSessions(ctx) {
   const oldPassword = passwords.passworded;
   const oldSession = await signIn(members.passworded.email, oldPassword);
   assert.equal(oldSession.error, null); assert.ok(oldSession.data.session?.access_token); const oldAccess = oldSession.data.session.access_token;
-  const invite = await issue(adminSession.data.session.access_token, members.passworded.id, members.passworded.email, 'reset', users.passworded.id, null);
+  const invite = await issue(adminSession.data.session.access_token, members.passworded.id, members.passworded.email, 'reset');
   const nextPassword = validPassword('passworded-reset');
   const changed = await enrollRequest(members.passworded.email, invite.token, nextPassword);
   assert.equal(changed.status, 200);
@@ -779,7 +835,7 @@ async function negatives(ctx) {
   const badAuth = await adminAction({ action: 'list' }, 'not-a-jwt'); assert.equal(badAuth.payload.code, 'UNAUTHORIZED');
   const apikeyBearer = await adminAction({ action: 'list' }, status.anonKey); assert.equal(apikeyBearer.payload.code, 'UNAUTHORIZED');
   const freshNormalized = await createMember(service, emailFor('fresh-normalized', ctx.suffix), 'fresh-normalized');
-  const wrongEmailInvite = await issue(adminSession.data.session.access_token, freshNormalized.id, freshNormalized.email, 'enroll', null, 'reviewed');
+  const wrongEmailInvite = await issue(adminSession.data.session.access_token, freshNormalized.id, freshNormalized.email, 'enroll');
   const wrongEmail = await enrollRequest(` ${freshNormalized.email.toUpperCase()}-wrong`, wrongEmailInvite.token, validPassword('bad')); assert.equal(wrongEmail.payload.code, 'WRONG_EMAIL');
   const normalized = await enrollRequest(` ${freshNormalized.email.toUpperCase()} `, wrongEmailInvite.token, validPassword('fresh-normalized')); assert.equal(normalized.status, 200);
   const revokedMember = await createMember(service, emailFor('revoked', ctx.suffix), 'revoked');
@@ -791,10 +847,18 @@ async function negatives(ctx) {
   const changed = await service.from('member_password_invitations').update({ expires_at: new Date(Date.now() - 60_000).toISOString() }).eq('id', expiredInvite.id).select('id').limit(1);
   assertRpc(changed, 'owned expiry fixture');
   const expiredUse = await enrollRequest(expiredMember.email, expiredInvite.token, validPassword('expired')); assert.equal(expiredUse.payload.code, 'EXPIRED');
-  const passwordedEnroll = await adminAction({ action: 'issue', memberId: members.unconfirmed.id, email: members.unconfirmed.email, purpose: 'enroll', expectedAuthUserId: users.unconfirmed.id, associationEvidence: 'reviewed', expiresInHours: 24, note: 'reject already enrolled unconfirmed identity' }, adminSession.data.session.access_token);
+  const passwordedEnroll = await adminAction({ action: 'issue', memberId: members.unconfirmed.id, email: members.unconfirmed.email, purpose: 'enroll', expiresInHours: 24, note: 'reject already enrolled unconfirmed identity' }, adminSession.data.session.access_token);
   assert.equal(passwordedEnroll.payload.code, 'PASSWORD_ALREADY_SET');
-  const badUuid = await adminAction({ action: 'issue', memberId: members.passworded.id, email: members.passworded.email, purpose: 'reset', expectedAuthUserId: users.outsider.id, associationEvidence: 'reviewed', expiresInHours: 24, note: 'wrong uuid' }, adminSession.data.session.access_token); assert.equal(badUuid.payload.code, 'IDENTITY_CONFLICT');
-  const badBinding = await adminAction({ action: 'issue', memberId: members.passworded.id, email: members.new.email, purpose: 'reset', expectedAuthUserId: users.passworded.id, associationEvidence: 'reviewed', expiresInHours: 24, note: 'wrong member binding' }, adminSession.data.session.access_token); assert.equal(badBinding.payload.code, 'WRONG_EMAIL');
+  const badUuid = await adminAction({ action: 'issue', memberId: members.passworded.id, email: members.passworded.email, purpose: 'reset', expectedAuthUserId: users.outsider.id, associationEvidence: 'reviewed', expiresInHours: 24, note: 'manual identity metadata is unsupported' }, adminSession.data.session.access_token); assert.equal(badUuid.payload.code, 'INVALID_INPUT');
+  const badBinding = await adminAction({ action: 'issue', memberId: members.passworded.id, email: members.new.email, purpose: 'reset', expiresInHours: 24, note: 'wrong member binding' }, adminSession.data.session.access_token); assert.equal(badBinding.payload.code, 'WRONG_EMAIL');
+  const unboundEmail = emailFor('unbound-legacy', ctx.suffix);
+  rememberRateKey('member-password:email:', unboundEmail);
+  const unboundUser = await createUser(admin, unboundEmail, validPassword('unbound-legacy'), true);
+  const unboundMember = await createMember(service, unboundEmail, 'unbound legacy identity');
+  assert.equal((await selectOwned(service, 'member_auth_bindings', 'member_id', 'member_id', [unboundMember.id])).length, 0);
+  const unboundLegacy = await adminAction({ action: 'issue', memberId: unboundMember.id, email: unboundEmail, purpose: 'enroll', expiresInHours: 24, note: 'unbound legacy identity must not be auto-adopted' }, adminSession.data.session.access_token);
+  assert.equal(unboundLegacy.payload.code, 'IDENTITY_CONFLICT');
+  assert.ok(unboundUser.id);
   const disabled = await createMember(service, emailFor('disabled', ctx.suffix), 'disabled');
   const disabledInvite = await issue(adminSession.data.session.access_token, disabled.id, disabled.email);
   const disableRow = await service.from('members').update({ work_status: 'disabled' }).eq('id', disabled.id).select('id').limit(1); assertRpc(disableRow, 'owned disabled fixture');
@@ -804,7 +868,7 @@ async function negatives(ctx) {
   console.log(`owned duplicate Auth call rejected ${Boolean(duplicateAuth.error)} exact identity count ${duplicateUsers.length}`);
   assert.ok(duplicateAuth.error);
   assert.equal(duplicateUsers.length, 1);
-  const adminIdentity = await adminAction({ action: 'issue', memberId: members.new.id, email: members.new.email, purpose: 'enroll', expectedAuthUserId: users.admin.id, associationEvidence: 'reviewed', expiresInHours: 24, note: 'admin identity' }, adminSession.data.session.access_token); assert.equal(adminIdentity.payload.code, 'IDENTITY_CONFLICT');
+  const adminIdentity = await adminAction({ action: 'issue', memberId: members.new.id, email: members.new.email, purpose: 'enroll', expectedAuthUserId: users.admin.id, associationEvidence: 'reviewed', expiresInHours: 24, note: 'admin identity metadata is unsupported' }, adminSession.data.session.access_token); assert.equal(adminIdentity.payload.code, 'INVALID_INPUT');
   const stale = await service.from('admin_accounts').update({ permissions: completeAdminPermissions({ dashboard: true }) }).eq('user_id', users.admin.id).select('user_id,permissions').limit(1); assertRpc(stale, 'owned permission fixture');
   assert.deepEqual(stale.data?.[0]?.permissions, completeAdminPermissions({ dashboard: true }));
   const staleDenied = await adminAction({ action: 'list' }, adminSession.data.session.access_token); assert.equal(staleDenied.payload.code, 'UNAUTHORIZED');
@@ -836,7 +900,7 @@ async function concurrent(ctx) {
   const resetMember = await createMember(service, emailFor('concurrent-reset', ctx.suffix), 'concurrent-reset');
   const resetUser = await createUser(ctx.admin, resetMember.email, validPassword('concurrent-reset-old'), true);
   const bind = await service.from('member_auth_bindings').insert({ member_id: resetMember.id, auth_user_id: resetUser.id, normalized_email: resetMember.email, password_ready: true }); assertRpc(bind, 'concurrent reset binding');
-  const resetInvite = await issue(adminSession.data.session.access_token, resetMember.id, resetMember.email, 'reset', resetUser.id, null);
+  const resetInvite = await issue(adminSession.data.session.access_token, resetMember.id, resetMember.email, 'reset');
   const resetAttempts = await Promise.all(Array.from({ length: 8 }, (_, i) => enrollRequest(resetMember.email, resetInvite.token, validPassword(`concurrent-reset-${i}`))));
   assert.equal(resetAttempts.filter((result) => result.status === 200).length, 1);
   const losingResetAttempts = resetAttempts.filter((result) => result.status !== 200);
@@ -852,7 +916,7 @@ async function createResetClaim(ctx, label, oldPassword = validPassword(`${label
   const binding = await ctx.service.from('member_auth_bindings').insert({ member_id: member.id, auth_user_id: user.id, normalized_email: member.email, password_ready: true });
   assertRpc(binding, `owned ${label} binding`);
   const adminSession = await signIn(ctx.fixtureEmail, ctx.passwords.admin); assert.equal(adminSession.error, null);
-  const invite = await issue(adminSession.data.session.access_token, member.id, member.email, 'reset', user.id, null);
+  const invite = await issue(adminSession.data.session.access_token, member.id, member.email, 'reset');
   let reservation = null;
   if (reserve) {
     reservation = await ctx.service.rpc('member_password_reserve', { p_token_hash: sha256(invite.token), p_email: member.email });
@@ -926,7 +990,7 @@ async function faultQuarantine(ctx) {
   const { service, users } = ctx;
   const adminSession = await signIn(ctx.fixtureEmail, ctx.passwords.admin); assert.equal(adminSession.error, null);
   const member = ctx.members.fault;
-  const invite = await issue(adminSession.data.session.access_token, member.id, member.email, 'reset', users.fault.id, null);
+  const invite = await issue(adminSession.data.session.access_token, member.id, member.email, 'reset');
   const triggerKey = `audit-${ctx.suffix}`;
   const triggerName = sqlIdentifier(`real_fault_audit_${ctx.suffix.replaceAll('-', '_')}`);
   const functionName = sqlIdentifier(`real_fault_audit_fn_${ctx.suffix.replaceAll('-', '_')}`);
@@ -1096,8 +1160,30 @@ async function cleanup() {
       return result;
     } catch { failures.push(true); return null; }
   };
+  if (service && fixture.joinEmails.size) {
+    const emails = [...fixture.joinEmails];
+    const discoveredInvites = await attempt(() => service.from('member_password_invitations').select('id,normalized_email,purpose').in('normalized_email', emails).eq('purpose', 'join').limit(1000));
+    if (!discoveredInvites || discoveredInvites.error || !Array.isArray(discoveredInvites.data)) failures.push(true);
+    else {
+      if (discoveredInvites.data.length >= 1000) failures.push(true);
+      for (const row of discoveredInvites.data) {
+        const normalizedEmail = typeof row.normalized_email === 'string' ? row.normalized_email.trim().toLowerCase() : '';
+        if (row.purpose !== 'join' || !fixture.joinEmails.has(normalizedEmail) || typeof row.id !== 'string') { failures.push(true); continue; }
+        if (!fixture.invitationIds.includes(row.id)) fixture.invitationIds.push(row.id);
+      }
+    }
+    const discoveredMembers = await attempt(() => service.from('members').select('id,email').in('email', emails).limit(1000));
+    if (!discoveredMembers || discoveredMembers.error || !Array.isArray(discoveredMembers.data)) failures.push(true);
+    else {
+      if (discoveredMembers.data.length >= 1000) failures.push(true);
+      for (const row of discoveredMembers.data) {
+        if (fixture.joinEmails.has(String(row.email).trim().toLowerCase()) && !fixture.memberIds.includes(row.id)) fixture.memberIds.push(row.id);
+      }
+    }
+  }
+  if (service && fixture.invitationIds.length) await attempt(() => service.from('member_password_audit').delete().in('invitation_id', [...new Set(fixture.invitationIds)]));
   if (service && fixture.memberIds.length) await attempt(() => service.from('member_password_audit').delete().in('member_id', fixture.memberIds));
-  if (service && fixture.invitationIds.length) await attempt(() => service.from('member_password_invitations').delete().in('id', fixture.invitationIds));
+  if (service && fixture.invitationIds.length) await attempt(() => service.from('member_password_invitations').delete().in('id', [...new Set(fixture.invitationIds)]));
   if (service && fixture.memberIds.length) await attempt(() => service.from('member_auth_bindings').delete().in('member_id', fixture.memberIds));
   if (service && fixture.memberIds.length) await attempt(() => service.from('members').delete().in('id', fixture.memberIds));
   if (service && fixture.adminUserIds.length) await attempt(() => service.from('admin_accounts').delete().in('user_id', [...new Set(fixture.adminUserIds)]));
@@ -1115,6 +1201,13 @@ async function cleanup() {
       ['member_password_invitations', 'id', fixture.invitationIds], ['member_password_audit', 'member_id', fixture.memberIds],
     ];
     for (const [table, column, values] of checks) if (values.length) await attempt(async () => { const rows = await selectOwned(service, table, column, column, values); if (rows.length) return { error: new Error('owned rows remain') }; return { data: rows }; });
+    if (fixture.invitationIds.length) await attempt(async () => { const rows = await service.from('member_password_audit').select('id').in('invitation_id', [...new Set(fixture.invitationIds)]).limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('owned invitation audit rows remain') } : rows; });
+    if (fixture.memberIds.length) await attempt(async () => { const rows = await service.from('member_password_audit').select('id').in('member_id', fixture.memberIds).limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('owned member audit rows remain') } : rows; });
+    if (fixture.joinEmails.size) {
+      const emails = [...fixture.joinEmails];
+      await attempt(async () => { const rows = await service.from('member_password_invitations').select('id').in('normalized_email', emails).eq('purpose', 'join').limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('owned join invitations remain') } : rows; });
+      await attempt(async () => { const rows = await service.from('members').select('id').in('email', emails).limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('owned join members remain') } : rows; });
+    }
     await attempt(async () => { const rows = await service.from('admin_accounts').select('user_id').in('user_id', [...new Set(fixture.adminUserIds)]).limit(Math.max(fixture.adminUserIds.length, 1)); return rows.data?.length ? { error: new Error('owned admin rows remain') } : rows; });
     await attempt(async () => { const rows = await service.from('member_password_rate_limits').select('key_hash').in('key_hash', [...fixture.rateKeyHashes]).limit(Math.max(fixture.rateKeyHashes.size, 1)); return rows.data?.length ? { error: new Error('owned rate rows remain') } : rows; });
     try { if ((await listOwnedAuthUsers(service.auth.admin)).length) failures.push(true); } catch { failures.push(true); }
@@ -1144,7 +1237,10 @@ async function run() {
     if (status && evidence.pg17 && evidence.stages[0].passed) {
       const ctx = await seedFixtures();
       ctx.fixtureEmail = ctx.users.admin.email; ctx.outsiderEmail = ctx.users.outsider.email; ctx.extraEmail = emailFor('extra', ctx.suffix); fixture.emails.add(ctx.extraEmail);
-      await mark(REAL_STAGE_LABELS[1], () => newMemberLifecycle(ctx));
+      await mark(REAL_STAGE_LABELS[1], async () => {
+        await newMemberLifecycle(ctx);
+        await selfServiceJoinLifecycle(ctx);
+      });
       await mark(REAL_STAGE_LABELS[2], () => existingPasswordless(ctx, 'unconfirmed', false));
       await mark(REAL_STAGE_LABELS[3], () => existingPasswordless(ctx, 'passwordless', true));
       await mark(REAL_STAGE_LABELS[4], () => adminAndUnrelated(ctx));

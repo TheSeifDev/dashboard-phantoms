@@ -12,6 +12,7 @@ export const AUTH_STAGE_TITLES = Object.freeze([
   'wrong password retry',
   'existing passwordless identity preserves UID without duplicate',
   'new member enrollment and no auto-login',
+  'new self-service join waits for Admin review and never opens the portal',
   'non-member password rejection and local cleanup',
   'public signup disabled',
   'reset invitation exact ID and one-use',

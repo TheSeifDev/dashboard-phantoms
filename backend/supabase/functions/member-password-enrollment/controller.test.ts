@@ -5,7 +5,7 @@ import { createMemberPasswordEnrollmentController, type ControllerRuntime, type 
 type State = {
   rate: boolean;
   health: boolean;
-  reserve: { invitation_id: string; claim_id: string; member_id: number; email: string; purpose: 'enroll' | 'reset'; expected_auth_user_id: string | null } | null;
+  reserve: { invitation_id: string; claim_id: string; member_id: number | null; email: string; purpose: 'enroll' | 'reset' | 'join'; expected_auth_user_id: string | null } | null;
   reserveError: string | null;
   identity: { exists: boolean; auth_user_id?: string; has_password?: boolean; is_admin?: boolean };
   identityState: { exists: boolean; auth_user_id?: string; email_matches?: boolean; has_password?: boolean; is_admin?: boolean; usable?: boolean };
@@ -48,14 +48,16 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
         auth_user_id: state.reserve?.expected_auth_user_id,
         ...state.identityState,
       } as T, error: null };
-      if (rpcName === 'member_password_complete') return state.complete
-        ? { data: { ok: true } as T, error: null } : { data: null, error: { message: 'completion unavailable' } };
+      if (rpcName === 'member_password_complete_profile') return state.complete
+        ? { data: { ok: true, membership: state.reserve?.purpose === 'join' ? 'pending_review' : 'active' } as T, error: null }
+        : { data: null, error: { message: 'completion unavailable' } };
       if (rpcName === 'member_password_mark_review_required') {
         state.reviews.push({ invitation_id: String(args?.p_invitation_id), claim_id: String(args?.p_claim_id) });
         return { data: true as T, error: null };
       }
       if (rpcName === 'member_password_issue_invitation') return { data: {
-        id: '55555555-5555-4555-8555-555555555555', member_id: 9, email: 'member@phantoms-test.example', purpose: 'enroll', note: '', expires_at: '2030-01-01T00:00:00.000Z',
+        id: '55555555-5555-4555-8555-555555555555', member_id: args?.p_member_id as number | null,
+        email: args?.p_email as string, purpose: args?.p_purpose as 'join' | 'enroll' | 'reset', note: '', expires_at: '2030-01-01T00:00:00.000Z',
       } as T, error: null };
       if (rpcName === 'member_password_revoke_invitation') return { data: true as T, error: null };
       if (rpcName === 'member_password_list_invitations') return { data: [] as T, error: null };
@@ -87,9 +89,10 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
 }
 
 const token = 'phpw_' + 'a'.repeat(64);
+const profile = { fullName: 'Member Test', phone: '', residence: '', workConditions: '', bio: '', device: '', gender: '' };
 const enrollBody = (overrides: Record<string, unknown> = {}) => ({
   action: 'enroll', email: 'member@phantoms-test.example', token,
-  password: 'StrongMemberPassword1', confirmPassword: 'StrongMemberPassword1', ...overrides,
+  password: 'StrongMemberPassword1', confirmPassword: 'StrongMemberPassword1', profile, ...overrides,
 });
 const request = (body: unknown, headers: Record<string, string> = {}) => new Request('https://local.test/member-password-enrollment', {
   method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://dashboard-phantoms.vercel.app', ...headers }, body: JSON.stringify(body),
@@ -102,13 +105,61 @@ test('valid new-member enrollment provisions confirmed Auth user then completes 
   const state = baseState();
   const controller = createMemberPasswordEnrollmentController(fakeRuntime(state));
   const result = await json(await controller(request(enrollBody())));
-  assert.deepEqual(result, { ok: true });
+  assert.deepEqual(result, { ok: true, membership: 'active' });
   const create = state.calls.find((call) => call.name === 'createUser');
   assert.equal(create?.args?.email, 'member@phantoms-test.example');
   assert.equal(create?.args?.email_confirm, true);
-  assert.equal(state.calls.some((call) => call.name === 'member_password_complete'), true);
+  assert.equal(state.calls.some((call) => call.name === 'member_password_complete_profile'), true);
   assert.equal(state.calls.filter((call) => call.name === 'member_password_check_rate_limit').length, 2);
   assert.equal(state.reviews.length, 0);
+});
+
+test('new join invitation creates only the recipient Auth identity and returns pending_review', async () => {
+  const state = baseState();
+  state.reserve = { ...state.reserve!, member_id: null, email: 'new@phantoms-test.example', purpose: 'join', expected_auth_user_id: null };
+  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request(enrollBody({ email: 'new@phantoms-test.example' })),
+  ));
+  assert.deepEqual(result, { ok: true, membership: 'pending_review' });
+  assert.equal(state.calls.filter((call) => call.name === 'createUser').length, 1);
+  assert.equal(state.calls.some((call) => call.name === 'updateUserById'), false);
+  const completion = state.calls.find((call) => call.name === 'member_password_complete_profile');
+  assert.deepEqual(completion?.args?.p_profile, { fullName: 'Member Test', phone: null, residence: null, workConditions: null, bio: null, device: null, gender: null });
+  assert.equal(state.reviews.length, 0);
+});
+
+test('password reset accepts no profile and never creates a new Auth identity', async () => {
+  const state = baseState();
+  const authId = '33333333-3333-4333-8333-333333333333';
+  state.reserve = { ...state.reserve!, expected_auth_user_id: authId, purpose: 'reset' };
+  state.identityState = { ...state.identityState, has_password: true };
+  const body = { action: 'enroll', email: 'member@phantoms-test.example', token,
+    password: 'StrongMemberPassword1', confirmPassword: 'StrongMemberPassword1' };
+  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(request(body)));
+  assert.deepEqual(result, { ok: true, membership: 'active' });
+  const completion = state.calls.find((call) => call.name === 'member_password_complete_profile');
+  assert.equal(completion?.args?.p_profile, null);
+  assert.equal(state.calls.filter((call) => call.name === 'updateUserById').length, 1);
+  assert.equal(state.calls.some((call) => call.name === 'createUser'), false);
+  assert.equal(state.reviews.length, 0);
+});
+
+test('purpose/profile mismatch is quarantined before any Auth write', async () => {
+  const resetState = baseState();
+  resetState.reserve = { ...resetState.reserve!, expected_auth_user_id: '33333333-3333-4333-8333-333333333333', purpose: 'reset' };
+  resetState.identityState = { ...resetState.identityState, has_password: true };
+  const resetResult = await json(await createMemberPasswordEnrollmentController(fakeRuntime(resetState))(request(enrollBody())));
+  assert.equal(resetResult.code, 'INVALID_INPUT');
+  assert.equal(resetState.reviews.length, 1);
+  assert.equal(resetState.calls.some((call) => call.name === 'createUser' || call.name === 'updateUserById'), false);
+
+  const joinState = baseState();
+  joinState.reserve = { ...joinState.reserve!, member_id: null, email: 'new@phantoms-test.example', purpose: 'join', expected_auth_user_id: null };
+  const { profile: _ignored, ...bodyWithoutProfile } = enrollBody({ email: 'new@phantoms-test.example' });
+  const joinResult = await json(await createMemberPasswordEnrollmentController(fakeRuntime(joinState))(request(bodyWithoutProfile)));
+  assert.equal(joinResult.code, 'INVALID_INPUT');
+  assert.equal(joinState.reviews.length, 1);
+  assert.equal(joinState.calls.some((call) => call.name === 'createUser' || call.name === 'updateUserById'), false);
 });
 
 test('password mismatch, weak password, extra key, and malformed token stop before reservation', async () => {
@@ -117,6 +168,8 @@ test('password mismatch, weak password, extra key, and malformed token stop befo
     [enrollBody({ password: 'short1', confirmPassword: 'short1' }), 'WEAK_PASSWORD'],
     [enrollBody({ extra: 'reject' }), 'INVALID_INPUT'],
     [enrollBody({ token: 'legacy-token' }), 'INVALID_INPUT'],
+    [enrollBody({ profile: { ...profile, role: 'admin' } }), 'INVALID_INPUT'],
+    [enrollBody({ profile: { ...profile, fullName: '' } }), 'INVALID_INPUT'],
   ] as const) {
     const state = baseState();
     const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(request(body)));
@@ -147,7 +200,7 @@ test('password validation follows the real GoTrue UTF-8 byte boundary without tr
   const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(
     request(enrollBody({ password: significantWhitespace, confirmPassword: significantWhitespace })),
   ));
-  assert.deepEqual(result, { ok: true });
+  assert.deepEqual(result, { ok: true, membership: 'active' });
   assert.equal(state.calls.find((call) => call.name === 'createUser')?.args?.password, significantWhitespace);
   assert.notEqual(state.calls.find((call) => call.name === 'createUser')?.args?.password, significantWhitespace.trim());
 });
@@ -168,7 +221,7 @@ test('existing OTP identity uses exact update path and never calls createUser', 
   const state = baseState();
   state.reserve = { ...state.reserve!, purpose: 'enroll', expected_auth_user_id: '77777777-7777-4777-8777-777777777777' };
   const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(request(enrollBody())));
-  assert.deepEqual(result, { ok: true });
+  assert.deepEqual(result, { ok: true, membership: 'active' });
   assert.equal(state.calls.some((call) => call.name === 'createUser'), false);
   const update = state.calls.find((call) => call.name === 'updateUserById');
   assert.equal(update?.args?.userId, state.reserve.expected_auth_user_id);
@@ -178,8 +231,9 @@ test('existing OTP identity uses exact update path and never calls createUser', 
 test('reset purpose updates the exact existing Auth ID without enrollment fallback', async () => {
   const state = baseState();
   state.reserve = { ...state.reserve!, purpose: 'reset', expected_auth_user_id: '88888888-8888-4888-8888-888888888888' };
-  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(request(enrollBody())));
-  assert.deepEqual(result, { ok: true });
+  const { profile: _ignored, ...body } = enrollBody();
+  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(request(body)));
+  assert.deepEqual(result, { ok: true, membership: 'active' });
   assert.equal(state.calls.some((call) => call.name === 'createUser'), false);
   const update = state.calls.find((call) => call.name === 'updateUserById');
   assert.equal(update?.args?.email_confirm, undefined);
@@ -238,6 +292,36 @@ test('admin issue is authenticated, strict, and returns a one-time server-genera
   assert.equal(malformed.code, 'INVALID_INPUT');
 });
 
+test('admin issue rejects manual Auth UUID and association-evidence fields at the HTTP boundary', async () => {
+  const base = { action: 'issue', memberId: 9, email: 'member@phantoms-test.example', purpose: 'enroll', expiresInHours: 24, note: 'reviewed' };
+  for (const extra of [
+    { expectedAuthUserId: '77777777-7777-4777-8777-777777777777' },
+    { associationEvidence: 'reviewed legacy identity' },
+    { expectedAuthUserId: '77777777-7777-4777-8777-777777777777', associationEvidence: 'reviewed legacy identity' },
+  ]) {
+    const state = baseState();
+    const controller = createMemberPasswordEnrollmentController(fakeRuntime(state));
+    const result = await json(await controller(request({ ...base, ...extra }, { Authorization: 'Bearer admin' })));
+    assert.equal(result.code, 'INVALID_INPUT');
+    assert.equal(state.calls.some((call) => call.name === 'member_password_issue_invitation'), false);
+  }
+});
+
+test('Admin can issue an unbound join link without supplying a member or Auth ID', async () => {
+  const state = baseState();
+  const controller = createMemberPasswordEnrollmentController(fakeRuntime(state));
+  const body = { action: 'issue', memberId: null, email: 'new@phantoms-test.example', purpose: 'join', expiresInHours: 24, note: '' };
+  const result = await json(await controller(request(body, { Authorization: 'Bearer admin' })));
+  const invite = result.invite as Record<string, unknown>;
+  assert.equal(invite.purpose, 'join');
+  assert.equal(invite.member_id, null);
+  assert.match(String(invite.token), /^phpw_[0-9a-f]{64}$/);
+  const args = state.calls.find((call) => call.name === 'member_password_issue_invitation')?.args;
+  assert.equal(args?.p_member_id, null);
+  assert.equal(args?.p_expected_auth_user_id, null);
+  assert.equal(args?.p_association_evidence, null);
+});
+
 test('admin list and revoke require admin permission and expose no token material', async () => {
   const state = baseState();
   const controller = createMemberPasswordEnrollmentController(fakeRuntime(state));
@@ -288,7 +372,7 @@ test('a mismatched Auth update response is quarantined rather than accepted', as
 });
 
 test('asynchronous RPC failures are sanitized before provisioning or quarantined after reservation', async () => {
-  for (const target of ['member_password_check_rate_limit', 'member_password_service_health', 'member_password_reserve', 'member_password_identity_by_email', 'member_password_complete']) {
+  for (const target of ['member_password_check_rate_limit', 'member_password_service_health', 'member_password_reserve', 'member_password_identity_by_email', 'member_password_complete_profile']) {
     const state = baseState();
     const runtime = fakeRuntime(state);
     const original = runtime.serviceDb.rpc.bind(runtime.serviceDb);
@@ -303,8 +387,8 @@ test('asynchronous RPC failures are sanitized before provisioning or quarantined
     assert.equal(result.code, ['member_password_check_rate_limit', 'member_password_service_health'].includes(target) ? 'SERVER_UNAVAILABLE' : 'REVIEW_REQUIRED');
     assert.equal(JSON.stringify(result).includes('private'), false);
     assert.equal(state.calls.filter((call) => call.name === target).length, 1, 'no automatic RPC retry');
-    assert.equal(state.calls.filter((call) => call.name === 'createUser').length, target === 'member_password_complete' ? 1 : 0);
-    assert.equal(state.reviews.length, ['member_password_identity_by_email', 'member_password_complete'].includes(target) ? 1 : 0);
+    assert.equal(state.calls.filter((call) => call.name === 'createUser').length, target === 'member_password_complete_profile' ? 1 : 0);
+    assert.equal(state.reviews.length, ['member_password_identity_by_email', 'member_password_complete_profile'].includes(target) ? 1 : 0);
   }
 });
 
@@ -423,7 +507,7 @@ test('completion success must be exactly true, never an empty or truthy response
     const state = baseState(); const runtime = fakeRuntime(state);
     const original = runtime.serviceDb.rpc.bind(runtime.serviceDb);
     runtime.serviceDb.rpc = async <T = unknown>(name: string, args?: Record<string, unknown>) => {
-      if (name === 'member_password_complete') return { data: data as T, error: null };
+      if (name === 'member_password_complete_profile') return { data: data as T, error: null };
       return original<T>(name, args);
     };
     assert.deepEqual(await json(await createMemberPasswordEnrollmentController(runtime)(request(enrollBody()))), { code: 'REVIEW_REQUIRED' });
@@ -441,10 +525,11 @@ for (const operation of ['create', 'update'] as const) {
     const timeout = async () => { committedWrites += 1; throw new Error('withheld remote result'); };
     if (operation === 'create') runtime.authAdmin.auth.admin.createUser = timeout;
     else runtime.authAdmin.auth.admin.updateUserById = timeout;
-    assert.deepEqual(await json(await createMemberPasswordEnrollmentController(runtime)(request(enrollBody()))), { code: 'REVIEW_REQUIRED' });
+    const body = operation === 'update' ? (({ profile: _ignored, ...rest }) => rest)(enrollBody()) : enrollBody();
+    assert.deepEqual(await json(await createMemberPasswordEnrollmentController(runtime)(request(body))), { code: 'REVIEW_REQUIRED' });
     assert.equal(committedWrites, 1);
     assert.equal(state.reviews.length, 1);
-    assert.equal(state.calls.some((call) => call.name === 'member_password_complete'), false);
+    assert.equal(state.calls.some((call) => call.name === 'member_password_complete_profile'), false);
     assert.equal(state.calls.some((call) => /release|delete|retry/.test(call.name)), false);
   });
 }
@@ -454,7 +539,7 @@ for (const failure of ['missing marker', 'wrong UUID marker', 'final consumption
     const state = baseState(); const runtime = fakeRuntime(state);
     const original = runtime.serviceDb.rpc.bind(runtime.serviceDb);
     runtime.serviceDb.rpc = async <T = unknown>(name: string, args?: Record<string, unknown>) => {
-      if (name === 'member_password_complete') {
+      if (name === 'member_password_complete_profile') {
         state.calls.push({ client: 'service', name, args });
         return { data: null, error: { message: failure === 'wrong UUID marker' ? 'IDENTITY_CONFLICT' : 'REVIEW_REQUIRED' } };
       }
@@ -462,7 +547,7 @@ for (const failure of ['missing marker', 'wrong UUID marker', 'final consumption
     };
     assert.deepEqual(await json(await createMemberPasswordEnrollmentController(runtime)(request(enrollBody()))), { code: 'REVIEW_REQUIRED' });
     assert.equal(state.calls.filter((call) => call.client === 'auth').length, 1);
-    assert.equal(state.calls.filter((call) => call.name === 'member_password_complete').length, 1);
+    assert.equal(state.calls.filter((call) => call.name === 'member_password_complete_profile').length, 1);
     assert.equal(state.reviews.length, 1);
     assert.equal(state.calls.some((call) => /release|delete|retry/.test(call.name)), false);
   });
@@ -475,7 +560,7 @@ for (const boundary of ['before request', 'after reserve', 'after Auth write', '
     if (boundary === 'before request') abort.abort();
     runtime.serviceDb.rpc = async <T = unknown>(name: string, args?: Record<string, unknown>) => {
       const result = await original<T>(name, args);
-      if ((boundary === 'after reserve' && name === 'member_password_reserve') || (boundary === 'after complete' && name === 'member_password_complete')) abort.abort();
+      if ((boundary === 'after reserve' && name === 'member_password_reserve') || (boundary === 'after complete' && name === 'member_password_complete_profile')) abort.abort();
       return result;
     };
     const originalCreate = runtime.authAdmin.auth.admin.createUser.bind(runtime.authAdmin.auth.admin);

@@ -20,6 +20,7 @@ import { createClient } from '@supabase/supabase-js';
 import {
   closeHttpServer,
   finalizeAuthEvidence,
+  isCompleteAuthEvidence,
   isExactLoopbackHttpOrigin,
   isExactLoopbackPostgresUrl,
   scopedMailpitDeleteOptions,
@@ -264,7 +265,7 @@ function runChild(command, args, options = {}) {
     const child = spawn(command, args, {
       cwd: options.cwd ?? FRONTEND,
       env: options.env ?? process.env,
-      stdio: options.inheritOutput ? ['ignore', 'inherit', 'ignore'] : ['ignore', 'ignore', 'ignore'],
+      stdio: options.inheritOutput ? ['ignore', 'inherit', 'inherit'] : ['ignore', 'ignore', 'ignore'],
       windowsHide: true,
     });
     activeChildren.add(child);
@@ -448,6 +449,7 @@ async function discoverFixtureUserIds(admin, fixture) {
     fixture.adminEmail,
     fixture.existingMemberEmail,
     fixture.firstTimeMemberEmail,
+    fixture.joinMemberEmail,
     fixture.outsiderEmail,
     fixture.inviteEmail,
     fixture.recoveryEmail,
@@ -468,6 +470,46 @@ async function discoverFixtureUserIds(admin, fixture) {
   throw new Error('fixture Auth listing exceeded its bounded pagination limit');
 }
 
+async function assertJoinFixtureEmailUnused(service, admin, email) {
+  const normalized = email.toLowerCase();
+  const [members, invitations] = await Promise.all([
+    service.from('members').select('id').eq('email', normalized).limit(1),
+    service.from('member_password_invitations').select('id').eq('normalized_email', normalized).limit(1),
+  ]);
+  if (members.error || invitations.error || members.data?.length || invitations.data?.length) {
+    fail('random join fixture email was not unused.');
+  }
+  for (let page = 1; page <= MAX_AUTH_USER_PAGES; page += 1) {
+    const listed = await admin.listUsers({ page, perPage: AUTH_USER_PAGE_SIZE });
+    if (listed?.error) fail('could not preflight the random join fixture identity.');
+    const users = Array.isArray(listed?.data?.users) ? listed.data.users : [];
+    if (users.some((user) => user.email?.toLowerCase() === normalized)) fail('random join fixture identity already exists.');
+    if (users.length < AUTH_USER_PAGE_SIZE) return;
+  }
+  fail('random join fixture identity preflight exceeded its bounded limit.');
+}
+
+async function prepareJoinFixtureCleanup(service, fixture) {
+  const email = typeof fixture.joinMemberEmail === 'string' ? fixture.joinMemberEmail.toLowerCase() : '';
+  if (!email) return;
+  const [invites, members] = await Promise.all([
+    service.from('member_password_invitations').select('id').eq('normalized_email', email).eq('purpose', 'join').limit(2),
+    service.from('members').select('id').eq('email', email).limit(2),
+  ]);
+  if (invites.error || members.error || (invites.data?.length ?? 0) > 1 || (members.data?.length ?? 0) > 1) {
+    throw new Error('exact join fixture lookup failed');
+  }
+  for (const row of members.data ?? []) {
+    if (!fixture.memberIds.includes(row.id)) fixture.memberIds.push(row.id);
+  }
+  const inviteIds = (invites.data ?? []).map((row) => row.id).filter((id) => typeof id === 'string');
+  if (!inviteIds.length) return;
+  const audit = await service.from('member_password_audit').delete().in('invitation_id', inviteIds);
+  if (audit.error) throw new Error('exact join fixture audit cleanup failed');
+  const removed = await service.from('member_password_invitations').delete().in('id', inviteIds);
+  if (removed.error) throw new Error('exact join fixture invitation cleanup failed');
+}
+
 async function cleanupFixtures(service, admin, fixture, messageIds) {
   const failures = [];
   const attempt = async (operation) => {
@@ -482,6 +524,7 @@ async function cleanupFixtures(service, admin, fixture, messageIds) {
     }
   };
   await attempt(() => trackFixtureMessages(fixture, messageIds));
+  await attempt(() => prepareJoinFixtureCleanup(service, fixture));
   // Invitations restrict member deletion; audit rows must be removed first.
   // All selected member IDs were registered immediately by this invocation.
   if (fixture.memberIds.length) {
@@ -518,6 +561,16 @@ async function cleanupFixtures(service, admin, fixture, messageIds) {
     for (const [table, column] of [['members', 'id'], ['member_auth_bindings', 'member_id'], ['member_password_invitations', 'member_id'], ['member_password_audit', 'member_id']]) {
       const remaining = await service.from(table).select(column).in(column, fixture.memberIds).limit(fixture.memberIds.length);
       if (remaining.error || remaining.data?.length !== 0) failures.push('owned fixture cleanup verification failed');
+    }
+  }
+  if (fixture.joinMemberEmail) {
+    const email = fixture.joinMemberEmail.toLowerCase();
+    const [remainingJoin, remainingMember] = await Promise.all([
+      service.from('member_password_invitations').select('id').eq('normalized_email', email).eq('purpose', 'join').limit(1),
+      service.from('members').select('id').eq('email', email).limit(1),
+    ]);
+    if (remainingJoin.error || remainingJoin.data?.length !== 0 || remainingMember.error || remainingMember.data?.length !== 0) {
+      failures.push('exact join fixture remains after cleanup');
     }
   }
   try {
@@ -577,6 +630,7 @@ async function seedFixtures(status) {
     adminEmail: email('admin'),
     existingMemberEmail: email('existing-member'),
     firstTimeMemberEmail: email('new-member'),
+    joinMemberEmail: email('join-member'),
     outsiderEmail: email('outsider'),
     inviteEmail: email('invite'),
     recoveryEmail: email('recovery'),
@@ -635,6 +689,7 @@ async function seedFixtures(status) {
     if (changed !== user.id) fail('owned passwordless fixture construction did not affect exactly one unbound identity.');
   };
   try {
+    await assertJoinFixtureEmailUnused(service, admin, fixture.joinMemberEmail);
     const adminUser = await createUser(fixture.adminEmail, { password: PASSWORD });
     await addAdmin(adminUser.id);
     const existingUser = await createUser(fixture.existingMemberEmail);
@@ -646,6 +701,13 @@ async function seedFixtures(status) {
 
     const existingMember = await createMember({ email: fixture.existingMemberEmail, full_name: 'Disposable existing password member', completion_rank: 88, team_notes: 'Auth E2E', residence: 'Alexandria', work_conditions: 'remote', bio: 'Auth E2E existing member', phone: '+201000000101', device: 'لابتوب', gender: 'female', meeting_attendance: 'present', work_status: 'active', can_go_alexandria: true, custom_fields: {} });
     const firstTimeMember = await createMember({ email: fixture.firstTimeMemberEmail, full_name: 'Disposable first-time password member', completion_rank: 47, team_notes: 'Auth E2E', residence: 'Cairo', work_conditions: 'onsite', bio: 'Auth E2E first-time member', phone: '+201000000102', device: 'كمبيوتر', gender: 'male', meeting_attendance: 'regular', work_status: 'active', can_go_alexandria: false, custom_fields: {} });
+    const identityBinding = await service.from('member_auth_bindings').insert({
+      member_id: existingMember.id,
+      auth_user_id: existingUser.id,
+      normalized_email: fixture.existingMemberEmail.toLowerCase(),
+      password_ready: false,
+    });
+    if (identityBinding.error) fail('could not seed the exact disposable existing-member identity binding.');
     fixture.existingMemberId = existingMember.id;
     fixture.firstTimeMemberId = firstTimeMember.id;
 
@@ -662,7 +724,7 @@ async function seedFixtures(status) {
 
 function startFixtureBridge(fixture, messageIds, service, admin) {
   const allowedEmails = new Set([
-    fixture.adminEmail, fixture.existingMemberEmail, fixture.firstTimeMemberEmail,
+    fixture.adminEmail, fixture.existingMemberEmail, fixture.firstTimeMemberEmail, fixture.joinMemberEmail,
     fixture.outsiderEmail, fixture.inviteEmail, fixture.recoveryEmail,
   ].map((email) => email.toLowerCase()));
   const server = createServer(async (request, response) => {
@@ -730,7 +792,7 @@ async function main() {
   process.on('SIGTERM', abortHandler);
   assertPreflightSafety();
   if (args.has('--list')) {
-    await runChild(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.auth.config.ts', '--list'], { env: childEnvironment(null), inheritOutput: true });
+    await runChild(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.auth.config.ts', '--list', '--reporter=list'], { env: childEnvironment(null), inheritOutput: true });
     return;
   }
   if (args.has('--compile-only')) {
@@ -764,6 +826,7 @@ async function main() {
         PHANTOMS_AUTH_EXISTING_MEMBER_AUTH_USER_ID: currentSeeded.fixture.existingMemberAuthUserId,
         PHANTOMS_AUTH_FIRST_TIME_MEMBER_EMAIL: currentSeeded.fixture.firstTimeMemberEmail,
         PHANTOMS_AUTH_FIRST_TIME_MEMBER_ID: String(currentSeeded.fixture.firstTimeMemberId),
+        PHANTOMS_AUTH_JOIN_MEMBER_EMAIL: currentSeeded.fixture.joinMemberEmail,
         PHANTOMS_AUTH_OUTSIDER_EMAIL: currentSeeded.fixture.outsiderEmail,
         PHANTOMS_LOCAL_FIXTURE_BRIDGE_URL: currentBridge.origin,
         PHANTOMS_LOCAL_MAILPIT_PORT: String(MAILPIT_PORT),
@@ -788,7 +851,10 @@ async function main() {
       }
     },
     cleanupFixtures,
-    finalizeEvidence: (cleanupStatus) => finalizeAuthEvidence(AUTH_EVIDENCE_PATH, cleanupStatus),
+    finalizeEvidence: (cleanupStatus) => {
+      const finalized = finalizeAuthEvidence(AUTH_EVIDENCE_PATH, cleanupStatus);
+      if (!isCompleteAuthEvidence(finalized)) fail('Auth browser evidence is incomplete or fixture cleanup did not pass.');
+    },
   });
   if (lifecycle.cleanupError) console.error('[auth-e2e] fixture cleanup failed; details withheld.');
   if (lifecycle.finalizationError) console.error('[auth-e2e] evidence finalization failed; details withheld.');

@@ -251,6 +251,8 @@ function makeControl() {
     authUser: { id: AUTH_UID, email: EMAIL },
     authListeners: new Set(),
     access: { member_id: 7, email: EMAIL, auth_user_id: AUTH_UID, active: true, password_ready: true },
+    pendingReview: false,
+    membership: 'pending_review',
     profile: MEMBER,
     signInCalls: [],
     getUserCalls: [],
@@ -279,11 +281,12 @@ function makeControl() {
       control.events.push(`rpc.${name}`);
       control.rpcCalls.push({ name, args });
       if (name === 'get_member_password_access') { control.accessCalls.push(args); return { data: control.access, error: null }; }
+      if (name === 'get_member_pending_review') return { data: control.pendingReview ? { status: 'pending_review' } : null, error: null };
       if (name === 'bind_member_device_session') { control.bindCalls.push(args); return { data: true, error: null }; }
       if (name === 'lookup_member_by_email') { control.fetchCalls.push(args); return { data: control.profile, error: null }; }
       return { data: null, error: null };
     },
-    invoke: async (name, options) => { control.events.push(`functions.${name}`); control.invokeCalls.push({ name, options }); return { data: { ok: true }, error: null }; },
+    invoke: async (name, options) => { control.events.push(`functions.${name}`); control.invokeCalls.push({ name, options }); return { data: { ok: true, membership: control.membership }, error: null }; },
     bindMemberDeviceSession: async (...args) => { control.events.push('api.bind'); control.bindCalls.push(args); return true; },
     fetchMemberByEmail: async (...args) => { control.events.push('api.fetch'); control.fetchCalls.push(args); return control.profile; },
     getMemberPasswordAccess: async (...args) => { control.events.push('api.access'); control.accessCalls.push(args); return control.access; },
@@ -413,7 +416,7 @@ async function main() {
       currentPath = `${location.pathname}${location.search}${location.hash}`;
       locationHistory.push(currentPath);
       globalThis.__PASSWORD_TEST.navigate = navigate;
-      const element = currentPath.startsWith('/join')
+      const element = currentPath.startsWith('/join') || currentPath.startsWith('/reset')
         ? React.createElement(MemberSelfRegisterPage)
         : currentPath.startsWith('/portal')
           ? React.createElement(MemberAccessGuard, null, React.createElement('div', { id: 'guard-child' }, 'portal'))
@@ -541,6 +544,21 @@ async function main() {
       await setValue(container, 'member-email', EMAIL); await setValue(container, 'member-password', PASSWORD); await submit(container, 'member-email');
       assert.equal(control.bindCalls.length, 0);
       assert.notEqual(currentPath, '/portal');
+    });
+
+    await scenario('new member with correct password is told approval is pending and receives no portal session', async () => {
+      control.access = null;
+      control.pendingReview = true;
+      await setValue(container, 'member-email', EMAIL);
+      await setValue(container, 'member-password', PASSWORD);
+      await submit(container, 'member-email');
+      await act(async () => { await settleMore(); });
+      assert.equal(control.rpcCalls.some((call) => call.name === 'get_member_pending_review'), true);
+      assert.equal(control.bindCalls.length, 0);
+      assert.equal(control.setMemberCalls.length, 0);
+      assert.equal(control.signOutCalls.length, 1);
+      assert.notEqual(currentPath, '/portal');
+      assert.match(textOf(container), /مراجعة الإدارة|تفعيل العضوية/);
     });
 
     await scenario('Auth UID/email mismatch, profile UID/email mismatch, and profile failure all fail closed', async () => {
@@ -726,9 +744,20 @@ async function main() {
       assert.equal(currentPath, '/join', 'hash invite must be scrubbed from the mounted router location');
       assert.equal(dom.window.localStorage.getItem('member-invite-token'), null);
       assert.equal(dom.window.sessionStorage.getItem('member-invite-token'), null);
+      assert.equal(container.querySelector('#join-token'), null, 'the member must open the link; no manual token field is displayed');
       assert.equal(textOf(container).includes(TOKEN), false);
       assertNoForbiddenCalls();
     }, `/join#invite=${TOKEN}`);
+
+    await scenario('join without an invite link requests a fresh link and has no manual code field', async () => {
+      assert.equal(container.querySelector('#join-token'), null);
+      await setValue(container, 'join-email', EMAIL);
+      await setValue(container, 'join-password', PASSWORD);
+      await setValue(container, 'join-confirm-password', PASSWORD);
+      await submit(container, 'join-email');
+      assert.equal(control.invokeCalls.length, 0);
+      assert.match(textOf(container), /افتح رابط الدعوة|رابطاً جديداً/);
+    }, '/join');
 
     for (const [label, path] of [
       ['query', `/join?invite=${TOKEN}`],
@@ -737,7 +766,7 @@ async function main() {
       await scenario(`join ${label} token is scrubbed and cannot auto-populate or submit`, async () => {
         await act(async () => { await settleMore(); });
         assert.equal(currentPath, '/join', `${label} token must be scrubbed from the mounted router location`);
-        assert.equal(input(container, 'join-token').value, '');
+        assert.equal(container.querySelector('#join-token'), null);
         await setValue(container, 'join-email', EMAIL);
         await setValue(container, 'join-password', PASSWORD);
         await setValue(container, 'join-confirm-password', PASSWORD);
@@ -748,24 +777,29 @@ async function main() {
       }, path);
     }
 
-    await scenario('join validation rejects missing/wrong-format token, missing fields, mismatch, and weak password before endpoint', async () => {
-      await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-token', 'bad'); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
+    await scenario('join fragment link remains private while email/profile/password validation stays before endpoint', async () => {
+      assert.equal(container.querySelector('#join-token'), null);
+      await setValue(container, 'join-email', 'not-an-email'); await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
       assert.equal(control.invokeCalls.length, 0);
-      await setValue(container, 'join-token', TOKEN); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', 'Different9!'); await submit(container, 'join-email');
+      await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-full-name', ''); await submit(container, 'join-email');
+      assert.equal(control.invokeCalls.length, 0);
+      await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', 'Different9!'); await submit(container, 'join-email');
       assert.equal(control.invokeCalls.length, 0);
       await setValue(container, 'join-confirm-password', PASSWORD); await setValue(container, 'join-password', WEAK_PASSWORD); await submit(container, 'join-email');
       assert.equal(control.invokeCalls.length, 0);
       assert.match(textOf(container), /دعوة|رابط|كلمة المرور|متطابق|قوي|12/);
-    }, '/join');
+    }, `/join#invite=${TOKEN}`);
 
-    await scenario('valid join invokes only email/token/password/confirmPassword, never IDs/roles, then clears secrets and redirects login without Auth sign-in', async () => {
-      await setValue(container, 'join-email', ` ${EMAIL.toUpperCase()} `); await setValue(container, 'join-token', TOKEN); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
+    await scenario('valid join sends only recipient-entered profile/password data, clears secrets and reports pending review without Auth sign-in', async () => {
+      assert.equal(container.querySelector('#join-token'), null);
+      await setValue(container, 'join-email', ` ${EMAIL.toUpperCase()} `); await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-phone', ''); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
       assert.equal(control.invokeCalls.length, 1);
       const invocation = control.invokeCalls[0];
       assert.equal(invocation.name, 'member-password-enrollment');
       const body = invocation.options?.body ?? invocation.body;
-      assert.deepEqual(Object.keys(body).sort(), ['action', 'confirmPassword', 'email', 'password', 'token'].sort());
+      assert.deepEqual(Object.keys(body).sort(), ['action', 'confirmPassword', 'email', 'password', 'profile', 'token'].sort());
       assert.equal(body.action, 'enroll'); assert.equal(body.email, EMAIL); assert.equal(body.token, TOKEN); assert.equal(body.password, PASSWORD); assert.equal(body.confirmPassword, PASSWORD);
+      assert.deepEqual(body.profile, { fullName: 'Member Test', phone: '', residence: '', workConditions: '', bio: '', device: '', gender: '' });
       assert.equal(Object.hasOwn(body, 'memberId'), false); assert.equal(Object.hasOwn(body, 'role'), false); assert.equal(Object.hasOwn(body, 'authUserId'), false);
       assert.equal(control.signInCalls.length, 0);
       await act(async () => { await settleMore(); });
@@ -781,41 +815,59 @@ async function main() {
         }
       }
       assert.equal(dom.window.localStorage.getItem('member-invite-token'), null); assert.equal(dom.window.sessionStorage.getItem('member-invite-token'), null);
-      assert.match(textOf(container), /تم|نجاح|حساب/);
-    }, '/join');
+      assert.match(textOf(container), /مراجعة|تم استلام|حساب/);
+    }, `/join#invite=${TOKEN}`);
+
+    await scenario('password-only reset route sends no profile fields and preserves the existing member data', async () => {
+      control.membership = 'active';
+      assert.equal(currentPath, '/reset', 'reset fragment is scrubbed without changing the reset route');
+      assert.equal(container.querySelector('#join-full-name'), null, 'reset must not ask the member to re-enter their profile');
+      assert.equal(container.querySelector('#join-token'), null, 'reset uses the link fragment without a manual token field');
+      await setValue(container, 'join-email', EMAIL);
+      await setValue(container, 'join-password', PASSWORD);
+      await setValue(container, 'join-confirm-password', PASSWORD);
+      await submit(container, 'join-email');
+      const body = control.invokeCalls[0]?.options?.body;
+      assert.deepEqual(Object.keys(body).sort(), ['action', 'confirmPassword', 'email', 'password', 'token'].sort());
+      assert.equal(Object.hasOwn(body, 'profile'), false);
+      assert.equal(control.signInCalls.length, 0);
+      await act(async () => { await settleMore(); });
+      assert.ok(locationHistory.includes('/login'));
+      assert.match(textOf(container), /كلمة المرور/);
+    }, `/reset#invite=${TOKEN}`);
 
     for (const code of ['EXPIRED', 'REVOKED', 'ALREADY_USED', 'INVALID_TOKEN']) {
       await scenario(`join ${code} is a safe error with no secret leakage`, async () => {
         control.invoke = async (name, options) => { control.invokeCalls.push({ name, options }); return { data: null, error: { code, message: `secret ${code} SQL` } }; };
-        await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-token', TOKEN); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
+        await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
         assert.equal(textOf(container).includes(`secret ${code}`), false);
         assert.equal(textOf(container).includes('SQL'), false);
         assert.notEqual(currentPath, '/portal');
-      }, '/join');
+      }, `/join#invite=${TOKEN}`);
     }
 
     await scenario('join network failure permits an explicit retry without duplicating stale submit state', async () => {
       let attempts = 0;
-      control.invoke = async (name, options) => { attempts += 1; control.invokeCalls.push({ name, options }); if (attempts === 1) return { data: null, error: { code: 'SERVER_UNAVAILABLE', message: 'secret network' } }; return { data: { ok: true }, error: null }; };
-      await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-token', TOKEN); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
+      control.invoke = async (name, options) => { attempts += 1; control.invokeCalls.push({ name, options }); if (attempts === 1) return { data: null, error: { code: 'SERVER_UNAVAILABLE', message: 'secret network' } }; return { data: { ok: true, membership: 'pending_review' }, error: null }; };
+      await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
       assert.equal(textOf(container).includes('secret network'), false);
       const retry = button(container, (node) => /حاول|تاني|إعادة|retry/i.test(node.textContent || ''));
       if (retry) await click(retry); else await submit(container, 'join-email');
       assert.equal(attempts, 2);
       assert.equal(control.signInCalls.length, 0);
-    }, '/join');
+    }, `/join#invite=${TOKEN}`);
 
     await scenario('join double-submit is single-flight with captured recipient and unmount ignores completion', async () => {
       const pending = deferred();
       control.invoke = async (name, options) => { control.invokeCalls.push({ name, options }); return pending.promise; };
-      await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-token', TOKEN); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD);
+      await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD);
       await submit(container, 'join-email', true);
       assert.equal(control.invokeCalls.length, 1);
       assert.equal((control.invokeCalls[0].options?.body ?? {}).email, EMAIL);
-      await unmount(); pending.resolve({ data: { ok: true }, error: null }); await act(async () => { await settle(); });
+      await unmount(); pending.resolve({ data: { ok: true, membership: 'pending_review' }, error: null }); await act(async () => { await settle(); });
       assert.equal(control.signInCalls.length, 0);
       assert.equal(dom.window.localStorage.getItem('phantoms_member_session'), null);
-    }, '/join');
+    }, `/join#invite=${TOKEN}`);
 
     await scenario('contact administrator is recovery-only: no reset email or public signup endpoint', async () => {
       assert.match(textOf(container), /مسؤول|مشكلة|الإدارة/);

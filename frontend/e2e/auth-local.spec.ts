@@ -14,6 +14,7 @@ const adminEmail = process.env.PHANTOMS_AUTH_ADMIN_EMAIL ?? '';
 const adminPassword = process.env.PHANTOMS_AUTH_ADMIN_PASSWORD ?? '';
 const existingMemberEmail = process.env.PHANTOMS_AUTH_EXISTING_MEMBER_EMAIL ?? '';
 const firstTimeMemberEmail = process.env.PHANTOMS_AUTH_FIRST_TIME_MEMBER_EMAIL ?? '';
+const joinMemberEmail = process.env.PHANTOMS_AUTH_JOIN_MEMBER_EMAIL ?? '';
 const outsiderEmail = process.env.PHANTOMS_AUTH_OUTSIDER_EMAIL ?? '';
 const existingMemberId = Number(process.env.PHANTOMS_AUTH_EXISTING_MEMBER_ID ?? '0');
 const firstTimeMemberId = Number(process.env.PHANTOMS_AUTH_FIRST_TIME_MEMBER_ID ?? '0');
@@ -52,6 +53,7 @@ function requireFixtureEnv(): void {
     adminPassword,
     existingMemberEmail,
     firstTimeMemberEmail,
+    joinMemberEmail,
     outsiderEmail,
     existingMemberAuthUserId,
   })) {
@@ -84,7 +86,7 @@ function memberSubmit(page: Page) {
 }
 
 function joinSubmit(page: Page) {
-  return page.getByRole('button', { name: /إنشاء|تسجيل|تأكيد|انضمام|enroll|join|create password/i }).last();
+  return page.getByRole('button', { name: /حفظ البيانات وكلمة المرور|تحديث كلمة المرور|إنشاء|تسجيل|تأكيد|انضمام|enroll|join|create password/i }).last();
 }
 
 function alert(page: Page) {
@@ -193,13 +195,12 @@ async function browserFunctionRequest(page: Page, body: Record<string, unknown>,
   }, { origin: API_ORIGIN, key: anonKey, requestBody: body, includeAdmin: useAdminSession });
 }
 
-async function issueInvite(page: Page, input: { memberId: number; email: string; purpose: 'enroll' | 'reset'; expectedAuthUserId?: string }): Promise<{ id: string; token: string }> {
+async function issueInvite(page: Page, input: { memberId: number | null; email: string; purpose: 'enroll' | 'reset' | 'join' }): Promise<{ id: string; token: string }> {
   const response = await browserFunctionRequest(page, {
     action: 'issue',
     memberId: input.memberId,
     email: input.email,
     purpose: input.purpose,
-    ...(input.expectedAuthUserId ? { expectedAuthUserId: input.expectedAuthUserId, associationEvidence: 'local-disposable-admin-reviewed-existing-identity' } : {}),
     expiresInHours: 24,
     note: 'local disposable password migration fixture',
   });
@@ -213,11 +214,22 @@ async function publicEnrollmentRequest(page: Page, input: { email: string; token
   return browserFunctionRequest(page, { action: 'enroll', ...input }, false);
 }
 
-async function enrollFromJoin(page: Page, email: string, token: string, password: string): Promise<void> {
-  await page.goto(`/join#invite=${encodeURIComponent(token)}`, { waitUntil: 'domcontentloaded' });
-  const emailInput = page.locator('#member-join-email, #join-email, input[type="email"]').first();
+async function enrollFromJoin(
+  page: Page,
+  email: string,
+  token: string,
+  password: string,
+  options: { mode?: 'join' | 'reset'; fullName?: string } = {},
+): Promise<void> {
+  const mode = options.mode ?? 'join';
+  const route = mode === 'reset' ? '/reset' : '/join';
+  await page.goto(`${route}#invite=${encodeURIComponent(token)}`, { waitUntil: 'domcontentloaded' });
+  const emailInput = page.locator('#join-email, #member-join-email, input[type="email"]').first();
   await expect(emailInput).toBeVisible({ timeout: 30_000 });
   await emailInput.fill(email);
+  if (mode === 'join') {
+    await page.locator('#join-full-name').fill(options.fullName ?? 'Disposable self-entered member');
+  }
   const passwords = memberJoinPasswordInputs(page);
   await expect(passwords).toHaveCount(2, { timeout: 10_000 });
   await passwords.nth(0).fill(password);
@@ -274,6 +286,7 @@ test.describe('disposable local Auth', () => {
       gates.push(primaryGate);
       let existingInvite!: { id: string; token: string };
       let firstTimeInvite!: { id: string; token: string };
+      let joinInvite!: { id: string; token: string };
 
       await test.step('admin login', async () => {
         await loginAdmin(page);
@@ -282,17 +295,21 @@ test.describe('disposable local Auth', () => {
           memberId: existingMemberId,
           email: existingMemberEmail,
           purpose: 'enroll',
-          expectedAuthUserId: existingMemberAuthUserId,
         });
         firstTimeInvite = await issueInvite(page, {
           memberId: firstTimeMemberId,
           email: firstTimeMemberEmail,
           purpose: 'enroll',
         });
+        joinInvite = await issueInvite(page, {
+          memberId: null,
+          email: joinMemberEmail,
+          purpose: 'join',
+        });
       });
 
       await test.step('existing member password enrollment and scoped member logout', async () => {
-        await enrollFromJoin(page, existingMemberEmail, existingInvite.token, EXISTING_MEMBER_PASSWORD);
+        await enrollFromJoin(page, existingMemberEmail, existingInvite.token, EXISTING_MEMBER_PASSWORD, { fullName: 'Disposable existing password member' });
         await loginMember(page, existingMemberEmail, EXISTING_MEMBER_PASSWORD);
         await expect(page).toHaveURL(/\/portal$/);
         await expect(page.getByText(/Disposable existing password member/i)).toBeVisible();
@@ -337,7 +354,7 @@ test.describe('disposable local Auth', () => {
       await test.step('new member enrollment and no auto-login', async () => {
         const before = await fixtureIdentity(firstTimeMemberEmail);
         expect(before.count).toBe(0);
-        await enrollFromJoin(page, firstTimeMemberEmail, firstTimeInvite.token, FIRST_TIME_MEMBER_PASSWORD);
+        await enrollFromJoin(page, firstTimeMemberEmail, firstTimeInvite.token, FIRST_TIME_MEMBER_PASSWORD, { fullName: 'Disposable first-time password member' });
         await expect(page).not.toHaveURL(/\/portal$/);
         await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
         const after = await fixtureIdentity(firstTimeMemberEmail);
@@ -345,6 +362,20 @@ test.describe('disposable local Auth', () => {
         await loginMember(page, firstTimeMemberEmail, FIRST_TIME_MEMBER_PASSWORD);
         await expect(page).toHaveURL(/\/portal$/);
         await expect(page.getByText(/Disposable first-time password member/i)).toBeVisible();
+      });
+
+      await test.step('new self-service join waits for Admin review and never opens the portal', async () => {
+        const before = await fixtureIdentity(joinMemberEmail);
+        expect(before.count).toBe(0);
+        await enrollFromJoin(page, joinMemberEmail, joinInvite.token, 'Disposable-Join-Member-2026!', { fullName: 'Self-entered pending-review member' });
+        await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
+        await expect(page.getByText(/تم استلام بياناتك وكلمة مرورك.*بانتظار مراجعة الإدارة/s)).toBeVisible();
+        const after = await fixtureIdentity(joinMemberEmail);
+        expect(after.count).toBe(1);
+        await loginMember(page, joinMemberEmail, 'Disposable-Join-Member-2026!');
+        await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
+        await expect(alert(page)).toContainText(/مراجعة الإدارة|بانتظار المراجعة/);
+        await expect(page).not.toHaveURL(/\/portal$/);
       });
 
       await test.step('non-member password rejection and local cleanup', async () => {
@@ -374,7 +405,6 @@ test.describe('disposable local Auth', () => {
           memberId: existingMemberId,
           email: existingMemberEmail,
           purpose: 'reset',
-          expectedAuthUserId: existingMemberAuthUserId,
         });
         const wrongEmail = await publicEnrollmentRequest(page, {
           email: firstTimeMemberEmail,
@@ -394,7 +424,7 @@ test.describe('disposable local Auth', () => {
 
       await test.step('reset invitation exact ID and one-use', async () => {
         expect(resetInvite.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
-        await enrollFromJoin(page, existingMemberEmail, resetInvite.token, RESET_MEMBER_PASSWORD);
+        await enrollFromJoin(page, existingMemberEmail, resetInvite.token, RESET_MEMBER_PASSWORD, { mode: 'reset' });
         await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
         const reused = await publicEnrollmentRequest(page, {
           email: existingMemberEmail,

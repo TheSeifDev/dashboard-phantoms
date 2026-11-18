@@ -10,6 +10,8 @@ const FRONTEND = path.resolve(here, '..');
 const readSource = (relativePath: string) => readFileSync(path.join(FRONTEND, relativePath), 'utf8');
 const api = readSource('src/features/members/api.ts');
 const inviteApi = readSource('src/features/members/memberInviteApi.ts');
+const inviteModal = readSource('src/features/members/MemberInviteModal.tsx');
+const memberSelfRegister = readSource('src/features/members/MemberSelfRegisterPage.tsx');
 
 const ADMIN_COLUMNS = [
   'id', 'created_at', 'email', 'full_name', 'completion_rank', 'team_notes',
@@ -69,6 +71,16 @@ test('invitation registration has no browser member writes or legacy fallback au
   assert.match(inviteApi, /\.limit\(500\)/);
   assert.match(inviteApi, /member-password-enrollment/);
   assert.doesNotMatch(readSource('src/features/members/MemberSelfRegisterPage.tsx'), /\.(?:insert|update|upsert|delete|signUp)\s*\(/);
+});
+
+test('Admin and member self-service screens expose links only, with no separate manual invitation-code channel', () => {
+  assert.match(inviteModal, /createdInvite\.url/);
+  assert.doesNotMatch(inviteModal, /createdInvite\.token|عرض الكود اليدوي|نسخ الكود اليدوي/);
+  assert.doesNotMatch(inviteApi, /expectedAuthUserId|associationEvidence/);
+  const createdInviteInterface = inviteApi.match(/export interface CreatedMemberInvite[\s\S]*?\n}/)?.[0] ?? '';
+  assert.ok(createdInviteInterface);
+  assert.doesNotMatch(createdInviteInterface, /token/);
+  assert.doesNotMatch(memberSelfRegister, /id="join-token"|أدخل الكود يدوياً|أدخل رمز الدعوة/);
 });
 
 test('member result selections exclude secrets while write-field protections remain intact', () => {

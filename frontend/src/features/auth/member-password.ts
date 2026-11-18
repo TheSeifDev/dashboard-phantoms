@@ -66,15 +66,21 @@ export function parseMemberInviteLocation(input: {
   return { kind: 'missing' };
 }
 
-export function buildTrustedMemberInviteUrl(token: string, publicWebUrl = 'https://dashboard-phantoms.vercel.app'): string {
+export function buildTrustedMemberInviteUrl(
+  token: string,
+  publicWebUrl = 'https://dashboard-phantoms.vercel.app',
+  purpose: 'join' | 'enroll' | 'reset' = 'join',
+): string {
   if (!isMemberInviteToken(token)) throw new Error('INVALID_TOKEN');
+  if (purpose !== 'join' && purpose !== 'enroll' && purpose !== 'reset') throw new Error('INVALID_INPUT');
   const url = new URL(publicWebUrl);
   const explicitLocal = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
   if ((url.protocol !== 'https:' && !(explicitLocal && url.protocol === 'http:'))
     || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
     throw new Error('SERVER_CONFIG');
   }
-  return `${url.origin}/join#invite=${token}`;
+  const path = purpose === 'reset' ? '/reset' : '/join';
+  return `${url.origin}${path}#invite=${token}`;
 }
 
 export const MEMBER_AUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -84,9 +90,10 @@ export const MEMBER_AUTH_ERROR_MESSAGES: Record<string, string> = {
   EXPIRED: 'انتهت صلاحية الدعوة. تواصل مع مسؤول الفريق لإصدار دعوة جديدة.',
   REVOKED: 'تم إلغاء هذه الدعوة. تواصل مع مسؤول الفريق.',
   ALREADY_USED: 'تم استخدام هذه الدعوة من قبل. تواصل مع مسؤول الفريق إذا كنت تحتاج مراجعة.',
+  MEMBER_PENDING_REVIEW: 'تم استلام بياناتك، وحسابك بانتظار مراجعة الإدارة وتفعيل العضوية. لن تتمكن من الدخول قبل التفعيل.',
   MEMBER_DISABLED: 'هذه العضوية غير مفعّلة حالياً. تواصل مع مسؤول الفريق.',
   MEMBER_NOT_FOUND: 'لم نتمكن من العثور على العضوية المطلوبة.',
-  IDENTITY_CONFLICT: 'تعذر مطابقة هوية الحساب مع العضوية. تواصل مع مسؤول الفريق.',
+  IDENTITY_CONFLICT: 'تعذر إثبات الربط الدقيق بين هوية الدخول والعضوية؛ مطابقة البريد وحدها غير كافية. تواصل مع مسؤول الفريق.',
   PASSWORD_ALREADY_SET: 'تم إعداد كلمة مرور لهذا الحساب بالفعل. تواصل مع مسؤول الفريق.',
   PASSWORD_MISMATCH: 'كلمتا المرور غير متطابقتين.',
   WEAK_PASSWORD: 'كلمة المرور يجب أن تكون 12 حرفاً على الأقل، وألا تتجاوز 72 بايتاً بترميز UTF-8، وتحتوي على حرف إنجليزي ورقم.',

@@ -11,12 +11,12 @@ import {
 } from '../auth/member-password';
 
 export const MEMBER_INVITES_KEY = ['member_password_invites'] as const;
-export type MemberInvitePurpose = 'enroll' | 'reset';
+export type MemberInvitePurpose = 'join' | 'enroll' | 'reset';
 export type MemberInviteStatus = 'pending' | 'reserved' | 'review_required';
 
 export interface MemberInviteRecord {
   id: string;
-  member_id: number;
+  member_id: number | null;
   email: string;
   purpose: MemberInvitePurpose;
   status: MemberInviteStatus;
@@ -26,7 +26,6 @@ export interface MemberInviteRecord {
 }
 
 export interface CreatedMemberInvite extends MemberInviteRecord {
-  token: string;
   url: string;
 }
 
@@ -51,15 +50,18 @@ function mapInviteRow(value: unknown): MemberInviteRecord | null {
   const row = value as Record<string, unknown>;
   if (
     typeof row.id !== 'string' || !isMemberInviteId(row.id)
-    || typeof row.member_id !== 'number' || !Number.isSafeInteger(row.member_id) || row.member_id <= 0
     || typeof row.email !== 'string'
-    || (row.purpose !== 'enroll' && row.purpose !== 'reset')
+    || (row.purpose !== 'join' && row.purpose !== 'enroll' && row.purpose !== 'reset')
     || (row.status !== 'pending' && row.status !== 'reserved' && row.status !== 'review_required')
     || typeof row.expires_at !== 'string' || typeof row.created_at !== 'string'
   ) return null;
+  const memberId = row.member_id === null
+    ? null
+    : typeof row.member_id === 'number' && Number.isSafeInteger(row.member_id) && row.member_id > 0 ? row.member_id : undefined;
+  if (memberId === undefined || ((row.purpose === 'join') !== (memberId === null))) return null;
   return {
     id: row.id,
-    member_id: row.member_id,
+    member_id: memberId,
     email: normalizeAuthEmail(row.email),
     purpose: row.purpose,
     status: row.status,
@@ -69,9 +71,9 @@ function mapInviteRow(value: unknown): MemberInviteRecord | null {
   };
 }
 
-export function buildMemberInviteUrl(token: string): string {
+export function buildMemberInviteUrl(token: string, purpose: MemberInvitePurpose = 'join'): string {
   try {
-    return buildTrustedMemberInviteUrl(token, import.meta.env.VITE_PUBLIC_WEB_URL as string | undefined);
+    return buildTrustedMemberInviteUrl(token, import.meta.env.VITE_PUBLIC_WEB_URL as string | undefined, purpose);
   } catch {
     throw new MemberInviteApiError(isMemberInviteToken(token) ? 'SERVER_CONFIG' : 'INVALID_TOKEN');
   }
@@ -99,11 +101,9 @@ export async function fetchApprovedMembersForInvite(): Promise<MemberInviteMembe
 }
 
 interface IssueInput {
-  memberId: number;
+  memberId: number | null;
   email: string;
   purpose: MemberInvitePurpose;
-  expectedAuthUserId?: string;
-  associationEvidence?: string;
   expiresInHours: number;
   note?: string;
 }
@@ -114,18 +114,18 @@ export function useCreateMemberInvite() {
     gcTime: 0,
     mutationFn: async (input: IssueInput): Promise<CreatedMemberInvite> => {
       const email = normalizeAuthEmail(input.email);
-      if (!Number.isSafeInteger(input.memberId) || input.memberId <= 0 || !email
-        || (input.purpose !== 'enroll' && input.purpose !== 'reset')) {
+      if ((input.purpose === 'join'
+        ? input.memberId !== null
+        : !Number.isSafeInteger(input.memberId) || (input.memberId ?? 0) <= 0) || !email
+        || (input.purpose !== 'join' && input.purpose !== 'enroll' && input.purpose !== 'reset')) {
         throw new MemberInviteApiError('INVALID_INPUT');
       }
       const { data, error } = await supabase.functions.invoke<{
-        invite?: { id?: string; token?: string; email?: string; member_id?: number; purpose?: MemberInvitePurpose; note?: string | null; expires_at?: string };
+        invite?: { id?: string; token?: string; email?: string; member_id?: number | null; purpose?: MemberInvitePurpose; note?: string | null; expires_at?: string };
         code?: string;
       }>('member-password-enrollment', {
         body: {
           action: 'issue', memberId: input.memberId, email, purpose: input.purpose,
-          ...(input.expectedAuthUserId?.trim() ? { expectedAuthUserId: input.expectedAuthUserId.trim() } : {}),
-          ...(input.associationEvidence?.trim() ? { associationEvidence: input.associationEvidence.trim() } : {}),
           expiresInHours: input.expiresInHours, note: input.note?.trim() || '',
         },
       });
@@ -141,7 +141,7 @@ export function useCreateMemberInvite() {
       return {
         id: invite.id, member_id: input.memberId, email, purpose: input.purpose, status: 'pending',
         note: typeof invite.note === 'string' ? invite.note : null, expires_at: invite.expires_at,
-        created_at: new Date().toISOString(), token: invite.token, url: buildMemberInviteUrl(invite.token),
+        created_at: new Date().toISOString(), url: buildMemberInviteUrl(invite.token, invite.purpose),
       };
     },
     onSettled: () => { void qc.invalidateQueries({ queryKey: MEMBER_INVITES_KEY }); },

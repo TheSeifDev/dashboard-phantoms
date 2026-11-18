@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   REAL_EVIDENCE_CONTRACT,
   REAL_BOUNDARY_EXPECTATIONS,
@@ -13,6 +14,8 @@ import {
   sanitizeRealEvidence,
   validatePreflightConfig,
 } from './member-password-real.test.mjs';
+
+const REAL_RUNNER_SOURCE = readFileSync(new URL('./member-password-real.test.mjs', import.meta.url), 'utf8');
 
 function passingInput(overrides = {}) {
   return {
@@ -182,6 +185,24 @@ test('incomplete evidence starts false and never silently skips the required sui
   assert.equal(initial.passed, false);
   assert.equal(initial.counts.notStarted, REAL_STAGE_LABELS.length);
   assert.equal(isCompleteRealEvidence(initial), false);
+});
+
+test('join invitation email is cleanup-owned before issue and orphan rows are discovered by exact email/purpose', () => {
+  const issueStart = REAL_RUNNER_SOURCE.indexOf('async function issue(');
+  const cleanupStart = REAL_RUNNER_SOURCE.indexOf('async function cleanup()');
+  assert.ok(issueStart >= 0 && cleanupStart > issueStart);
+  const issueSource = REAL_RUNNER_SOURCE.slice(issueStart, REAL_RUNNER_SOURCE.indexOf('\nasync function signIn(', issueStart));
+  const joinOwnership = issueSource.indexOf('fixture.joinEmails.add(normalizedEmail)');
+  const requestWrite = issueSource.indexOf('await adminAction(body, accessToken)');
+  assert.ok(joinOwnership >= 0 && requestWrite > joinOwnership, 'register the exact join email before the write can commit');
+  const cleanupSource = REAL_RUNNER_SOURCE.slice(cleanupStart, REAL_RUNNER_SOURCE.indexOf('\nasync function run()', cleanupStart));
+  assert.match(cleanupSource, /member_password_invitations'\)\.select\('id,normalized_email,purpose'\)\.in\('normalized_email', emails\)\.eq\('purpose', 'join'\)/);
+  const auditDelete = cleanupSource.indexOf("member_password_audit').delete().in('invitation_id'");
+  const invitationDelete = cleanupSource.indexOf("member_password_invitations').delete().in('id'");
+  assert.ok(auditDelete >= 0 && invitationDelete > auditDelete, 'delete exact-owned audit rows before invitations');
+  assert.match(cleanupSource, /owned join invitations remain/);
+  assert.match(cleanupSource, /owned join members remain/);
+  assert.match(cleanupSource, /owned invitation audit rows remain/);
 });
 
 test('mocked bounded Auth listing counts matching identities across pages', async () => {

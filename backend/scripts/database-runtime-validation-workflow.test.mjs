@@ -32,7 +32,7 @@ test('Docker loopback lock covers default and Supabase user-defined bridge netwo
   const stackStart = position('- name: Start fresh disposable local Supabase stack');
   const migrationStart = position('- name: Validate migration manifest, immutable checksums, and local-only safety');
   const healthStart = position('- name: Verify owned stack health, PG17, and exact loopback bindings');
-  const migrationHistory = position('- name: Verify local migration history and run entire history all pgTAP suites including 09 operator and 10 guards');
+  const migrationHistory = position('- name: Verify local migration history and run the entire pgTAP history including self-service join');
   const dockerLock = workflow.slice(lockStart, migrationStart);
   const healthCheck = workflow.slice(healthStart, migrationHistory);
   assert.ok(lockStart < stackStart, 'Docker default bridge options must be in place before Supabase creates its network');
@@ -60,6 +60,7 @@ test('runtime workflow uses local migration history and retains every SQL suite'
     '10_member_password_runtime_guards',
     '11_member_password_session_guards',
     '12_member_password_limiter_storage_guards',
+    '13_member_password_self_service_join',
   ]) {
     assert.match(workflow, new RegExp(suite));
   }

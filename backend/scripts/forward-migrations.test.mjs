@@ -52,13 +52,13 @@ function withFixture(body) {
   try { body(f); } finally { f.cleanup(); }
 }
 
-test('repository retains 24 initialized files, the applied correction and eight pending password migrations', () => {
+test('repository retains 24 initialized files, the applied correction and nine pending password migrations', () => {
   const result = validateMigrationManifest({ rootDir: root });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, 24);
-  assert.equal(result.forwardEntryCount, 9);
-  assert.equal(result.migrationFiles.length, 33);
-  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql']);
+  assert.equal(result.forwardEntryCount, 10);
+  assert.equal(result.migrationFiles.length, 34);
+  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql']);
   const entries = JSON.parse(readFileSync(join(root, FORWARD_MANIFEST_PATH), 'utf8'));
   assert.equal(entries[0].version, forwardVersion);
   assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
