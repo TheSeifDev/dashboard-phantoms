@@ -293,6 +293,7 @@ test.describe('disposable local dashboard', () => {
         const messageName = page.locator('#member-invite-message-name');
         await expect(purpose).toHaveValue('join');
         await expect(expiry).toHaveValue('24');
+        await expect(page.getByText('ملاحظة داخلية (اختيارية)', { exact: true })).toHaveCount(0);
         await expect(page.getByText('أنت ترسل الرابط فقط — العضو يكتب بياناته وكلمة مروره')).toBeVisible();
         await expect(page.getByText(/الرابط يُستخدم مرة واحدة وينتهي في الموعد المحدد/)).toBeVisible();
         await expect(joinOptions).toBeVisible();
@@ -365,6 +366,7 @@ test.describe('disposable local dashboard', () => {
         await expect(page.getByText(/الكود اليدوي/)).toHaveCount(0);
         await assertNoHorizontalOverflow(page);
         expect(joinIssuePayload).toMatchObject({ action: 'issue', memberId: null, purpose: 'join', email: null, expiresInHours: 72 });
+        expect(joinIssuePayload).toHaveProperty('note', '');
         expect(joinIssuePayload).not.toHaveProperty('messageName');
         expect(joinIssuePayload).not.toHaveProperty('whatsAppName');
         if (typeof firstMember?.id !== 'number') throw new Error('owned invite member fixture is unavailable');

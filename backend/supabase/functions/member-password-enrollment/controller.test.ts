@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { createMemberPasswordEnrollmentController, type ControllerRuntime, type RpcClient } from './controller.ts';
 
@@ -633,4 +634,28 @@ test('default origins exclude unapproved hosts and loopback is accepted only by 
   const state = baseState();
   const controller = createMemberPasswordEnrollmentController(fakeRuntime(state), { allowedOrigins: ['http://127.0.0.1:4173'] });
   assert.equal((await controller(request(enrollBody(), { Origin: 'http://127.0.0.1:4173' }))).status, 200);
+});
+
+test('production CORS preflight reaches the handler before configuration checks and gateway JWT is disabled', async () => {
+  const state = baseState();
+  const runtime = fakeRuntime(state);
+  runtime.configReady = false;
+  const response = await createMemberPasswordEnrollmentController(runtime)(new Request(
+    'https://local.test/member-password-enrollment',
+    {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://dashboard-phantoms.vercel.app',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization, apikey, content-type, x-client-info',
+      },
+    },
+  ));
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get('access-control-allow-origin'), 'https://dashboard-phantoms.vercel.app');
+  assert.equal(response.headers.get('access-control-allow-methods'), 'POST, OPTIONS');
+  assert.equal(state.calls.length, 0);
+
+  const config = readFileSync(new URL('../../config.toml', import.meta.url), 'utf8');
+  assert.match(config, /\[functions\.member-password-enrollment\]\s*verify_jwt\s*=\s*false/);
 });

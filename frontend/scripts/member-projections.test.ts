@@ -98,6 +98,8 @@ test('Admin join form has no email field, always issues an unbound link, and kee
   assert.match(inviteModal, /نسخ الدعوة في رسالة واتساب/);
   assert.match(inviteModal, /id="member-invite-whatsapp-preview"[^>]*readOnly/);
   assert.match(inviteModal, /document\.execCommand\('copy'\)/);
+  assert.doesNotMatch(inviteModal, /ملاحظة داخلية|setNote|\n\s*note,/);
+  assert.doesNotMatch(inviteModal, /value=\{note\}|onChange=\{\(event\) => setNote/);
   const issuePayload = inviteModal.match(/createInvite\.mutateAsync\(\{([\s\S]*?)\}\)/)?.[1] ?? '';
   assert.ok(issuePayload);
   assert.doesNotMatch(issuePayload, /whatsAppName|messageName|studentName/);

@@ -50,7 +50,6 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
   const [email, setEmail] = useState('');
   const [whatsAppName, setWhatsAppName] = useState('');
   const [purpose, setPurpose] = useState<MemberInvitePurpose>('join');
-  const [note, setNote] = useState('');
   const [expiresInHours, setExpiresInHours] = useState<number>(24);
   const [createdInvite, setCreatedInvite] = useState<CreatedMemberInvite | null>(null);
   const [copiedType, setCopiedType] = useState<'url' | 'message' | null>(null);
@@ -110,13 +109,11 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
         memberId: selectedMemberId,
         email: isNewMember ? null : email.trim(),
         purpose,
-        note,
         expiresInHours,
       });
       resetIssuedInvite();
       if (!visibleRef.current || generation !== generationRef.current) return;
       setCreatedInvite(result);
-      setNote('');
       toast.success(purpose === 'join'
         ? 'تم إصدار رابط تسجيل خاص؛ العضو سيكتب بياناته بنفسه.'
         : purpose === 'reset' ? 'تم إصدار رابط إعادة تعيين كلمة المرور.' : 'تم إصدار رابط إعداد كلمة المرور.');
@@ -242,10 +239,7 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
             </>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-xs font-bold text-[var(--text-2)]">ملاحظة داخلية (اختيارية)
-              <input type="text" value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder={purpose === 'join' ? 'مثال: تسجيل فريق جديد' : purpose === 'reset' ? 'مثال: طلب إعادة تعيين' : 'مثال: إعداد أول كلمة مرور'} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-normal text-[var(--text)]" />
-            </label>
+          <div className="grid gap-3">
             <label className="grid gap-1.5 text-xs font-bold text-[var(--text-2)]">مدة الصلاحية
               <select id="member-invite-expiry" value={expiresInHours} onChange={(event) => setExpiresInHours(Number(event.target.value))} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-normal text-[var(--text)]">
                 {EXPIRY_OPTIONS.map((option) => <option key={option.hours} value={option.hours}>{option.label}</option>)}
