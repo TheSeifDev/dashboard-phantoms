@@ -250,13 +250,13 @@ test.describe('disposable local dashboard', () => {
 
     await test.step('Admin invitation UI sends a link and never asks for a manual Auth ID', async () => {
       const invitationEndpoint = `${API_ORIGIN}/functions/v1/member-password-enrollment`;
-      let joinIssuePayload: { action?: string; memberId?: number | null; purpose?: string; email?: string } | null = null;
+      let joinIssuePayload: { action?: string; memberId?: number | null; purpose?: string; email?: string; expiresInHours?: number } | null = null;
       const mockJoinIssue = async (route: Route) => {
         if (route.request().method() !== 'POST') {
           await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ code: 'INVALID_INPUT' }) });
           return;
         }
-        const payload = route.request().postDataJSON() as { action?: string; memberId?: number | null; purpose?: string; email?: string };
+        const payload = route.request().postDataJSON() as { action?: string; memberId?: number | null; purpose?: string; email?: string; expiresInHours?: number };
         if (payload.action === 'list') {
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ invites: [] }) });
           return;
@@ -288,19 +288,53 @@ test.describe('disposable local dashboard', () => {
         await page.getByRole('button', { name: 'توليد رابط تسجيل للعضو', exact: true }).click();
         const purpose = page.locator('#member-invite-purpose');
         const inviteEmail = page.locator('#member-invite-email');
+        const expiry = page.locator('#member-invite-expiry');
+        const messageName = page.locator('#member-invite-message-name');
         await expect(purpose).toHaveValue('join');
+        await expect(expiry).toHaveValue('24');
         await expect(page.getByText('أنت ترسل الرابط فقط — العضو يكتب بياناته وكلمة مروره')).toBeVisible();
+        await expect(page.getByText(/الرابط يُستخدم مرة واحدة وينتهي بعد المدة المحددة/)).toBeVisible();
         await expect(inviteEmail).toBeVisible();
+        await expect(page.getByText(/اكتب بريد العضو يدويًا.*انسخ الرابط وأرسله بنفسك/)).toBeVisible();
+        await expect(messageName).toHaveCount(0);
         await assertNoHorizontalOverflow(page);
         await expect(page.locator('#member-invite-auth-id')).toHaveCount(0);
         await inviteEmail.fill('dashboard-ui-join@phantoms-test.example');
+        await expiry.selectOption('72');
+        const inviteScreenshotDir = process.env.PHANTOMS_MOBILE_SCREENSHOT_DIR;
+        if (inviteScreenshotDir && vapidMode === 'missing') {
+          await mkdir(inviteScreenshotDir, { recursive: true, mode: 0o700 });
+          await page.screenshot({ path: path.join(inviteScreenshotDir, 'invite-link-modal-390.png'), fullPage: true });
+        }
         await page.getByRole('button', { name: 'إنشاء رابط خاص', exact: true }).click();
         await expect(page.getByText(/#invite=phpw_a{64}$/)).toBeVisible();
+        await expect(page.getByText('مرة واحدة فقط', { exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: 'نسخ الرابط', exact: true })).toBeVisible();
+        await expect(messageName).toBeVisible();
+        await expect(page.getByText(/لرسالة واتساب فقط؛ لا يُحفظ في ملف الطالب/)).toBeVisible();
+        await messageName.fill('سلمى');
+        const copyWhatsAppMessage = page.getByTestId('member-invite-copy-whatsapp');
+        await expect(copyWhatsAppMessage).toBeVisible();
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: PREVIEW_ORIGIN });
+        await copyWhatsAppMessage.click();
+        await expect(copyWhatsAppMessage).toHaveText('تم نسخ الرسالة');
+        const personalizedMessage = await page.evaluate(() => navigator.clipboard.readText());
+        expect(personalizedMessage).toContain('أهلًا سلمى،');
+        expect(personalizedMessage).toContain('اكتب بياناتك وكلمة مرورك بنفسك');
+        expect(personalizedMessage).toContain('#invite=phpw_a');
+        expect(personalizedMessage).toContain('مرة واحدة فقط');
+        expect(personalizedMessage).toContain('الرابط صالح حتى');
+        await messageName.fill('');
+        await copyWhatsAppMessage.click();
+        const genericMessage = await page.evaluate(() => navigator.clipboard.readText());
+        expect(genericMessage).toContain('أهلًا،');
+        expect(genericMessage).not.toContain('سلمى');
         await expect(page.locator('details')).toHaveCount(0);
         await expect(page.getByText(/الكود اليدوي/)).toHaveCount(0);
         await assertNoHorizontalOverflow(page);
-        expect(joinIssuePayload).toMatchObject({ action: 'issue', memberId: null, purpose: 'join', email: 'dashboard-ui-join@phantoms-test.example' });
+        expect(joinIssuePayload).toMatchObject({ action: 'issue', memberId: null, purpose: 'join', email: 'dashboard-ui-join@phantoms-test.example', expiresInHours: 72 });
+        expect(joinIssuePayload).not.toHaveProperty('messageName');
+        expect(joinIssuePayload).not.toHaveProperty('whatsAppName');
         if (typeof firstMember?.id !== 'number') throw new Error('owned invite member fixture is unavailable');
         await purpose.selectOption('enroll');
         const existingMember = page.locator('#member-invite-member');

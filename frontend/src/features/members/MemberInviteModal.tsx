@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Check, Clock, Copy, KeyRound, Link2, ShieldCheck, Trash2, UserRound } from 'lucide-react';
+import { Check, Clock, Copy, KeyRound, Link2, MessageCircle, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import {
   fetchApprovedMembersForInvite,
   useCreateMemberInvite,
@@ -48,11 +48,12 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
 
   const [memberId, setMemberId] = useState('');
   const [email, setEmail] = useState('');
+  const [whatsAppName, setWhatsAppName] = useState('');
   const [purpose, setPurpose] = useState<MemberInvitePurpose>('join');
   const [note, setNote] = useState('');
-  const [expiresInHours, setExpiresInHours] = useState<number>(168);
+  const [expiresInHours, setExpiresInHours] = useState<number>(24);
   const [createdInvite, setCreatedInvite] = useState<CreatedMemberInvite | null>(null);
-  const [copiedType, setCopiedType] = useState<'url' | null>(null);
+  const [copiedType, setCopiedType] = useState<'url' | 'message' | null>(null);
   const [error, setError] = useState('');
   const visibleRef = useRef(isOpen);
   const issueBusyRef = useRef(false);
@@ -66,6 +67,7 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
     if (!isOpen) {
       setCreatedInvite(null);
       setCopiedType(null);
+      setWhatsAppName('');
       setError('');
       resetIssuedInvite();
     }
@@ -79,6 +81,7 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
     setPurpose(value);
     setMemberId('');
     setEmail('');
+    setWhatsAppName('');
     setError('');
     setCreatedInvite(null);
   };
@@ -124,11 +127,11 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
     }
   };
 
-  const copyText = async (text: string) => {
+  const copyText = async (text: string, type: 'url' | 'message') => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedType('url');
-      toast.success('تم نسخ الرابط.');
+      setCopiedType(type);
+      toast.success(type === 'url' ? 'تم نسخ الرابط.' : 'تم نسخ رسالة واتساب.');
       window.setTimeout(() => setCopiedType(null), 2500);
     } catch {
       toast.error('تعذر النسخ التلقائي — حدّد القيمة وانسخها يدوياً.');
@@ -153,6 +156,17 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
     }
   };
 
+  const buildWhatsAppMessage = (invite: CreatedMemberInvite, name: string) => {
+    const displayName = name.replace(/\p{Cc}/gu, ' ').replace(/\s+/gu, ' ').trim().slice(0, 100);
+    const greeting = displayName ? `أهلًا ${displayName}،` : 'أهلًا،';
+    const instructions = invite.purpose === 'join'
+      ? 'افتح الرابط واكتب بياناتك وكلمة مرورك بنفسك. بعد التسجيل، ستبقى عضويتك بانتظار مراجعة الإدارة.'
+      : invite.purpose === 'reset'
+        ? 'استخدم الرابط لإعادة تعيين كلمة المرور فقط؛ لن تتغير بيانات ملفك.'
+        : 'افتح الرابط لإعداد كلمة مرور حسابك بنفسك.';
+    return `${greeting}\n${instructions}\n\n${invite.url}\n\nالرابط صالح حتى ${formatDate(invite.expires_at)} ويُستخدم مرة واحدة فقط.`;
+  };
+
   const activeList = pendingInvites.data ?? [];
 
   return (
@@ -162,7 +176,7 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--link)]" aria-hidden="true"><ShieldCheck size={20} /></span>
           <div className="min-w-0 text-xs leading-6 text-[var(--text-2)]">
             <p className="font-black text-[var(--text)]">أنت ترسل الرابط فقط — العضو يكتب بياناته وكلمة مروره</p>
-            <p>لعضو جديد: يملأ ملفه بنفسه وتبقى عضويته غير مفعّلة حتى مراجعة الإدارة. ولعضو موجود: أرسل رابط إعداد كلمة المرور أو إعادة تعيينها. لا يُرسل بريد تلقائياً.</p>
+            <p>لعضو جديد: يملأ ملفه بنفسه وتبقى عضويته غير مفعّلة حتى مراجعة الإدارة. ولعضو موجود: أرسل رابط إعداد كلمة المرور أو إعادة تعيينها. لا يُرسل بريد تلقائياً؛ الرابط يُستخدم مرة واحدة وينتهي بعد المدة المحددة.</p>
           </div>
         </div>
 
@@ -181,6 +195,7 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
             <label className="grid gap-1.5 text-xs font-bold text-[var(--text-2)]" htmlFor="member-invite-email">
               بريد العضو الجديد *
               <input id="member-invite-email" type="email" dir="ltr" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} placeholder="name@example.com" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-normal text-[var(--text)]" />
+              <span className="text-[11px] font-normal leading-5 text-[var(--text-muted)]">اكتب بريد العضو يدويًا — لازم يستخدمه نفسه عند التسجيل. انسخ الرابط وأرسله بنفسك.</span>
             </label>
           ) : (
             <>
@@ -203,9 +218,10 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
               <input type="text" value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder={purpose === 'join' ? 'مثال: تسجيل فريق جديد' : purpose === 'reset' ? 'مثال: طلب إعادة تعيين' : 'مثال: إعداد أول كلمة مرور'} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-normal text-[var(--text)]" />
             </label>
             <label className="grid gap-1.5 text-xs font-bold text-[var(--text-2)]">مدة الصلاحية
-              <select value={expiresInHours} onChange={(event) => setExpiresInHours(Number(event.target.value))} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-normal text-[var(--text)]">
+              <select id="member-invite-expiry" value={expiresInHours} onChange={(event) => setExpiresInHours(Number(event.target.value))} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-normal text-[var(--text)]">
                 {EXPIRY_OPTIONS.map((option) => <option key={option.hours} value={option.hours}>{option.label}</option>)}
               </select>
+              <span className="text-[11px] font-normal leading-5 text-[var(--text-muted)]">الافتراضي 24 ساعة؛ اختر 3 أيام أو مدة أخرى عند الحاجة. الرابط لمرة واحدة فقط.</span>
             </label>
           </div>
           <div className="flex justify-end pt-1"><Button type="submit" isLoading={createInvite.isPending} loadingText="بنجهز الرابط..." icon={<KeyRound size={16} aria-hidden="true" />} fullOnMobile>إنشاء رابط خاص</Button></div>
@@ -213,9 +229,22 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
 
         {createdInvite && (
           <div className="grid gap-3 rounded-xl border-2 border-[var(--primary)] bg-[var(--primary-soft)] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Link2 size={18} className="text-[var(--link)]" aria-hidden="true" /><span className="text-sm font-black text-[var(--text)]">{purposeLabel(createdInvite.purpose)}</span></div><span className="rounded-md bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-muted)]">صالح حتى {formatDate(createdInvite.expires_at)}</span></div>
+            <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Link2 size={18} className="text-[var(--link)]" aria-hidden="true" /><span className="text-sm font-black text-[var(--text)]">{purposeLabel(createdInvite.purpose)}</span><span className="rounded-md bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-muted)]">مرة واحدة فقط</span></div><span className="rounded-md bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-muted)]">صالح حتى {formatDate(createdInvite.expires_at)}</span></div>
             {createdInvite.purpose === 'join' && <p className="text-xs leading-5 text-[var(--text-2)]">بعد أن يرسل العضو بياناته، ستظهر العضوية بحالة غير مفعّلة لتراجعها الإدارة قبل السماح بالدخول.</p>}
-            <div className="grid gap-2"><span className="text-xs font-bold text-[var(--text-2)]">الرابط — انسخه وأرسله للعضو</span><div dir="ltr" className="max-h-24 overflow-y-auto break-all rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 font-mono text-xs leading-5 text-[var(--text)] select-all">{createdInvite.url}</div><Button type="button" variant="primary" onClick={() => { void copyText(createdInvite.url); }} icon={copiedType === 'url' ? <Check size={16} /> : <Copy size={16} />}>{copiedType === 'url' ? 'تم نسخ الرابط' : 'نسخ الرابط'}</Button></div>
+            <label className="grid gap-1.5 text-xs font-bold text-[var(--text-2)]" htmlFor="member-invite-message-name">
+              اسم الطالب في رسالة واتساب (اختياري)
+              <input id="member-invite-message-name" type="text" autoComplete="off" value={whatsAppName} onChange={(event) => setWhatsAppName(event.target.value)} maxLength={100} placeholder="اكتب الاسم أو اتركه فارغًا" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-normal text-[var(--text)]" />
+              <span className="text-[11px] font-normal leading-5 text-[var(--text-muted)]">لرسالة واتساب فقط؛ لا يُحفظ في ملف الطالب، والطالب يكتب اسمه بنفسه.</span>
+            </label>
+            <div className="grid gap-2">
+              <span className="text-xs font-bold text-[var(--text-2)]">الرابط — انسخه وأرسله للعضو</span>
+              <div dir="ltr" className="max-h-24 overflow-y-auto break-all rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 font-mono text-xs leading-5 text-[var(--text)] select-all">{createdInvite.url}</div>
+              <Button type="button" variant="primary" onClick={() => { void copyText(createdInvite.url, 'url'); }} icon={copiedType === 'url' ? <Check size={16} /> : <Copy size={16} />}>{copiedType === 'url' ? 'تم نسخ الرابط' : 'نسخ الرابط'}</Button>
+            </div>
+            <div className="grid gap-2">
+              <span className="text-xs font-bold text-[var(--text-2)]">رسالة واتساب جاهزة — انسخها وأرسلها بنفسك</span>
+              <Button data-testid="member-invite-copy-whatsapp" type="button" variant="secondary" onClick={() => { void copyText(buildWhatsAppMessage(createdInvite, whatsAppName), 'message'); }} icon={copiedType === 'message' ? <Check size={16} /> : <MessageCircle size={16} />}>{copiedType === 'message' ? 'تم نسخ الرسالة' : 'نسخ رسالة واتساب'}</Button>
+            </div>
           </div>
         )}
 
