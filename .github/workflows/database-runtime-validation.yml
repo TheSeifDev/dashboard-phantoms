@@ -478,15 +478,19 @@ jobs:
           with open(sys.argv[1], encoding='utf-8') as handle:
               evidence = json.load(handle)
           assert set(evidence) == {'schema', 'mode', 'boundary', 'pg17', 'passed', 'checks', 'cleanupStatus'}
-          assert evidence['schema'] == 'phantoms-local-pg17-sql-concurrency/v1'
+          assert evidence['schema'] == 'phantoms-local-pg17-sql-concurrency/v2'
           assert evidence['mode'] == 'local-supabase-pg17-sql-only'
           assert evidence['boundary'] == 'PostgreSQL only; fabricated Auth rows, not GoTrue'
           assert evidence['pg17'] is True and evidence['passed'] is True
           assert evidence['cleanupStatus'] == 'completed-exact-fixtures'
-          assert isinstance(evidence['checks'], list) and len(evidence['checks']) == 3
+          assert isinstance(evidence['checks'], list) and len(evidence['checks']) == 5
           expected = [
               ({'name', 'connections', 'successfulClaims', 'reviewRejected', 'durableClaims', 'passed'},
                {'name': 'eight simultaneous reserve transactions', 'connections': 8, 'successfulClaims': 1, 'reviewRejected': 7, 'durableClaims': 1}),
+              ({'name', 'connections', 'successfulReservations', 'identityConflicts', 'singleBoundInvitation', 'loserStaysPendingUnbound', 'passed'},
+               {'name': 'two email-free join links race for one recipient email', 'connections': 2, 'successfulReservations': 1, 'identityConflicts': 1, 'singleBoundInvitation': 1, 'loserStaysPendingUnbound': 1}),
+              ({'name', 'connections', 'reservationClaimed', 'memberInsertBlocked', 'adminInsertWonAndReservationRejected', 'passed'},
+               {'name': 'email-free join reservation races Admin member insertion', 'connections': 2}),
               ({'name', 'connections', 'allowedWrites', 'blockedWrites', 'exactUuidMarkers', 'passed'},
                {'name': 'two simultaneous reset password writes', 'connections': 2, 'allowedWrites': 1, 'blockedWrites': 1, 'exactUuidMarkers': 1}),
               ({'name', 'connections', 'durableAttempts', 'passed'},
@@ -496,6 +500,13 @@ jobs:
               assert set(check) == fields and check['passed'] is True
               for field, value in values.items():
                   assert check[field] == value
+          member_race = evidence['checks'][2]
+          assert (member_race['reservationClaimed'] is True
+                  and member_race['memberInsertBlocked'] is True
+                  and member_race['adminInsertWonAndReservationRejected'] is False) or (
+                  member_race['reservationClaimed'] is False
+                  and member_race['memberInsertBlocked'] is False
+                  and member_race['adminInsertWonAndReservationRejected'] is True)
           PY
           exit "$status"
 
