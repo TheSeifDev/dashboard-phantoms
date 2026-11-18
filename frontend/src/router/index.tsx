@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { firstAllowedAdminPath } from '../features/admin/access/permissions';
 import type { AdminPermission } from '../types/db';
 import { clearAdminSetupIntent, inspectAdminCallback } from '../features/auth/auth-flow';
+import { MemberAccessGuard } from '../features/auth/MemberAccessGuard';
 
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 const AdminLoginPage = lazy(() => import('../features/auth/AdminLoginPage'));
@@ -129,7 +130,7 @@ function AdminSection({ permission, children }: { permission: AdminPermission; c
 function ProtectedMemberRoute({ children }: { children: React.ReactNode }) {
   const member = useAuthStore((s) => s.currentMember);
   if (!member) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  return <MemberAccessGuard>{children}</MemberAccessGuard>;
 }
 
 /** الجذر: وجّه الجلسات المحفوظة (تذكرني) مباشرة بدل رمي الجميع على الدخول */
@@ -161,6 +162,10 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <Page><LoginPage /></Page>,
+  },
+  {
+    path: '/join',
+    element: <Page><MemberSelfRegisterPage /></Page>,
   },
   {
     path: '/join/:token',

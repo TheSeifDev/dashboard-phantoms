@@ -4,13 +4,18 @@
 // سابقاً كانت الجلسة تُحفظ في مفتاح localStorage مخصص بالتوازي مع تخزين supabase-js نفسه،
 // فكان النسختان تنفصلان بعد أول تجديد Token — هنا نعتمد supabase.auth كمصدر وحيد ونرصد أحداثه.
 //
-// بوابة الأعضاء تبقى جلسة عميل (passwordless) كما في المخطط §8.1 —
-// ترقيتها لـ Magic Link مدرجة في المرحلة 3 (Post-MVP).
+// بوابة الأعضاء تستخدم جلسة عميل معزولة بعد تحقق كلمة المرور والعضوية وربط الجهاز.
 // =====================================================
 import { create } from 'zustand';
 import type { Session, User } from '@supabase/supabase-js';
 import type { Member } from '../types/db';
 import { supabase } from '../lib/supabase/client';
+import { memberSupabase } from '../lib/supabase/member-client';
+import {
+  getMemberRemember as readMemberRemember,
+  transitionMemberRemember,
+} from '../lib/supabase/member-auth-storage';
+import type { MemberRememberTransition } from '../lib/supabase/member-auth-storage';
 
 interface AuthState {
   // Admin State
@@ -30,26 +35,22 @@ interface AuthState {
 
 const SAVED_MEMBER_KEY = 'phantoms_member_session';
 const DEVICE_TOKEN_KEY = 'phantoms_device_token';
-const MEMBER_REMEMBER_KEY = 'phantoms_member_remember';
 const ADMIN_REMEMBER_KEY = 'phantoms_admin_remember';
 
 /** هل العضو اختار الحفظ الدائم؟ الافتراضي نعم للحفاظ على السلوك الحالي */
 export const getMemberRemember = (): boolean => {
-  try {
-    const primary = localStorage.getItem(MEMBER_REMEMBER_KEY);
-    if (primary !== null) return primary !== '0';
-    return true;
-  } catch {
-    return true;
-  }
+  return readMemberRemember();
 };
 
-export const setMemberRemember = (remember: boolean): void => {
-  try {
-    localStorage.setItem(MEMBER_REMEMBER_KEY, remember ? '1' : '0');
-  } catch {
-    // ignore
+export const setMemberRemember = (remember: boolean): MemberRememberTransition => {
+  const transition = transitionMemberRemember(remember);
+  if (!transition.ok && transition.requiresReauthentication) {
+    // A storage transition failure must not leave a live member session or
+    // member device state looking authenticated. Admin state is independent.
+    void memberSupabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+    useAuthStore.getState().logoutMember();
   }
+  return transition;
 };
 
 /** هل الإدارة اختارت الحفظ الدائم؟ الافتراضي نعم */

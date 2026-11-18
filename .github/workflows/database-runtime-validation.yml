@@ -1,19 +1,20 @@
 name: Database Runtime Validation
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches:
+      - main
+      - 'fix/**'
+      - 'feat/**'
     paths:
-      - 'backend/supabase/**'
-      - 'backend/scripts/**'
+      - 'backend/**'
       - 'frontend/**'
       - '.gitignore'
       - '.github/workflows/database-runtime-validation.yml'
-  push:
-    branches: [main, 'fix/**']
+  pull_request:
+    branches: [main]
     paths:
-      - 'backend/supabase/**'
-      - 'backend/scripts/**'
+      - 'backend/**'
       - 'frontend/**'
       - '.gitignore'
       - '.github/workflows/database-runtime-validation.yml'
@@ -26,118 +27,21 @@ concurrency:
   group: database-runtime-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NODE_VERSION: '22.23.4'
+  SUPABASE_CLI_VERSION: '3.1.0'
+  TSX_VERSION: '4.19.4'
+  JSDOM_VERSION: '26.1.0'
+
 jobs:
-  disposable-supabase:
-    name: Fresh Supabase migrations + pgTAP
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: 3.1.0
-
-      - name: Validate migration manifest and immutable SQL checksums
-        run: |
-          node backend/scripts/migration-manifest.mjs
-          node --test backend/scripts/migration-manifest.test.mjs
-          node --test backend/scripts/forward-migrations.test.mjs
-          node --test backend/scripts/migration-deployment-safety.test.mjs
-          node --test backend/scripts/configure-disposable-stack.test.mjs
-          node frontend/scripts/run-migrations.mjs --check
-
-      - name: Validate bootstrap and Supabase cache safety
-        run: |
-          node --test backend/scripts/bootstrap-phantoms-owner.test.mjs
-          node --test frontend/scripts/supabase-cli-safety.test.mjs
-
-      - name: Assert disposable-only execution
-        run: |
-          set -euo pipefail
-          test ! -e backend/supabase/.temp/project-ref
-          test -z "${SUPABASE_ACCESS_TOKEN:-}"
-          test -z "${SUPABASE_DB_PASSWORD:-}"
-          test -z "${DATABASE_URL:-}"
-          test -z "${SUPABASE_DB_URL:-}"
-          supabase --version
-          echo "No remote project link or production connection credentials; Docker-local stack only."
-
-      - name: Isolate disposable container namespace and loopback ports
-        run: node backend/scripts/configure-disposable-stack.mjs
-
-      - name: Start disposable local Supabase database
-        run: |
-          if ! supabase start --workdir backend \
-            -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta,storage-api \
-            >/dev/null 2>&1; then
-            echo "Disposable Supabase stack failed to start."
-            docker ps --format 'table {{.Names}}\t{{.Status}}'
-            exit 1
-          fi
-          echo "Disposable Supabase stack ready (local loopback namespace; credentials withheld)."
-
-      - name: Verify local migration timestamps
-        run: supabase migration list --workdir backend
-
-      - name: Run all existing pgTAP suites on the local database
-        run: supabase test db --workdir backend
-
-      - name: Install locked browser-test dependencies
-        working-directory: frontend
-        run: |
-          npm ci --no-audit --no-fund
-          npx playwright install --with-deps chromium
-
-      - name: Test real dashboard and member workflows against the disposable stack
-        working-directory: frontend
-        env:
-          PHANTOMS_DISPOSABLE_E2E: '1'
-        run: node scripts/run-disposable-dashboard-e2e.mjs
-
-      - name: Test real Auth OTP, session isolation, invite, and recovery workflows
-        working-directory: frontend
-        env:
-          PHANTOMS_DISPOSABLE_E2E: '1'
-        run: |
-          node scripts/run-disposable-auth-e2e.mjs --list
-          node scripts/run-disposable-auth-e2e.mjs
-
-      - name: Upload synthetic dashboard screenshots and sanitized request evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dashboard-disposable-evidence-${{ github.event_name }}
-          path: |
-            frontend/test-results/dashboard-*.png
-            frontend/test-results/dashboard-*.json
-            frontend/test-results/dashboard-*/test-failed-*.png
-            frontend/test-results/auth-*.json
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Revalidate SQL checksums after disposable execution
-        run: node backend/scripts/migration-manifest.mjs
-
-      - name: Stop disposable stack
-        if: always()
-        run: supabase stop --workdir backend --no-backup
-
   frontend-validation:
-    name: Node tests + TypeScript + lint + production build (no deployment)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    name: Frontend safeguards, controller, TypeScript, lint, and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_ANON_KEY: local-build-only-placeholder
-      VITE_PUBLIC_WEB_URL: http://localhost:5173
+      VITE_PUBLIC_WEB_URL: http://127.0.0.1:4173
     defaults:
       run:
         working-directory: frontend
@@ -145,32 +49,683 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 22.23.4
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install locked dependencies
+      - name: Assert exact Node.js 22.23.4 installation
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = "v${NODE_VERSION}"
+
+      - name: Install locked frontend dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Run existing Node and TypeScript regression tests
+      - name: Install temporary exact test tooling without changing frontend manifests
         run: |
+          set -euo pipefail
+          package_hash="$(sha256sum package.json | cut -d' ' -f1)"
+          lock_hash="$(sha256sum package-lock.json | cut -d' ' -f1)"
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund \
+            "jsdom@${JSDOM_VERSION}" "tsx@${TSX_VERSION}"
+          test "$(node -p "require('jsdom/package.json').version")" = "${JSDOM_VERSION}"
+          test "$(node -p "require('tsx/package.json').version")" = "${TSX_VERSION}"
+          test "$(sha256sum package.json | cut -d' ' -f1)" = "$package_hash"
+          test "$(sha256sum package-lock.json | cut -d' ' -f1)" = "$lock_hash"
+
+      - name: Run migration, bootstrap, CLI, and Auth safety safeguards
+        run: |
+          set -euo pipefail
+          node --test \
+            ../backend/scripts/bootstrap-phantoms-owner.test.mjs \
+            ../backend/scripts/configure-disposable-stack.test.mjs \
+            ../backend/scripts/configure-password-disposable-stack.test.mjs \
+            ../backend/scripts/forward-migrations.test.mjs \
+            ../backend/scripts/member-password-inventory.test.mjs \
+            ../backend/scripts/member-password-inventory-evidence.test.mjs \
+            ../backend/scripts/database-runtime-validation-workflow.test.mjs \
+            ../backend/scripts/migration-deployment-safety.test.mjs \
+            ../backend/scripts/migration-manifest.test.mjs
+          node --test scripts/supabase-cli-safety.test.mjs
+          node --test scripts/auth-e2e-safety.test.mjs scripts/auth-fixture-lifecycle.test.mjs
+          node --test scripts/member-password-real-safety.test.mjs
+
+      - name: Run password, mock, controller, mounted Member, and Admin callback suites
+        run: |
+          set -euo pipefail
+          ../frontend/node_modules/.bin/tsx --test scripts/member-password.test.ts
+          node --test scripts/member-password-component.test.mjs
+          node --test scripts/auth-callback-state.test.mjs
+          ../frontend/node_modules/.bin/tsx --test \
+            ../backend/supabase/functions/member-password-enrollment/controller.test.ts \
+            ../backend/supabase/functions/member-password-enrollment/pureorigins.test.ts \
+            scripts/auth-flow.test.ts \
+            scripts/member-auth-storage.test.ts \
+            scripts/member-logout.test.ts \
+            scripts/member-projections.test.ts \
+            scripts/dashboard-state.test.ts
+
+      - name: Run security, runtime, push, brand, and supporting regressions
+        run: |
+          set -euo pipefail
           npm run test:security
-          npm run test:runtime
+          node --test scripts/security-runtime-integration.mjs
+          ../frontend/node_modules/.bin/tsx --test scripts/push-deferred.test.ts
           npm run test:brand
-          node --test scripts/auth-e2e-safety.test.mjs
-          npx --yes tsx --test scripts/test-storage-migration.ts scripts/safe-xlsx-test.ts scripts/member-projections.test.ts scripts/dashboard-state.test.ts
+          ../frontend/node_modules/.bin/tsx --test \
+            scripts/safe-xlsx-test.ts \
+            scripts/test-storage-migration.ts
+          node scripts/audit-legacy-identity.mjs
+          npm run test:secrets
 
-      - name: TypeScript and lint
+      - name: TypeScript check-only and supplemental lint checks
         run: |
-          npx tsc -b --noEmit
-          npx tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2022 --types node e2e/dashboard-local.spec.ts playwright.dashboard.config.ts
-          npx tsc --ignoreConfig --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2022 --types node e2e/auth-local.spec.ts playwright.auth.config.ts
+          set -euo pipefail
+          ../frontend/node_modules/.bin/tsc -b --noEmit
+          ../frontend/node_modules/.bin/tsc --ignoreConfig --noEmit --skipLibCheck \
+            --module esnext --moduleResolution bundler --target es2023 --types node \
+            e2e/dashboard-local.spec.ts playwright.dashboard.config.ts
+          ../frontend/node_modules/.bin/tsc --ignoreConfig --noEmit --skipLibCheck \
+            --module esnext --moduleResolution bundler --target es2023 --types node \
+            e2e/auth-local.spec.ts playwright.auth.config.ts
           npm run lint
+          if [ -x node_modules/.bin/eslint ]; then
+            node_modules/.bin/eslint .
+          else
+            echo 'No ESLint dependency is configured; oxlint is the required lint gate.'
+          fi
 
-      - name: Production build and credential scan (no deployment)
+      - name: Production build and build-artifact secret scan
         run: |
+          set -euo pipefail
           npm run build
           npm run audit:build-secrets
+          test -f dist/index.html
+          test -f dist/sw.js
+          test -f dist/manifest.json
+          test -f dist/branding/phantoms-mark.png
+
+  disposable-supabase:
+    name: Fresh Supabase PG17, pgTAP, dashboard, Auth, and live HTTP
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.23.4
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Assert exact Node.js 22.23.4 installation
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = "v${NODE_VERSION}"
+
+      - name: Install locked frontend dependencies for runtime and evidence validation
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Install official pinned Supabase CLI 3.1.0
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Assert exact Supabase CLI 3.1.0 installation
+        run: |
+          set -euo pipefail
+          test "$(supabase --version 2>/dev/null | head -n 1)" = "${SUPABASE_CLI_VERSION}"
+
+      - name: Lock default and user-defined Docker bridge ports to loopback
+        run: |
+          set -euo pipefail
+          test "$(docker context show)" = default
+          test -z "${DOCKER_HOST:-}"
+          sudo python3 - <<'PY'
+          import json
+          import os
+          import stat
+          import tempfile
+
+          path = '/etc/docker/daemon.json'
+          if os.path.exists(path):
+              with open(path, encoding='utf-8') as handle:
+                  config = json.load(handle)
+              if not isinstance(config, dict):
+                  raise SystemExit('Docker daemon configuration must be a JSON object.')
+              mode = stat.S_IMODE(os.stat(path).st_mode)
+          else:
+              config = {}
+              mode = 0o644
+          config['ip'] = '127.0.0.1'
+          network_defaults = config.get('default-network-opts', {})
+          if not isinstance(network_defaults, dict):
+              raise SystemExit('Docker default-network-opts must be a JSON object.')
+          bridge_defaults = network_defaults.get('bridge', {})
+          if not isinstance(bridge_defaults, dict):
+              raise SystemExit('Docker default bridge options must be a JSON object.')
+          bridge_defaults['com.docker.network.bridge.host_binding_ipv4'] = '127.0.0.1'
+          network_defaults['bridge'] = bridge_defaults
+          config['default-network-opts'] = network_defaults
+          directory = os.path.dirname(path)
+          fd, temporary = tempfile.mkstemp(prefix='.daemon.json.', dir=directory, text=True)
+          try:
+              with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+                  json.dump(config, handle, indent=2, sort_keys=True)
+                  handle.write('\n')
+              os.chmod(temporary, mode)
+              os.replace(temporary, path)
+          finally:
+              if os.path.exists(temporary):
+                  os.unlink(temporary)
+          PY
+          sudo systemctl restart docker
+          test "$(docker context show)" = default
+          test -z "${DOCKER_HOST:-}"
+          docker info --format '{{json .ServerVersion}}' >/dev/null
+
+      - name: Validate migration manifest, immutable checksums, and local-only safety
+        run: |
+          set -euo pipefail
+          node backend/scripts/migration-manifest.mjs
+          node --test \
+            backend/scripts/migration-manifest.test.mjs \
+            backend/scripts/forward-migrations.test.mjs \
+            backend/scripts/migration-deployment-safety.test.mjs \
+            backend/scripts/configure-disposable-stack.test.mjs \
+            backend/scripts/configure-password-disposable-stack.test.mjs \
+            backend/scripts/bootstrap-phantoms-owner.test.mjs \
+            backend/scripts/database-runtime-validation-workflow.test.mjs
+          node frontend/scripts/run-migrations.mjs --check
+          node --test frontend/scripts/supabase-cli-safety.test.mjs
+          node --test frontend/scripts/local-stack-runtime.test.mjs
+          test ! -e backend/supabase/.temp/project-ref
+          test ! -e frontend/.env.local
+          for name in \
+            SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD DATABASE_URL SUPABASE_DB_URL \
+            SUPABASE_SERVICE_ROLE_KEY SUPABASE_SERVICE_KEY SUPABASE_SECRET_KEY \
+            SERVICE_ROLE_KEY JWT_SECRET SUPABASE_JWT_SECRET ANON_KEY POSTGRES_URL \
+            DIRECT_URL SB_SECRET_KEY SB_ACCESS_TOKEN PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE; do
+            test -z "${!name:-}"
+          done
+          supabase --version
+          node --test backend/scripts/member-password-inventory.test.mjs
+
+      - name: Configure generated loopback-only namespace and ports
+        run: node backend/scripts/configure-password-disposable-stack.mjs
+
+      - name: Assert generated config is disposable, loopback-only, and PG17
+        run: |
+          set -euo pipefail
+          test "$(grep -Ec '^project_id = "phantoms-disposable-[0-9]+"$' backend/supabase/config.toml)" = 1
+          grep -Eq '^major_version = 17$' backend/supabase/config.toml
+          grep -Eq '^enable_signup = false$' backend/supabase/config.toml
+          grep -Eq '^enable_confirmations = true$' backend/supabase/config.toml
+          grep -Eq '^site_url = "http://127\.0\.0\.1:[0-9]+"$' backend/supabase/config.toml
+          grep -Eq '^additional_redirect_urls = \["http://127\.0\.0\.1:[0-9]+", "http://127\.0\.0\.1:[0-9]+/\*\*"\]$' backend/supabase/config.toml
+          if grep -Eqi '^[[:space:]]*[^#].*(supabase\.co|vercel\.app)' backend/supabase/config.toml; then
+            echo '::error::Generated local config contains a hosted Supabase or Vercel reference.'
+            exit 1
+          fi
+          test -n "${PHANTOMS_LOCAL_API_PORT:-}"
+          test -n "${PHANTOMS_LOCAL_DB_PORT:-}"
+          test -n "${PHANTOMS_LOCAL_PREVIEW_PORT:-}"
+
+      - name: Start fresh disposable local Supabase stack
+        run: |
+          set -euo pipefail
+          mkdir -p frontend/test-results
+          project_id="$(sed -nE 's/^project_id = "(phantoms-disposable-[0-9]+)"$/\1/p' backend/supabase/config.toml)"
+          if [[ ! "$project_id" =~ ^phantoms-disposable-[0-9]+$ ]]; then
+            echo '::error::Generated disposable project namespace is missing or invalid.'
+            exit 1
+          fi
+          start_status=0
+          supabase start --workdir backend \
+            -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta,storage-api \
+            >/dev/null 2>&1 || start_status=$?
+          if [ "$start_status" -ne 0 ]; then
+            container_rows="$(docker ps -a --filter "label=com.supabase.cli.project=$project_id" --format '{{.Names}}\t{{.State}}\t{{.Status}}' 2>/dev/null || true)"
+            if [ -z "$container_rows" ]; then
+              container_rows="$(docker ps -a --format '{{.Names}}\t{{.State}}\t{{.Status}}' 2>/dev/null | awk -v suffix="_${project_id}" '$1 ~ (suffix "$" )' || true)"
+            fi
+            python3 - "$project_id" "$start_status" "$container_rows" <<'PY' > frontend/test-results/stack-start-evidence.json
+          import json
+          import sys
+          project, _status, rows = sys.argv[1:]
+          containers = []
+          for row in rows.splitlines():
+              parts = row.split('\t', 2)
+              if len(parts) == 3 and parts[0]:
+                  containers.append({'name': parts[0], 'state': parts[1], 'status': parts[2]})
+          print(json.dumps({
+              'schema': 'phantoms-disposable-stack-start/v1',
+              'project': project,
+              'classification': 'cli-start-failed',
+              'containers': containers,
+              'passed': False,
+          }, indent=2, sort_keys=True))
+          PY
+            echo 'Disposable Supabase stack failed to start (classification: cli-start-failed).'
+            exit "$start_status"
+          fi
+          python3 - "$project_id" <<'PY' > frontend/test-results/stack-start-evidence.json
+          import json
+          import sys
+          print(json.dumps({
+              'schema': 'phantoms-disposable-stack-start/v1',
+              'project': sys.argv[1],
+              'classification': 'started',
+              'containers': [],
+              'passed': True,
+          }, indent=2, sort_keys=True))
+          PY
+          echo 'Disposable Supabase stack started on loopback only.'
+
+      - name: Verify owned stack health, PG17, and exact loopback bindings
+        run: |
+          set -euo pipefail
+          status_env="$(supabase status --workdir backend -o env 2>/dev/null)"
+          printf '%s' "$status_env" | python3 -c '
+          import json, os, sys
+          values = {}
+          for line in sys.stdin.read().splitlines():
+              if "=" in line:
+                  key, value = line.split("=", 1)
+                  values[key] = value.strip().strip(chr(34)).strip(chr(39))
+          def loopback_url(value, scheme, expected_port):
+              from urllib.parse import urlparse
+              parsed = urlparse(value)
+              return parsed.scheme == scheme and parsed.hostname == "127.0.0.1" and parsed.port == expected_port
+          api = values.get("API_URL") or values.get("SUPABASE_URL")
+          db = values.get("DB_URL") or values.get("DATABASE_URL")
+          if not api or not db or not loopback_url(api, "http", int(os.environ["PHANTOMS_LOCAL_API_PORT"])) or not any(loopback_url(db, scheme, int(os.environ["PHANTOMS_LOCAL_DB_PORT"])) for scheme in ("postgresql", "postgres")):
+              raise SystemExit("local status is not exact loopback")
+          import urllib.request
+          anon = values.get("ANON_KEY") or values.get("SUPABASE_ANON_KEY")
+          if not anon:
+              raise SystemExit("local status omitted generated public key")
+          req = urllib.request.Request(api + "/auth/v1/settings", headers={"apikey": anon, "Authorization": "Bearer " + anon})
+          try:
+              with urllib.request.urlopen(req, timeout=10) as response:
+                  settings = json.load(response)
+              assert settings.get("disable_signup") is True
+              assert settings.get("mailer_autoconfirm") is False
+          except Exception:
+              raise SystemExit("disposable Auth health or signup/confirmation policy failed") from None
+          print(json.dumps({"apiHost": "127.0.0.1", "apiPort": int(os.environ["PHANTOMS_LOCAL_API_PORT"]), "dbHost": "127.0.0.1", "dbPort": int(os.environ["PHANTOMS_LOCAL_DB_PORT"])}, sort_keys=True))
+          '
+          project_id="$(sed -nE 's/^project_id = "(phantoms-disposable-[0-9]+)"$/\1/p' backend/supabase/config.toml)"
+          if [[ ! "$project_id" =~ ^phantoms-disposable-[0-9]+$ ]]; then
+            echo '::error::Generated disposable project namespace is missing or invalid.'
+            exit 1
+          fi
+          container_ids="$(docker ps -q --filter "label=com.supabase.cli.project=$project_id")"
+          if [ -z "$container_ids" ]; then
+            container_ids="$(docker ps --format '{{.ID}}\t{{.Names}}' | awk -v suffix="_${project_id}" '$2 ~ (suffix "$") { print $1 }')"
+          fi
+          test -n "$container_ids"
+          docker inspect $container_ids | python3 -c '
+          import json, sys
+          containers = json.load(sys.stdin)
+          safe = []
+          non_loopback = []
+          for container in containers:
+              name = container.get("Name", "").lstrip("/")
+              bindings = []
+              for port, entries in (container.get("NetworkSettings", {}).get("Ports") or {}).items():
+                  for entry in entries or []:
+                      host_ip = entry.get("HostIp", "")
+                      if host_ip not in ("127.0.0.1", "::1"):
+                          non_loopback.append({"name": name, "containerPort": port, "hostIp": host_ip})
+                      else:
+                          bindings.append({"containerPort": port, "hostIp": host_ip, "hostPort": entry.get("HostPort", "")})
+              safe.append({"name": name, "bindings": bindings})
+          if non_loopback:
+              print(json.dumps({"nonLoopbackBindings": non_loopback}, sort_keys=True), file=sys.stderr)
+              raise SystemExit("owned Supabase binding is not loopback")
+          if not safe:
+              raise SystemExit("owned Supabase container inspection was empty")
+          print(json.dumps({"containers": safe}, sort_keys=True))
+          '
+          cli_version="$(supabase --version 2>/dev/null | head -n 1)"
+          python3 -c 'import json,sys; print(json.dumps({"supabaseCli": sys.argv[1]}, sort_keys=True))' "$cli_version"
+          unset status_env
+
+      - name: Verify local migration history and run entire history all pgTAP suites including 09 operator and 10 guards
+        run: |
+          set -euo pipefail
+          test -f backend/supabase/tests/database/09_member_password_operator.test.sql
+          test -f backend/supabase/tests/database/10_member_password_runtime_guards.test.sql
+          test -f backend/supabase/tests/database/11_member_password_session_guards.test.sql
+          test -f backend/supabase/tests/database/12_member_password_limiter_storage_guards.test.sql
+          for suite in \
+            01_schema_and_posture \
+            02_rbac_owner_admin \
+            03_rls_tables \
+            04_member_portal \
+            05_tasks_bonus_ratings \
+            06_invites_evaluations \
+            07_admin_member_projection \
+            08_member_password_auth; do
+            test -f "backend/supabase/tests/database/${suite}.test.sql"
+          done
+          supabase migration list --local --workdir backend
+          supabase test db --workdir backend
+
+      - name: Install PostgreSQL client for bounded inventory verification
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql-client
+          fi
+          psql --version
+
+      - name: Run owned local member-password inventory pagination integration
+        env:
+          PHANTOMS_DISPOSABLE_E2E: '1'
+        run: CI=true PHANTOMS_DISPOSABLE_E2E=1 node --test backend/scripts/member-password-inventory.integration.test.mjs
+
+      - name: Install locked browser dependencies
+        working-directory: frontend
+        run: |
+          npx --no-install playwright install --with-deps chromium
+
+      - name: Test Auth fixture lifecycle and native process ownership
+        working-directory: frontend
+        run: node --test scripts/auth-fixture-lifecycle.test.mjs scripts/native-supabase-process-ownership.test.mjs scripts/dashboard-e2e-evidence.test.mjs
+
+      - name: Run real disposable dashboard workflow
+        working-directory: frontend
+        env:
+          PHANTOMS_DISPOSABLE_E2E: '1'
+        run: node scripts/run-disposable-dashboard-e2e.mjs
+
+      - name: Run existing real Auth safety workflow
+        working-directory: frontend
+        env:
+          PHANTOMS_DISPOSABLE_E2E: '1'
+        run: |
+          node scripts/run-disposable-auth-e2e.mjs --list
+          node scripts/run-disposable-auth-e2e.mjs
+
+      - name: Run real member-password HTTP acceptance against local Auth, API, PG17, and Edge Function
+        working-directory: frontend
+        env:
+          PHANTOMS_DISPOSABLE_E2E: '1'
+        run: node scripts/member-password-real.test.mjs
+
+      - name: Run PG17 SQL-only concurrency and validate sanitized evidence
+        run: |
+          set -euo pipefail
+          mkdir -p frontend/test-results
+          set +e
+          python3 backend/scripts/member-password-sql-concurrency.py --run-local-supabase \
+            > frontend/test-results/member-password-sql-concurrency.json
+          status=$?
+          set -e
+          python3 - frontend/test-results/member-password-sql-concurrency.json <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], encoding='utf-8') as handle:
+              evidence = json.load(handle)
+          assert set(evidence) == {'schema', 'mode', 'boundary', 'pg17', 'passed', 'checks', 'cleanupStatus'}
+          assert evidence['schema'] == 'phantoms-local-pg17-sql-concurrency/v1'
+          assert evidence['mode'] == 'local-supabase-pg17-sql-only'
+          assert evidence['boundary'] == 'PostgreSQL only; fabricated Auth rows, not GoTrue'
+          assert evidence['pg17'] is True and evidence['passed'] is True
+          assert evidence['cleanupStatus'] == 'completed-exact-fixtures'
+          assert isinstance(evidence['checks'], list) and len(evidence['checks']) == 3
+          expected = [
+              ({'name', 'connections', 'successfulClaims', 'reviewRejected', 'durableClaims', 'passed'},
+               {'name': 'eight simultaneous reserve transactions', 'connections': 8, 'successfulClaims': 1, 'reviewRejected': 7, 'durableClaims': 1}),
+              ({'name', 'connections', 'allowedWrites', 'blockedWrites', 'exactUuidMarkers', 'passed'},
+               {'name': 'two simultaneous reset password writes', 'connections': 2, 'allowedWrites': 1, 'blockedWrites': 1, 'exactUuidMarkers': 1}),
+              ({'name', 'connections', 'durableAttempts', 'passed'},
+               {'name': 'twelve simultaneous limiter increments', 'connections': 12, 'durableAttempts': 12}),
+          ]
+          for check, (fields, values) in zip(evidence['checks'], expected):
+              assert set(check) == fields and check['passed'] is True
+              for field, value in values.items():
+                  assert check[field] == value
+          PY
+          exit "$status"
+
+      - name: Validate sanitized evidence and remove forbidden runtime files
+        if: always()
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          find test-results -type f \
+            ! -path 'test-results/auth-evidence.json' \
+            ! -path 'test-results/member-password-real-evidence.json' \
+            ! -path 'test-results/member-password-sql-concurrency.json' \
+            ! -path 'test-results/member-password-inventory-pagination-evidence.json' \
+            ! -path 'test-results/dashboard-contract-missing.json' \
+            ! -path 'test-results/dashboard-contract-invalid.json' \
+            ! -path 'test-results/dashboard-fixture-cleanup-missing.json' \
+            ! -path 'test-results/dashboard-fixture-cleanup-invalid.json' \
+            ! -path 'test-results/stack-start-evidence.json' \
+            -delete 2>/dev/null || true
+          find test-results -type d -empty -delete 2>/dev/null || true
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { isCompleteAuthEvidence } from './scripts/auth-e2e-helpers.mjs';
+          import { isCompleteRealEvidence } from './scripts/member-password-real.test.mjs';
+          import { isCompleteInventoryPaginationEvidence } from '../backend/scripts/member-password-inventory-evidence.mjs';
+          import { isCompleteDashboardEvidence, isCompleteDashboardCleanupEvidence } from './scripts/dashboard-e2e-evidence.mjs';
+          const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
+          const exactKeys = (value, expected) => Object.keys(value ?? {}).length === expected.length
+            && expected.every((key) => Object.hasOwn(value, key));
+          const exactSqlChecks = (sql) => {
+            if (!exactKeys(sql, ['schema', 'mode', 'boundary', 'pg17', 'passed', 'checks', 'cleanupStatus'])
+              || !Array.isArray(sql.checks) || sql.checks.length !== 3) return false;
+            const expected = [
+              {
+                keys: ['name', 'connections', 'successfulClaims', 'reviewRejected', 'durableClaims', 'passed'],
+                values: { name: 'eight simultaneous reserve transactions', connections: 8, successfulClaims: 1, reviewRejected: 7, durableClaims: 1 },
+              },
+              {
+                keys: ['name', 'connections', 'allowedWrites', 'blockedWrites', 'exactUuidMarkers', 'passed'],
+                values: { name: 'two simultaneous reset password writes', connections: 2, allowedWrites: 1, blockedWrites: 1, exactUuidMarkers: 1 },
+              },
+              {
+                keys: ['name', 'connections', 'durableAttempts', 'passed'],
+                values: { name: 'twelve simultaneous limiter increments', connections: 12, durableAttempts: 12 },
+              },
+            ];
+            return sql.checks.every((check, index) => exactKeys(check, expected[index].keys)
+              && check.passed === true
+              && Object.entries(expected[index].values).every(([key, value]) => check[key] === value));
+          };
+          const auth = readJson('test-results/auth-evidence.json');
+          if (!isCompleteAuthEvidence(auth)) throw new Error('Required Auth evidence is missing or incomplete.');
+          const real = readJson('test-results/member-password-real-evidence.json');
+          if (!isCompleteRealEvidence(real)) throw new Error('Required real HTTP evidence is missing or incomplete.');
+          const inventory = readJson('test-results/member-password-inventory-pagination-evidence.json');
+          if (!isCompleteInventoryPaginationEvidence(inventory)) throw new Error('Required inventory pagination evidence is missing or incomplete.');
+          const sql = readJson('test-results/member-password-sql-concurrency.json');
+          if (!exactSqlChecks(sql)
+            || sql.schema !== 'phantoms-local-pg17-sql-concurrency/v1'
+            || sql.mode !== 'local-supabase-pg17-sql-only'
+            || sql.boundary !== 'PostgreSQL only; fabricated Auth rows, not GoTrue'
+            || sql.pg17 !== true
+            || sql.passed !== true
+            || sql.cleanupStatus !== 'completed-exact-fixtures'
+            || !exactKeys(sql, ['schema', 'mode', 'boundary', 'pg17', 'passed', 'checks', 'cleanupStatus'])) {
+            throw new Error('Required PG17 SQL concurrency evidence is missing or incomplete.');
+          }
+          for (const mode of ['missing', 'invalid']) {
+            const evidence = readJson(`test-results/dashboard-contract-${mode}.json`);
+            if (!isCompleteDashboardEvidence(evidence, mode)) {
+              throw new Error(`Required dashboard evidence is missing or incomplete for ${mode}.`);
+            }
+            const cleanup = readJson(`test-results/dashboard-fixture-cleanup-${mode}.json`);
+            if (!isCompleteDashboardCleanupEvidence(cleanup, mode)) {
+              throw new Error(`Required dashboard fixture cleanup evidence is missing or incomplete for ${mode}.`);
+            }
+          }
+          NODE
+          if find test-results -type f \
+            ! -path 'test-results/auth-evidence.json' \
+            ! -path 'test-results/member-password-real-evidence.json' \
+            ! -path 'test-results/member-password-sql-concurrency.json' \
+            ! -path 'test-results/member-password-inventory-pagination-evidence.json' \
+            ! -path 'test-results/dashboard-contract-missing.json' \
+            ! -path 'test-results/dashboard-contract-invalid.json' \
+            ! -path 'test-results/dashboard-fixture-cleanup-missing.json' \
+            ! -path 'test-results/dashboard-fixture-cleanup-invalid.json' \
+            ! -path 'test-results/stack-start-evidence.json' \
+            -print -quit | grep -q .; then
+            echo '::error::Unexpected runtime file survived allowlist cleanup.'
+            exit 1
+          fi
+
+      - name: Stop disposable stack and verify owned cleanup
+        if: always()
+        run: |
+          set +e
+          mkdir -p frontend/test-results
+          project_id="$(sed -nE 's/^project_id = "(phantoms-disposable-[0-9]+)"$/\1/p' backend/supabase/config.toml)"
+          if [[ ! "$project_id" =~ ^phantoms-disposable-[0-9]+$ ]]; then
+            echo '::error::Generated disposable project namespace is missing or invalid.'
+            exit 1
+          fi
+          stop_status=0
+          supabase stop --workdir backend --no-backup >/dev/null 2>&1 || stop_status=$?
+          rm -f frontend/.env.local
+          if [ "$stop_status" -ne 0 ]; then
+            echo '::error::Disposable Supabase cleanup failed.'
+          fi
+          remaining="$(docker ps -aq --filter "label=com.supabase.cli.project=$project_id" 2>/dev/null || true)"
+          if [ -z "$remaining" ]; then
+            remaining="$(docker ps -aq --format '{{.ID}}\t{{.Names}}' | awk -v suffix="_${project_id}" '$2 ~ (suffix "$") { print $1 }')"
+          fi
+          if [ -n "$remaining" ]; then
+            echo '::error::Owned disposable Supabase containers remain after stop.'
+          fi
+          volumes="$(docker volume ls -q --filter "label=com.supabase.cli.project=$project_id" 2>/dev/null || true)"
+          if [ -z "$volumes" ]; then
+            volumes="$(docker volume ls --format '{{.Name}}' | awk -v suffix="_${project_id}" '$0 ~ (suffix "$") { print $0 }')"
+          fi
+          if [ -n "$volumes" ]; then
+            echo '::error::Owned disposable Supabase volumes remain after stop.'
+          fi
+          network_query_failed=0
+          labeled_network_ids=""
+          labeled_network_status=0
+          labeled_network_ids="$(docker network ls -q --filter "label=com.supabase.cli.project=$project_id" 2>/dev/null)" || labeled_network_status=$?
+          named_network_listing=""
+          named_network_status=0
+          named_network_listing="$(docker network ls --format '{{.ID}}\t{{.Name}}' 2>/dev/null)" || named_network_status=$?
+          if [ "$labeled_network_status" -ne 0 ] || [ "$named_network_status" -ne 0 ]; then
+            network_query_failed=1
+          fi
+          named_network_ids="$(printf '%s\n' "$named_network_listing" | awk -v expected="supabase_network_${project_id}" '$2 == expected { print $1 }')"
+          network_ids="$(printf '%s\n%s\n' "$labeled_network_ids" "$named_network_ids" | awk 'NF && !seen[$1]++ { print $1 }')"
+          network_rows=""
+          for network_id in $network_ids; do
+            network_row="$(docker network inspect --format '{{.ID}}\t{{.Name}}\t{{index .Labels "com.supabase.cli.project"}}' "$network_id" 2>/dev/null)"
+            network_status=$?
+            if [ "$network_status" -ne 0 ] || [ -z "$network_row" ]; then
+              network_query_failed=1
+              network_rows+="$network_id"$'\t\t\n'
+            else
+              network_rows+="$network_row"$'\n'
+            fi
+          done
+          python3 - "$project_id" "$stop_status" "$remaining" "$volumes" "$network_query_failed" "$network_rows" <<'PY' > frontend/test-results/stack-cleanup-evidence.json
+          import json
+          import sys
+          project, stop_status, containers, volumes, network_query_failed, network_rows = sys.argv[1:]
+          networks = []
+          for row in network_rows.splitlines():
+              parts = row.split('\t', 2)
+              if len(parts) == 3 and parts[0]:
+                  networks.append({'id': parts[0], 'name': parts[1], 'projectLabel': parts[2]})
+              elif row:
+                  networks.append({'id': row, 'name': 'network-inspection-unavailable', 'projectLabel': ''})
+          if network_query_failed != '0':
+              networks.append({'id': 'network-inspection-unavailable', 'name': 'network-inspection-unavailable', 'projectLabel': ''})
+          evidence = {
+              'schema': 'phantoms-disposable-stack-cleanup/v1',
+              'project': project,
+              'supabaseStopNoBackup': stop_status == '0',
+              'containersRemaining': [item for item in containers.splitlines() if item],
+              'volumesRemaining': [item for item in volumes.splitlines() if item],
+              'networksRemaining': networks,
+          }
+          evidence['passed'] = evidence['supabaseStopNoBackup'] and not evidence['containersRemaining'] and not evidence['volumesRemaining'] and not evidence['networksRemaining']
+          print(json.dumps(evidence, indent=2, sort_keys=True))
+          PY
+          if [ "$stop_status" -eq 0 ] && [ -z "$remaining" ] && [ -z "$volumes" ] && [ -z "$network_ids" ] && [ "$network_query_failed" -eq 0 ]; then
+            echo 'Disposable Supabase stack and owned runtime artifacts cleaned up.'
+          else
+            exit 1
+          fi
+
+      - name: Upload only fixed sanitized JSON evidence after owned stack cleanup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: disposable-runtime-evidence-${{ github.run_id }}
+          path: |
+            frontend/test-results/auth-evidence.json
+            frontend/test-results/member-password-real-evidence.json
+            frontend/test-results/member-password-sql-concurrency.json
+            frontend/test-results/member-password-inventory-pagination-evidence.json
+            frontend/test-results/dashboard-contract-missing.json
+            frontend/test-results/dashboard-contract-invalid.json
+            frontend/test-results/dashboard-fixture-cleanup-missing.json
+            frontend/test-results/dashboard-fixture-cleanup-invalid.json
+            frontend/test-results/stack-start-evidence.json
+            frontend/test-results/stack-cleanup-evidence.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Require verified owned stack cleanup
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 - frontend/test-results/stack-start-evidence.json <<'PY'
+          import json
+          import re
+          import sys
+          with open(sys.argv[1], encoding='utf-8') as handle:
+              evidence = json.load(handle)
+          if (set(evidence) != {'schema', 'project', 'classification', 'containers', 'passed'}
+              or evidence['schema'] != 'phantoms-disposable-stack-start/v1'
+              or not re.fullmatch(r'phantoms-disposable-[0-9]+', evidence['project'])
+              or evidence['classification'] not in {'started', 'cli-start-failed'}
+              or evidence['passed'] is not (evidence['classification'] == 'started')
+              or not isinstance(evidence['containers'], list)
+              or any(set(container) != {'name', 'state', 'status'} for container in evidence['containers'])):
+              raise SystemExit('startup evidence was not a fixed safe classification')
+          PY
+          python3 - frontend/test-results/stack-cleanup-evidence.json <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], encoding='utf-8') as handle:
+              evidence = json.load(handle)
+          if (set(evidence) != {'schema', 'project', 'supabaseStopNoBackup', 'containersRemaining', 'volumesRemaining', 'networksRemaining', 'passed'}
+              or evidence['schema'] != 'phantoms-disposable-stack-cleanup/v1'
+              or not __import__('re').fullmatch(r'phantoms-disposable-[0-9]+', evidence['project'])
+              or evidence['supabaseStopNoBackup'] is not True
+              or evidence['containersRemaining']
+              or evidence['volumesRemaining']
+              or not isinstance(evidence['networksRemaining'], list)
+              or any(set(network) != {'id', 'name', 'projectLabel'} for network in evidence['networksRemaining'])
+              or evidence['networksRemaining']
+              or evidence['passed'] is not True):
+              raise SystemExit('owned disposable stack cleanup was not fully verified')
+          PY
+
+      - name: Revalidate migration checksums after runtime execution
+        if: always()
+        run: node backend/scripts/migration-manifest.mjs

@@ -52,13 +52,13 @@ function withFixture(body) {
   try { body(f); } finally { f.cleanup(); }
 }
 
-test('repository retains 24 initialized files and exactly one registered applied forward correction', () => {
+test('repository retains 24 initialized files, the applied correction and eight pending password migrations', () => {
   const result = validateMigrationManifest({ rootDir: root });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, 24);
-  assert.equal(result.forwardEntryCount, 1);
-  assert.equal(result.migrationFiles.length, 25);
-  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`]);
+  assert.equal(result.forwardEntryCount, 9);
+  assert.equal(result.migrationFiles.length, 33);
+  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql']);
   const entries = JSON.parse(readFileSync(join(root, FORWARD_MANIFEST_PATH), 'utf8'));
   assert.equal(entries[0].version, forwardVersion);
   assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
@@ -67,6 +67,39 @@ test('repository retains 24 initialized files and exactly one registered applied
   assert.equal(entries[0].original_source_version, originalVersion);
   assert.equal(entries[0].original_source_filename, `backend/supabase/migrations/${originalVersion}_${forwardName}.sql`);
   assert.equal(entries[0].sha256, 'c3ec586e6fc50bc31733fcffbb8e3903eb87fe2979ee2fc8906f725168916be6');
+  assert.equal(entries[1].version, '20261116234800');
+  assert.equal(entries[1].production_status, 'not_applied');
+  assert.equal(entries[1].remote_applied_timestamp, null);
+  assert.equal(entries[1].original_source_version, entries[1].version);
+  assert.equal(entries[1].original_source_filename, entries[1].canonical_repository_filename);
+  assert.equal(entries[2].version, '20261117163000');
+  assert.equal(entries[2].production_status, 'not_applied');
+  assert.equal(entries[2].remote_applied_timestamp, null);
+  assert.equal(entries[2].original_source_version, entries[2].version);
+  assert.equal(entries[2].original_source_filename, entries[2].canonical_repository_filename);
+  assert.equal(entries[3].version, '20261117164800');
+  assert.equal(entries[3].production_status, 'not_applied');
+  assert.equal(entries[3].remote_applied_timestamp, null);
+  assert.equal(entries[3].original_source_version, entries[3].version);
+  assert.equal(entries[3].original_source_filename, entries[3].canonical_repository_filename);
+  assert.equal(entries[4].version, '20261117170000');
+  assert.equal(entries[4].production_status, 'not_applied');
+  assert.equal(entries[4].remote_applied_timestamp, null);
+  assert.equal(entries[4].original_source_version, entries[4].version);
+  assert.equal(entries[4].original_source_filename, entries[4].canonical_repository_filename);
+  assert.equal(entries[5].version, '20261117172500');
+  assert.equal(entries[5].production_status, 'not_applied');
+  assert.equal(entries[5].remote_applied_timestamp, null);
+  assert.equal(entries[5].original_source_version, entries[5].version);
+  assert.equal(entries[7].version, '20261117174000');
+  assert.equal(entries[7].production_status, 'not_applied');
+  assert.equal(entries[7].remote_applied_timestamp, null);
+  assert.equal(entries[7].original_source_version, entries[7].version);
+  assert.equal(entries[7].original_source_filename, entries[7].canonical_repository_filename);
+  assert.equal(entries[6].version, '20261117173500');
+  assert.equal(entries[6].remote_applied_timestamp, null);
+  assert.equal(entries[6].original_source_version, entries[6].version);
+  assert.equal(entries[5].original_source_filename, entries[5].canonical_repository_filename);
 });
 
 test('a valid separate forward registration does not change initialization provenance', () => {

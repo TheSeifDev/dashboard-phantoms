@@ -13,8 +13,8 @@ BEGIN
   PERFORM phantoms_test.grant_admin('tasks_admin', 'admin', phantoms_test.perms('tasks'));
   PERFORM phantoms_test.grant_admin('ranking_admin', 'admin', phantoms_test.perms('ranking'));
   PERFORM phantoms_test.grant_admin('notes_admin', 'admin', phantoms_test.perms('notes'));
-  PERFORM phantoms_test.create_member('alice');
-  PERFORM phantoms_test.create_member('bob');
+  PERFORM phantoms_test.create_member('alice', NULL, true);
+  PERFORM phantoms_test.create_member('bob', NULL, true);
   PERFORM phantoms_test.bind_device('alice');
   UPDATE public.members SET completion_rank = 98 WHERE id = phantoms_test.mid('bob');
   INSERT INTO public.tasks (title, assigned_to, bonus_points, tracking)
@@ -46,6 +46,7 @@ RESET ROLE;
 SELECT phantoms_test.login_as('tasks_admin');
 SELECT throws_like($$SELECT public.approve_task_submission(phantoms_test.var('task')::bigint, phantoms_test.mid('alice'), 51)$$,
   '%INVALID_BONUS%', 'bonus above 50 is rejected');
+RESET ROLE;
 SELECT phantoms_test.clear_auth();
 SELECT phantoms_test.login_as('tasks_admin');
 INSERT INTO phantoms_test.vars
@@ -73,7 +74,7 @@ SELECT is((SELECT (tracking -> phantoms_test.mid('alice')::text ->> 'bonus_note_
   'tracking stores the bonus note id for exact reversal');
 
 -- Members cannot touch an approved entry --------------------------------------
-SELECT phantoms_test.login_anon();
+SELECT phantoms_test.login_as('alice');
 SELECT throws_like($$SELECT public.submit_task_status(phantoms_test.var('task')::bigint, phantoms_test.mid('alice'), phantoms_test.tok('alice'), 'pending', '', '')$$,
   '%ADMIN_APPROVAL_FORBIDDEN%', 'member cannot overwrite an approved submission');
 RESET ROLE;
@@ -99,7 +100,7 @@ SELECT is((SELECT tracking -> phantoms_test.mid('alice')::text ->> 'status' FROM
   'revision_requested', 'reversed entry returns to revision_requested');
 SELECT is((SELECT tracking -> phantoms_test.mid('alice')::text ->> 'approval_reversal_reason' FROM public.tasks WHERE id = phantoms_test.var('task')::bigint),
   'Wrong file', 'reversal reason is recorded without injected tags');
-SELECT phantoms_test.login_anon();
+SELECT phantoms_test.login_as('alice');
 SELECT is(public.get_member_bonus_total(phantoms_test.mid('alice'), phantoms_test.tok('alice')), 0::bigint,
   'member bonus total is back to 0 after reversal');
 RESET ROLE;
@@ -137,7 +138,7 @@ SELECT is((SELECT count(*)::int FROM public.notes WHERE target_member_id = phant
 SELECT is((SELECT author || '|' || author_role FROM public.notes WHERE id = phantoms_test.var('rating_pos')::bigint),
   'إدارة PHANTOMS|Admin', 'default author is the PHANTOMS identity and author_role is Admin');
 SELECT is((SELECT author FROM public.notes WHERE id = phantoms_test.var('rating_neg')::bigint), 'Lead', 'explicit author is kept');
-SELECT phantoms_test.login_anon();
+SELECT phantoms_test.login_as('alice');
 SELECT is(public.get_member_bonus_total(phantoms_test.mid('alice'), phantoms_test.tok('alice')), 1::bigint,
   'portal bonus total counts ratings exactly (+3 −2 = 1); the injected +50 is not counted');
 RESET ROLE;

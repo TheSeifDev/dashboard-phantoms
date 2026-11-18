@@ -1,5 +1,5 @@
 -- 01 — Final schema, signatures, constraints, indexes, triggers, RLS posture and
--- RPC grants for the original 24-migration historical cohort.
+-- RPC grants for the original 24-migration historical cohort plus password auth.
 BEGIN;
 \ir _helpers.psql
 
@@ -25,8 +25,10 @@ SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations
 SELECT tables_are('public', ARRAY[
   'admin_accounts', 'admin_emails', 'announcements', 'member_custom_fields',
   'member_device_sessions', 'member_evaluations', 'member_infinite_bonus_events',
-  'member_registration_invites', 'members', 'notes', 'tasks', 'whatsapp_settings'
-], 'public schema contains exactly the 12 final application tables');
+  'member_password_audit', 'member_password_invitations', 'member_password_rate_limits',
+  'member_auth_bindings', 'member_registration_invites', 'members', 'notes', 'tasks',
+  'whatsapp_settings'
+], 'public schema contains exactly the 16 final application tables');
 SELECT hasnt_table('public', 'member_info_fields', '0019 member_info_fields was removed by 0020');
 SELECT hasnt_table('public', 'member_info_submissions', '0019 member_info_submissions was removed by 0020');
 SELECT hasnt_table('public', 'admin_permissions', 'no separate admin_permissions table exists');
@@ -159,8 +161,10 @@ SELECT ok(NOT has_function_privilege('anon', 'public.assert_member_device(bigint
 SELECT ok(has_function_privilege('anon', 'public.lookup_member_by_email(text,text)', 'EXECUTE')
           AND has_function_privilege('anon', 'public.submit_task_status(bigint,bigint,text,text,text,text)', 'EXECUTE')
           AND has_function_privilege('anon', 'public.get_member_tasks(bigint,text)', 'EXECUTE')
-          AND has_function_privilege('anon', 'public.submit_member_registration_invite(text,jsonb)', 'EXECUTE'),
-  'member-portal RPCs remain executable by anon (device/invite gated internally)');
+          AND NOT has_function_privilege('anon', 'public.create_member_invite(text,text,integer)', 'EXECUTE')
+          AND NOT has_function_privilege('anon', 'public.get_member_invite_context(text)', 'EXECUTE')
+          AND NOT has_function_privilege('anon', 'public.submit_member_registration_invite(text,jsonb)', 'EXECUTE'),
+  'member portal RPCs retain their gates while retired invite RPCs have no anon grant');
 SELECT ok(NOT has_schema_privilege('anon', 'public', 'CREATE')
           AND NOT has_schema_privilege('authenticated', 'public', 'CREATE'),
   'anon/authenticated cannot create objects in public (search_path=public definers stay safe)');

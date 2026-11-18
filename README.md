@@ -35,7 +35,8 @@
 │                                       Backend Infrastructure                                           │
 │   • Supabase PostgreSQL (Schema & Row Level Security)                                                  │
 │   • RPC Security Functions (`is_admin`, `bind_member_device_session`, `admin_add_member_rating`)        │
-│   • Edge Functions (`phantoms-ai`, `push-notify`, `whatsapp-tasks`)                                    │
+│   • Edge Functions: `phantoms-ai`, `push-notify`, `whatsapp-tasks`                                     │
+│     `member-password-enrollment` (invitation-only member auth)                                         │
 │   • WhatsApp Integration Service (Baileys Bridge / Multi-Device Protocol)                              │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -50,7 +51,7 @@
 
 2. **Member Directory & Profile Management**
    - Comprehensive member profiles: hardware readiness, geographic availability, role tags.
-   - Protected one-time self-registration links with expiration and single-use enforcement.
+   - Administrator-issued, manually distributed one-time password invitations bound to an existing member and exact email.
    - Resilient member deletion lifecycle with a 5-second persistent undo barrier.
 
 3. **Task & Assignment Lifecycle**
@@ -59,7 +60,7 @@
 
 4. **Member Portal**
    - Clean, focused interface for members to view assigned tasks, submit links, and view evaluations.
-   - Device binding authentication via email OTP for verified device sessions.
+   - Isolated member email/password authentication, exact Auth-to-member authorization and verified device sessions.
 
 5. **Evaluations & Performance Ranking**
    - Structured evaluations with grade levels (`excellent`, `very_good`, `good`, `needs_improvement`, `warning`).
@@ -79,11 +80,14 @@
 
 ## Security Architecture & Authorization Model
 
-- **Verified-Device Session Binding:** Members authenticate through cryptographic device tokens (`phantoms_device_token` with legacy compatibility). For new devices, Supabase Auth email OTP (`signInWithOtp` and `verifyOtp`) is required to verify email ownership before `bind_member_device_session` registers a SHA-256 session hash.
+- **Invitation-Only Member Password Auth:** Join validates a hashed, member/email-bound credential on the server and provisions through Supabase Admin API. Enrollment redirects to Login without a session. Public signup is disabled in local configuration; global email confirmation stays enabled. Normal member login and administrator-issued reset invitations do not require OTP, SMTP or invitation emails.
+- **Verified-Device Session Binding:** The isolated member client signs in with a password. `get_member_password_access` must verify the exact Auth UUID, normalized email, active membership and completed password enrollment before device binding and portal access. Cryptographic device tokens remain a second authorization requirement, not authentication by themselves. Old unbound invitation/device credentials are not password-enrollment authority.
 - **Dynamic Multi-Admin & Owner Authorization:** Administrative access is governed by the `admin_access` table and PostgreSQL `is_admin()` RPC checks (migration `0022`), decoupling authorization from hardcoded UUIDs and supporting granular administrative permissions.
 - **Destructive Mutation Guards:** AI assistant actions that perform deletions cannot execute autonomously; they require explicit operator confirmation through dedicated UI modals.
 - **Spreadsheet Security:** Archive validation safeguards (`safeXlsxGuard.ts`) enforce total decompress size bounds, entry caps, and compression ratio limits. Untrusted file uploads remain feature-gated.
 - **Secret Isolation:** Environment secrets (`.env`) are untracked and excluded from version control.
+
+The password-auth forward migration is a **local, not-applied production candidate**. It does not silently map existing users, change Owner/Admin credentials or configure production signup/SMTP. Reserved or uncertain Auth writes are quarantined without automatic retry/release. Run real disposable Supabase/GoTrue, Edge and browser tests and obtain independent review plus explicit approval before any production installation; SQL fixtures and mounted mocks are not real Auth validation.
 
 ---
 
@@ -164,12 +168,19 @@ dashboard-phantoms/
 │   │   └── types/                # TypeScript schema & entity definitions
 │   └── scripts/                  # Security tests, APK builders, audit scripts
 ├── backend/
-│   ├── migrations/               # PostgreSQL schema migrations (0000 - 0023)
-│   ├── supabase/functions/       # Supabase Edge Functions (phantoms-ai, push-notify, whatsapp-tasks)
+│   ├── scripts/                  # Migration manifest, runtime validation, and operator inventory
+│   ├── supabase/
+│   │   ├── migrations/           # Canonical SQL (24 historical + 9 forward; see forward manifest)
+│   │   ├── functions/            # Edge Functions, including member-password-enrollment
+│   │   └── tests/database/       # Database security and pgTAP suites
 │   ├── whatsapp-service/         # WhatsApp notification API service
 │   └── whatsapp-bridge/          # Baileys WhatsApp client gateway
+├── docs/
+│   └── member-password/          # Operator runbook and existing-account migration guide
 └── audit/reports/                # Independent technical & security audit reports
 ```
+
+Member-password operations: [operator runbook](docs/member-password/operator-runbook.md) · [existing-account migration guide](docs/member-password/existing-account-migration.md).
 
 ---
 

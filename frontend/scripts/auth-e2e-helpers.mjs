@@ -3,18 +3,35 @@ import path from 'node:path';
 
 const SAFE_STATUSES = new Set(['passed', 'failed', 'timedOut', 'skipped', 'interrupted']);
 const SAFE_CLEANUP_STATUSES = new Set(['passed', 'failed', 'not-started']);
+const AUTH_EVIDENCE_SCHEMA = 'phantoms-auth-disposable-evidence/v2';
 
-export const AUTH_TEST_TITLE = 'real numeric OTP, isolated member/admin sessions, rejection, retry, invite, and recovery';
+export const AUTH_TEST_TITLE = 'real member password migration, isolated sessions, invitations, and recovery';
 export const AUTH_STAGE_TITLES = Object.freeze([
   'admin login',
-  'same-account member OTP and scoped member logout',
-  'real invalid eight-digit OTP and retry',
-  'expired OTP and resend retry',
-  'first-time member OTP',
-  'non-member rejection and local cleanup',
+  'existing member password enrollment and scoped member logout',
+  'wrong password retry',
+  'existing passwordless identity preserves UID without duplicate',
+  'new member enrollment and no auto-login',
+  'non-member password rejection and local cleanup',
+  'public signup disabled',
+  'reset invitation exact ID and one-use',
+  'invalid invitation email and token states',
   'delivered invite action link and local admin session',
   'delivered recovery action link and local admin session',
 ]);
+export const AUTH_REQUIRED_METADATA = Object.freeze([
+  'noMemberOtpCalls',
+  'noBrowserSignup',
+  'memberLogoutScoped',
+  'nonmemberLogoutScoped',
+]);
+export const AUTH_EVIDENCE_CONTRACT = Object.freeze({
+  schema: AUTH_EVIDENCE_SCHEMA,
+  overallTest: AUTH_TEST_TITLE,
+  stages: AUTH_STAGE_TITLES,
+  requiredMetadata: AUTH_REQUIRED_METADATA,
+  cleanupStatus: 'passed',
+});
 export const AUTH_ALLOWED_LABELS = Object.freeze([AUTH_TEST_TITLE, ...AUTH_STAGE_TITLES]);
 
 export function sanitizeAuthLabel(value) {
@@ -53,6 +70,7 @@ export function scopedMailpitDeleteOptions(messageIds) {
   };
 }
 
+/** Historical OTP-only utility retained for old unit/security coverage; no active password E2E path calls it. */
 export function differentOtp(code) {
   if (!/^\d{8}$/.test(code)) throw new Error('OTP must be an eight-digit string.');
   const next = String((Number(code) + 1) % 100_000_000).padStart(8, '0');
@@ -63,8 +81,45 @@ function safeStatus(value) {
   return SAFE_STATUSES.has(value) ? value : 'interrupted';
 }
 
+function exactKeys(value, expected) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const keys = Object.keys(value);
+  return keys.length === expected.length && expected.every((key) => Object.hasOwn(value, key));
+}
+
 function safeStep(step) {
   return { name: sanitizeAuthLabel(step?.name), status: safeStatus(step?.status), passed: step?.status === 'passed' };
+}
+
+export function isCompleteAuthEvidence(evidence) {
+  if (!exactKeys(evidence, ['schema', 'passed', 'tests', 'steps', 'statusCounts', 'metadata', 'cleanupStatus'])
+    || evidence.schema !== AUTH_EVIDENCE_SCHEMA || evidence.passed !== true
+    || evidence.cleanupStatus !== AUTH_EVIDENCE_CONTRACT.cleanupStatus) return false;
+  if (!Array.isArray(evidence.tests) || evidence.tests.length === 0) return false;
+  if (evidence.tests.some((test) => !exactKeys(test, ['name', 'status', 'passed']) || !AUTH_ALLOWED_LABELS.includes(test.name)
+    || test.status !== 'passed' || test.passed !== true)) return false;
+  if (!evidence.tests.some((test) => test.name === AUTH_TEST_TITLE)) return false;
+
+  if (!Array.isArray(evidence.steps) || evidence.steps.length !== AUTH_STAGE_TITLES.length) return false;
+  const stages = new Set();
+  for (const step of evidence.steps) {
+    if (!exactKeys(step, ['name', 'status', 'passed']) || !AUTH_STAGE_TITLES.includes(step.name) || stages.has(step.name)
+      || step.status !== 'passed' || step.passed !== true) return false;
+    stages.add(step.name);
+  }
+  if (stages.size !== AUTH_STAGE_TITLES.length) return false;
+
+  if (!Array.isArray(evidence.metadata) || evidence.metadata.length !== AUTH_REQUIRED_METADATA.length) return false;
+  const metadata = new Set();
+  for (const item of evidence.metadata) {
+    if (!exactKeys(item, ['name', 'passed']) || !AUTH_REQUIRED_METADATA.includes(item.name) || metadata.has(item.name)
+      || item.passed !== true) return false;
+    metadata.add(item.name);
+  }
+  if (!exactKeys(evidence.statusCounts, ['passed'])) return false;
+  const counts = Object.entries(evidence.statusCounts);
+  return metadata.size === AUTH_REQUIRED_METADATA.length && counts.length === 1
+    && counts[0][0] === 'passed' && counts[0][1] === evidence.tests.length;
 }
 
 export function sanitizeAuthEvidence(raw, cleanupStatus = 'not-started') {
@@ -77,20 +132,20 @@ export function sanitizeAuthEvidence(raw, cleanupStatus = 'not-started') {
   const metadata = Array.isArray(raw?.metadata)
     ? raw.metadata.flatMap((item) => {
       const name = item?.name;
-      if (!['noVerifyBeforeCode', 'noEmailRedirectTo', 'memberLogoutScoped', 'nonmemberLogoutScoped'].includes(name)) return [];
+      if (!AUTH_REQUIRED_METADATA.includes(name)) return [];
       return [{ name, passed: item?.passed === true }];
     })
     : [];
-  const passed = tests.length > 0 && tests.every((test) => test.passed) && steps.every((step) => step.passed);
-  return {
-    schema: 'phantoms-auth-disposable-evidence/v1',
-    passed,
+  const evidence = {
+    schema: AUTH_EVIDENCE_SCHEMA,
+    passed: true,
     tests,
     steps,
     statusCounts,
     metadata,
     cleanupStatus: SAFE_CLEANUP_STATUSES.has(cleanupStatus) ? cleanupStatus : 'failed',
   };
+  return { ...evidence, passed: isCompleteAuthEvidence(evidence) };
 }
 
 export function writeSanitizedAuthEvidence(filePath, raw, cleanupStatus = 'not-started') {

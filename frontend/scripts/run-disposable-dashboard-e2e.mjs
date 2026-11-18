@@ -9,11 +9,12 @@
  */
 import { createHash, randomBytes } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { URL } from 'node:url';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
+import { localStatusArgs, localRuntimeWorkdir } from './local-stack-runtime.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(HERE, '..');
@@ -72,6 +73,7 @@ function assertPreflightSafety() {
   }
   if (existsSync(ENV_LOCAL)) fail('refusing to run while frontend/.env.local exists; use CI checkout env only.');
   if (existsSync(PROJECT_REF_FILE)) fail('refusing to run while backend/supabase/.temp/project-ref exists.');
+  localRuntimeWorkdir(BACKEND);
   for (const name of FORBIDDEN_ENV_NAMES) {
     if (process.env[name]) fail(`refusing to run with forbidden production credential variable ${name}.`);
   }
@@ -100,7 +102,7 @@ function parseEnvOutput(raw) {
 function readLocalStatus() {
   let raw;
   try {
-    raw = execFileSync('supabase', ['status', '--workdir', BACKEND, '-o', 'env'], {
+    raw = execFileSync('supabase', localStatusArgs(BACKEND), {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -209,46 +211,100 @@ async function stopPreview(preview) {
   });
 }
 
-async function cleanupFixtures(service, admin, createdUserIds = []) {
+async function cleanupFixtures(service, admin, createdUserIds = [], evidenceMode = null) {
   const failures = [];
+  const memberEmails = [MEMBER_ONE_EMAIL, MEMBER_TWO_EMAIL];
+  const taskTitles = [TASK_TITLE, UI_SPECIFIC_TASK_TITLE, UI_ALL_TASK_TITLE, UI_RESTORED_TASK_TITLE];
+  const authIds = new Set(createdUserIds);
+  const safeErrorCode = (error) => typeof error?.code === 'string' && /^[A-Z0-9_]+$/.test(error.code) ? error.code : 'operation-failed';
   const attempt = async (label, operation) => {
     try {
       const result = await operation();
-      if (result?.error) failures.push(`${label}: ${result.error.code ?? 'database error'}`);
+      if (result?.error) failures.push(`${label}:${safeErrorCode(result.error)}`);
+      return result;
     } catch (error) {
-      failures.push(`${label}: ${error instanceof Error ? error.message : 'unknown error'}`);
+      failures.push(`${label}:${safeErrorCode(error)}`);
+      return null;
     }
   };
+  const rows = async (label, query) => {
+    const result = await attempt(label, query);
+    return result && !result.error && Array.isArray(result.data) ? result.data : null;
+  };
+  const memberRows = await rows('member inventory', () => service.from('members').select('id').in('email', memberEmails).limit(10));
+  const memberIds = (memberRows ?? []).map((row) => row.id);
+  const taskRows = await rows('task inventory', () => service.from('tasks').select('id').in('title', taskTitles).limit(10));
+  const taskIds = (taskRows ?? []).map((row) => row.id);
+  const listOwnedUsers = async (label) => {
+    const matching = new Map();
+    let complete = false;
+    for (let page = 1; page <= 20; page += 1) {
+      const result = await attempt(`${label} page`, () => admin.listUsers({ page, perPage: 100 }));
+      if (!result || result.error || !Array.isArray(result.data?.users)) return null;
+      for (const user of result.data.users) {
+        if (createdUserIds.includes(user.id) || [OWNER_EMAIL, OUTSIDER_EMAIL].includes(user.email ?? '')) matching.set(user.id, user);
+      }
+      if (result.data.users.length < 100) { complete = true; break; }
+    }
+    if (!complete) {
+      failures.push(`${label}:pagination-guard`);
+      return null;
+    }
+    return [...matching.values()];
+  };
+  const initialUsers = await listOwnedUsers('auth user inventory');
+  for (const user of initialUsers ?? []) authIds.add(user.id);
   await attempt('invite cleanup', () => service.from('member_registration_invites').delete().eq('note', INVITE_NOTE));
   await attempt('custom field cleanup', () => service.from('member_custom_fields').delete().eq('label', CUSTOM_FIELD_LABEL));
   await attempt('target note cleanup', () => service.from('notes').delete().eq('text', NOTE_TEXT));
   await attempt('general note cleanup', () => service.from('notes').delete().eq('text', 'Disposable local dashboard general note'));
   await attempt('approval source note cleanup', async () => {
-    const taskRows = await service.from('tasks').select('id').in('title', [TASK_TITLE, UI_SPECIFIC_TASK_TITLE, UI_ALL_TASK_TITLE, UI_RESTORED_TASK_TITLE]).limit(10);
-    if (taskRows.error) return taskRows;
-    const taskIds = (taskRows.data ?? []).map((row) => row.id);
     return taskIds.length ? service.from('notes').delete().in('source_task_id', taskIds) : { error: null };
   });
-  await attempt('task cleanup', () => service.from('tasks').delete().in('title', [TASK_TITLE, UI_SPECIFIC_TASK_TITLE, UI_ALL_TASK_TITLE, UI_RESTORED_TASK_TITLE]));
-  await attempt('member cleanup', () => service.from('members').delete().in('email', [MEMBER_ONE_EMAIL, MEMBER_TWO_EMAIL]));
-  let users;
-  try {
-    users = await admin.listUsers({ page: 1, perPage: 100 });
-    if (users.error) failures.push(`auth user listing: ${users.error.code ?? 'auth error'}`);
-  } catch (error) {
-    failures.push(`auth user listing: ${error instanceof Error ? error.message : 'unknown error'}`);
+  await attempt('task cleanup', () => service.from('tasks').delete().in('title', taskTitles));
+  if (authIds.size) await attempt('admin account cleanup', () => service.from('admin_accounts').delete().in('user_id', [...authIds]));
+  if (memberIds.length) await attempt('member binding cleanup', () => service.from('member_auth_bindings').delete().in('member_id', memberIds));
+  await attempt('member cleanup', () => service.from('members').delete().in('email', memberEmails));
+  for (const id of authIds) await attempt('auth user cleanup', () => admin.deleteUser(id));
+
+  const countRows = async (label, query) => {
+    const result = await rows(label, query);
+    return result === null ? null : result.length;
+  };
+  const remainingAuthUsers = await listOwnedUsers('auth cleanup verification');
+  const [adminAccounts, members, bindings, tasks, notesByText, notesByTask, customFields, invites] = await Promise.all([
+    countRows('admin account verification', () => authIds.size ? service.from('admin_accounts').select('user_id').in('user_id', [...authIds]).limit(100) : { data: [], error: null }),
+    countRows('member verification', () => service.from('members').select('id').in('email', memberEmails).limit(10)),
+    countRows('binding verification', () => memberIds.length ? service.from('member_auth_bindings').select('member_id').in('member_id', memberIds).limit(20) : { data: [], error: null }),
+    countRows('task verification', () => service.from('tasks').select('id').in('title', taskTitles).limit(20)),
+    rows('note text verification', () => service.from('notes').select('id').in('text', [NOTE_TEXT, 'Disposable local dashboard general note']).limit(20)),
+    rows('note source verification', () => taskIds.length ? service.from('notes').select('id').in('source_task_id', taskIds).limit(20) : { data: [], error: null }),
+    countRows('custom field verification', () => service.from('member_custom_fields').select('id').eq('label', CUSTOM_FIELD_LABEL).limit(10)),
+    countRows('invite verification', () => service.from('member_registration_invites').select('id').eq('note', INVITE_NOTE).limit(10)),
+  ]);
+  const noteIds = new Set([...(notesByText ?? []), ...(notesByTask ?? [])].map((row) => row.id));
+  const remaining = {
+    authUsers: remainingAuthUsers === null ? null : remainingAuthUsers.length,
+    adminAccounts,
+    members,
+    memberBindings: bindings,
+    tasks,
+    notes: notesByText === null || notesByTask === null ? null : noteIds.size,
+    customFields,
+    legacyInvites: invites,
+  };
+  const passed = failures.length === 0 && Object.values(remaining).every((count) => count === 0);
+  const cleanupEvidence = { schema: 'phantoms-dashboard-fixture-cleanup/v1', vapidMode: evidenceMode, passed, remaining };
+  if (evidenceMode === 'missing' || evidenceMode === 'invalid') {
+    const evidenceDir = path.join(FRONTEND, 'test-results');
+    mkdirSync(evidenceDir, { recursive: true, mode: 0o700 });
+    writeFileSync(path.join(evidenceDir, `dashboard-fixture-cleanup-${evidenceMode}.json`), `${JSON.stringify(cleanupEvidence, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
   }
-  const ids = new Set(createdUserIds);
-  for (const user of users?.data?.users ?? []) {
-    if ([OWNER_EMAIL, OUTSIDER_EMAIL].includes(user.email ?? '')) ids.add(user.id);
-  }
-  for (const id of ids) {
-    await attempt(`auth user cleanup ${id.slice(0, 8)}`, () => admin.deleteUser(id));
-  }
-  if (failures.length) fail(`fixture cleanup failed: ${failures.join('; ')}`);
+  if (!passed) fail('fixture cleanup could not verify that all exact-owned dashboard records were removed');
+  return cleanupEvidence;
 }
 
-async function seedFixtures(status) {
+async function seedFixtures(status, evidenceMode) {
   const service = createClient(status.api, status.serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const admin = service.auth.admin;
   const createdUserIds = [];
@@ -303,7 +359,7 @@ async function seedFixtures(status) {
   const inviteInsert = await service.from('member_registration_invites').insert({ token_hash: inviteHash, note: INVITE_NOTE, expires_at: '2099-12-31T00:00:00Z', created_by: ownerId }).select('id').single();
   if (inviteInsert.error) fail('could not seed the disposable invite row.');
 
-    return { cleanup: () => cleanupFixtures(service, admin, createdUserIds) };
+    return { cleanup: () => cleanupFixtures(service, admin, createdUserIds, evidenceMode) };
   } catch (error) {
     try {
       await cleanupFixtures(service, admin, createdUserIds);
@@ -334,7 +390,7 @@ async function main() {
     const buildEnv = childEnvironment(status, { VITE_VAPID_PUBLIC_KEY: variant.key });
     console.log(`[dashboard-e2e] building frontend with ${variant.name} VAPID readiness…`);
     await runChild('npm', ['run', 'build'], { env: buildEnv });
-    const fixtures = await seedFixtures(status);
+    const fixtures = await seedFixtures(status, variant.name);
     let preview;
     try {
       preview = spawnPreview(buildEnv);

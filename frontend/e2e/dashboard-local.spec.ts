@@ -157,7 +157,7 @@ test.describe('disposable local dashboard', () => {
     expect(outsiderRead.data).toEqual([]);
     await outsider.auth.signOut();
 
-    const [tasksRead, notesRead, customFieldsRead, invitesRead] = await Promise.all([
+    const [tasksRead, notesRead, customFieldsRead, legacyInvitesRead] = await Promise.all([
       owner.from('tasks').select('id,title,description,has_deadline,deadline_date,assigned_to,tracking,bonus_points').limit(20),
       owner.from('notes').select('id,created_at,text,author,author_role,date,target_member_id,target_name,source_task_id,source_member_id').limit(20),
       owner.from('member_custom_fields').select('id,label,field_type,options,placeholder,show_in_card,is_required,is_active,sort_order').eq('is_active', true).order('sort_order').order('id').limit(20),
@@ -169,12 +169,14 @@ test.describe('disposable local dashboard', () => {
     expect(notesRead.data?.length).toBeGreaterThan(0);
     expect(customFieldsRead.error).toBeNull();
     expect(customFieldsRead.data?.length).toBeGreaterThan(0);
-    expect(invitesRead.error).toBeNull();
-    expect(invitesRead.data?.length).toBeGreaterThanOrEqual(1);
+    // Retired legacy invitation history remains unavailable through direct authenticated table reads.
+    expect(legacyInvitesRead.data).toBeNull();
+    expect(legacyInvitesRead.error?.code).toBe('42501');
 
-    const { data: invalidInvite, error: invalidInviteError } = await anon.rpc('get_member_invite_context', { p_token: 'not-a-real-reserved-domain-invite-token-000000' });
-    expect(invalidInviteError).toBeNull();
-    expect(invalidInvite).toMatchObject({ valid: false });
+    // The old public invite-context RPC is retired; onboarding uses the guarded member-password API.
+    const { data: retiredInvite, error: retiredInviteError } = await anon.rpc('get_member_invite_context', { p_token: 'not-a-real-reserved-domain-invite-token-000000' });
+    expect(retiredInvite).toBeNull();
+    expect(retiredInviteError?.code).toBe('42501');
 
     const tempEmail = `crud-${Date.now()}@phantoms-test.example`;
     const insert = await owner.from('members').insert({
@@ -284,11 +286,135 @@ test.describe('disposable local dashboard', () => {
       }
     }
 
-    await assertCorePage(page, '/admin/members', /دليل الأعضاء/);
-    await expect(page.getByText('Disposable member one')).toBeVisible();
-    await page.getByRole('button', { name: 'Disposable member one', exact: true }).click();
-    await expect(page.getByRole('dialog')).toContainText('Projection verification');
-    await page.keyboard.press('Escape');
+    const mobileScreenshotDir = process.env.PHANTOMS_MOBILE_SCREENSHOT_DIR
+      ? path.resolve(process.env.PHANTOMS_MOBILE_SCREENSHOT_DIR)
+      : null;
+    if (mobileScreenshotDir && vapidMode === 'missing') {
+      await mkdir(mobileScreenshotDir, { recursive: true, mode: 0o700 });
+    }
+    const longArabicName = 'عضو تجريبي ذو اسم عربي طويل جداً لاختبار التفاف العنوان داخل نافذة الملف على شاشة الهاتف';
+    if (typeof firstMember?.id !== 'number') throw new Error('mobile profile fixture member ID is unavailable');
+    const longNameUpdate = await owner.from('members').update({ full_name: longArabicName }).eq('id', firstMember.id).select('id').single();
+    expect(longNameUpdate.error).toBeNull();
+    expect(longNameUpdate.data?.id).toBe(firstMember.id);
+    const persistedLongName = await owner.from('members').select('full_name').eq('id', firstMember.id).single();
+    expect(persistedLongName.data?.full_name).toBe(longArabicName);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    const mobileCoverage: Array<{ width: number; theme: 'light' | 'dark'; drawerFullScreen: true; nameFromDatabase: true; nameWrapped: true; closeButton: true; escapeClose: true }> = [];
+    for (const theme of ['light', 'dark'] as const) {
+      await page.evaluate((value) => {
+        localStorage.setItem('tms_theme', value);
+        document.documentElement.dataset.theme = value;
+      }, theme);
+      for (const width of [360, 390]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
+        await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe(theme);
+        await expect(page.getByTestId('dashboard-metrics')).toBeVisible();
+        await assertNoHorizontalOverflow(page);
+        await page.getByRole('button', { name: 'افتح القائمة الرئيسية' }).click();
+        const navigationDrawer = page.getByRole('dialog', { name: 'القائمة الرئيسية' });
+        await expect(navigationDrawer).toBeVisible();
+        await page.waitForTimeout(220);
+        const navigationLayout = await navigationDrawer.evaluate((dialog) => {
+          const rect = dialog.getBoundingClientRect();
+          const hit = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+          return {
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+            width: rect.width,
+            height: rect.height,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            centerCovered: Boolean(hit && dialog.contains(hit)),
+            backgroundColor: getComputedStyle(dialog).backgroundColor,
+          };
+        });
+        expect(navigationLayout.left).toBeLessThanOrEqual(1);
+        expect(navigationLayout.top).toBeLessThanOrEqual(1);
+        expect(navigationLayout.right).toBeGreaterThanOrEqual(width - 1);
+        expect(navigationLayout.bottom).toBeGreaterThanOrEqual(844 - 1);
+        expect(navigationLayout.width).toBeGreaterThanOrEqual(width - 1);
+        expect(navigationLayout.height).toBeGreaterThanOrEqual(844 - 1);
+        expect(navigationLayout.centerCovered).toBe(true);
+        expect(navigationLayout.backgroundColor).not.toBe('transparent');
+        expect(navigationLayout.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+        if (mobileScreenshotDir && vapidMode === 'missing') {
+          await page.screenshot({ path: path.join(mobileScreenshotDir, `admin-navigation-${width}-${theme}.png`) });
+        }
+        await navigationDrawer.getByRole('link', { name: 'الأعضاء', exact: true }).click();
+        await expect(page).toHaveURL(/\/admin\/members$/);
+        await expect(page.getByRole('heading', { name: 'دليل الأعضاء', exact: true })).toBeVisible();
+        await page.getByRole('button', { name: longArabicName, exact: true }).click();
+        const memberDialog = page.getByRole('dialog', { name: 'ملف العضو' });
+        await expect(memberDialog).toBeVisible();
+        await page.waitForTimeout(220);
+        const dialogVisual = await memberDialog.evaluate((dialog) => ({
+          opacity: Number.parseFloat(getComputedStyle(dialog).opacity),
+          backgroundColor: getComputedStyle(dialog).backgroundColor,
+        }));
+        expect(dialogVisual.opacity).toBe(1);
+        expect(dialogVisual.backgroundColor).not.toBe('transparent');
+        expect(dialogVisual.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+        const memberNameHeading = memberDialog.locator('h3');
+        await expect(memberNameHeading).toHaveText(longArabicName);
+        const layout = await memberDialog.evaluate((dialog) => {
+          const bounds = (element: Element | null) => element ? (element as HTMLElement).getBoundingClientRect() : null;
+          const panel = dialog.getBoundingClientRect();
+          const title = bounds(dialog.querySelector('header h2'));
+          const close = bounds(dialog.querySelector('header button'));
+          const hero = bounds(dialog.querySelector('h3'));
+          const heroElement = dialog.querySelector('h3') as HTMLElement | null;
+          const heroStyle = heroElement ? getComputedStyle(heroElement) : null;
+          const heroLineHeight = heroStyle ? Number.parseFloat(heroStyle.lineHeight) : 0;
+          const overlaps = title && close
+            ? !(title.right <= close.left || close.right <= title.left || title.bottom <= close.top || close.bottom <= title.top)
+            : false;
+          let clippedChildren = 0;
+          for (const element of Array.from(dialog.querySelectorAll('*'))) {
+            const rect = element.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0 && (rect.left < panel.left - 2 || rect.right > panel.right + 2)) clippedChildren += 1;
+          }
+          return {
+            viewport: window.innerWidth,
+            documentWidth: document.documentElement.scrollWidth,
+            dialogWidth: panel.width,
+            headerOverlap: overlaps,
+            heroOverflow: Boolean(hero && (hero.left < panel.left - 1 || hero.right > panel.right + 1)),
+            heroClientWidth: heroElement?.clientWidth ?? 0,
+            heroScrollWidth: heroElement?.scrollWidth ?? 0,
+            heroLineCount: hero && heroLineHeight > 0 ? Math.round(hero.height / heroLineHeight) : 0,
+            heroWhiteSpace: heroStyle?.whiteSpace ?? '',
+            clippedChildren,
+          };
+        });
+        expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewport + 1);
+        expect(layout.dialogWidth).toBeLessThanOrEqual(layout.viewport + 1);
+        expect(layout.headerOverlap).toBe(false);
+        expect(layout.heroOverflow).toBe(false);
+        expect(layout.heroLineCount).toBeGreaterThan(1);
+        expect(layout.heroWhiteSpace).not.toBe('nowrap');
+        expect(layout.heroScrollWidth).toBeLessThanOrEqual(layout.heroClientWidth + 1);
+        expect(layout.clippedChildren).toBe(0);
+        if (mobileScreenshotDir && vapidMode === 'missing') {
+          await page.screenshot({ path: path.join(mobileScreenshotDir, `member-profile-${width}-${theme}.png`) });
+        }
+        await memberDialog.getByRole('button', { name: 'اقفل' }).click();
+        await expect(memberDialog).toHaveCount(0);
+        await page.getByRole('button', { name: longArabicName, exact: true }).click();
+        await expect(memberDialog).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(memberDialog).toHaveCount(0);
+        mobileCoverage.push({ width, theme, drawerFullScreen: true, nameFromDatabase: true, nameWrapped: true, closeButton: true, escapeClose: true });
+      }
+    }
+    const restoredMemberName = await owner.from('members').update({ full_name: 'Disposable member one' }).eq('id', firstMember.id).select('id').single();
+    expect(restoredMemberName.error).toBeNull();
+    expect(restoredMemberName.data?.id).toBe(firstMember.id);
+    await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('dashboard-metrics')).toBeVisible();
     await assertCorePage(page, '/admin/tasks', /إدارة وتكليف المهام/);
     await expect(page.getByText('Disposable local dashboard task').first()).toBeVisible();
 
@@ -398,26 +524,51 @@ test.describe('disposable local dashboard', () => {
     await expect(page.getByText('مفيش تكليفات لسه')).toBeVisible();
     await expect(page.getByText('لسه مفيش بونص متسجل')).toBeVisible();
 
+    const injectedTaskErrors = requestEvidence.filter((r) => r.status === 400 && r.method === 'POST' && r.endpoint === '/rest/v1/tasks');
+    const unexpectedErrorResponses = requestEvidence.filter((r) => r.status === 401 || (r.status >= 400 && !(r.status === 403 && ['/rest/v1/members', '/rest/v1/tasks', '/rest/v1/notes'].includes(r.endpoint)) && !injectedTaskErrors.includes(r)));
+    const specificTask = specificRead.data?.[0];
+    const allTask = allRead.data?.[0];
+    const specificTracking = Object.keys((specificTask?.tracking ?? {}) as Record<string, unknown>);
+    const allTracking = Object.keys((allTask?.tracking ?? {}) as Record<string, unknown>);
     await mkdir(evidenceDir, { recursive: true });
     await writeFile(path.join(evidenceDir, `dashboard-contract-${vapidMode}.json`), JSON.stringify({
-      schema: 'phantoms-dashboard-disposable-evidence/v2',
-      localApi: API_ORIGIN,
+      schema: 'phantoms-dashboard-disposable-evidence/v3',
+      runtime: { apiHost: '127.0.0.1', apiPort: Number(new URL(API_ORIGIN).port) },
       vapidMode,
       fixtures: { members: 2, tasks: 4, notes: 2, customFields: 1, pendingInvites: 1 },
       workflows: { seededApprovalPersisted: true, failedTaskInsertVisibleAndNotPersisted: true, restoredUiCreationPersisted: true },
-      assignments: { specific: specificRead.data?.[0], all: allRead.data?.[0], visibleAfterReload: true, exactTestTasksRemainingAfterCleanup: tasksAfterCleanup.data?.length },
-      screenshots: screenshots.map(({ theme, viewport, path: screenshotPath }) => ({ theme, viewport, path: screenshotPath })),
+      assignments: {
+        specificPersisted: specificRead.data?.length === 1,
+        specificAssignedMembers: Array.isArray(specificTask?.assigned_to) ? specificTask.assigned_to.length : 0,
+        specificTrackingMembers: specificTracking.length,
+        allPersisted: allRead.data?.length === 1,
+        allAssignedMembers: allTracking.length,
+        allTrackingMembers: allTracking.length,
+        visibleAfterReload: true,
+        exactTestTasksRemainingAfterCleanup: tasksAfterCleanup.data?.length ?? -1,
+      },
+      screenshots: screenshots.map(({ theme, viewport }) => ({ theme, viewport })),
       security: { protectedColumnsDenied: true, anonDenied: true, outsiderRows: 0, blockedRemoteRequests: gate.blocked.length, pushRequestsWhileVapidDeferred: gate.pushRequests.length },
       recovery: { controlled403Observed: (['members', 'tasks', 'notes'] as const).every((resource) => gate.getResource403Count(resource) > 0), recoveredWithLiveData: true },
       genuineEmptyStateVerified: true,
       pageErrorCount: pageErrors.length,
-      requests: requestEvidence,
+      requests: {
+        total: requestEvidence.length,
+        successfulMemberSelects: requestEvidence.filter((r) => r.endpoint === '/rest/v1/members' && r.status === 200 && r.columns === SAFE_MEMBER_COLUMNS).length,
+        injectedTaskInsertFailures: injectedTaskErrors.length,
+        unexpectedErrorResponses: unexpectedErrorResponses.length,
+      },
+      mobileUI: {
+        cases: mobileCoverage,
+        longArabicNamePersistedFromDatabase: true,
+        longArabicNameWrapped: mobileCoverage.length === 4,
+        noHorizontalOverflow: true,
+      },
     }, null, 2) + '\n', { encoding: 'utf8' });
     expect(gate.blocked).toEqual([]);
     expect(pageErrors).toEqual([]);
-    const injectedTaskErrors = requestEvidence.filter((r) => r.status === 400 && r.method === 'POST' && r.endpoint === '/rest/v1/tasks');
     expect(injectedTaskErrors).toHaveLength(1);
-    expect(requestEvidence.filter((r) => r.status === 401 || r.status >= 400 && !(r.status === 403 && ['/rest/v1/members', '/rest/v1/tasks', '/rest/v1/notes'].includes(r.endpoint)) && !injectedTaskErrors.includes(r))).toEqual([]);
+    expect(unexpectedErrorResponses).toEqual([]);
     await owner.auth.signOut();
   });
 });

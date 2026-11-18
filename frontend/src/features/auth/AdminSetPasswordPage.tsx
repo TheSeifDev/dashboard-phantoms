@@ -18,8 +18,13 @@ import type { Session } from '@supabase/supabase-js';
 
 const callbackError = 'رابط الدعوة أو الاستعادة غير صالح أو انتهت صلاحيته. اطلب رابطاً جديداً وحاول مرة أخرى.';
 const callbackRequests = createSingleFlight<string, Session>();
+let activeCallbackKey: string | null = null;
 
 async function completeAdminCallbackOnce(callback: Extract<AdminCallbackInput, { kind: 'callback' }>): Promise<Session> {
+  const assertCurrentCallback = () => {
+    if (activeCallbackKey !== callback.key) throw new Error(callbackError);
+  };
+  assertCurrentCallback();
   // Never let a failed or repeated callback inherit a stale setup marker.
   clearAdminSetupIntent();
 
@@ -39,9 +44,12 @@ async function completeAdminCallbackOnce(callback: Extract<AdminCallbackInput, {
     }
 
     if (!session) throw new Error(callbackError);
+    assertCurrentCallback();
     const { data: access, error: accessError } = await supabase.rpc('get_admin_access');
+    assertCurrentCallback();
     if (accessError || !access?.is_admin) {
       await supabase.auth.signOut({ scope: 'local' });
+      assertCurrentCallback();
       useAuthStore.getState().clear();
       throw new Error('الحساب الموجود في الرابط ليس حساب إدارة معتمداً. اطلب من مالك النظام دعوة صحيحة.');
     }
@@ -52,7 +60,8 @@ async function completeAdminCallbackOnce(callback: Extract<AdminCallbackInput, {
     window.history.replaceState({}, document.title, window.location.pathname);
     return session;
   } catch (cause) {
-    clearAdminSetupIntent();
+    // A cancelled earlier exchange must not clear a newer callback's marker.
+    if (activeCallbackKey === callback.key) clearAdminSetupIntent();
     throw cause;
   }
 }
@@ -87,13 +96,22 @@ export default function AdminSetPasswordPage() {
     callback.kind === 'callback' ? 'pending' : callback.kind === 'invalid' ? 'error' : 'idle',
   );
   const [callbackMessage, setCallbackMessage] = useState(callback.kind === 'invalid' ? callback.message : '');
+  const [callbackStateKey, setCallbackStateKey] = useState(callback.key);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (callback.kind === 'invalid') clearAdminSetupIntent();
+    activeCallbackKey = callback.kind === 'callback' ? callback.key : null;
+    setCallbackStateKey(callback.key);
+    setCallbackState(callback.kind === 'callback' ? 'pending' : callback.kind === 'invalid' ? 'error' : 'idle');
+    setCallbackMessage(callback.kind === 'invalid' ? callback.message : '');
+    setError('');
+    if (callback.kind === 'invalid') {
+      clearAdminSetupIntent();
+      return;
+    }
     if (callback.kind !== 'callback') return;
     let active = true;
     void completeAdminCallback(callback)
@@ -105,15 +123,21 @@ export default function AdminSetPasswordPage() {
         setCallbackMessage(cause instanceof Error ? cause.message : callbackError);
         setCallbackState('error');
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      if (activeCallbackKey === callback.key) activeCallbackKey = null;
+    };
   }, [callback]);
 
   const setupIntent = ready ? readAdminSetupIntent(user?.id ?? null) : null;
-  const isProcessingCallback = callbackState === 'pending' || (callbackState === 'complete' && !ready);
+  const isCurrentCallbackState = callbackStateKey === callback.key;
+  const isProcessingCallback = callback.kind === 'callback'
+    && (!isCurrentCallbackState || callbackState === 'pending' || (callbackState === 'complete' && !ready));
+  if (callback.kind === 'invalid') return <CallbackStatus message={callback.message} />;
   if (isProcessingCallback) {
     return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl"><span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">بنتأكد من رابط الإدارة...</span></div>;
   }
-  if (callbackState === 'error') return <CallbackStatus message={callbackMessage || callbackError} />;
+  if (callback.kind === 'callback' && callbackState === 'error') return <CallbackStatus message={callbackMessage || callbackError} />;
   if (callback.kind === 'none' && !setupIntent) return <CallbackStatus message="افتح رابط دعوة أو استعادة كلمة مرور صالحاً قبل إعداد كلمة المرور." />;
   if (!ready || (user && access.isPending)) {
     return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl"><span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">بنتأكد من جلسة الإدارة...</span></div>;
@@ -175,11 +199,20 @@ export function AdminRecoveryCallbackPage() {
     [location.hash, location.pathname, location.search],
   );
   const [error, setError] = useState(callback.kind === 'invalid' ? callback.message : '');
+  const [callbackStateKey, setCallbackStateKey] = useState(callback.key);
 
   useEffect(() => {
+    activeCallbackKey = callback.kind === 'callback' ? callback.key : null;
+    setCallbackStateKey(callback.key);
+    setError(
+      callback.kind === 'invalid'
+        ? callback.message
+        : callback.kind === 'none'
+          ? 'لم نجد بيانات استعادة في هذا الرابط. اطلب رابطاً جديداً وحاول مرة أخرى.'
+          : '',
+    );
     if (callback.kind !== 'callback') {
       clearAdminSetupIntent();
-      if (callback.kind === 'none') setError('لم نجد بيانات استعادة في هذا الرابط. اطلب رابطاً جديداً وحاول مرة أخرى.');
       return;
     }
     let active = true;
@@ -190,9 +223,15 @@ export function AdminRecoveryCallbackPage() {
       .catch((cause: unknown) => {
         if (active) setError(cause instanceof Error ? cause.message : callbackError);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      if (activeCallbackKey === callback.key) activeCallbackKey = null;
+    };
   }, [callback, navigate]);
 
+  if (callback.kind === 'invalid') return <CallbackStatus message={callback.message} />;
+  if (callback.kind === 'none') return <CallbackStatus message="لم نجد بيانات استعادة في هذا الرابط. اطلب رابطاً جديداً وحاول مرة أخرى." />;
+  if (callbackStateKey !== callback.key) return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl"><span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">بنتجهز لتغيير كلمة المرور...</span></div>;
   if (error) return <CallbackStatus message={error} />;
   return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl"><span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">بنتجهز لتغيير كلمة المرور...</span></div>;
 }

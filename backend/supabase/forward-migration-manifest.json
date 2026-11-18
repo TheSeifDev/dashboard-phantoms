@@ -8,5 +8,85 @@
     "remote_applied_timestamp": "20261116100646",
     "original_source_version": "20261116061247",
     "original_source_filename": "backend/supabase/migrations/20261116061247_admin_member_column_access.sql"
+  },
+  {
+    "version": "20261116234800",
+    "name": "member_password_auth",
+    "canonical_repository_filename": "backend/supabase/migrations/20261116234800_member_password_auth.sql",
+    "sha256": "40d0c9c64f1bfc98961383228377071b54f53aed9b5581ef2590574eb8f679a2",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261116234800",
+    "original_source_filename": "backend/supabase/migrations/20261116234800_member_password_auth.sql"
+  },
+  {
+    "version": "20261117163000",
+    "name": "member_password_runtime_guards",
+    "canonical_repository_filename": "backend/supabase/migrations/20261117163000_member_password_runtime_guards.sql",
+    "sha256": "66364bfa01a34f1ba1c426417c3c3a4817469a2eaf111851e23dc57ee99b8cf4",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261117163000",
+    "original_source_filename": "backend/supabase/migrations/20261117163000_member_password_runtime_guards.sql"
+  },
+  {
+    "version": "20261117164800",
+    "name": "member_password_session_guards",
+    "canonical_repository_filename": "backend/supabase/migrations/20261117164800_member_password_session_guards.sql",
+    "sha256": "42f7268a739c672f9849fa406d7bbfd94630d65e379b6ccc97c52b604912f522",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261117164800",
+    "original_source_filename": "backend/supabase/migrations/20261117164800_member_password_session_guards.sql"
+  },
+  {
+    "version": "20261117170000",
+    "name": "member_password_invitation_lock_guards",
+    "canonical_repository_filename": "backend/supabase/migrations/20261117170000_member_password_invitation_lock_guards.sql",
+    "sha256": "c4b1c64b5a842fb7159146621ced56bf0092b991b3f9529944d9117189170f2f",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261117170000",
+    "original_source_filename": "backend/supabase/migrations/20261117170000_member_password_invitation_lock_guards.sql"
+  },
+  {
+    "version": "20261117172500",
+    "name": "member_password_anonymous_session_guards",
+    "canonical_repository_filename": "backend/supabase/migrations/20261117172500_member_password_anonymous_session_guards.sql",
+    "sha256": "62cb8a80d530931dd2848cfa6bdda30c53c1c877b8c47d0ba46499f5df74a055",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261117172500",
+    "original_source_filename": "backend/supabase/migrations/20261117172500_member_password_anonymous_session_guards.sql"
+  },
+  {
+    "version": "20261117173500",
+    "name": "member_password_gotrue_insert_compat",
+    "canonical_repository_filename": "backend/supabase/migrations/20261117173500_member_password_gotrue_insert_compat.sql",
+    "sha256": "de999319c4c037f9e7bdf2d61493f9f83d8f1d23234fd678ba97c09fdcb16d10",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261117173500",
+    "original_source_filename": "backend/supabase/migrations/20261117173500_member_password_gotrue_insert_compat.sql"
+  },
+  {
+    "version": "20261117174000",
+    "name": "member_password_gotrue_bound_guard_reconciliation",
+    "canonical_repository_filename": "backend/supabase/migrations/20261117174000_member_password_gotrue_bound_guard_reconciliation.sql",
+    "sha256": "8a8109f6ffdb7592e2606e505061cd3771cf55ecefa7ff82636110724426d032",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261117174000",
+    "original_source_filename": "backend/supabase/migrations/20261117174000_member_password_gotrue_bound_guard_reconciliation.sql"
+  },
+  {
+    "version": "20261117175500",
+    "name": "member_password_limiter_storage_guards",
+    "canonical_repository_filename": "backend/supabase/migrations/20261117175500_member_password_limiter_storage_guards.sql",
+    "sha256": "b577f09ac939752c084a8546ea0236e32c3958a914a85d790c8b3e8cb9bf4e5c",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261117175500",
+    "original_source_filename": "backend/supabase/migrations/20261117175500_member_password_limiter_storage_guards.sql"
   }
 ]

@@ -62,12 +62,13 @@ test('member create/update/upsert primary responses and existing fallback respon
   }
 });
 
-test('invitation registration primary update and both legacy paths use safe compatible projections', () => {
-  assert.equal((inviteApi.match(/\.select\(ADMIN_MEMBER_COLUMNS\)/g) ?? []).length, 1);
-  assert.equal((inviteApi.match(/\.select\(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS\)/g) ?? []).length, 2);
-  assert.match(inviteApi, /\.update\(updateBody\)[\s\S]*?\.select\(ADMIN_MEMBER_COLUMNS\)[\s\S]*?\.maybeSingle\(\)/);
-  assert.match(inviteApi, /team_notes: packTeamNotesWithCustomFields[\s\S]*?\.select\(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS\)[\s\S]*?\.maybeSingle\(\)/);
-  assert.match(inviteApi, /const allMembersRes = await supabase[\s\S]*?\.from\(TABLES\.members\)[\s\S]*?\.select\(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS\)/);
+test('invitation registration has no browser member writes or legacy fallback authority and keeps an explicit safe bounded projection', () => {
+  assert.doesNotMatch(inviteApi, /\.(?:insert|update|upsert|delete)\s*\(/);
+  assert.doesNotMatch(inviteApi, /packTeamNotesWithCustomFields|updateBody|register_member_with_invite|create_member_invite/);
+  assert.match(inviteApi, /\.select\('id, email, full_name, work_status'\)\.eq\('work_status', 'active'\)/);
+  assert.match(inviteApi, /\.limit\(500\)/);
+  assert.match(inviteApi, /member-password-enrollment/);
+  assert.doesNotMatch(readSource('src/features/members/MemberSelfRegisterPage.tsx'), /\.(?:insert|update|upsert|delete|signUp)\s*\(/);
 });
 
 test('member result selections exclude secrets while write-field protections remain intact', () => {
