@@ -175,6 +175,97 @@ SELECT phantoms_test.clear_auth();
 SELECT is(public.get_member_pending_review(), NULL::jsonb,
           'unauthenticated callers receive no pending-review status');
 
+-- An Admin may leave the join email blank. The member's first valid submission
+-- is bound atomically under the shared email-registration lock before Auth.
+SELECT phantoms_test.as_service();
+SELECT lives_ok($$SELECT public.member_password_issue_invitation(
+  encode(extensions.digest(convert_to('phpw_' || repeat('u', 64), 'UTF8'), 'sha256'), 'hex'),
+  NULL::bigint, NULL::text, 'join', NULL, NULL, 24, 'unbound join email optional',
+  phantoms_test.uid('join_admin'))$$,
+  'Admin may issue a unique join link without supplying an email');
+SELECT lives_ok($$SELECT public.member_password_issue_invitation(
+  encode(extensions.digest(convert_to('phpw_' || repeat('v', 64), 'UTF8'), 'sha256'), 'hex'),
+  NULL::bigint, NULL::text, 'join', NULL, NULL, 24, 'unbound join sibling',
+  phantoms_test.uid('join_admin'))$$,
+  'distinct email-free join links remain individually issuable');
+RESET ROLE;
+SELECT is((SELECT normalized_email IS NULL AND member_id IS NULL AND status = 'pending'
+           FROM public.member_password_invitations WHERE note = 'unbound join email optional'), true,
+          'an email-free link stores neither a guessed email nor a member id');
+SELECT is((SELECT count(*)::int FROM public.member_password_invitations
+           WHERE token_hash = 'phpw_' || repeat('u', 64)), 0,
+          'an email-free link still stores only the token hash');
+SELECT phantoms_test.as_service();
+SELECT throws_like($$SELECT public.member_password_issue_invitation(
+  encode(extensions.digest(convert_to('phpw_' || repeat('w', 64), 'UTF8'), 'sha256'), 'hex'),
+  phantoms_test.mid('existing_reset'), NULL::text, 'enroll', NULL, NULL, 24, '',
+  phantoms_test.uid('join_admin'))$$, '%INVALID_INPUT%',
+  'enroll invitations still require an email');
+SELECT throws_like($$SELECT public.member_password_issue_invitation(
+  encode(extensions.digest(convert_to('phpw_' || repeat('x', 64), 'UTF8'), 'sha256'), 'hex'),
+  phantoms_test.mid('existing_reset'), NULL::text, 'reset', NULL, NULL, 24, '',
+  phantoms_test.uid('join_admin'))$$, '%INVALID_INPUT%',
+  'reset invitations still require an email');
+SELECT throws_like($$SELECT public.member_password_reserve(
+  encode(extensions.digest(convert_to('phpw_' || repeat('u', 64), 'UTF8'), 'sha256'), 'hex'), NULL::text)$$,
+  '%INVALID_TOKEN%', 'recipient email remains required at redemption');
+SELECT is((public.member_password_reserve(
+  encode(extensions.digest(convert_to('phpw_' || repeat('u', 64), 'UTF8'), 'sha256'), 'hex'),
+  'reset-self@phantoms-test.example') ->> 'status'), 'identity_conflict',
+  'a collision with an existing member is rejected without consuming the join link');
+RESET ROLE;
+SELECT is((SELECT normalized_email IS NULL AND status = 'pending'
+           FROM public.member_password_invitations WHERE note = 'unbound join email optional'), true,
+          'a conflicting email leaves the join link unbound and pending');
+SELECT lives_ok($$INSERT INTO phantoms_test.vars(key, value)
+SELECT 'unbound_join_claim', public.member_password_reserve(
+  encode(extensions.digest(convert_to('phpw_' || repeat('u', 64), 'UTF8'), 'sha256'), 'hex'),
+  '  UNBOUND-SELF@PHANTOMS-TEST.EXAMPLE  ')::text$$,
+  'the recipient can bind their own normalized email on the first valid use');
+SELECT is((SELECT normalized_email FROM public.member_password_invitations
+           WHERE note = 'unbound join email optional'), 'unbound-self@phantoms-test.example',
+          'recipient email is normalized and atomically attached to the invitation');
+SELECT is((SELECT status FROM public.member_password_invitations
+           WHERE note = 'unbound join email optional'), 'reserved',
+          'the email binding and one-use reservation happen together');
+SELECT is((SELECT (value::jsonb ->> 'email') FROM phantoms_test.vars WHERE key = 'unbound_join_claim'),
+          'unbound-self@phantoms-test.example', 'reservation returns only the normalized claimed email');
+SELECT is((public.member_password_reserve(
+  encode(extensions.digest(convert_to('phpw_' || repeat('v', 64), 'UTF8'), 'sha256'), 'hex'),
+  'unbound-self@phantoms-test.example') ->> 'status'), 'identity_conflict',
+  'another unbound link cannot concurrently claim the same active registration email');
+RESET ROLE;
+SELECT is((SELECT normalized_email IS NULL AND status = 'pending'
+           FROM public.member_password_invitations WHERE note = 'unbound join sibling'), true,
+          'the losing sibling link stays unbound for its intended recipient');
+INSERT INTO auth.users(
+  id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+) VALUES (
+  '40000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000',
+  'authenticated', 'authenticated', 'unbound-self@phantoms-test.example', 'self-service-unbound-hash', now(),
+  '{"provider":"email","providers":["email"]}', '{}', now(), now()
+);
+INSERT INTO phantoms_test.users(name, id, email)
+VALUES ('join_unbound', '40000000-0000-4000-8000-000000000002', 'unbound-self@phantoms-test.example');
+SELECT phantoms_test.as_service();
+SELECT lives_ok($$SELECT public.member_password_complete_profile(
+  (SELECT id FROM public.member_password_invitations WHERE note = 'unbound join email optional'),
+  ((SELECT value::jsonb FROM phantoms_test.vars WHERE key = 'unbound_join_claim') ->> 'claim_id')::uuid,
+  '40000000-0000-4000-8000-000000000002',
+  '{"fullName":"Unbound Self Service Member","phone":"","residence":"","workConditions":"","bio":"","device":"","gender":""}'::jsonb)$$,
+  'email-free Admin issuance still completes the member-entered profile behind the guarded Auth write');
+SELECT is((SELECT count(*)::int FROM public.members WHERE email = 'unbound-self@phantoms-test.example'), 1,
+          'email-free issuance creates exactly one member only after redemption');
+SELECT is((SELECT work_status FROM public.members WHERE email = 'unbound-self@phantoms-test.example'), 'inactive',
+          'email-free join remains inactive pending Admin review');
+SELECT is((SELECT status FROM public.member_password_invitations WHERE note = 'unbound join email optional'), 'complete',
+          'email-free link reaches a terminal completed state');
+SELECT throws_like($$SELECT public.member_password_reserve(
+  encode(extensions.digest(convert_to('phpw_' || repeat('u', 64), 'UTF8'), 'sha256'), 'hex'),
+  'unbound-self@phantoms-test.example')$$, '%ALREADY_USED%',
+  'a completed email-free join link cannot be used a second time');
+
 -- Existing-member password reset is a separate, profile-preserving path.
 SELECT phantoms_test.as_service();
 INSERT INTO phantoms_test.vars(key, value)

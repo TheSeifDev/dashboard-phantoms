@@ -15,6 +15,7 @@ const adminPassword = process.env.PHANTOMS_AUTH_ADMIN_PASSWORD ?? '';
 const existingMemberEmail = process.env.PHANTOMS_AUTH_EXISTING_MEMBER_EMAIL ?? '';
 const firstTimeMemberEmail = process.env.PHANTOMS_AUTH_FIRST_TIME_MEMBER_EMAIL ?? '';
 const joinMemberEmail = process.env.PHANTOMS_AUTH_JOIN_MEMBER_EMAIL ?? '';
+const joinInvitationNote = process.env.PHANTOMS_AUTH_JOIN_INVITE_NOTE ?? '';
 const outsiderEmail = process.env.PHANTOMS_AUTH_OUTSIDER_EMAIL ?? '';
 const existingMemberId = Number(process.env.PHANTOMS_AUTH_EXISTING_MEMBER_ID ?? '0');
 const firstTimeMemberId = Number(process.env.PHANTOMS_AUTH_FIRST_TIME_MEMBER_ID ?? '0');
@@ -54,6 +55,7 @@ function requireFixtureEnv(): void {
     existingMemberEmail,
     firstTimeMemberEmail,
     joinMemberEmail,
+    joinInvitationNote,
     outsiderEmail,
     existingMemberAuthUserId,
   })) {
@@ -195,14 +197,14 @@ async function browserFunctionRequest(page: Page, body: Record<string, unknown>,
   }, { origin: API_ORIGIN, key: anonKey, requestBody: body, includeAdmin: useAdminSession });
 }
 
-async function issueInvite(page: Page, input: { memberId: number | null; email: string; purpose: 'enroll' | 'reset' | 'join' }): Promise<{ id: string; token: string }> {
+async function issueInvite(page: Page, input: { memberId: number | null; email: string | null; purpose: 'enroll' | 'reset' | 'join'; note?: string }): Promise<{ id: string; token: string }> {
   const response = await browserFunctionRequest(page, {
     action: 'issue',
     memberId: input.memberId,
     email: input.email,
     purpose: input.purpose,
     expiresInHours: 24,
-    note: 'local disposable password migration fixture',
+    note: input.note ?? 'local disposable password migration fixture',
   });
   expect(response.status).toBe(200);
   expect(response.ok).toBe(false);
@@ -303,8 +305,9 @@ test.describe('disposable local Auth', () => {
         });
         joinInvite = await issueInvite(page, {
           memberId: null,
-          email: joinMemberEmail,
+          email: null,
           purpose: 'join',
+          note: joinInvitationNote,
         });
       });
 

@@ -57,7 +57,7 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
       }
       if (rpcName === 'member_password_issue_invitation') return { data: {
         id: '55555555-5555-4555-8555-555555555555', member_id: args?.p_member_id as number | null,
-        email: args?.p_email as string, purpose: args?.p_purpose as 'join' | 'enroll' | 'reset', note: '', expires_at: '2030-01-01T00:00:00.000Z',
+        email: args?.p_email as string | null, purpose: args?.p_purpose as 'join' | 'enroll' | 'reset', note: '', expires_at: '2030-01-01T00:00:00.000Z',
       } as T, error: null };
       if (rpcName === 'member_password_revoke_invitation') return { data: true as T, error: null };
       if (rpcName === 'member_password_list_invitations') return { data: [] as T, error: null };
@@ -320,6 +320,48 @@ test('Admin can issue an unbound join link without supplying a member or Auth ID
   assert.equal(args?.p_member_id, null);
   assert.equal(args?.p_expected_auth_user_id, null);
   assert.equal(args?.p_association_evidence, null);
+});
+
+test('Admin may leave join email unset, but enrollment and reset emails remain mandatory', async () => {
+  const state = baseState();
+  const controller = createMemberPasswordEnrollmentController(fakeRuntime(state));
+  const join = await json(await controller(request({
+    action: 'issue', memberId: null, email: null, purpose: 'join', expiresInHours: 72, note: '',
+  }, { Authorization: 'Bearer admin' })));
+  const invite = join.invite as Record<string, unknown>;
+  assert.equal(invite.email, null);
+  assert.equal(invite.purpose, 'join');
+  assert.match(String(invite.token), /^phpw_[0-9a-f]{64}$/);
+  assert.equal(state.calls.find((call) => call.name === 'member_password_issue_invitation')?.args?.p_email, null);
+
+  for (const purpose of ['enroll', 'reset'] as const) {
+    const invalidState = baseState();
+    const invalid = await json(await createMemberPasswordEnrollmentController(fakeRuntime(invalidState))(request({
+      action: 'issue', memberId: 9, email: null, purpose, expiresInHours: 24, note: '',
+    }, { Authorization: 'Bearer admin' })));
+    assert.equal(invalid.code, 'INVALID_INPUT');
+    assert.equal(invalidState.calls.some((call) => call.name === 'member_password_issue_invitation'), false);
+  }
+});
+
+test('unbound join email conflict is returned without reserving or quarantining the token', async () => {
+  const state = baseState();
+  state.reserve = { ...state.reserve!, member_id: null, purpose: 'join', expected_auth_user_id: null };
+  state.reserve = null;
+  state.reserveError = null;
+  const runtime = fakeRuntime(state);
+  const originalRpc = runtime.serviceDb.rpc.bind(runtime.serviceDb);
+  runtime.serviceDb.rpc = async <T = unknown>(name: string, args?: Record<string, unknown>) => {
+    if (name === 'member_password_reserve') {
+      state.calls.push({ client: 'service', name, args });
+      return { data: { status: 'identity_conflict' } as T, error: null };
+    }
+    return originalRpc<T>(name, args);
+  };
+  const result = await json(await createMemberPasswordEnrollmentController(runtime)(request(enrollBody())));
+  assert.equal(result.code, 'IDENTITY_CONFLICT');
+  assert.equal(state.calls.some((call) => call.name === 'createUser'), false);
+  assert.equal(state.reviews.length, 0);
 });
 
 test('admin list and revoke require admin permission and expose no token material', async () => {

@@ -153,7 +153,7 @@ export default function MemberSelfRegisterPage() {
       audience="member"
       badge={isPasswordReset ? 'رابط إعادة تعيين آمن' : 'رابط آمن من إدارة PHANTOMS'}
       title={isPasswordReset ? 'إعادة تعيين كلمة المرور' : 'بياناتك وكلمة مرورك'}
-      description={isPasswordReset ? 'تحقق من بريدك وأدخل كلمة مرور جديدة. لن تتغير بيانات ملفك الشخصي.' : 'اكتب بياناتك بنفسك. الرابط مخصص لبريدك الإلكتروني ويُستخدم مرة واحدة فقط.'}
+      description={isPasswordReset ? 'تحقق من بريدك وأدخل كلمة مرور جديدة. لن تتغير بيانات ملفك الشخصي.' : 'اكتب بريدك وبياناتك بنفسك. إذا كانت الإدارة قد قيّدت الرابط ببريد محدد، استخدمه. الرابط صالح مرة واحدة فقط.'}
       footer={(
         <div className="grid gap-2 text-center text-sm text-[var(--text-2)]">
           <p>إذا واجهت مشكلة أو نسيت كلمة المرور، تواصل مع مسؤول الفريق ليصدر لك رابطاً جديداً.</p>
@@ -163,7 +163,7 @@ export default function MemberSelfRegisterPage() {
     >
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
       <form onSubmit={handleSubmit} className="auth-form" noValidate>
-        <label className="auth-field" htmlFor="join-email">بريدك الإلكتروني المرتبط بالرابط
+        <label className="auth-field" htmlFor="join-email">بريدك الإلكتروني للتسجيل
           <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="join-email" type="email" dir="ltr" autoComplete="email" required maxLength={254} placeholder="name@example.com" value={email} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }} /></span>
         </label>
         {!isPasswordReset && <section className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5" aria-labelledby="join-profile-heading">

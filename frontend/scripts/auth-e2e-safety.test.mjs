@@ -253,7 +253,18 @@ test('Auth runner lists the discovered suite and rejects incomplete final eviden
   const runner = readFileSync(new URL('./run-disposable-auth-e2e.mjs', import.meta.url), 'utf8');
   assert.match(runner, /'--list', '--reporter=list'/);
   assert.match(runner, /if \(!isCompleteAuthEvidence\(finalized\)\)/);
-  assert.match(runner, /prepareJoinFixtureCleanup\(service, fixture\)/);
+  assert.match(runner, /prepareOwnedInvitationCleanup\(service, fixture\)/);
+  assert.match(runner, /select\('id,created_by,member_id,purpose,note,normalized_email,expected_auth_user_id,auth_user_id,auth_write_user_id'\)/);
+  assert.match(runner, /eq\('created_by', actorId\)\.in\('note', \[\.\.\.notes\]\)/);
+  assert.match(runner, /deleteAndVerifyExactAuthUser\(admin, userId\)/);
+  assert.match(runner, /assertExactAuthUserAbsent\(admin, userId\)/);
+  assert.doesNotMatch(runner, /discoverFixtureUserIds/);
+  assert.match(runner, /exact owned invitation markers remain after cleanup/);
+  const cleanupStart = runner.indexOf('async function cleanupFixtures(');
+  const cleanupEnd = runner.indexOf('\nfunction extractDeliveredConfirmationURL', cleanupStart);
+  const cleanup = runner.slice(cleanupStart, cleanupEnd);
+  assert.doesNotMatch(cleanup, /listUsers|\.eq\('email',/);
+  assert.match(runner, /PHANTOMS_AUTH_JOIN_INVITE_NOTE/);
 });
 
 test('HTTP bridge shutdown closes real connections within the bounded path', async () => {

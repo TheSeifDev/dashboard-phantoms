@@ -187,21 +187,32 @@ test('incomplete evidence starts false and never silently skips the required sui
   assert.equal(isCompleteRealEvidence(initial), false);
 });
 
-test('join invitation email is cleanup-owned before issue and orphan rows are discovered by exact email/purpose', () => {
+test('unbound join invitations are cleanup-owned before issue and orphan rows are discovered by exact actor/note', () => {
   const issueStart = REAL_RUNNER_SOURCE.indexOf('async function issue(');
+  const lifecycleStart = REAL_RUNNER_SOURCE.indexOf('async function selfServiceJoinLifecycle(');
   const cleanupStart = REAL_RUNNER_SOURCE.indexOf('async function cleanup()');
-  assert.ok(issueStart >= 0 && cleanupStart > issueStart);
+  assert.ok(issueStart >= 0 && lifecycleStart > issueStart && cleanupStart > lifecycleStart);
   const issueSource = REAL_RUNNER_SOURCE.slice(issueStart, REAL_RUNNER_SOURCE.indexOf('\nasync function signIn(', issueStart));
-  const joinOwnership = issueSource.indexOf('fixture.joinEmails.add(normalizedEmail)');
+  const joinOwnership = issueSource.indexOf('fixture.joinIssueNotes.add(note)');
   const requestWrite = issueSource.indexOf('await adminAction(body, accessToken)');
-  assert.ok(joinOwnership >= 0 && requestWrite > joinOwnership, 'register the exact join email before the write can commit');
+  assert.ok(joinOwnership >= 0 && requestWrite > joinOwnership, 'register the exact join marker before the write can commit');
+  const lifecycleSource = REAL_RUNNER_SOURCE.slice(lifecycleStart, REAL_RUNNER_SOURCE.indexOf('\nasync function existingPasswordless(', lifecycleStart));
+  const emailPreflight = lifecycleSource.indexOf('const existingAuth = await countUsersByEmail(ctx.admin, email)');
+  const issueWrite = lifecycleSource.indexOf("issue(adminSession.data.session.access_token, null, null, 'join'");
+  assert.ok(emailPreflight >= 0 && issueWrite > emailPreflight, 'preflight member-submitted email before issuing the unbound link');
   const cleanupSource = REAL_RUNNER_SOURCE.slice(cleanupStart, REAL_RUNNER_SOURCE.indexOf('\nasync function run()', cleanupStart));
-  assert.match(cleanupSource, /member_password_invitations'\)\.select\('id,normalized_email,purpose'\)\.in\('normalized_email', emails\)\.eq\('purpose', 'join'\)/);
+  assert.match(issueSource, /fixture\.invitationNotes\.add\(note\)/);
+  assert.match(cleanupSource, /select\('id,created_by,member_id,purpose,note,expected_auth_user_id,auth_user_id,auth_write_user_id'\)/);
+  assert.match(cleanupSource, /eq\('created_by', actorId\)\.in\('note', notes\)/);
+  assert.doesNotMatch(cleanupSource, /listUsers|listOwnedAuthUsers|\.in\('email',|\.eq\('email',/);
+  assert.match(cleanupSource, /deleteAndVerifyExactAuthUser\(service\.auth\.admin, id\)/);
+  assert.match(cleanupSource, /assertExactAuthUserAbsent\(service\.auth\.admin, id\)/);
+  assert.match(cleanupSource, /\.in\('id', \[\.\.\.new Set\(fixture\.invitationIds\)\]\)/);
   const auditDelete = cleanupSource.indexOf("member_password_audit').delete().in('invitation_id'");
   const invitationDelete = cleanupSource.indexOf("member_password_invitations').delete().in('id'");
   assert.ok(auditDelete >= 0 && invitationDelete > auditDelete, 'delete exact-owned audit rows before invitations');
-  assert.match(cleanupSource, /owned join invitations remain/);
-  assert.match(cleanupSource, /owned join members remain/);
+  assert.match(cleanupSource, /exact owned invitation markers remain/);
+  assert.match(cleanupSource, /exact owned invitations remain/);
   assert.match(cleanupSource, /owned invitation audit rows remain/);
 });
 

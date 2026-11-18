@@ -102,6 +102,10 @@ test('SQL evidence runs after browser/dashboard work and before sanitization', (
   assert.match(workflow, /'reviewRejected': 7/);
   assert.match(workflow, /'blockedWrites': 1/);
   assert.match(workflow, /'durableAttempts': 12/);
+  assert.match(workflow, /sql\.checks\.length !== 5/);
+  assert.match(workflow, /phantoms-local-pg17-sql-concurrency\/v2/);
+  assert.match(workflow, /two email-free join links race for one recipient email/);
+  assert.match(workflow, /email-free join reservation races Admin member insertion/);
   assert.match(workflow, /check\['passed'\] is True/);
   assert.match(workflow, /Object\.keys\(value \?\? \{\}\)/);
 });

@@ -250,18 +250,18 @@ test.describe('disposable local dashboard', () => {
 
     await test.step('Admin invitation UI sends a link and never asks for a manual Auth ID', async () => {
       const invitationEndpoint = `${API_ORIGIN}/functions/v1/member-password-enrollment`;
-      let joinIssuePayload: { action?: string; memberId?: number | null; purpose?: string; email?: string; expiresInHours?: number } | null = null;
+      let joinIssuePayload: { action?: string; memberId?: number | null; purpose?: string; email?: string | null; expiresInHours?: number } | null = null;
       const mockJoinIssue = async (route: Route) => {
         if (route.request().method() !== 'POST') {
           await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ code: 'INVALID_INPUT' }) });
           return;
         }
-        const payload = route.request().postDataJSON() as { action?: string; memberId?: number | null; purpose?: string; email?: string; expiresInHours?: number };
+        const payload = route.request().postDataJSON() as { action?: string; memberId?: number | null; purpose?: string; email?: string | null; expiresInHours?: number };
         if (payload.action === 'list') {
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ invites: [] }) });
           return;
         }
-        if (payload.action !== 'issue' || payload.memberId !== null || payload.purpose !== 'join' || typeof payload.email !== 'string') {
+        if (payload.action !== 'issue' || payload.memberId !== null || payload.purpose !== 'join' || payload.email !== null) {
           await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'INVALID_INPUT' }) });
           return;
         }
@@ -272,7 +272,7 @@ test.describe('disposable local dashboard', () => {
           body: JSON.stringify({ invite: {
             id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
             token: `phpw_${'a'.repeat(64)}`,
-            email: payload.email,
+            email: null,
             member_id: null,
             purpose: 'join',
             note: null,
@@ -295,11 +295,11 @@ test.describe('disposable local dashboard', () => {
         await expect(page.getByText('أنت ترسل الرابط فقط — العضو يكتب بياناته وكلمة مروره')).toBeVisible();
         await expect(page.getByText(/الرابط يُستخدم مرة واحدة وينتهي بعد المدة المحددة/)).toBeVisible();
         await expect(inviteEmail).toBeVisible();
-        await expect(page.getByText(/اكتب بريد العضو يدويًا.*انسخ الرابط وأرسله بنفسك/)).toBeVisible();
+        await expect(inviteEmail).not.toHaveAttribute('required', '');
+        await expect(page.getByText(/اختياري.*يكتب العضو بريده بنفسه عند التسجيل/)).toBeVisible();
         await expect(messageName).toHaveCount(0);
         await assertNoHorizontalOverflow(page);
         await expect(page.locator('#member-invite-auth-id')).toHaveCount(0);
-        await inviteEmail.fill('dashboard-ui-join@phantoms-test.example');
         await expiry.selectOption('72');
         const inviteScreenshotDir = process.env.PHANTOMS_MOBILE_SCREENSHOT_DIR;
         if (inviteScreenshotDir && vapidMode === 'missing') {
@@ -320,7 +320,7 @@ test.describe('disposable local dashboard', () => {
         await expect(copyWhatsAppMessage).toHaveText('تم نسخ الرسالة');
         const personalizedMessage = await page.evaluate(() => navigator.clipboard.readText());
         expect(personalizedMessage).toContain('أهلًا سلمى،');
-        expect(personalizedMessage).toContain('اكتب بياناتك وكلمة مرورك بنفسك');
+        expect(personalizedMessage).toContain('اكتب بريدك الإلكتروني وبياناتك وكلمة مرورك بنفسك');
         expect(personalizedMessage).toContain('#invite=phpw_a');
         expect(personalizedMessage).toContain('مرة واحدة فقط');
         expect(personalizedMessage).toContain('الرابط صالح حتى');
@@ -332,7 +332,7 @@ test.describe('disposable local dashboard', () => {
         await expect(page.locator('details')).toHaveCount(0);
         await expect(page.getByText(/الكود اليدوي/)).toHaveCount(0);
         await assertNoHorizontalOverflow(page);
-        expect(joinIssuePayload).toMatchObject({ action: 'issue', memberId: null, purpose: 'join', email: 'dashboard-ui-join@phantoms-test.example', expiresInHours: 72 });
+        expect(joinIssuePayload).toMatchObject({ action: 'issue', memberId: null, purpose: 'join', email: null, expiresInHours: 72 });
         expect(joinIssuePayload).not.toHaveProperty('messageName');
         expect(joinIssuePayload).not.toHaveProperty('whatsAppName');
         if (typeof firstMember?.id !== 'number') throw new Error('owned invite member fixture is unavailable');

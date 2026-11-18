@@ -1,0 +1,296 @@
+-- Allow the Admin to issue a one-use join link without knowing the member's email.
+-- The recipient still supplies a valid email at redemption; the reservation RPC
+-- binds it under the shared registration advisory lock before any Auth write.
+-- Existing enroll/reset invitations stay email-bound and all portal/review guards
+-- remain unchanged.
+BEGIN;
+
+ALTER TABLE public.member_password_invitations
+  ALTER COLUMN normalized_email DROP NOT NULL;
+
+ALTER TABLE public.member_password_invitations
+  DROP CONSTRAINT IF EXISTS member_password_invitation_email_presence_check;
+ALTER TABLE public.member_password_invitations
+  ADD CONSTRAINT member_password_invitation_email_presence_check CHECK (
+    (purpose = 'join' AND (normalized_email IS NOT NULL OR status IN ('pending', 'revoked', 'expired')))
+    OR (purpose IN ('enroll', 'reset') AND normalized_email IS NOT NULL AND member_id IS NOT NULL)
+  );
+
+CREATE OR REPLACE FUNCTION public.member_password_issue_invitation(
+  p_token_hash TEXT,
+  p_member_id BIGINT,
+  p_email TEXT,
+  p_purpose TEXT,
+  p_expected_auth_user_id UUID DEFAULT NULL,
+  p_association_evidence TEXT DEFAULT NULL,
+  p_expires_in_hours INTEGER DEFAULT 168,
+  p_note TEXT DEFAULT '',
+  p_actor_user_id UUID DEFAULT NULL
+)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_email TEXT := NULLIF(pg_catalog.lower(pg_catalog.btrim(COALESCE(p_email, ''))), '');
+  v_member public.members;
+  v_mapping public.member_auth_bindings;
+  v_identity auth.users;
+  v_actor auth.users;
+  v_expected_auth_user_id UUID := p_expected_auth_user_id;
+  v_id UUID;
+  v_expires TIMESTAMPTZ;
+  v_evidence_hash TEXT;
+  v_identity_matches INTEGER;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN RAISE EXCEPTION 'SERVICE_ONLY'; END IF;
+  SELECT u.* INTO v_actor FROM auth.users AS u WHERE u.id = p_actor_user_id;
+  IF NOT FOUND OR v_actor.deleted_at IS NOT NULL OR v_actor.banned_until IS NOT NULL
+     OR NOT EXISTS (
+       SELECT 1 FROM public.admin_accounts AS a
+       WHERE a.user_id = p_actor_user_id
+         AND (a.role = 'owner' OR (a.role = 'admin' AND COALESCE(a.permissions ->> 'members', 'false') = 'true'))
+     ) THEN RAISE EXCEPTION 'UNAUTHORIZED'; END IF;
+  IF p_token_hash IS NULL OR p_token_hash !~ '^[0-9a-f]{64}$'
+     OR (v_email IS NOT NULL AND (v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'
+       OR pg_catalog.char_length(v_email) > 254))
+     OR p_purpose IS NULL OR p_purpose NOT IN ('enroll', 'reset', 'join')
+     OR (p_purpose <> 'join' AND v_email IS NULL)
+     OR p_expires_in_hours IS NULL OR p_expires_in_hours < 1 OR p_expires_in_hours > 2160
+     OR pg_catalog.char_length(COALESCE(p_note, '')) > 500 THEN RAISE EXCEPTION 'INVALID_INPUT'; END IF;
+  IF p_association_evidence IS NOT NULL AND pg_catalog.char_length(p_association_evidence) > 2000 THEN RAISE EXCEPTION 'INVALID_INPUT'; END IF;
+  IF (p_purpose = 'join' AND (p_member_id IS NOT NULL OR v_expected_auth_user_id IS NOT NULL
+       OR NULLIF(pg_catalog.btrim(COALESCE(p_association_evidence, '')), '') IS NOT NULL))
+     OR (p_purpose <> 'join' AND (p_member_id IS NULL OR p_member_id <= 0)) THEN
+    RAISE EXCEPTION 'INVALID_INPUT';
+  END IF;
+
+  -- Email-bound links serialize with member insert/update and redemption. An
+  -- unbound join has no email lock until the recipient supplies an address.
+  IF v_email IS NOT NULL THEN
+    PERFORM pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended('phantoms-member-registration:' || v_email, 0)
+    );
+  END IF;
+
+  IF p_purpose = 'join' THEN
+    IF v_email IS NOT NULL THEN
+      -- Expired pending links may be replaced; reserved/uncertain attempts are
+      -- never made reusable automatically and require human reconciliation.
+      WITH expired AS (
+        UPDATE public.member_password_invitations AS i
+        SET status = 'expired', expired_at = pg_catalog.clock_timestamp()
+        WHERE i.normalized_email = v_email AND i.purpose = 'join'
+          AND i.status = 'pending' AND i.expires_at <= pg_catalog.clock_timestamp()
+        RETURNING i.id, i.member_id
+      )
+      INSERT INTO public.member_password_audit (invitation_id, member_id, action, actor_user_id, details)
+      SELECT expired.id, expired.member_id, 'expired', p_actor_user_id, '{}'::jsonb FROM expired;
+
+      IF EXISTS (SELECT 1 FROM public.members AS m WHERE pg_catalog.lower(pg_catalog.btrim(m.email)) = v_email)
+         OR EXISTS (SELECT 1 FROM auth.users AS u WHERE pg_catalog.lower(pg_catalog.btrim(COALESCE(u.email, ''))) = v_email) THEN
+        RAISE EXCEPTION 'IDENTITY_CONFLICT';
+      END IF;
+      IF EXISTS (SELECT 1 FROM public.member_password_invitations AS i
+                 WHERE i.normalized_email = v_email AND i.purpose = 'join'
+                   AND i.status IN ('pending', 'reserved', 'review_required')) THEN
+        RAISE EXCEPTION 'REVIEW_REQUIRED';
+      END IF;
+    END IF;
+  ELSE
+    SELECT * INTO v_member FROM public.members WHERE id = p_member_id FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'MEMBER_NOT_FOUND'; END IF;
+    IF pg_catalog.lower(pg_catalog.btrim(v_member.email)) <> v_email THEN RAISE EXCEPTION 'WRONG_EMAIL'; END IF;
+    IF (SELECT count(*) FROM public.members AS m WHERE pg_catalog.lower(pg_catalog.btrim(m.email)) = v_email) <> 1 THEN
+      RAISE EXCEPTION 'IDENTITY_CONFLICT';
+    END IF;
+    IF COALESCE(v_member.work_status, '') <> 'active' THEN RAISE EXCEPTION 'MEMBER_DISABLED'; END IF;
+
+    SELECT * INTO v_mapping FROM public.member_auth_bindings WHERE member_id = p_member_id FOR UPDATE;
+    IF FOUND THEN
+      -- Existing exact DB binding is authoritative; admins never supply Auth IDs.
+      IF v_expected_auth_user_id IS NULL THEN v_expected_auth_user_id := v_mapping.auth_user_id; END IF;
+      IF v_expected_auth_user_id IS DISTINCT FROM v_mapping.auth_user_id
+         OR v_mapping.normalized_email IS DISTINCT FROM v_email THEN
+        RAISE EXCEPTION 'IDENTITY_CONFLICT';
+      END IF;
+    END IF;
+
+    SELECT count(*)::integer INTO v_identity_matches FROM auth.users AS u WHERE pg_catalog.lower(COALESCE(u.email, '')) = v_email;
+    IF v_identity_matches > 1 THEN RAISE EXCEPTION 'IDENTITY_CONFLICT'; END IF;
+    SELECT u.* INTO v_identity FROM auth.users AS u WHERE pg_catalog.lower(COALESCE(u.email, '')) = v_email;
+    IF FOUND THEN
+      IF EXISTS (SELECT 1 FROM public.admin_accounts AS a WHERE a.user_id = v_identity.id)
+         OR v_identity.deleted_at IS NOT NULL OR v_identity.banned_until IS NOT NULL
+         OR COALESCE(v_identity.is_sso_user, false)
+         OR NOT (COALESCE(v_identity.raw_app_meta_data -> 'providers', '[]'::jsonb) ? 'email') THEN
+        RAISE EXCEPTION 'IDENTITY_CONFLICT';
+      END IF;
+      IF v_expected_auth_user_id IS NULL OR v_expected_auth_user_id IS DISTINCT FROM v_identity.id THEN RAISE EXCEPTION 'IDENTITY_CONFLICT'; END IF;
+      IF p_purpose = 'enroll' AND COALESCE(v_identity.encrypted_password, '') <> '' THEN RAISE EXCEPTION 'PASSWORD_ALREADY_SET'; END IF;
+    ELSIF v_expected_auth_user_id IS NOT NULL THEN
+      RAISE EXCEPTION 'IDENTITY_CONFLICT';
+    END IF;
+
+    IF p_purpose = 'reset' AND (v_mapping.member_id IS NULL OR v_expected_auth_user_id IS DISTINCT FROM v_mapping.auth_user_id) THEN
+      RAISE EXCEPTION 'IDENTITY_CONFLICT';
+    END IF;
+    IF v_mapping.member_id IS NULL AND v_expected_auth_user_id IS NOT NULL
+       AND NULLIF(pg_catalog.btrim(COALESCE(p_association_evidence, '')), '') IS NULL THEN
+      RAISE EXCEPTION 'REVIEW_REQUIRED';
+    END IF;
+  END IF;
+
+  v_expires := pg_catalog.now() + pg_catalog.make_interval(hours => p_expires_in_hours);
+  v_evidence_hash := CASE WHEN NULLIF(pg_catalog.btrim(COALESCE(p_association_evidence, '')), '') IS NULL THEN NULL
+    ELSE pg_catalog.encode(extensions.digest(pg_catalog.convert_to(pg_catalog.btrim(p_association_evidence), 'UTF8'), 'sha256'), 'hex') END;
+  INSERT INTO public.member_password_invitations (
+    token_hash, member_id, normalized_email, purpose, expires_at, note, created_by,
+    expected_auth_user_id, association_evidence_hash
+  ) VALUES (
+    p_token_hash, p_member_id, v_email, p_purpose, v_expires,
+    pg_catalog.btrim(COALESCE(p_note, '')), p_actor_user_id, v_expected_auth_user_id, v_evidence_hash
+  ) RETURNING id INTO v_id;
+
+  INSERT INTO public.member_password_audit (invitation_id, member_id, action, actor_user_id, details)
+  VALUES (v_id, p_member_id, 'issued', p_actor_user_id,
+          pg_catalog.jsonb_build_object('purpose', p_purpose, 'evidence_present', v_evidence_hash IS NOT NULL));
+  RETURN pg_catalog.jsonb_build_object('id', v_id, 'member_id', p_member_id, 'email', v_email,
+    'purpose', p_purpose, 'note', pg_catalog.btrim(COALESCE(p_note, '')), 'expires_at', v_expires);
+EXCEPTION WHEN unique_violation THEN
+  RAISE EXCEPTION 'REVIEW_REQUIRED';
+END;
+$$;
+REVOKE ALL ON FUNCTION public.member_password_issue_invitation(TEXT, BIGINT, TEXT, TEXT, UUID, TEXT, INTEGER, TEXT, UUID) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.member_password_issue_invitation(TEXT, BIGINT, TEXT, TEXT, UUID, TEXT, INTEGER, TEXT, UUID) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.member_password_reserve(p_token_hash TEXT, p_email TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_hash TEXT := p_token_hash;
+  v_email TEXT := pg_catalog.lower(pg_catalog.btrim(COALESCE(p_email, '')));
+  v_lock_email TEXT;
+  v_was_unbound_join BOOLEAN := false;
+  v_inv public.member_password_invitations;
+  v_member public.members;
+  v_mapping public.member_auth_bindings;
+  v_identity auth.users;
+  v_claim UUID := extensions.gen_random_uuid();
+  v_identity_matches INTEGER;
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role' THEN RAISE EXCEPTION 'SERVICE_ONLY'; END IF;
+  IF v_hash IS NULL OR v_hash !~ '^[0-9a-f]{64}$'
+     OR v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'
+     OR pg_catalog.char_length(v_email) > 254 THEN RAISE EXCEPTION 'INVALID_TOKEN'; END IF;
+  SELECT i.normalized_email INTO v_lock_email FROM public.member_password_invitations AS i WHERE i.token_hash = v_hash;
+  IF NOT FOUND THEN RAISE EXCEPTION 'INVALID_TOKEN'; END IF;
+  -- NULL-email join links lock on the recipient's submitted normalized email.
+  -- Acquire this shared registration lock before locking/re-reading the invite.
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('phantoms-member-registration:' || COALESCE(v_lock_email, v_email), 0)
+  );
+  SELECT * INTO v_inv FROM public.member_password_invitations WHERE token_hash = v_hash FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'INVALID_TOKEN'; END IF;
+  IF v_inv.status = 'revoked' THEN RAISE EXCEPTION 'REVOKED'; END IF;
+  IF v_inv.status = 'expired' THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'expired', 'invitation_id', v_inv.id);
+  END IF;
+  IF v_inv.status = 'pending' AND v_inv.expires_at <= pg_catalog.clock_timestamp() THEN
+    UPDATE public.member_password_invitations
+    SET status = 'expired', claim_id = NULL, claimed_at = NULL, auth_user_id = NULL,
+        auth_write_completed_at = NULL, auth_write_user_id = NULL, completed_at = NULL,
+        review_required_at = NULL, revoked_at = NULL, expired_at = pg_catalog.clock_timestamp(), used_at = NULL
+    WHERE id = v_inv.id AND status = 'pending';
+    IF NOT FOUND THEN RAISE EXCEPTION 'REVIEW_REQUIRED'; END IF;
+    INSERT INTO public.member_password_audit (invitation_id, member_id, action, details)
+    VALUES (v_inv.id, v_inv.member_id, 'expired', '{}'::jsonb);
+    RETURN pg_catalog.jsonb_build_object('status', 'expired', 'invitation_id', v_inv.id);
+  END IF;
+  IF v_inv.status = 'complete' THEN RAISE EXCEPTION 'ALREADY_USED'; END IF;
+  IF v_inv.status IN ('reserved', 'review_required') THEN RAISE EXCEPTION 'REVIEW_REQUIRED'; END IF;
+  IF v_inv.normalized_email IS NOT NULL AND v_inv.normalized_email <> v_email THEN RAISE EXCEPTION 'WRONG_EMAIL'; END IF;
+
+  IF v_inv.purpose = 'join' THEN
+    IF v_inv.member_id IS NOT NULL OR v_inv.expected_auth_user_id IS NOT NULL THEN RAISE EXCEPTION 'IDENTITY_CONFLICT'; END IF;
+    v_was_unbound_join := v_inv.normalized_email IS NULL;
+    IF EXISTS (SELECT 1 FROM public.members AS m WHERE pg_catalog.lower(pg_catalog.btrim(m.email)) = v_email)
+       OR EXISTS (SELECT 1 FROM auth.users AS u WHERE pg_catalog.lower(pg_catalog.btrim(COALESCE(u.email, ''))) = v_email) THEN
+      -- Return normally so the pending link remains usable with another address.
+      RETURN pg_catalog.jsonb_build_object('status', 'identity_conflict');
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.member_password_invitations AS i
+               WHERE i.id <> v_inv.id AND i.normalized_email = v_email AND i.purpose = 'join'
+                 AND i.status IN ('pending', 'reserved', 'review_required')
+                 AND (i.status <> 'pending' OR i.expires_at > pg_catalog.clock_timestamp())) THEN
+      RETURN pg_catalog.jsonb_build_object('status', 'identity_conflict');
+    END IF;
+    IF v_was_unbound_join THEN
+      -- Expire stale email-bound join links while holding the same email lock;
+      -- their audit rows and this new binding commit together.
+      WITH expired AS (
+        UPDATE public.member_password_invitations AS i
+        SET status = 'expired', expired_at = pg_catalog.clock_timestamp()
+        WHERE i.id <> v_inv.id AND i.normalized_email = v_email AND i.purpose = 'join'
+          AND i.status = 'pending' AND i.expires_at <= pg_catalog.clock_timestamp()
+        RETURNING i.id, i.member_id
+      )
+      INSERT INTO public.member_password_audit (invitation_id, member_id, action, details)
+      SELECT expired.id, expired.member_id, 'expired', '{}'::jsonb FROM expired;
+      UPDATE public.member_password_invitations
+      SET normalized_email = v_email
+      WHERE id = v_inv.id AND status = 'pending' AND normalized_email IS NULL;
+      IF NOT FOUND THEN RAISE EXCEPTION 'REVIEW_REQUIRED'; END IF;
+      v_inv.normalized_email := v_email;
+    END IF;
+  ELSE
+    SELECT * INTO v_member FROM public.members WHERE id = v_inv.member_id FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'MEMBER_NOT_FOUND'; END IF;
+    IF pg_catalog.lower(pg_catalog.btrim(v_member.email)) <> v_inv.normalized_email THEN RAISE EXCEPTION 'IDENTITY_CONFLICT'; END IF;
+    IF (SELECT count(*) FROM public.members AS m WHERE pg_catalog.lower(pg_catalog.btrim(m.email)) = v_inv.normalized_email) <> 1 THEN
+      RAISE EXCEPTION 'IDENTITY_CONFLICT';
+    END IF;
+    IF COALESCE(v_member.work_status, '') <> 'active' THEN RAISE EXCEPTION 'MEMBER_DISABLED'; END IF;
+    SELECT * INTO v_mapping FROM public.member_auth_bindings WHERE member_id = v_inv.member_id FOR UPDATE;
+    IF FOUND AND (v_mapping.auth_user_id IS DISTINCT FROM v_inv.expected_auth_user_id
+        OR v_mapping.normalized_email IS DISTINCT FROM v_inv.normalized_email) THEN
+      RAISE EXCEPTION 'IDENTITY_CONFLICT';
+    END IF;
+
+    SELECT count(*)::integer INTO v_identity_matches FROM auth.users AS u WHERE pg_catalog.lower(COALESCE(u.email, '')) = v_inv.normalized_email;
+    IF v_identity_matches > 1 THEN RAISE EXCEPTION 'IDENTITY_CONFLICT'; END IF;
+    SELECT u.* INTO v_identity FROM auth.users AS u WHERE pg_catalog.lower(COALESCE(u.email, '')) = v_inv.normalized_email;
+    IF FOUND THEN
+      IF EXISTS (SELECT 1 FROM public.admin_accounts AS a WHERE a.user_id = v_identity.id)
+         OR v_identity.deleted_at IS NOT NULL OR v_identity.banned_until IS NOT NULL
+         OR COALESCE(v_identity.is_sso_user, false)
+         OR NOT (COALESCE(v_identity.raw_app_meta_data -> 'providers', '[]'::jsonb) ? 'email') THEN
+        RAISE EXCEPTION 'IDENTITY_CONFLICT';
+      END IF;
+      IF v_inv.expected_auth_user_id IS NULL OR v_inv.expected_auth_user_id IS DISTINCT FROM v_identity.id THEN RAISE EXCEPTION 'IDENTITY_CONFLICT'; END IF;
+      IF v_inv.purpose = 'enroll' AND COALESCE(v_identity.encrypted_password, '') <> '' THEN RAISE EXCEPTION 'PASSWORD_ALREADY_SET'; END IF;
+    ELSIF v_inv.expected_auth_user_id IS NOT NULL THEN
+      RAISE EXCEPTION 'IDENTITY_CONFLICT';
+    END IF;
+    IF v_inv.purpose = 'reset' AND (v_mapping.member_id IS NULL OR v_inv.expected_auth_user_id IS DISTINCT FROM v_mapping.auth_user_id) THEN
+      RAISE EXCEPTION 'IDENTITY_CONFLICT';
+    END IF;
+  END IF;
+
+  UPDATE public.member_password_invitations
+  SET normalized_email = v_email, status = 'reserved', claim_id = v_claim, claimed_at = pg_catalog.clock_timestamp()
+  WHERE id = v_inv.id AND status = 'pending'
+    AND normalized_email IS NOT DISTINCT FROM v_inv.normalized_email;
+  IF NOT FOUND THEN RAISE EXCEPTION 'REVIEW_REQUIRED'; END IF;
+  INSERT INTO public.member_password_audit (invitation_id, member_id, action, details)
+  VALUES (v_inv.id, v_inv.member_id, 'reserved', pg_catalog.jsonb_build_object('purpose', v_inv.purpose));
+  RETURN pg_catalog.jsonb_build_object('invitation_id', v_inv.id, 'claim_id', v_claim,
+    'member_id', v_inv.member_id, 'email', v_email, 'purpose', v_inv.purpose,
+    'expected_auth_user_id', v_inv.expected_auth_user_id);
+EXCEPTION WHEN unique_violation THEN
+  IF v_was_unbound_join THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'identity_conflict');
+  END IF;
+  RAISE EXCEPTION 'REVIEW_REQUIRED';
+END;
+$$;
+REVOKE ALL ON FUNCTION public.member_password_reserve(TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.member_password_reserve(TEXT, TEXT) TO service_role;
+
+COMMIT;

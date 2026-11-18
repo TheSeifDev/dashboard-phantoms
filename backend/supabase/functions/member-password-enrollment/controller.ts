@@ -217,17 +217,18 @@ function validateEnroll(body: Record<string, unknown>):
 }
 
 function validateIssue(body: Record<string, unknown>):
-  | { ok: true; memberId: number | null; email: string; purpose: 'enroll' | 'reset' | 'join'; expiresInHours: number; note: string }
+  | { ok: true; memberId: number | null; email: string | null; purpose: 'enroll' | 'reset' | 'join'; expiresInHours: number; note: string }
   | { ok: false; code: string } {
   const requiredKeys = ['action', 'memberId', 'email', 'purpose', 'expiresInHours', 'note'] as const;
   if (!hasExactKeys(body, requiredKeys)) return { ok: false, code: 'INVALID_INPUT' };
-  const email = normalizeEmail(body.email);
+  const emailValue = body.email;
+  const email = emailValue === null ? null : normalizeEmail(emailValue);
   const memberId = body.memberId === null ? null : typeof body.memberId === 'number' && Number.isSafeInteger(body.memberId) && body.memberId > 0 ? body.memberId : null;
   const purpose = body.purpose === 'enroll' || body.purpose === 'reset' || body.purpose === 'join' ? body.purpose : null;
   const expires = typeof body.expiresInHours === 'number' && Number.isInteger(body.expiresInHours) && body.expiresInHours >= 1 && body.expiresInHours <= 2160 ? body.expiresInHours : null;
   const note = typeof body.note === 'string' && body.note.length <= 500 ? body.note : null;
-  if (!email || purpose === null || expires === null || note === null
-      || (purpose === 'join' ? body.memberId !== null : memberId === null)) return { ok: false, code: 'INVALID_INPUT' };
+  if ((emailValue !== null && email === null) || purpose === null || expires === null || note === null
+      || (purpose === 'join' ? body.memberId !== null : memberId === null || email === null)) return { ok: false, code: 'INVALID_INPUT' };
   return { ok: true, memberId, email, purpose, expiresInHours: expires, note };
 }
 
@@ -268,6 +269,9 @@ async function enroll(runtime: ControllerRuntime, body: Record<string, unknown>,
     }
     if ((reserved.data as { status?: unknown }).status === 'expired') {
       return errorResponse('EXPIRED', statusForCode('EXPIRED'), origin);
+    }
+    if ((reserved.data as { status?: unknown }).status === 'identity_conflict') {
+      return errorResponse('IDENTITY_CONFLICT', statusForCode('IDENTITY_CONFLICT'), origin);
     }
     if (typeof reserved.data.invitation_id !== 'string' || !UUID_RE.test(reserved.data.invitation_id)
         || typeof reserved.data.claim_id !== 'string' || !UUID_RE.test(reserved.data.claim_id)) {
@@ -385,7 +389,7 @@ async function issue(runtime: ControllerRuntime, body: Record<string, unknown>, 
   if (!parsed.ok) return errorResponse(parsed.code, statusForCode(parsed.code), origin);
   const token = randomInvitationToken();
   const issued = await runtime.adminDb.rpc<{
-    id: string; member_id: number | null; email: string; purpose: 'enroll' | 'reset' | 'join'; note: string; expires_at: string;
+    id: string; member_id: number | null; email: string | null; purpose: 'enroll' | 'reset' | 'join'; note: string; expires_at: string;
   }>('member_password_issue_invitation', {
     p_token_hash: await sha256Hex(token),
     p_member_id: parsed.memberId,

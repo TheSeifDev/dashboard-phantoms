@@ -83,6 +83,14 @@ test('Admin and member self-service screens expose links only, with no separate 
   assert.doesNotMatch(memberSelfRegister, /id="join-token"|أدخل الكود يدوياً|أدخل رمز الدعوة/);
 });
 
+test('only a new join link may omit the Admin-known email; the recipient must still enter their own email', () => {
+  assert.match(inviteModal, /بريد العضو الجديد \(اختياري\)/);
+  assert.match(inviteModal, /يكتب العضو بريده بنفسه عند التسجيل/);
+  assert.match(inviteApi, /interface IssueInput[\s\S]*?email: string \| null/);
+  assert.match(inviteApi, /input\.purpose === 'join'[\s\S]*?email === null/);
+  assert.match(memberSelfRegister, /id="join-email" type="email"[^>]*required/);
+});
+
 test('member result selections exclude secrets while write-field protections remain intact', () => {
   assert.doesNotMatch(`${api}\n${inviteApi}`, /\.select\([^)]*(?:session_token|push_subscription)/);
   assert.match(api, /MEMBER_WRITABLE_FIELDS/);

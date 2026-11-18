@@ -98,5 +98,15 @@
     "remote_applied_timestamp": null,
     "original_source_version": "20261118153000",
     "original_source_filename": "backend/supabase/migrations/20261118153000_member_password_self_service_join.sql"
+  },
+  {
+    "version": "20261118200500",
+    "name": "member_password_optional_join_email",
+    "canonical_repository_filename": "backend/supabase/migrations/20261118200500_member_password_optional_join_email.sql",
+    "sha256": "562d5d74378ed3423206623312836aacd8048791d3248402c89d59b4737f99d1",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261118200500",
+    "original_source_filename": "backend/supabase/migrations/20261118200500_member_password_optional_join_email.sql"
   }
 ]

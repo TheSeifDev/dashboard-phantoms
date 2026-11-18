@@ -88,9 +88,10 @@ function emptyBoundaryObservations() {
   return BOUNDARY_LABELS.map((label) => ({ label, characters: 0, utf8Bytes: 0, accepted: false, exactLogin: false, trimmedRejected: false, changedSuffixRejected: false }));
 }
 const fixture = {
-  emails: new Set(),
   memberIds: [],
-  joinEmails: new Set(),
+  joinIssueNotes: new Set(),
+  invitationNotes: new Set(),
+  joinIssueActorId: null,
   resetTokens: new Set(),
   authUserIds: [],
   adminUserIds: [],
@@ -431,7 +432,7 @@ async function createUser(admin, email, password, confirmed = true) {
   assertRpc(result, 'Auth fixture creation');
   const user = result.data.user;
   if (!user?.id) fail('Auth fixture did not return an id');
-  fixture.authUserIds.push(user.id); fixture.emails.add(email); fixture.passwords.add(password ?? '');
+  fixture.authUserIds.push(user.id); fixture.passwords.add(password ?? '');
   return user;
 }
 
@@ -455,14 +456,15 @@ async function createMember(service, email, label) {
     meeting_attendance: 'regular', work_status: 'active', can_go_alexandria: false, custom_fields: {},
   }).select('id,email').limit(1).single();
   assertRpc(result, 'member fixture row');
-  fixture.memberIds.push(result.data.id); fixture.emails.add(email);
+  fixture.memberIds.push(result.data.id);
   return result.data;
 }
-async function issue(accessToken, memberId, email, purpose = 'enroll') {
-  const normalizedEmail = String(email).trim().toLowerCase();
-  if (purpose === 'join') { fixture.joinEmails.add(normalizedEmail); fixture.emails.add(normalizedEmail); }
-  rememberRateKey('member-password:email:', normalizedEmail);
-  const body = { action: 'issue', memberId, email, purpose, expiresInHours: 24, note: 'owned real HTTP fixture' };
+async function issue(accessToken, memberId, email, purpose = 'enroll', note = 'owned real HTTP fixture') {
+  const normalizedEmail = typeof email === 'string' ? String(email).trim().toLowerCase() : null;
+  fixture.invitationNotes.add(note);
+  if (purpose === 'join' && normalizedEmail === null) fixture.joinIssueNotes.add(note);
+  if (normalizedEmail) rememberRateKey('member-password:email:', normalizedEmail);
+  const body = { action: 'issue', memberId, email: normalizedEmail, purpose, expiresInHours: 24, note };
   const result = await adminAction(body, accessToken);
   if (result.status !== 200 || !result.payload.invite?.id || !result.payload.invite?.token) fail('invitation issue failed');
   fixture.invitationIds.push(result.payload.invite.id);
@@ -503,7 +505,14 @@ async function seedFixtures() {
   const passwords = Object.fromEntries(names.map((name) => [name, validPassword(name)]));
   const users = {};
   users.admin = await createUser(admin, email('admin'), passwords.admin, true);
+  fixture.joinIssueActorId = users.admin.id;
+  const joinIssueNote = `real-http-join-${suffix}`;
+  fixture.joinIssueNotes.add(joinIssueNote);
   await addAdmin(service, users.admin.id, { members: true, dashboard: true, tasks: true });
+  const existingJoinMarker = await service.from('member_password_invitations').select('id')
+    .eq('created_by', fixture.joinIssueActorId).eq('purpose', 'join').eq('note', joinIssueNote).limit(1);
+  assertRpc(existingJoinMarker, 'unbound join ownership-marker preflight');
+  assert.equal(existingJoinMarker.data?.length, 0, 'unique join ownership marker must be unused');
   users.unrelatedAdmin = await createUser(admin, email('unrelated-admin'), passwords['unrelated-admin'], true);
   await addAdmin(service, users.unrelatedAdmin.id, { members: true, dashboard: true });
   users.outsider = await createUser(admin, email('outsider'), passwords.outsider, true);
@@ -558,7 +567,6 @@ async function newMemberLifecycle(ctx) {
   const profile = await memberClient.rpc('lookup_member_by_email', { p_email: members.new.email, p_device_token: device });
   assert.equal(profile.error, null); assert.equal(profile.data?.[0]?.id, members.new.id);
   const publicSignupEmail = emailFor('public-signup', ctx.suffix);
-  fixture.emails.add(publicSignupEmail);
   const signup = await anonClient().auth.signUp({ email: publicSignupEmail, password: validPassword('public-signup') });
   assert.ok(signup.error, 'public signup must be rejected');
   if (signup.data?.user?.id) fixture.authUserIds.push(signup.data.user.id);
@@ -577,7 +585,26 @@ async function selfServiceJoinLifecycle(ctx) {
   const existingJoinInvite = await ctx.service.from('member_password_invitations').select('id').eq('normalized_email', email).eq('purpose', 'join').limit(1);
   assertRpc(existingJoinInvite, 'self-service join invitation collision check');
   assert.equal(existingJoinInvite.data?.length, 0, 'self-service join email must not already have an invitation');
-  const invite = await issue(adminSession.data.session.access_token, null, email, 'join');
+  rememberRateKey('member-password:email:', email);
+  const joinIssueNote = [...fixture.joinIssueNotes][0];
+  const invite = await issue(adminSession.data.session.access_token, null, null, 'join', joinIssueNote);
+  const unbound = await ctx.service.from('member_password_invitations')
+    .select('id,normalized_email,purpose,status,created_by,note').eq('id', invite.id).limit(1);
+  assertRpc(unbound, 'unbound join issue row');
+  assert.equal(unbound.data?.length, 1);
+  assert.equal(unbound.data[0].normalized_email, null, 'Admin email is not stored when left blank');
+  assert.equal(unbound.data[0].status, 'pending');
+  assert.equal(unbound.data[0].created_by, fixture.joinIssueActorId);
+  assert.equal(unbound.data[0].note, joinIssueNote);
+
+  const collision = await enrollRequest(ctx.members.passworded.email, invite.token, password);
+  assert.equal(collision.status, 400);
+  assert.equal(collision.payload.code, 'IDENTITY_CONFLICT');
+  const stillUnbound = await ctx.service.from('member_password_invitations')
+    .select('normalized_email,status').eq('id', invite.id).limit(1);
+  assertRpc(stillUnbound, 'unbound invitation after email collision');
+  assert.deepEqual(stillUnbound.data?.[0], { normalized_email: null, status: 'pending' }, 'a conflicting email does not consume or bind the one-use link');
+
   const completion = await enrollRequest(email, invite.token, password);
   assert.equal(completion.status, 200);
   assert.deepEqual(completion.payload, { ok: true, membership: 'pending_review' });
@@ -595,6 +622,9 @@ async function selfServiceJoinLifecycle(ctx) {
   assert.equal(binding.length, 1);
   assert.equal(binding[0].auth_user_id, authUsers[0].id);
   assert.equal(binding[0].password_ready, true);
+  const replay = await enrollRequest(email, invite.token, validPassword('self-service-join-replay'));
+  assert.equal(replay.status, 400);
+  assert.equal(replay.payload.code, 'ALREADY_USED', 'a completed email-optional join link cannot be used again');
   const session = await signIn(email, password);
   assert.equal(session.error, null, 'the newly provisioned identity can authenticate without opening member portal access');
   const memberClient = createClient(status.api, status.anonKey, {
@@ -741,7 +771,7 @@ async function passwordBoundaries(ctx) {
   ];
   const observations = [];
   for (const [label, password] of cases) {
-    const email = emailFor(`boundary-${label}`, ctx.suffix); fixture.emails.add(email); fixture.passwords.add(password);
+    const email = emailFor(`boundary-${label}`, ctx.suffix); fixture.passwords.add(password);
     const result = await bounded(admin.createUser({ email, password, email_confirm: true }));
     const accepted = !result.error && Boolean(result.data?.user?.id);
     if (accepted) fixture.authUserIds.push(result.data.user.id);
@@ -761,7 +791,7 @@ async function passwordBoundaries(ctx) {
   }
   const byteCases = [['utf8bytes72', `A1${'Ж'.repeat(35)}`], ['utf8bytes73', `A1${'Ж'.repeat(35)}Z`]];
   for (const [label, password] of byteCases) {
-    const email = emailFor(`boundary-${label}`, ctx.suffix); fixture.emails.add(email); fixture.passwords.add(password);
+    const email = emailFor(`boundary-${label}`, ctx.suffix); fixture.passwords.add(password);
     const result = await bounded(admin.createUser({ email, password, email_confirm: true }));
     const accepted = !result.error && Boolean(result.data?.user?.id);
     if (accepted) fixture.authUserIds.push(result.data.user.id);
@@ -807,7 +837,7 @@ async function passwordBoundaries(ctx) {
   }
   const whitespaceEmail = emailFor('boundary-whitespace', ctx.suffix);
   const whitespacePassword = `${'A'.repeat(10)}1 `;
-  fixture.emails.add(whitespaceEmail); fixture.passwords.add(whitespacePassword);
+  fixture.passwords.add(whitespacePassword);
   const whitespaceUser = await bounded(admin.createUser({ email: whitespaceEmail, password: whitespacePassword, email_confirm: true }));
   assert.equal(whitespaceUser.error, null); assert.ok(whitespaceUser.data?.user?.id); fixture.authUserIds.push(whitespaceUser.data.user.id);
   const exact = await signIn(whitespaceEmail, whitespacePassword);
@@ -1136,16 +1166,24 @@ async function controlledChildTermination(ctx) {
 }
 
 
-async function listOwnedAuthUsers(admin) {
-  const matches = [];
-  for (let page = 1; page <= 20; page += 1) {
-    const result = await bounded(admin.listUsers({ page, perPage: 100 }), CLEANUP_TIMEOUT_MS);
-    if (result.error) fail('Auth cleanup listing failed');
-    const users = result.data?.users ?? [];
-    for (const user of users) if (typeof user.email === 'string' && fixture.emails.has(user.email.trim().toLowerCase())) matches.push(user);
-    if (users.length < 100) return matches;
-  }
-  fail('bounded Auth cleanup listing exceeded');
+function authUserNotFound(result) {
+  return Boolean(result?.error && (result.error.status === 404 || /user not found/i.test(String(result.error.message ?? ''))));
+}
+async function assertExactAuthUserAbsent(admin, userId) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) fail('invalid exact Auth fixture UUID');
+  const result = await bounded(admin.getUserById(userId), CLEANUP_TIMEOUT_MS);
+  if (authUserNotFound(result) || (!result?.error && !result?.data?.user)) return;
+  if (result?.error) fail('exact Auth fixture lookup failed');
+  fail('owned Auth fixture remains after cleanup');
+}
+async function deleteAndVerifyExactAuthUser(admin, userId) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) fail('invalid exact Auth fixture UUID');
+  const before = await bounded(admin.getUserById(userId), CLEANUP_TIMEOUT_MS);
+  if (authUserNotFound(before) || (!before?.error && !before?.data?.user)) return;
+  if (before?.error) fail('exact Auth fixture lookup failed');
+  const deleted = await bounded(admin.deleteUser(userId), CLEANUP_TIMEOUT_MS);
+  if (deleted?.error && !authUserNotFound(deleted)) fail('exact Auth fixture deletion failed');
+  await assertExactAuthUserAbsent(admin, userId);
 }
 async function cleanup() {
   const failures = [];
@@ -1160,24 +1198,25 @@ async function cleanup() {
       return result;
     } catch { failures.push(true); return null; }
   };
-  if (service && fixture.joinEmails.size) {
-    const emails = [...fixture.joinEmails];
-    const discoveredInvites = await attempt(() => service.from('member_password_invitations').select('id,normalized_email,purpose').in('normalized_email', emails).eq('purpose', 'join').limit(1000));
-    if (!discoveredInvites || discoveredInvites.error || !Array.isArray(discoveredInvites.data)) failures.push(true);
+  const actorId = fixture.joinIssueActorId ?? fixture.adminUserIds[0];
+  if (service && actorId && fixture.invitationNotes.size) {
+    const notes = [...fixture.invitationNotes];
+    const discovered = await attempt(() => service.from('member_password_invitations')
+      .select('id,created_by,member_id,purpose,note,expected_auth_user_id,auth_user_id,auth_write_user_id')
+      .eq('created_by', actorId).in('note', notes).limit(1000));
+    if (!discovered || discovered.error || !Array.isArray(discovered.data) || discovered.data.length >= 1000) failures.push(true);
     else {
-      if (discoveredInvites.data.length >= 1000) failures.push(true);
-      for (const row of discoveredInvites.data) {
-        const normalizedEmail = typeof row.normalized_email === 'string' ? row.normalized_email.trim().toLowerCase() : '';
-        if (row.purpose !== 'join' || !fixture.joinEmails.has(normalizedEmail) || typeof row.id !== 'string') { failures.push(true); continue; }
+      for (const row of discovered.data) {
+        if (typeof row.id !== 'string' || row.created_by !== actorId || !fixture.invitationNotes.has(row.note)
+            || !['join', 'enroll', 'reset'].includes(row.purpose)) {
+          failures.push(true); continue;
+        }
         if (!fixture.invitationIds.includes(row.id)) fixture.invitationIds.push(row.id);
-      }
-    }
-    const discoveredMembers = await attempt(() => service.from('members').select('id,email').in('email', emails).limit(1000));
-    if (!discoveredMembers || discoveredMembers.error || !Array.isArray(discoveredMembers.data)) failures.push(true);
-    else {
-      if (discoveredMembers.data.length >= 1000) failures.push(true);
-      for (const row of discoveredMembers.data) {
-        if (fixture.joinEmails.has(String(row.email).trim().toLowerCase()) && !fixture.memberIds.includes(row.id)) fixture.memberIds.push(row.id);
+        if (Number.isSafeInteger(row.member_id) && row.member_id > 0 && !fixture.memberIds.includes(row.member_id)) fixture.memberIds.push(row.member_id);
+        for (const userId of [row.expected_auth_user_id, row.auth_user_id, row.auth_write_user_id]) {
+          if (typeof userId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)
+              && !fixture.authUserIds.includes(userId)) fixture.authUserIds.push(userId);
+        }
       }
     }
   }
@@ -1188,29 +1227,29 @@ async function cleanup() {
   if (service && fixture.memberIds.length) await attempt(() => service.from('members').delete().in('id', fixture.memberIds));
   if (service && fixture.adminUserIds.length) await attempt(() => service.from('admin_accounts').delete().in('user_id', [...new Set(fixture.adminUserIds)]));
   if (service && fixture.rateKeyHashes.size) await attempt(() => service.from('member_password_rate_limits').delete().in('key_hash', [...fixture.rateKeyHashes]));
-  if (service) {
-    let users = [];
-    try { users = await listOwnedAuthUsers(service.auth.admin); } catch { failures.push(true); }
-    const listedIds = new Set(users.map((user) => user.id));
-    for (const user of users) await attempt(() => service.auth.admin.deleteUser(user.id));
-    for (const id of new Set(fixture.authUserIds)) if (!listedIds.has(id)) await attempt(() => service.auth.admin.deleteUser(id));
-  }
+  const exactAuthUserIds = new Set([...fixture.authUserIds, ...fixture.adminUserIds]);
+  if (service) for (const id of exactAuthUserIds) await attempt(() => deleteAndVerifyExactAuthUser(service.auth.admin, id));
   if (service) {
     const checks = [
       ['members', 'id', fixture.memberIds], ['member_auth_bindings', 'member_id', fixture.memberIds],
       ['member_password_invitations', 'id', fixture.invitationIds], ['member_password_audit', 'member_id', fixture.memberIds],
     ];
     for (const [table, column, values] of checks) if (values.length) await attempt(async () => { const rows = await selectOwned(service, table, column, column, values); if (rows.length) return { error: new Error('owned rows remain') }; return { data: rows }; });
-    if (fixture.invitationIds.length) await attempt(async () => { const rows = await service.from('member_password_audit').select('id').in('invitation_id', [...new Set(fixture.invitationIds)]).limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('owned invitation audit rows remain') } : rows; });
     if (fixture.memberIds.length) await attempt(async () => { const rows = await service.from('member_password_audit').select('id').in('member_id', fixture.memberIds).limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('owned member audit rows remain') } : rows; });
-    if (fixture.joinEmails.size) {
-      const emails = [...fixture.joinEmails];
-      await attempt(async () => { const rows = await service.from('member_password_invitations').select('id').in('normalized_email', emails).eq('purpose', 'join').limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('owned join invitations remain') } : rows; });
-      await attempt(async () => { const rows = await service.from('members').select('id').in('email', emails).limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('owned join members remain') } : rows; });
+    if (fixture.invitationIds.length) {
+      await attempt(async () => { const rows = await service.from('member_password_invitations').select('id').in('id', [...new Set(fixture.invitationIds)]).limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('exact owned invitations remain') } : rows; });
+      await attempt(async () => { const rows = await service.from('member_password_audit').select('id').in('invitation_id', [...new Set(fixture.invitationIds)]).limit(1000); return rows.error || rows.data?.length ? { error: rows.error ?? new Error('exact owned invitation audit rows remain') } : rows; });
+    }
+    if (actorId && fixture.invitationNotes.size) {
+      await attempt(async () => {
+        const rows = await service.from('member_password_invitations').select('id')
+          .eq('created_by', actorId).in('note', [...fixture.invitationNotes]).limit(1000);
+        return rows.error || rows.data?.length ? { error: rows.error ?? new Error('exact owned invitation markers remain') } : rows;
+      });
     }
     await attempt(async () => { const rows = await service.from('admin_accounts').select('user_id').in('user_id', [...new Set(fixture.adminUserIds)]).limit(Math.max(fixture.adminUserIds.length, 1)); return rows.data?.length ? { error: new Error('owned admin rows remain') } : rows; });
     await attempt(async () => { const rows = await service.from('member_password_rate_limits').select('key_hash').in('key_hash', [...fixture.rateKeyHashes]).limit(Math.max(fixture.rateKeyHashes.size, 1)); return rows.data?.length ? { error: new Error('owned rate rows remain') } : rows; });
-    try { if ((await listOwnedAuthUsers(service.auth.admin)).length) failures.push(true); } catch { failures.push(true); }
+    for (const id of exactAuthUserIds) await attempt(() => assertExactAuthUserAbsent(service.auth.admin, id));
   }
   if (ownedSqlFaults.size) failures.push(true);
   return failures.length ? 'failed' : 'passed';
@@ -1236,7 +1275,7 @@ async function run() {
     });
     if (status && evidence.pg17 && evidence.stages[0].passed) {
       const ctx = await seedFixtures();
-      ctx.fixtureEmail = ctx.users.admin.email; ctx.outsiderEmail = ctx.users.outsider.email; ctx.extraEmail = emailFor('extra', ctx.suffix); fixture.emails.add(ctx.extraEmail);
+      ctx.fixtureEmail = ctx.users.admin.email; ctx.outsiderEmail = ctx.users.outsider.email; ctx.extraEmail = emailFor('extra', ctx.suffix);
       await mark(REAL_STAGE_LABELS[1], async () => {
         await newMemberLifecycle(ctx);
         await selfServiceJoinLifecycle(ctx);

@@ -527,11 +527,19 @@ jobs:
             && expected.every((key) => Object.hasOwn(value, key));
           const exactSqlChecks = (sql) => {
             if (!exactKeys(sql, ['schema', 'mode', 'boundary', 'pg17', 'passed', 'checks', 'cleanupStatus'])
-              || !Array.isArray(sql.checks) || sql.checks.length !== 3) return false;
+              || !Array.isArray(sql.checks) || sql.checks.length !== 5) return false;
             const expected = [
               {
                 keys: ['name', 'connections', 'successfulClaims', 'reviewRejected', 'durableClaims', 'passed'],
                 values: { name: 'eight simultaneous reserve transactions', connections: 8, successfulClaims: 1, reviewRejected: 7, durableClaims: 1 },
+              },
+              {
+                keys: ['name', 'connections', 'successfulReservations', 'identityConflicts', 'singleBoundInvitation', 'loserStaysPendingUnbound', 'passed'],
+                values: { name: 'two email-free join links race for one recipient email', connections: 2, successfulReservations: 1, identityConflicts: 1, singleBoundInvitation: 1, loserStaysPendingUnbound: 1 },
+              },
+              {
+                keys: ['name', 'connections', 'reservationClaimed', 'memberInsertBlocked', 'adminInsertWonAndReservationRejected', 'passed'],
+                values: { name: 'email-free join reservation races Admin member insertion', connections: 2 },
               },
               {
                 keys: ['name', 'connections', 'allowedWrites', 'blockedWrites', 'exactUuidMarkers', 'passed'],
@@ -542,9 +550,14 @@ jobs:
                 values: { name: 'twelve simultaneous limiter increments', connections: 12, durableAttempts: 12 },
               },
             ];
-            return sql.checks.every((check, index) => exactKeys(check, expected[index].keys)
+            if (!sql.checks.every((check, index) => exactKeys(check, expected[index].keys)
               && check.passed === true
-              && Object.entries(expected[index].values).every(([key, value]) => check[key] === value));
+              && Object.entries(expected[index].values).every(([key, value]) => check[key] === value))) return false;
+            const memberRace = sql.checks[2];
+            return (memberRace.reservationClaimed === true && memberRace.memberInsertBlocked === true
+                && memberRace.adminInsertWonAndReservationRejected === false)
+              || (memberRace.reservationClaimed === false && memberRace.memberInsertBlocked === false
+                && memberRace.adminInsertWonAndReservationRejected === true);
           };
           const auth = readJson('test-results/auth-evidence.json');
           if (!isCompleteAuthEvidence(auth)) throw new Error('Required Auth evidence is missing or incomplete.');
@@ -554,7 +567,7 @@ jobs:
           if (!isCompleteInventoryPaginationEvidence(inventory)) throw new Error('Required inventory pagination evidence is missing or incomplete.');
           const sql = readJson('test-results/member-password-sql-concurrency.json');
           if (!exactSqlChecks(sql)
-            || sql.schema !== 'phantoms-local-pg17-sql-concurrency/v1'
+            || sql.schema !== 'phantoms-local-pg17-sql-concurrency/v2'
             || sql.mode !== 'local-supabase-pg17-sql-only'
             || sql.boundary !== 'PostgreSQL only; fabricated Auth rows, not GoTrue'
             || sql.pg17 !== true

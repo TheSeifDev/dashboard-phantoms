@@ -52,13 +52,13 @@ function withFixture(body) {
   try { body(f); } finally { f.cleanup(); }
 }
 
-test('repository retains 24 initialized files, the applied correction and nine pending password migrations', () => {
+test('repository retains 24 initialized files, the applied correction and ten pending password migrations', () => {
   const result = validateMigrationManifest({ rootDir: root });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, 24);
-  assert.equal(result.forwardEntryCount, 10);
-  assert.equal(result.migrationFiles.length, 34);
-  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql']);
+  assert.equal(result.forwardEntryCount, 11);
+  assert.equal(result.migrationFiles.length, 35);
+  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql', '20261118200500_member_password_optional_join_email.sql']);
   const entries = JSON.parse(readFileSync(join(root, FORWARD_MANIFEST_PATH), 'utf8'));
   assert.equal(entries[0].version, forwardVersion);
   assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
@@ -100,6 +100,12 @@ test('repository retains 24 initialized files, the applied correction and nine p
   assert.equal(entries[6].remote_applied_timestamp, null);
   assert.equal(entries[6].original_source_version, entries[6].version);
   assert.equal(entries[5].original_source_filename, entries[5].canonical_repository_filename);
+  assert.equal(entries[10].version, '20261118200500');
+  assert.equal(entries[10].production_status, 'not_applied');
+  assert.equal(entries[10].remote_applied_timestamp, null);
+  assert.equal(entries[10].original_source_version, entries[10].version);
+  assert.equal(entries[10].original_source_filename, entries[10].canonical_repository_filename);
+  assert.equal(entries[10].sha256, createHash('sha256').update(readFileSync(join(root, entries[10].canonical_repository_filename))).digest('hex'));
 });
 
 test('a valid separate forward registration does not change initialization provenance', () => {

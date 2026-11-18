@@ -51,7 +51,7 @@
 
 2. **Member Directory & Profile Management**
    - Comprehensive member profiles: hardware readiness, geographic availability, role tags.
-   - Administrator-issued, manually shared one-time links: new members enter their own profile and password and wait inactive for Admin review; existing members receive a first-password setup or password-only reset link.
+   - Administrator-issued, manually shared expiring one-time links: for a new member the Admin may leave email blank, and the recipient enters their own email, profile and password before waiting inactive for Admin review; existing members receive a first-password setup or password-only reset link.
    - Resilient member deletion lifecycle with a 5-second persistent undo barrier.
 
 3. **Task & Assignment Lifecycle**
@@ -80,7 +80,7 @@
 
 ## Security Architecture & Authorization Model
 
-- **Invitation-Only Member Password Auth:** An Admin issues a one-time link and shares it out-of-band; no manual Auth UUID or Admin-entered member password is required. A new-member join validates the hashed credential server-side, lets the member enter their profile and password, then keeps the new membership inactive pending Admin review without opening the portal. Existing-member first-password setup and reset are distinct exact-member operations; reset accepts a new password only and cannot edit profile data. Enrollment redirects to Login without a session. Public signup remains disabled; global email confirmation stays enabled. Normal login and reset do not require OTP, SMTP or application-sent invitation email.
+- **Invitation-Only Member Password Auth:** An Admin issues an expiring one-time link and shares it out-of-band; no manual Auth UUID or Admin-entered member password is required. For a new-member join, Admin may optionally pre-bind an email; otherwise the recipient must enter their own email on the link, where it is atomically bound at first use. The member also enters their profile and password, then remains inactive pending Admin review without portal access. The app does not send an email-verification message, so the Admin must independently verify identity and the submitted contact email before activation. Existing-member first-password setup and reset are distinct exact-member operations; reset accepts a new password only and cannot edit profile data. Enrollment redirects to Login without a session. Public signup remains disabled; global email confirmation stays enabled. Normal login and reset do not require OTP, SMTP or application-sent invitation email.
 - **Verified-Device Session Binding:** The isolated member client signs in with a password. `get_member_password_access` must verify the exact Auth UUID, normalized email, active membership and completed password enrollment before device binding and portal access. Cryptographic device tokens remain a second authorization requirement, not authentication by themselves. Old unbound invitation/device credentials are not password-enrollment authority.
 - **Dynamic Multi-Admin & Owner Authorization:** Administrative access is governed by the `admin_access` table and PostgreSQL `is_admin()` RPC checks (migration `0022`), decoupling authorization from hardcoded UUIDs and supporting granular administrative permissions.
 - **Destructive Mutation Guards:** AI assistant actions that perform deletions cannot execute autonomously; they require explicit operator confirmation through dedicated UI modals.
@@ -170,7 +170,7 @@ dashboard-phantoms/
 ├── backend/
 │   ├── scripts/                  # Migration manifest, runtime validation, and operator inventory
 │   ├── supabase/
-│   │   ├── migrations/           # Canonical SQL (24 historical + 9 forward; see forward manifest)
+│   │   ├── migrations/           # Canonical SQL (24 historical + 11 forward; see forward manifest)
 │   │   ├── functions/            # Edge Functions, including member-password-enrollment
 │   │   └── tests/database/       # Database security and pgTAP suites
 │   ├── whatsapp-service/         # WhatsApp notification API service

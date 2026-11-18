@@ -135,13 +135,15 @@ def run():
 
     actor, reset_user = str(uuid.uuid4()), str(uuid.uuid4())
     suffix = uuid.uuid4().hex
-    emails = [f'concurrency-{suffix}-{kind}@phantoms-test.example' for kind in ('owner', 'new', 'reset')]
+    emails = [f'concurrency-{suffix}-{kind}@phantoms-test.example' for kind in ('owner', 'new', 'reset', 'join', 'member-race')]
     invitation_hash = hashlib.sha256(('invitation-' + suffix).encode()).hexdigest()
     reset_hash = hashlib.sha256(('reset-' + suffix).encode()).hexdigest()
+    unbound_hashes = [hashlib.sha256((f'unbound-{index}-' + suffix).encode()).hexdigest() for index in (1, 2)]
+    member_race_hash = hashlib.sha256(('member-race-' + suffix).encode()).hexdigest()
     limit_hash = hashlib.sha256(('limiter-' + suffix).encode()).hexdigest()
     registered = False
     evidence = {
-        'schema': 'phantoms-local-pg17-sql-concurrency/v1',
+        'schema': 'phantoms-local-pg17-sql-concurrency/v2',
         'mode': 'local-supabase-pg17-sql-only',
         'boundary': 'PostgreSQL only; fabricated Auth rows, not GoTrue',
         'pg17': True,
@@ -162,6 +164,9 @@ def run():
           {SERVICE}
           SELECT public.member_password_issue_invitation('{invitation_hash}', (SELECT id FROM public.members WHERE email = '{emails[1]}'), '{emails[1]}', 'enroll', NULL, NULL, 24, 'synthetic concurrency', '{actor}');
           SELECT public.member_password_issue_invitation('{reset_hash}', (SELECT id FROM public.members WHERE email = '{emails[2]}'), '{emails[2]}', 'reset', '{reset_user}', NULL, 24, 'synthetic concurrency', '{actor}');
+          SELECT public.member_password_issue_invitation('{unbound_hashes[0]}', NULL, NULL, 'join', NULL, NULL, 24, 'synthetic unbound concurrency', '{actor}');
+          SELECT public.member_password_issue_invitation('{unbound_hashes[1]}', NULL, NULL, 'join', NULL, NULL, 24, 'synthetic unbound concurrency', '{actor}');
+          SELECT public.member_password_issue_invitation('{member_race_hash}', NULL, NULL, 'join', NULL, NULL, 24, 'synthetic member race', '{actor}');
           COMMIT;""")
         reserve = f"BEGIN; {SERVICE} SELECT public.member_password_reserve('{invitation_hash}', '{emails[1]}'); SELECT pg_sleep(0.2); COMMIT;"
         outcomes = concurrent_sql([reserve] * 8)
@@ -170,6 +175,32 @@ def run():
         durable = sql(f"SELECT count(*) FROM public.member_password_invitations WHERE token_hash = '{invitation_hash}' AND status = 'reserved' AND claim_id IS NOT NULL;").stdout.strip()
         assert (winners, rejected, durable) == (1, 7, '1')
         evidence['checks'].append({'name': 'eight simultaneous reserve transactions', 'connections': 8, 'successfulClaims': winners, 'reviewRejected': rejected, 'durableClaims': 1, 'passed': True})
+        unbound_email = emails[3]
+        unbound_results = concurrent_sql([
+            f"BEGIN; {SERVICE} SELECT public.member_password_reserve('{token_hash}', '{unbound_email}'); SELECT pg_sleep(0.2); COMMIT;"
+            for token_hash in unbound_hashes
+        ])
+        unbound_payloads = [json.loads(result.stdout.strip().splitlines()[-1]) for result in unbound_results]
+        unbound_winners = sum(bool(payload.get('claim_id')) for payload in unbound_payloads)
+        unbound_conflicts = sum(payload.get('status') == 'identity_conflict' for payload in unbound_payloads)
+        unbound_state = sql(f"SELECT count(*) FILTER (WHERE normalized_email = '{unbound_email}' AND status = 'reserved' AND claim_id IS NOT NULL) || '|' || count(*) FILTER (WHERE token_hash IN ('{unbound_hashes[0]}','{unbound_hashes[1]}') AND normalized_email IS NULL AND status = 'pending') FROM public.member_password_invitations WHERE token_hash IN ('{unbound_hashes[0]}','{unbound_hashes[1]}');").stdout.strip()
+        assert (unbound_winners, unbound_conflicts, unbound_state) == (1, 1, '1|1')
+        evidence['checks'].append({'name': 'two email-free join links race for one recipient email', 'connections': 2, 'successfulReservations': 1, 'identityConflicts': 1, 'singleBoundInvitation': 1, 'loserStaysPendingUnbound': 1, 'passed': True})
+
+        member_race_email = emails[4]
+        reserve_statement = f"BEGIN; {SERVICE} SELECT public.member_password_reserve('{member_race_hash}', '{member_race_email}'); SELECT pg_sleep(0.2); COMMIT;"
+        member_insert_statement = f"BEGIN; INSERT INTO public.members(email,full_name,completion_rank) VALUES ('{member_race_email}','Disposable member race',0); SELECT pg_sleep(0.2); COMMIT;"
+        reserve_result, insert_result = concurrent_sql([reserve_statement, member_insert_statement])
+        reserve_payload = json.loads(reserve_result.stdout.strip().splitlines()[-1]) if reserve_result.returncode == 0 else {}
+        reservation_claimed = bool(reserve_payload.get('claim_id'))
+        identity_rejected = reserve_payload.get('status') == 'identity_conflict'
+        member_inserted = insert_result.returncode == 0
+        member_insert_blocked = insert_result.returncode != 0 and 'REGISTRATION_IN_PROGRESS' in insert_result.stderr
+        member_race_state = sql(f"SELECT (SELECT count(*) FROM public.member_password_invitations WHERE token_hash = '{member_race_hash}' AND normalized_email = '{member_race_email}' AND status = 'reserved' AND claim_id IS NOT NULL)::text || '|' || (SELECT count(*) FROM public.member_password_invitations WHERE token_hash = '{member_race_hash}' AND normalized_email IS NULL AND status = 'pending')::text || '|' || (SELECT count(*) FROM public.members WHERE email = '{member_race_email}')::text;").stdout.strip()
+        safe_reserved = reservation_claimed and member_insert_blocked and member_race_state == '1|0|0'
+        safe_admin_insert = identity_rejected and member_inserted and member_race_state == '0|1|1'
+        assert safe_reserved or safe_admin_insert
+        evidence['checks'].append({'name': 'email-free join reservation races Admin member insertion', 'connections': 2, 'reservationClaimed': reservation_claimed, 'memberInsertBlocked': member_insert_blocked, 'adminInsertWonAndReservationRejected': safe_admin_insert, 'passed': True})
         sql(f"BEGIN; {SERVICE} SELECT public.member_password_reserve('{reset_hash}', '{emails[2]}'); COMMIT;")
         writes = concurrent_sql([f"BEGIN; UPDATE auth.users SET encrypted_password = 'synthetic-reset-write-{i}' WHERE id = '{reset_user}'; SELECT pg_sleep(0.2); COMMIT;" for i in range(2)])
         allowed = sum(result.returncode == 0 for result in writes)
@@ -188,15 +219,15 @@ def run():
         if registered:
             # Exact UUIDs/emails/hashes registered by THIS invocation, never pattern cleanup.
             sql(f"""BEGIN;
-              DELETE FROM public.member_password_audit WHERE invitation_id IN (SELECT id FROM public.member_password_invitations WHERE token_hash IN ('{invitation_hash}', '{reset_hash}'));
-              DELETE FROM public.member_password_invitations WHERE token_hash IN ('{invitation_hash}', '{reset_hash}');
+              DELETE FROM public.member_password_audit WHERE invitation_id IN (SELECT id FROM public.member_password_invitations WHERE token_hash IN ('{invitation_hash}', '{reset_hash}', '{unbound_hashes[0]}', '{unbound_hashes[1]}', '{member_race_hash}'));
+              DELETE FROM public.member_password_invitations WHERE token_hash IN ('{invitation_hash}', '{reset_hash}', '{unbound_hashes[0]}', '{unbound_hashes[1]}', '{member_race_hash}');
               DELETE FROM public.member_auth_bindings WHERE auth_user_id = '{reset_user}';
-              DELETE FROM public.members WHERE email IN ('{emails[1]}', '{emails[2]}');
+              DELETE FROM public.members WHERE email IN ('{emails[1]}', '{emails[2]}', '{emails[4]}');
               DELETE FROM public.admin_accounts WHERE user_id = '{actor}';
               DELETE FROM auth.users WHERE id IN ('{actor}', '{reset_user}');
               DELETE FROM public.member_password_rate_limits WHERE key_hash = '{limit_hash}';
               COMMIT;""")
-            remaining = sql(f"SELECT (SELECT count(*) FROM auth.users WHERE id IN ('{actor}', '{reset_user}')) + (SELECT count(*) FROM public.members WHERE email IN ('{emails[1]}', '{emails[2]}')) + (SELECT count(*) FROM public.member_password_invitations WHERE token_hash IN ('{invitation_hash}', '{reset_hash}')) + (SELECT count(*) FROM public.member_password_rate_limits WHERE key_hash = '{limit_hash}');").stdout.strip()
+            remaining = sql(f"SELECT (SELECT count(*) FROM auth.users WHERE id IN ('{actor}', '{reset_user}')) + (SELECT count(*) FROM public.members WHERE email IN ('{emails[1]}', '{emails[2]}', '{emails[4]}')) + (SELECT count(*) FROM public.member_password_invitations WHERE token_hash IN ('{invitation_hash}', '{reset_hash}', '{unbound_hashes[0]}', '{unbound_hashes[1]}', '{member_race_hash}')) + (SELECT count(*) FROM public.member_password_rate_limits WHERE key_hash = '{limit_hash}');").stdout.strip()
             assert remaining == '0'
             evidence['cleanupStatus'] = 'completed-exact-fixtures'
         print(json.dumps(evidence, indent=2))

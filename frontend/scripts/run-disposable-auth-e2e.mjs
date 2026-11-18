@@ -58,6 +58,7 @@ const ENV_LOCAL = path.join(FRONTEND, '.env.local');
 const PROJECT_REF_FILE = path.join(BACKEND, 'supabase', '.temp', 'project-ref');
 const SAFE_DOMAIN = 'phantoms-test.example';
 const PASSWORD = 'Disposable-Auth-Local-2026!';
+const DISPOSABLE_INVITATION_NOTE = 'local disposable password migration fixture';
 const ADMIN_PERMISSIONS = { dashboard: true, members: true, tasks: true, ranking: true, notes: true, announcements: true, whatsapp: true, ai_assistant: true };
 const FORBIDDEN_ENV_NAMES = [
   'SUPABASE_ACCESS_TOKEN', 'DATABASE_URL', 'SUPABASE_DB_URL', 'SUPABASE_DB_PASSWORD',
@@ -444,30 +445,72 @@ async function trackFixtureMessages(fixture, messageIds) {
   }
 }
 
-async function discoverFixtureUserIds(admin, fixture) {
-  const fixtureEmails = new Set([
-    fixture.adminEmail,
-    fixture.existingMemberEmail,
-    fixture.firstTimeMemberEmail,
-    fixture.joinMemberEmail,
-    fixture.outsiderEmail,
-    fixture.inviteEmail,
-    fixture.recoveryEmail,
-  ].map((email) => email.toLowerCase()));
-  const ids = new Set();
-  for (let page = 1; page <= MAX_AUTH_USER_PAGES; page += 1) {
-    const listed = await Promise.race([
-      admin.listUsers({ page, perPage: AUTH_USER_PAGE_SIZE }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('fixture Auth listing timed out')), CLEANUP_OPERATION_TIMEOUT_MS)),
-    ]);
-    if (listed?.error) throw new Error('fixture Auth listing failed');
-    const users = Array.isArray(listed?.data?.users) ? listed.data.users : [];
-    for (const user of users) {
-      if (user.id && typeof user.email === 'string' && fixtureEmails.has(user.email.toLowerCase())) ids.add(user.id);
-    }
-    if (users.length < AUTH_USER_PAGE_SIZE) return ids;
+async function prepareOwnedInvitationCleanup(service, fixture) {
+  const actorId = fixture.joinIssueActorId ?? fixture.adminUserIds[0];
+  const notes = new Set([DISPOSABLE_INVITATION_NOTE, fixture.joinInvitationNote].filter((value) => typeof value === 'string' && value));
+  if (!actorId || notes.size === 0) return;
+  const result = await Promise.race([
+    service.from('member_password_invitations')
+      .select('id,created_by,member_id,purpose,note,normalized_email,expected_auth_user_id,auth_user_id,auth_write_user_id')
+      .eq('created_by', actorId).in('note', [...notes]).limit(100),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('owned invitation lookup timed out')), CLEANUP_OPERATION_TIMEOUT_MS)),
+  ]);
+  if (result?.error || !Array.isArray(result?.data) || result.data.length >= 100) {
+    throw new Error('exact owned invitation lookup failed');
   }
-  throw new Error('fixture Auth listing exceeded its bounded pagination limit');
+  for (const row of result.data) {
+    if (typeof row.id !== 'string' || row.created_by !== actorId
+        || !['join', 'enroll', 'reset'].includes(row.purpose) || !notes.has(row.note)) {
+      throw new Error('owned invitation marker mismatch');
+    }
+    if (row.purpose === 'join' && row.note === fixture.joinInvitationNote && typeof row.normalized_email === 'string'
+        && row.normalized_email.toLowerCase() !== fixture.joinMemberEmail.toLowerCase()) {
+      throw new Error('owned join invitation email mismatch');
+    }
+    if (!fixture.invitationIds.includes(row.id)) fixture.invitationIds.push(row.id);
+    if (Number.isSafeInteger(row.member_id) && row.member_id > 0 && !fixture.memberIds.includes(row.member_id)) {
+      fixture.memberIds.push(row.member_id);
+    }
+    for (const userId of [row.expected_auth_user_id, row.auth_user_id, row.auth_write_user_id]) {
+      if (typeof userId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)
+          && !fixture.createdUserIds.includes(userId)) fixture.createdUserIds.push(userId);
+    }
+  }
+}
+
+function authUserNotFound(result) {
+  return Boolean(result?.error && (result.error.status === 404 || /user not found/i.test(String(result.error.message ?? ''))));
+}
+
+async function assertExactAuthUserAbsent(admin, userId) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+    throw new Error('refusing non-UUID Auth fixture cleanup');
+  }
+  const result = await Promise.race([
+    admin.getUserById(userId),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('exact Auth lookup timed out')), CLEANUP_OPERATION_TIMEOUT_MS)),
+  ]);
+  if (authUserNotFound(result) || (!result?.error && !result?.data?.user)) return;
+  if (result?.error) throw new Error('exact Auth fixture lookup failed');
+  throw new Error('owned Auth fixture remains after cleanup');
+}
+
+async function deleteAndVerifyExactAuthUser(admin, userId) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+    throw new Error('refusing non-UUID Auth fixture cleanup');
+  }
+  const before = await Promise.race([
+    admin.getUserById(userId),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('exact Auth lookup timed out')), CLEANUP_OPERATION_TIMEOUT_MS)),
+  ]);
+  if (authUserNotFound(before) || (!before?.error && !before?.data?.user)) return;
+  if (before?.error) throw new Error('exact Auth fixture lookup failed');
+  const deleted = await Promise.race([
+    admin.deleteUser(userId),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('exact Auth deletion timed out')), CLEANUP_OPERATION_TIMEOUT_MS)),
+  ]);
+  if (deleted?.error && !authUserNotFound(deleted)) throw new Error('exact Auth fixture deletion failed');
+  await assertExactAuthUserAbsent(admin, userId);
 }
 
 async function assertJoinFixtureEmailUnused(service, admin, email) {
@@ -486,28 +529,7 @@ async function assertJoinFixtureEmailUnused(service, admin, email) {
     if (users.some((user) => user.email?.toLowerCase() === normalized)) fail('random join fixture identity already exists.');
     if (users.length < AUTH_USER_PAGE_SIZE) return;
   }
-  fail('random join fixture identity preflight exceeded its bounded limit.');
-}
-
-async function prepareJoinFixtureCleanup(service, fixture) {
-  const email = typeof fixture.joinMemberEmail === 'string' ? fixture.joinMemberEmail.toLowerCase() : '';
-  if (!email) return;
-  const [invites, members] = await Promise.all([
-    service.from('member_password_invitations').select('id').eq('normalized_email', email).eq('purpose', 'join').limit(2),
-    service.from('members').select('id').eq('email', email).limit(2),
-  ]);
-  if (invites.error || members.error || (invites.data?.length ?? 0) > 1 || (members.data?.length ?? 0) > 1) {
-    throw new Error('exact join fixture lookup failed');
-  }
-  for (const row of members.data ?? []) {
-    if (!fixture.memberIds.includes(row.id)) fixture.memberIds.push(row.id);
-  }
-  const inviteIds = (invites.data ?? []).map((row) => row.id).filter((id) => typeof id === 'string');
-  if (!inviteIds.length) return;
-  const audit = await service.from('member_password_audit').delete().in('invitation_id', inviteIds);
-  if (audit.error) throw new Error('exact join fixture audit cleanup failed');
-  const removed = await service.from('member_password_invitations').delete().in('id', inviteIds);
-  if (removed.error) throw new Error('exact join fixture invitation cleanup failed');
+  fail('random join fixture email preflight exceeded its bounded limit.');
 }
 
 async function cleanupFixtures(service, admin, fixture, messageIds) {
@@ -524,23 +546,21 @@ async function cleanupFixtures(service, admin, fixture, messageIds) {
     }
   };
   await attempt(() => trackFixtureMessages(fixture, messageIds));
-  await attempt(() => prepareJoinFixtureCleanup(service, fixture));
+  await attempt(() => prepareOwnedInvitationCleanup(service, fixture));
+  const exactFixtureUserIds = new Set(fixture.createdUserIds);
   // Invitations restrict member deletion; audit rows must be removed first.
   // All selected member IDs were registered immediately by this invocation.
+  if (fixture.invitationIds.length) {
+    await attempt(() => service.from('member_password_audit').delete().in('invitation_id', fixture.invitationIds));
+    await attempt(() => service.from('member_password_invitations').delete().in('id', fixture.invitationIds));
+  }
   if (fixture.memberIds.length) {
     await attempt(() => service.from('member_password_audit').delete().in('member_id', fixture.memberIds));
     await attempt(() => service.from('member_password_invitations').delete().in('member_id', fixture.memberIds));
   }
   if (fixture.memberIds.length) await attempt(() => service.from('members').delete().in('id', fixture.memberIds));
   if (fixture.adminUserIds.length) await attempt(() => service.from('admin_accounts').delete().in('user_id', fixture.adminUserIds));
-  let discoveredUserIds = new Set();
-  try {
-    discoveredUserIds = await discoverFixtureUserIds(admin, fixture);
-  } catch {
-    failures.push('fixture Auth listing failed');
-  }
-  const exactFixtureUserIds = new Set([...fixture.createdUserIds, ...discoveredUserIds]);
-  for (const userId of exactFixtureUserIds) await attempt(() => admin.deleteUser(userId));
+  for (const userId of exactFixtureUserIds) await attempt(() => deleteAndVerifyExactAuthUser(admin, userId));
   for (const messageId of messageIds) {
     try {
       const response = await fetch(`${MAILPIT_ORIGIN}/api/v1/messages`, {
@@ -563,19 +583,23 @@ async function cleanupFixtures(service, admin, fixture, messageIds) {
       if (remaining.error || remaining.data?.length !== 0) failures.push('owned fixture cleanup verification failed');
     }
   }
-  if (fixture.joinMemberEmail) {
-    const email = fixture.joinMemberEmail.toLowerCase();
-    const [remainingJoin, remainingMember] = await Promise.all([
-      service.from('member_password_invitations').select('id').eq('normalized_email', email).eq('purpose', 'join').limit(1),
-      service.from('members').select('id').eq('email', email).limit(1),
+  if (fixture.invitationIds.length) {
+    const [remainingInvites, remainingAudit] = await Promise.all([
+      service.from('member_password_invitations').select('id').in('id', fixture.invitationIds).limit(fixture.invitationIds.length),
+      service.from('member_password_audit').select('id').in('invitation_id', fixture.invitationIds).limit(100),
     ]);
-    if (remainingJoin.error || remainingJoin.data?.length !== 0 || remainingMember.error || remainingMember.data?.length !== 0) {
-      failures.push('exact join fixture remains after cleanup');
+    if (remainingInvites.error || remainingInvites.data?.length !== 0 || remainingAudit.error || remainingAudit.data?.length !== 0) {
+      failures.push('exact owned invitation cleanup verification failed');
     }
   }
-  try {
-    if ((await discoverFixtureUserIds(admin, fixture)).size !== 0) failures.push('owned Auth fixtures remain');
-  } catch { failures.push('owned Auth cleanup verification failed'); }
+  const actorId = fixture.joinIssueActorId ?? fixture.adminUserIds[0];
+  if (actorId) {
+    const notes = [DISPOSABLE_INVITATION_NOTE, fixture.joinInvitationNote].filter((value) => typeof value === 'string' && value);
+    const remainingMarkers = await service.from('member_password_invitations').select('id')
+      .eq('created_by', actorId).in('note', notes).limit(1);
+    if (remainingMarkers.error || remainingMarkers.data?.length !== 0) failures.push('exact owned invitation markers remain after cleanup');
+  }
+  for (const userId of exactFixtureUserIds) await attempt(() => assertExactAuthUserAbsent(admin, userId));
   if (failures.length) fail(`fixture cleanup failed (${failures.length} bounded operations).`);
 }
 
@@ -631,6 +655,9 @@ async function seedFixtures(status) {
     existingMemberEmail: email('existing-member'),
     firstTimeMemberEmail: email('new-member'),
     joinMemberEmail: email('join-member'),
+    joinInvitationNote: `auth-e2e-join-${suffix}`,
+    joinIssueActorId: null,
+    invitationIds: [],
     outsiderEmail: email('outsider'),
     inviteEmail: email('invite'),
     recoveryEmail: email('recovery'),
@@ -691,7 +718,11 @@ async function seedFixtures(status) {
   try {
     await assertJoinFixtureEmailUnused(service, admin, fixture.joinMemberEmail);
     const adminUser = await createUser(fixture.adminEmail, { password: PASSWORD });
+    fixture.joinIssueActorId = adminUser.id;
     await addAdmin(adminUser.id);
+    const existingJoinMarker = await service.from('member_password_invitations').select('id')
+      .eq('created_by', fixture.joinIssueActorId).eq('purpose', 'join').eq('note', fixture.joinInvitationNote).limit(1);
+    if (existingJoinMarker.error || existingJoinMarker.data?.length) fail('random join invitation ownership marker was not unused.');
     const existingUser = await createUser(fixture.existingMemberEmail);
     makeOwnedLegacyFixturePasswordless(existingUser);
     fixture.existingMemberAuthUserId = existingUser.id;
@@ -827,6 +858,7 @@ async function main() {
         PHANTOMS_AUTH_FIRST_TIME_MEMBER_EMAIL: currentSeeded.fixture.firstTimeMemberEmail,
         PHANTOMS_AUTH_FIRST_TIME_MEMBER_ID: String(currentSeeded.fixture.firstTimeMemberId),
         PHANTOMS_AUTH_JOIN_MEMBER_EMAIL: currentSeeded.fixture.joinMemberEmail,
+        PHANTOMS_AUTH_JOIN_INVITE_NOTE: currentSeeded.fixture.joinInvitationNote,
         PHANTOMS_AUTH_OUTSIDER_EMAIL: currentSeeded.fixture.outsiderEmail,
         PHANTOMS_LOCAL_FIXTURE_BRIDGE_URL: currentBridge.origin,
         PHANTOMS_LOCAL_MAILPIT_PORT: String(MAILPIT_PORT),

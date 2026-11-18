@@ -17,7 +17,7 @@ export type MemberInviteStatus = 'pending' | 'reserved' | 'review_required';
 export interface MemberInviteRecord {
   id: string;
   member_id: number | null;
-  email: string;
+  email: string | null;
   purpose: MemberInvitePurpose;
   status: MemberInviteStatus;
   note: string | null;
@@ -48,22 +48,26 @@ export class MemberInviteApiError extends Error {
 function mapInviteRow(value: unknown): MemberInviteRecord | null {
   if (!value || typeof value !== 'object') return null;
   const row = value as Record<string, unknown>;
+  const purpose = row.purpose;
+  const email = row.email === null
+    ? null
+    : typeof row.email === 'string' && row.email.trim() ? normalizeAuthEmail(row.email) : undefined;
   if (
     typeof row.id !== 'string' || !isMemberInviteId(row.id)
-    || typeof row.email !== 'string'
-    || (row.purpose !== 'join' && row.purpose !== 'enroll' && row.purpose !== 'reset')
+    || email === undefined || (email === null && purpose !== 'join')
+    || (purpose !== 'join' && purpose !== 'enroll' && purpose !== 'reset')
     || (row.status !== 'pending' && row.status !== 'reserved' && row.status !== 'review_required')
     || typeof row.expires_at !== 'string' || typeof row.created_at !== 'string'
   ) return null;
   const memberId = row.member_id === null
     ? null
     : typeof row.member_id === 'number' && Number.isSafeInteger(row.member_id) && row.member_id > 0 ? row.member_id : undefined;
-  if (memberId === undefined || ((row.purpose === 'join') !== (memberId === null))) return null;
+  if (memberId === undefined || ((purpose === 'join') !== (memberId === null))) return null;
   return {
     id: row.id,
     member_id: memberId,
-    email: normalizeAuthEmail(row.email),
-    purpose: row.purpose,
+    email,
+    purpose,
     status: row.status,
     note: typeof row.note === 'string' ? row.note : null,
     expires_at: row.expires_at,
@@ -102,7 +106,7 @@ export async function fetchApprovedMembersForInvite(): Promise<MemberInviteMembe
 
 interface IssueInput {
   memberId: number | null;
-  email: string;
+  email: string | null;
   purpose: MemberInvitePurpose;
   expiresInHours: number;
   note?: string;
@@ -113,15 +117,15 @@ export function useCreateMemberInvite() {
   return useMutation({
     gcTime: 0,
     mutationFn: async (input: IssueInput): Promise<CreatedMemberInvite> => {
-      const email = normalizeAuthEmail(input.email);
+      const email = input.email === null ? null : normalizeAuthEmail(input.email);
       if ((input.purpose === 'join'
         ? input.memberId !== null
-        : !Number.isSafeInteger(input.memberId) || (input.memberId ?? 0) <= 0) || !email
+        : !Number.isSafeInteger(input.memberId) || (input.memberId ?? 0) <= 0 || email === null) || (input.email !== null && !email)
         || (input.purpose !== 'join' && input.purpose !== 'enroll' && input.purpose !== 'reset')) {
         throw new MemberInviteApiError('INVALID_INPUT');
       }
       const { data, error } = await supabase.functions.invoke<{
-        invite?: { id?: string; token?: string; email?: string; member_id?: number | null; purpose?: MemberInvitePurpose; note?: string | null; expires_at?: string };
+        invite?: { id?: string; token?: string; email?: string | null; member_id?: number | null; purpose?: MemberInvitePurpose; note?: string | null; expires_at?: string };
         code?: string;
       }>('member-password-enrollment', {
         body: {
@@ -131,10 +135,13 @@ export function useCreateMemberInvite() {
       });
       if (error) throw new MemberInviteApiError(await readMemberEndpointCode(error));
       const invite = data?.invite;
+      const issuedEmail = invite?.email === null
+        ? null
+        : typeof invite?.email === 'string' && invite.email.trim() ? normalizeAuthEmail(invite.email) : undefined;
       if (!invite || typeof invite.id !== 'string' || !isMemberInviteId(invite.id)
         || typeof invite.token !== 'string' || !isMemberInviteToken(invite.token)
-        || invite.member_id !== input.memberId || typeof invite.email !== 'string'
-        || normalizeAuthEmail(invite.email) !== email || invite.purpose !== input.purpose
+        || invite.member_id !== input.memberId || issuedEmail === undefined
+        || issuedEmail !== email || invite.purpose !== input.purpose
         || typeof invite.expires_at !== 'string') {
         throw new MemberInviteApiError(await readMemberEndpointCode(data));
       }
