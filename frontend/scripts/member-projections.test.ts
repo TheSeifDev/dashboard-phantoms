@@ -83,9 +83,24 @@ test('Admin and member self-service screens expose links only, with no separate 
   assert.doesNotMatch(memberSelfRegister, /id="join-token"|أدخل الكود يدوياً|أدخل رمز الدعوة/);
 });
 
-test('only a new join link may omit the Admin-known email; the recipient must still enter their own email', () => {
-  assert.match(inviteModal, /بريد العضو الجديد \(اختياري\)/);
-  assert.match(inviteModal, /يكتب العضو بريده بنفسه عند التسجيل/);
+test('Admin join form has no email field, always issues an unbound link, and keeps recipient email required', () => {
+  const joinOptionsStart = inviteModal.indexOf('<div data-testid="member-invite-join-options"');
+  assert.notEqual(joinOptionsStart, -1);
+  const joinOptionsEnd = inviteModal.indexOf('</div>', joinOptionsStart);
+  assert.notEqual(joinOptionsEnd, -1);
+  const joinOptions = inviteModal.slice(joinOptionsStart, joinOptionsEnd);
+  assert.doesNotMatch(joinOptions, /member-invite-email|type="email"/);
+  assert.match(joinOptions, /اسم الطالب في رسالة واتساب \(اختياري\)/);
+  assert.doesNotMatch(joinOptions, /required/);
+  assert.match(inviteModal, /email: isNewMember \? null : email\.trim\(\)/);
+  assert.match(inviteModal, /ده رابط الدعوة لمنصة PHANTOMS/);
+  assert.match(inviteModal, /نسخ رابط الدعوة/);
+  assert.match(inviteModal, /نسخ الدعوة في رسالة واتساب/);
+  assert.match(inviteModal, /id="member-invite-whatsapp-preview"[^>]*readOnly/);
+  assert.match(inviteModal, /document\.execCommand\('copy'\)/);
+  const issuePayload = inviteModal.match(/createInvite\.mutateAsync\(\{([\s\S]*?)\}\)/)?.[1] ?? '';
+  assert.ok(issuePayload);
+  assert.doesNotMatch(issuePayload, /whatsAppName|messageName|studentName/);
   assert.match(inviteApi, /interface IssueInput[\s\S]*?email: string \| null/);
   assert.match(inviteApi, /input\.purpose === 'join'[\s\S]*?email === null/);
   assert.match(memberSelfRegister, /id="join-email" type="email"[^>]*required/);

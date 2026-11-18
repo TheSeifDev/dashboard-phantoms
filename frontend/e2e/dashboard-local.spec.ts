@@ -248,7 +248,7 @@ test.describe('disposable local dashboard', () => {
     }
     expect(requestEvidence.some((r) => r.endpoint === '/rest/v1/members' && r.columns === SAFE_MEMBER_COLUMNS && r.status === 200)).toBe(true);
 
-    await test.step('Admin invitation UI sends a link and never asks for a manual Auth ID', async () => {
+    await test.step('Admin invitation UI is email-free and copies either the link or WhatsApp invitation', async () => {
       const invitationEndpoint = `${API_ORIGIN}/functions/v1/member-password-enrollment`;
       let joinIssuePayload: { action?: string; memberId?: number | null; purpose?: string; email?: string | null; expiresInHours?: number } | null = null;
       const mockJoinIssue = async (route: Route) => {
@@ -288,44 +288,76 @@ test.describe('disposable local dashboard', () => {
         await page.getByRole('button', { name: 'توليد رابط تسجيل للعضو', exact: true }).click();
         const purpose = page.locator('#member-invite-purpose');
         const inviteEmail = page.locator('#member-invite-email');
+        const joinOptions = page.getByTestId('member-invite-join-options');
         const expiry = page.locator('#member-invite-expiry');
         const messageName = page.locator('#member-invite-message-name');
         await expect(purpose).toHaveValue('join');
         await expect(expiry).toHaveValue('24');
         await expect(page.getByText('أنت ترسل الرابط فقط — العضو يكتب بياناته وكلمة مروره')).toBeVisible();
-        await expect(page.getByText(/الرابط يُستخدم مرة واحدة وينتهي بعد المدة المحددة/)).toBeVisible();
-        await expect(inviteEmail).toBeVisible();
-        await expect(inviteEmail).not.toHaveAttribute('required', '');
-        await expect(page.getByText(/اختياري.*يكتب العضو بريده بنفسه عند التسجيل/)).toBeVisible();
-        await expect(messageName).toHaveCount(0);
+        await expect(page.getByText(/الرابط يُستخدم مرة واحدة وينتهي في الموعد المحدد/)).toBeVisible();
+        await expect(joinOptions).toBeVisible();
+        await expect(joinOptions.locator('input[type="email"]')).toHaveCount(0);
+        await expect(inviteEmail).toHaveCount(0);
+        await expect(page.getByTestId('member-invite-join-email-note')).toHaveCount(0);
+        await expect(messageName).toBeVisible();
+        await expect(messageName).not.toHaveAttribute('required', '');
+        await messageName.fill('سلمى');
         await assertNoHorizontalOverflow(page);
         await expect(page.locator('#member-invite-auth-id')).toHaveCount(0);
         await expiry.selectOption('72');
         const inviteScreenshotDir = process.env.PHANTOMS_MOBILE_SCREENSHOT_DIR;
         if (inviteScreenshotDir && vapidMode === 'missing') {
           await mkdir(inviteScreenshotDir, { recursive: true, mode: 0o700 });
-          await page.screenshot({ path: path.join(inviteScreenshotDir, 'invite-link-modal-390.png'), fullPage: true });
+          await page.locator('form').screenshot({ path: path.join(inviteScreenshotDir, 'invite-link-modal-390.png'), animations: 'disabled' });
         }
         await page.getByRole('button', { name: 'إنشاء رابط خاص', exact: true }).click();
         await expect(page.getByText(/#invite=phpw_a{64}$/)).toBeVisible();
         await expect(page.getByText('مرة واحدة فقط', { exact: true })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'نسخ الرابط', exact: true })).toBeVisible();
+        const copyInviteLink = page.getByRole('button', { name: 'نسخ رابط الدعوة', exact: true });
+        await expect(copyInviteLink).toBeVisible();
         await expect(messageName).toBeVisible();
-        await expect(page.getByText(/لرسالة واتساب فقط؛ لا يُحفظ في ملف الطالب/)).toBeVisible();
-        await messageName.fill('سلمى');
+        await expect(page.getByText(/يُستخدم في التحية داخل الرسالة فقط؛ لا يُحفظ ولا يُرسل إلى الخادم/)).toBeVisible();
+        await expect(page.getByTestId('member-invite-created-result')).toBeVisible();
+        // Keep the browser test deterministic: headless localhost may deny OS clipboard access.
+        await page.evaluate(() => {
+          let contents = '';
+          Object.defineProperty(navigator, 'clipboard', {
+            configurable: true,
+            value: {
+              writeText: async (text: string) => { contents = text; },
+              readText: async () => contents,
+            },
+          });
+        });
+        const clipboardStubProbe = await page.evaluate(async () => {
+          await navigator.clipboard.writeText('clipboard-fixture-probe');
+          return navigator.clipboard.readText();
+        });
+        expect(clipboardStubProbe).toBe('clipboard-fixture-probe');
+        await page.evaluate(() => navigator.clipboard.writeText(''));
+        await copyInviteLink.click();
+        await expect.poll(() => page.evaluate(() => navigator.clipboard.readText()), { timeout: 5000 }).toContain('#invite=phpw_a');
+        const copiedInviteLink = await page.evaluate(() => navigator.clipboard.readText());
+        expect(copiedInviteLink).toContain('#invite=phpw_a');
+        const whatsappPreview = page.locator('#member-invite-whatsapp-preview');
+        await expect(whatsappPreview).toBeVisible();
+        await expect(whatsappPreview).toHaveValue(/أهلًا يا سلمى،/);
+        expect(await whatsappPreview.inputValue()).toContain('ده رابط الدعوة لمنصة PHANTOMS:');
         const copyWhatsAppMessage = page.getByTestId('member-invite-copy-whatsapp');
         await expect(copyWhatsAppMessage).toBeVisible();
-        await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: PREVIEW_ORIGIN });
         await copyWhatsAppMessage.click();
-        await expect(copyWhatsAppMessage).toHaveText('تم نسخ الرسالة');
+        await expect.poll(() => page.evaluate(() => navigator.clipboard.readText()), { timeout: 5000 }).toContain('أهلًا يا سلمى،');
         const personalizedMessage = await page.evaluate(() => navigator.clipboard.readText());
-        expect(personalizedMessage).toContain('أهلًا سلمى،');
+        expect(personalizedMessage).toContain('أهلًا يا سلمى،');
+        expect(personalizedMessage).toContain('ده رابط الدعوة لمنصة PHANTOMS:');
         expect(personalizedMessage).toContain('اكتب بريدك الإلكتروني وبياناتك وكلمة مرورك بنفسك');
         expect(personalizedMessage).toContain('#invite=phpw_a');
         expect(personalizedMessage).toContain('مرة واحدة فقط');
-        expect(personalizedMessage).toContain('الرابط صالح حتى');
+        expect(personalizedMessage).toContain('الرابط صالح لحد');
         await messageName.fill('');
+        await expect(whatsappPreview).toHaveValue(/أهلًا،/);
         await copyWhatsAppMessage.click();
+        await expect.poll(() => page.evaluate(() => navigator.clipboard.readText()), { timeout: 5000 }).toContain('أهلًا،');
         const genericMessage = await page.evaluate(() => navigator.clipboard.readText());
         expect(genericMessage).toContain('أهلًا،');
         expect(genericMessage).not.toContain('سلمى');
@@ -347,7 +379,8 @@ test.describe('disposable local dashboard', () => {
         await existingMember.selectOption(String(firstMember.id));
         await expect(inviteEmail).toHaveValue(memberEmails[0]);
         await purpose.selectOption('join');
-        await expect(inviteEmail).not.toHaveAttribute('readonly', '');
+        await expect(inviteEmail).toHaveCount(0);
+        await expect(joinOptions).toBeVisible();
         await page.getByRole('button', { name: 'إغلاق', exact: true }).last().click();
         await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
         await expect(page.getByTestId('dashboard-metrics')).toBeVisible();
