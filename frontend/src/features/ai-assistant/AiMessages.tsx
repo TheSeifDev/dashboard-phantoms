@@ -2,6 +2,7 @@ import { AlertTriangle, Bot, CheckCircle2, Sparkles } from 'lucide-react';
 import type { RefObject } from 'react';
 import type { AiAction, AiMessage } from './api';
 
+import { useLocale } from '../../i18n/useLocale';
 export function AiMessages({
   messages,
   isPending,
@@ -13,6 +14,7 @@ export function AiMessages({
   onExecute: (id: string, action: AiAction) => void;
   endRef: RefObject<HTMLDivElement | null>;
 }) {
+  const { t } = useLocale();
   return (
     <div
       className="flex min-h-72 flex-1 flex-col gap-4 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-5"
@@ -44,11 +46,11 @@ export function AiMessages({
                   <p className="flex items-center gap-2 text-sm font-bold text-[var(--link)]">
                     {isDestructive ? (
                       <span className="flex items-center gap-1.5 text-[var(--danger)]">
-                        <AlertTriangle size={17} /> إجراء حذف مقترح يتطلب مراجعة
+                        <AlertTriangle size={17} /> {t("إجراء حذف مقترح يتطلب مراجعة", "Proposed deletion requires review")}
                       </span>
                     ) : (
                       <span className="flex items-center gap-1.5">
-                        <Sparkles size={17} /> اقتراح من المساعد
+                        <Sparkles size={17} /> {t("اقتراح من المساعد", "Assistant suggestion")}
                       </span>
                     )}
                   </p>
@@ -60,7 +62,7 @@ export function AiMessages({
                   </pre>
                   {message.actionExecuted ? (
                     <p className="flex items-center gap-2 text-sm font-bold text-emerald-800 dark:text-emerald-300">
-                      <CheckCircle2 size={17} /> اتنفّذ الإجراء بنجاح
+                      <CheckCircle2 size={17} /> {t("اتنفّذ الإجراء بنجاح", "Action executed successfully")}
                     </p>
                   ) : (
                     <button
@@ -70,7 +72,7 @@ export function AiMessages({
                         isDestructive ? 'bg-[var(--danger)]' : 'bg-[var(--primary)]'
                       }`}
                     >
-                      {isDestructive ? 'مراجعة وتأكيد الحذف' : 'نفّذ الإجراء'}
+                      {isDestructive ? t('مراجعة وتأكيد الحذف', 'Review and confirm deletion') : t('نفّذ الإجراء', 'Execute action')}
                     </button>
                   )}
                 </div>
@@ -86,7 +88,7 @@ export function AiMessages({
           role="status"
         >
           <Bot size={17} className="animate-pulse" />
-          مساعد PHANTOMS بيحلّل بيانات الفريق...
+          {t("مساعد PHANTOMS بيحلّل بيانات الفريق...", "PHANTOMS Assistant is analyzing team data...")}
         </p>
       )}
       <div ref={endRef} />

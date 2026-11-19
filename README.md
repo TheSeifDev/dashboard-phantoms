@@ -9,6 +9,12 @@
 
 > **PHANTOMS** is an operations and team management platform built for distributed teams. It provides task assignment, member evaluations, performance ranking, real-time push/WhatsApp notifications, and an AI operations copilot.
 
+## Redesign and task contribution streak
+
+The 2026-11-19 redesign adds a cool light/navy dashboard, persisted Arabic/English RTL/LTR, split-screen sign-in, scoped GSAP motion with reduced-motion support, and a yearly task-approval contribution heatmap. Counts come from the real task/member queries and the protected daily contribution RPC; unknown historical periods are explicitly distinguished from zero activity. The approval/reversal ledger is captured by a trigger inside the existing administrative RPC transaction, preserving the RPC signatures and authorization.
+
+`20261119183000_task_contribution_ledger.sql` (migration 37) is applied to PHANTOMS production as remote version `20261119193932`. The tested frontend redesign is being committed and pushed to `main` under explicit release approval; that push may trigger automatic UI deployment. The already released Owner-review migration 36 and Edge function are unchanged. Streaks are observed within the selected calendar year; current streak is shown only for the current year. See [the approved plan](plan.md). Migration checksums and production status are recorded in the forward manifest.
+
 ---
 
 ## Architecture Overview

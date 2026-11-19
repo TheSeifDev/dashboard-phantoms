@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, ArrowLeft, KeyRound, ShieldCheck } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthShell } from '../../components/layout/AuthShell';
+import { PhantomLoader } from '../../components/motion/PhantomLoader';
+import { useLocale } from '../../i18n/useLocale';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/auth';
 import { supabase } from '../../lib/supabase/client';
@@ -19,6 +21,23 @@ import type { Session } from '@supabase/supabase-js';
 const callbackError = 'رابط الدعوة أو الاستعادة غير صالح أو انتهت صلاحيته. اطلب رابطاً جديداً وحاول مرة أخرى.';
 const callbackRequests = createSingleFlight<string, Session>();
 let activeCallbackKey: string | null = null;
+
+function localizedCallbackMessage(message: string, t: (arabic: string, english: string) => string): string {
+  const messages: Record<string, string> = {
+    [callbackError]: 'This invitation or recovery link is invalid or expired. Request a new link and try again.',
+    'الحساب الموجود في الرابط ليس حساب إدارة معتمداً. اطلب من مالك النظام دعوة صحيحة.': 'The account in this link is not an authorized administrator. Ask the system owner for a valid invitation.',
+    'الرابط ده مش رابط دعوة أو استعادة كلمة مرور صالح.': 'This is not a valid invitation or password recovery link.',
+    'رابط الدعوة أو الاستعادة فشل. اطلب رابطاً جديداً وحاول مرة أخرى.': 'The invitation or recovery link failed. Request a new link and try again.',
+    'نوع رابط الدخول غير مدعوم هنا. استخدم رابط الإدارة المخصص.': 'This sign-in link type is not supported here. Use the administrator link.',
+    'رابط الدعوة لا يمكن استخدامه كاستعادة لكلمة المرور.': 'An invitation link cannot be used to recover a password.',
+    'الرابط ناقص أو انتهت صلاحيته. اطلب رابطاً جديداً وحاول مرة أخرى.': 'This link is incomplete or expired. Request a new link and try again.',
+    'افتح رابط دعوة أو استعادة كلمة مرور صالحاً قبل إعداد كلمة المرور.': 'Open a valid invitation or recovery link before setting a password.',
+    'لم نجد بيانات استعادة في هذا الرابط. اطلب رابطاً جديداً وحاول مرة أخرى.': 'No recovery details were found in this link. Request a new link and try again.',
+    'لم نجد جلسة الإدارة الخاصة بهذا الرابط. اطلب رابطاً جديداً وحاول مرة أخرى.': 'The administrator session for this link was not found. Request a new link and try again.',
+  };
+  const english = messages[message];
+  return english ? t(message, english) : message;
+}
 
 async function completeAdminCallbackOnce(callback: Extract<AdminCallbackInput, { kind: 'callback' }>): Promise<Session> {
   const assertCurrentCallback = () => {
@@ -71,18 +90,20 @@ function completeAdminCallback(callback: Extract<AdminCallbackInput, { kind: 'ca
 }
 
 function CallbackStatus({ message }: { message: string }) {
+  const { t } = useLocale();
   return (
-    <AuthShell audience="admin" badge="رابط الإدارة" title="الرابط غير صالح" description="لم نفتح أي جلسة إدارة من هذا الرابط." footer={<Link to="/admin/login" className="auth-inline-link justify-center"><span>العودة لدخول الإدارة</span><ArrowLeft size={16} /></Link>}>
+    <AuthShell audience="admin" badge={t('رابط الإدارة', 'Administrator link')} title={t('الرابط غير صالح', 'Invalid link')} description={t('لم نفتح أي جلسة إدارة من هذا الرابط.', 'No administrator session was opened from this link.')} footer={<Link to="/admin/login" className="auth-inline-link justify-center"><span>{t('العودة لدخول الإدارة', 'Back to administrator sign-in')}</span><ArrowLeft size={16} /></Link>}>
       <div className="grid gap-4" role="alert">
-        <div className="auth-error"><AlertCircle size={18} aria-hidden="true" /><span>{message}</span></div>
-        <Link to="/admin/forgot-password" className="auth-submit text-center">طلب رابط استعادة جديد</Link>
-        <Link to="/admin/login" className="auth-inline-link justify-center"><span>العودة لدخول الإدارة</span><ArrowLeft size={16} /></Link>
+        <div className="auth-error"><AlertCircle size={18} aria-hidden="true" /><span>{localizedCallbackMessage(message, t)}</span></div>
+        <Link to="/admin/forgot-password" className="auth-submit text-center">{t('طلب رابط استعادة جديد', 'Request a new recovery link')}</Link>
+        <Link to="/admin/login" className="auth-inline-link justify-center"><span>{t('العودة لدخول الإدارة', 'Back to administrator sign-in')}</span><ArrowLeft size={16} /></Link>
       </div>
     </AuthShell>
   );
 }
 
 export default function AdminSetPasswordPage() {
+  const { t } = useLocale();
   const user = useAuthStore((state) => state.user);
   const ready = useAuthStore((state) => state.ready);
   const access = useAdminAccess(user?.id ?? null);
@@ -135,18 +156,18 @@ export default function AdminSetPasswordPage() {
     && (!isCurrentCallbackState || callbackState === 'pending' || (callbackState === 'complete' && !ready));
   if (callback.kind === 'invalid') return <CallbackStatus message={callback.message} />;
   if (isProcessingCallback) {
-    return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl"><span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">بنتأكد من رابط الإدارة...</span></div>;
+    return <PhantomLoader message={t('بنتأكد من رابط الإدارة...', 'Verifying administrator link...')} />;
   }
   if (callback.kind === 'callback' && callbackState === 'error') return <CallbackStatus message={callbackMessage || callbackError} />;
   if (callback.kind === 'none' && !setupIntent) return <CallbackStatus message="افتح رابط دعوة أو استعادة كلمة مرور صالحاً قبل إعداد كلمة المرور." />;
   if (!ready || (user && access.isPending)) {
-    return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl"><span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">بنتأكد من جلسة الإدارة...</span></div>;
+    return <PhantomLoader message={t('بنتأكد من جلسة الإدارة...', 'Verifying administrator session...')} />;
   }
   if (!user) return <CallbackStatus message="لم نجد جلسة الإدارة الخاصة بهذا الرابط. اطلب رابطاً جديداً وحاول مرة أخرى." />;
   if (access.isError || !access.data?.is_admin) {
     return (
-      <AuthShell audience="admin" badge="رابط دعوة الإدارة" title="الرابط غير صالح" description="لا توجد جلسة دعوة إدارية صالحة على الجهاز ده. اطلب من مالك النظام إرسال دعوة جديدة." footer={<Link to="/admin/login" className="auth-inline-link"><span>دخول الإدارة</span><ArrowLeft size={16} /></Link>}>
-        <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6" role="alert"><ShieldCheck size={20} className="mt-0.5 shrink-0 text-amber-500" aria-hidden="true" /><p>صلاحية الإدارة لم تُثبت لهذا الرابط، لذلك لم نفتح لوحة التحكم.</p></div>
+      <AuthShell audience="admin" badge={t('رابط دعوة الإدارة', 'Administrator invitation link')} title={t('الرابط غير صالح', 'Invalid link')} description={t('لا توجد جلسة دعوة إدارية صالحة على الجهاز ده. اطلب من مالك النظام إرسال دعوة جديدة.', 'There is no valid administrator invitation session on this device. Ask the system owner to send a new invitation.')} footer={<Link to="/admin/login" className="auth-inline-link"><span>{t('دخول الإدارة', 'Administrator sign-in')}</span><ArrowLeft size={16} /></Link>}>
+        <div className="auth-error" role="alert"><ShieldCheck size={20} aria-hidden="true" /><p>{t('صلاحية الإدارة لم تُثبت لهذا الرابط، لذلك لم نفتح لوحة التحكم.', 'Administrator access was not verified for this link, so the dashboard was not opened.')}</p></div>
       </AuthShell>
     );
   }
@@ -155,11 +176,11 @@ export default function AdminSetPasswordPage() {
     event.preventDefault();
     setError('');
     if (password.length < 8) {
-      setError('كلمة المرور لازم تكون 8 أحرف على الأقل.');
+      setError(t('كلمة المرور لازم تكون 8 أحرف على الأقل.', 'Password must be at least 8 characters.'));
       return;
     }
     if (password !== confirmPassword) {
-      setError('تأكيد كلمة المرور مش مطابق.');
+      setError(t('تأكيد كلمة المرور مش مطابق.', 'The passwords do not match.'));
       return;
     }
     setSaving(true);
@@ -169,29 +190,30 @@ export default function AdminSetPasswordPage() {
       clearAdminSetupIntent();
       navigate('/admin/dashboard', { replace: true });
     } catch {
-      setError('معرفناش نحفظ كلمة المرور. جرّب تاني.');
+      setError(t('معرفناش نحفظ كلمة المرور. جرّب تاني.', 'Could not save the password. Please try again.'));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <AuthShell audience="admin" badge="دعوة إدارة PHANTOMS" title="أنشئ كلمة المرور" description={`اختار كلمة مرور لحساب الإدارة ${user.email ?? ''}.`} footer={<Link to="/login" className="auth-inline-link"><span>بوابة الأعضاء</span><ArrowLeft size={16} /></Link>}>
+    <AuthShell audience="admin" badge={t('دعوة إدارة PHANTOMS', 'PHANTOMS administrator invitation')} title={t('أنشئ كلمة المرور', 'Create a password')} description={`${t('اختار كلمة مرور لحساب الإدارة', 'Choose a password for administrator account')} ${user.email ?? ''}.`} footer={<Link to="/login" className="auth-inline-link"><span>{t('بوابة الأعضاء', 'Member portal')}</span><ArrowLeft size={16} /></Link>}>
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
       <form onSubmit={(event) => void savePassword(event)} className="auth-form" noValidate>
-        <label className="auth-field" htmlFor="invite-password">كلمة المرور الجديدة
+        <label className="auth-field" htmlFor="invite-password">{t('كلمة المرور الجديدة', 'New password')}
           <span className="auth-input-wrap"><input id="invite-password" type="password" dir="ltr" autoComplete="new-password" minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} /></span>
         </label>
-        <label className="auth-field" htmlFor="invite-password-confirm">تأكيد كلمة المرور
+        <label className="auth-field" htmlFor="invite-password-confirm">{t('تأكيد كلمة المرور', 'Confirm password')}
           <span className="auth-input-wrap"><input id="invite-password-confirm" type="password" dir="ltr" autoComplete="new-password" minLength={8} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></span>
         </label>
-        <Button type="submit" icon={<KeyRound size={17} />} isLoading={saving} loadingText="بنحفظ..." fullOnMobile>حفظ وفتح لوحة الإدارة</Button>
+        <Button type="submit" icon={<KeyRound size={17} />} isLoading={saving} loadingText={t('بنحفظ...', 'Saving...')} fullOnMobile>{t('حفظ وفتح لوحة الإدارة', 'Save and open administrator workspace')}</Button>
       </form>
     </AuthShell>
   );
 }
 
 export function AdminRecoveryCallbackPage() {
+  const { t } = useLocale();
   const location = useLocation();
   const navigate = useNavigate();
   const callback = useMemo(
@@ -231,7 +253,7 @@ export function AdminRecoveryCallbackPage() {
 
   if (callback.kind === 'invalid') return <CallbackStatus message={callback.message} />;
   if (callback.kind === 'none') return <CallbackStatus message="لم نجد بيانات استعادة في هذا الرابط. اطلب رابطاً جديداً وحاول مرة أخرى." />;
-  if (callbackStateKey !== callback.key) return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl"><span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">بنتجهز لتغيير كلمة المرور...</span></div>;
+  if (callbackStateKey !== callback.key) return <PhantomLoader message={t('بنتجهز لتغيير كلمة المرور...', 'Preparing to change your password...')} />;
   if (error) return <CallbackStatus message={error} />;
-  return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl"><span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">بنتجهز لتغيير كلمة المرور...</span></div>;
+  return <PhantomLoader message={t('بنتجهز لتغيير كلمة المرور...', 'Preparing to change your password...')} />;
 }

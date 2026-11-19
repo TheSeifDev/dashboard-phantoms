@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TaskStatus } from '../../types/db';
+import { useLocale } from '../../i18n/useLocale';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -44,17 +45,18 @@ export const Badge: React.FC<BadgeProps> = ({
 };
 
 export const TaskStatusBadge: React.FC<{ status: TaskStatus }> = ({ status }) => {
+  const { t } = useLocale();
   switch (status) {
     case 'pending':
-      return <Badge variant="neutral">لسه مبدأش</Badge>;
+      return <Badge variant="neutral">{t('لسه مبدأش', 'Not started')}</Badge>;
     case 'in_progress':
-      return <Badge variant="info">تحت التنفيذ</Badge>;
+      return <Badge variant="info">{t('تحت التنفيذ', 'In progress')}</Badge>;
     case 'under_review':
-      return <Badge variant="warning">تحت المراجعة</Badge>;
+      return <Badge variant="warning">{t('تحت المراجعة', 'Under review')}</Badge>;
     case 'approved':
-      return <Badge variant="success">اتعتمدت</Badge>;
+      return <Badge variant="success">{t('اتعتمدت', 'Approved')}</Badge>;
     case 'revision_requested':
-      return <Badge variant="danger">محتاجة تعديل</Badge>;
+      return <Badge variant="danger">{t('محتاجة تعديل', 'Revision requested')}</Badge>;
     default:
       return <Badge variant="neutral">{status}</Badge>;
   }

@@ -1,5 +1,6 @@
 import type { Member } from '../../types/db';
 
+import { useLocale } from '../../i18n/useLocale';
 interface WhatsAppMemberPickerProps {
   eligible: Member[];
   memberIds: number[];
@@ -17,10 +18,11 @@ export function WhatsAppMemberPicker({
   onSelectAll,
   onDeselectAll,
 }: WhatsAppMemberPickerProps) {
+  const { t, number, dir } = useLocale();
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3" dir={dir}>
       <div className="flex items-center justify-between">
-        <h3 className="font-black text-sm">اختار الأعضاء عشان تبعت لهم ({memberIds.length} محدد)</h3>
+        <h3 className="font-black text-sm">{t("اختار الأعضاء عشان تبعت لهم", "Select recipients")} ({number(memberIds.length)} {t("محدد", "selected")})</h3>
         {eligible.length > 0 && (
           <div className="flex gap-2">
             <button
@@ -28,14 +30,14 @@ export function WhatsAppMemberPicker({
               className="text-xs font-bold text-[var(--primary)] hover:underline"
               onClick={onSelectAll}
             >
-              تحديد الكل
+              {t('تحديد الكل', 'Select all')}
             </button>
             <button
               type="button"
               className="text-xs text-[var(--text-muted)] hover:underline"
               onClick={onDeselectAll}
             >
-              إلغاء التحديد
+              {t('إلغاء التحديد', 'Clear selection')}
             </button>
           </div>
         )}
@@ -43,11 +45,11 @@ export function WhatsAppMemberPicker({
 
       {loading ? (
         <p role="status" className="text-xs text-[var(--text-muted)]">
-          بنحمّل الأعضاء...
+          {t('بنحمّل الأعضاء...', 'Loading members...')}
         </p>
       ) : !eligible.length ? (
         <p className="text-xs text-[var(--text-muted)]">
-          مفيش عضو مكلف عنده رقم تليفون صالح.
+          {t('مفيش عضو مكلف عنده رقم تليفون صالح.', 'No assigned members have a valid phone number.')}
         </p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
@@ -70,7 +72,7 @@ export function WhatsAppMemberPicker({
                 </small>
               </span>
               <span className="text-xs font-bold text-[var(--text-muted)]">
-                {memberIds.includes(member.id) ? 'محدد' : 'اختيار'}
+                {memberIds.includes(member.id) ? t('محدد','Selected') : t('اختيار','Select')}
               </span>
             </button>
           ))}

@@ -1,9 +1,10 @@
 import { AlertCircle, CalendarCheck2, CalendarClock, CalendarX2, CheckCircle2, Gift } from 'lucide-react';
 import type { Task, TaskStatus, TaskTrackingEntry } from '../../types/db';
-import { daysRemaining, formatDeadline, formatDeadlineTime, hoursRemaining, isOverdue } from '../../lib/dateUtils';
+import { daysRemaining, formatDeadline, formatDeadlineTime, hoursRemaining, isOverdue, parseDeadline } from '../../lib/dateUtils';
 import { arDaysPhrase, arDurationPhrase, formatSigned } from '../../lib/arabic';
+import { useLocale } from '../../i18n/useLocale';
 
-/** تسميات وألوان الحالات — مصدر واحد للبطاقة والجدول والقائمة المنسدلة */
+/** Labels and tones for task statuses; keep the Arabic defaults stable for existing consumers. */
 export const STATUS_META: Record<TaskStatus, { label: string; tone: string }> = {
   pending: {
     label: 'لسه مبدأش',
@@ -27,7 +28,19 @@ export const STATUS_META: Record<TaskStatus, { label: string; tone: string }> = 
   },
 };
 
-/** الحالات التي يضبطها المسؤول يدوياً — الاعتماد يمر فقط عبر نافذة المراجعة (يمنح نقاطاً) */
+const ENGLISH_STATUS_LABELS: Record<TaskStatus, string> = {
+  pending: 'Not started',
+  in_progress: 'In progress',
+  under_review: 'Under review',
+  revision_requested: 'Revision requested',
+  approved: 'Approved',
+};
+
+export function taskStatusLabel(status: TaskStatus, locale: 'ar' | 'en'): string {
+  return locale === 'ar' ? STATUS_META[status].label : ENGLISH_STATUS_LABELS[status];
+}
+
+/** Statuses an administrator can set manually; approval remains in review flow. */
 export const ADMIN_SETTABLE_STATUSES: TaskStatus[] = ['pending', 'in_progress', 'under_review', 'revision_requested'];
 
 export interface TaskSummary {
@@ -60,14 +73,21 @@ export function summarizeTask(task: Task): TaskSummary {
   };
 }
 
-/** بونص المهمة كعدد صحيح آمن (0 إن لم تُطبَّق migration 0012 بعد) */
+/** Task bonus as a safe whole number (0 if the bonus migration is unavailable). */
 export function taskBonus(task: Pick<Task, 'bonus_points'>): number {
   const value = Number(task.bonus_points ?? 0);
   return Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0;
 }
 
-/** شارة البونص: "+10 بونص" — earned = تم منحه فعلاً */
+function signedBonus(points: number, locale: 'ar' | 'en'): string {
+  return locale === 'ar'
+    ? formatSigned(points)
+    : new Intl.NumberFormat('en-GB', { signDisplay: 'always', maximumFractionDigits: 0 }).format(points);
+}
+
+/** Bonus chip: planned points or points already awarded. */
 export function BonusChip({ points, earned = false, className = '' }: { points: number; earned?: boolean; className?: string }) {
+  const { locale, t } = useLocale();
   if (points <= 0) return null;
   const tone = earned
     ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200'
@@ -75,52 +95,83 @@ export function BonusChip({ points, earned = false, className = '' }: { points: 
   return (
     <span className={`inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-black tabular-nums ${tone} ${className}`}>
       <Gift size={14} aria-hidden="true" />
-      {earned ? 'خدت ' : ''}{formatSigned(points)} بونص
+      {earned ? t('خدت ', 'Awarded ') : ''}{signedBonus(points, locale)} {t('بونص', 'bonus')}
     </span>
   );
 }
 
-/** شارة الموعد: بدون موعد / متأخرة / اليوم / قريباً / عادية / مكتملة */
+function localizedDeadlineDate(
+  deadline: string,
+  locale: 'ar' | 'en',
+  date: ReturnType<typeof useLocale>['date'],
+  weekday = false,
+): string {
+  if (locale === 'ar') return formatDeadline(deadline, { weekday });
+  const parsed = parseDeadline(deadline);
+  const showYear = Boolean(parsed && parsed.getFullYear() !== new Date().getFullYear());
+  return date(deadline, {
+    ...(weekday ? { weekday: 'long' as const } : {}),
+    day: 'numeric',
+    month: 'long',
+    ...(showYear ? { year: 'numeric' as const } : {}),
+  });
+}
+
+/** Due-date badge with locale-aware relative labels. */
 export function DeadlineChip({ task, summary }: { task: Task; summary?: TaskSummary }) {
+  const { locale, t, number, date } = useLocale();
   const s = summary ?? summarizeTask(task);
   const base = 'inline-flex min-h-7 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold';
   if (!task.has_deadline || !task.deadline_date) {
-    return <span className={`${base} border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]`}><CalendarX2 size={14} aria-hidden="true" />بدون موعد</span>;
+    return <span className={`${base} border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]`}><CalendarX2 size={14} aria-hidden="true" />{t('بدون موعد', 'No deadline')}</span>;
   }
-  const date = formatDeadline(task.deadline_date);
+  const deadline = task.deadline_date;
+  const dueDate = localizedDeadlineDate(deadline, locale, date);
+  const time = locale === 'ar'
+    ? formatDeadlineTime(deadline)
+    : parseDeadline(deadline) && !/^\d{4}-\d{2}-\d{2}$/.test(deadline)
+      ? date(deadline, { hour: 'numeric', minute: '2-digit' })
+      : null;
   if (s.isComplete) {
-    return <span className={`${base} ${STATUS_META.approved.tone}`}><CheckCircle2 size={14} aria-hidden="true" />اكتملت · {date}</span>;
+    return <span className={`${base} ${STATUS_META.approved.tone}`}><CheckCircle2 size={14} aria-hidden="true" />{t('اكتملت', 'Complete')} · {dueDate}</span>;
   }
   if (s.overdue) {
     const late = s.daysLeft !== null ? Math.abs(s.daysLeft) : 0;
-    const lateHours = Math.abs(hoursRemaining(task.deadline_date) ?? 0);
-    const since = late ? `بقالها ${arDaysPhrase(late)}` : lateHours > 0 ? `بقالها ${arDurationPhrase(lateHours)}` : '';
-    return <span className={`${base} ${STATUS_META.revision_requested.tone}`}><AlertCircle size={14} aria-hidden="true" />متأخرة {since} · {date}</span>;
+    const lateHours = Math.abs(hoursRemaining(deadline) ?? 0);
+    const since = locale === 'ar'
+      ? late ? `بقالها ${arDaysPhrase(late)}` : lateHours > 0 ? `بقالها ${arDurationPhrase(lateHours)}` : ''
+      : late ? t(`${number(late)} أيام تأخير`, `${number(late)} day${late === 1 ? '' : 's'} overdue`) : lateHours > 0 ? t(`${number(Math.ceil(lateHours))} ساعة تأخير`, `${number(Math.ceil(lateHours))} hour${Math.ceil(lateHours) === 1 ? '' : 's'} overdue`) : '';
+    return <span className={`${base} ${STATUS_META.revision_requested.tone}`}><AlertCircle size={14} aria-hidden="true" />{t('متأخرة', 'Overdue')} {since} · {dueDate}</span>;
   }
-  const time = formatDeadlineTime(task.deadline_date);
-  const hoursLeft = hoursRemaining(task.deadline_date);
+  const hoursLeft = hoursRemaining(deadline);
   if (time && hoursLeft !== null && hoursLeft <= 12) {
-    return <span className={`${base} ${STATUS_META.revision_requested.tone}`}><CalendarClock size={14} aria-hidden="true" />خلال {arDurationPhrase(hoursLeft)} · {time}</span>;
+    const duration = locale === 'ar'
+      ? arDurationPhrase(hoursLeft)
+      : `${number(Math.max(1, Math.ceil(hoursLeft)))} ${Math.ceil(hoursLeft) < 2 ? 'hour' : 'hours'}`;
+    return <span className={`${base} ${STATUS_META.revision_requested.tone}`}><CalendarClock size={14} aria-hidden="true" />{t(`خلال ${duration}`, `Due in ${duration}`)} · {time}</span>;
   }
   if (s.daysLeft === 0) {
-    return <span className={`${base} ${STATUS_META.under_review.tone}`}><CalendarClock size={14} aria-hidden="true" />ميعادها النهارده{time ? ` · ${time}` : ''}</span>;
+    return <span className={`${base} ${STATUS_META.under_review.tone}`}><CalendarClock size={14} aria-hidden="true" />{locale === 'ar' ? `ميعادها النهارده${time ? ` · ${time}` : ''}` : `Due today${time ? ` · ${time}` : ''}`}</span>;
   }
   if (s.daysLeft !== null && s.daysLeft <= 3) {
-    const label = s.daysLeft === 1 ? 'بكرة' : `بعد ${arDaysPhrase(s.daysLeft)}`;
-    return <span className={`${base} ${STATUS_META.under_review.tone}`}><CalendarClock size={14} aria-hidden="true" />{label} · {date}</span>;
+    const label = locale === 'ar'
+      ? s.daysLeft === 1 ? 'بكرة' : `بعد ${arDaysPhrase(s.daysLeft)}`
+      : s.daysLeft === 1 ? 'Tomorrow' : `In ${number(s.daysLeft)} days`;
+    return <span className={`${base} ${STATUS_META.under_review.tone}`}><CalendarClock size={14} aria-hidden="true" />{label} · {dueDate}</span>;
   }
-  return <span className={`${base} border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)]`}><CalendarCheck2 size={14} aria-hidden="true" />{date}</span>;
+  return <span className={`${base} border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)]`}><CalendarCheck2 size={14} aria-hidden="true" />{dueDate}</span>;
 }
 
-/** شريط تقدم الاعتماد */
+/** Approval progress bar. */
 export function TaskProgress({ summary, compact = false }: { summary: TaskSummary; compact?: boolean }) {
+  const { t, number } = useLocale();
   const { approved, total, percent } = summary;
   return (
     <div className="grid gap-1.5">
       {!compact && (
         <div className="flex items-baseline justify-between gap-2 text-xs">
-          <span className="font-bold text-[var(--text-2)]">الإنجاز</span>
-          <span className="font-bold tabular-nums text-[var(--text-muted)]">{approved} من {total} اتعتمد · {percent}%</span>
+          <span className="font-bold text-[var(--text-2)]">{t('الإنجاز', 'Progress')}</span>
+          <span className="font-bold tabular-nums text-[var(--text-muted)]">{number(approved)} {t('من', 'of')} {number(total)} {t('اتعتمد', 'approved')} · {number(percent)}%</span>
         </div>
       )}
       <div
@@ -129,7 +180,7 @@ export function TaskProgress({ summary, compact = false }: { summary: TaskSummar
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
-        aria-label={`نسبة الإنجاز ${percent}%`}
+        aria-label={t(`نسبة الإنجاز ${percent}%`, `${percent}% complete`)}
       >
         <div
           className={`h-full rounded-full transition-[width] duration-500 ${percent === 100 ? 'bg-emerald-600' : 'bg-[var(--primary)]'}`}

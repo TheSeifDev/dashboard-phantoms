@@ -106,7 +106,10 @@ jobs:
             scripts/member-auth-storage.test.ts \
             scripts/member-logout.test.ts \
             scripts/member-projections.test.ts \
-            scripts/dashboard-state.test.ts
+            scripts/dashboard-state.test.ts \
+            scripts/task-contributions.test.ts \
+            scripts/task-contribution-invalidation.test.ts \
+            scripts/redesign-locale.test.ts
 
       - name: Run security, runtime, push, brand, and supporting regressions
         run: |

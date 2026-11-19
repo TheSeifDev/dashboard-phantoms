@@ -13,7 +13,9 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { useAuthStore } from '../../store/auth';
 import { useAdminAccess } from '../admin/access/api';
 
+import { useLocale } from '../../i18n/useLocale';
 export default function RankingPage() {
+  const { t, dir } = useLocale();
   const { members, notes, rankedAllMembers, topThree, isLoading, isError, refetch } = useRanking();
   const customFieldsQuery = useMemberCustomFields();
   const user = useAuthStore((state) => state.user);
@@ -46,15 +48,15 @@ export default function RankingPage() {
   };
 
   if (isLoading) {
-    return <div className="grid gap-5" dir="rtl"><CardSkeletons count={3} /></div>;
+    return <div className="grid gap-5" dir={dir}><CardSkeletons count={3} /></div>;
   }
 
   if (isError) {
-    return <div className="grid gap-5" dir="rtl"><ErrorState message="معرفناش نحمّل بيانات الترتيب والتقييم." onRetry={() => { void refetch(); }} /></div>;
+    return <div className="grid gap-5" dir={dir}><ErrorState message={t("معرفناش نحمّل بيانات الترتيب والتقييم.", "Could not load ranking and evaluation data.")} onRetry={() => { void refetch(); }} /></div>;
   }
 
   return (
-    <div className="grid gap-6 text-start" dir="rtl">
+    <div className="grid gap-6 text-start" dir={dir}>
       {/* Header */}
       <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6 shadow-[var(--shadow-sm)]">
         <div className="flex items-start gap-3.5">
@@ -62,25 +64,25 @@ export default function RankingPage() {
             <Trophy size={24} />
           </div>
           <div>
-            <h2 className="text-[var(--fs-xl)] font-black text-[var(--text)]">ترتيب الفريق</h2>
+            <h2 className="text-[var(--fs-xl)] font-black text-[var(--text)]">{t("ترتيب الفريق", "Team ranking")}</h2>
             <p className="mt-1 max-w-xl text-sm leading-relaxed text-[var(--text-muted)]">
-              البونص غير المحدود يتصدر، وبعده نقاط البونص المسجلة. دوس على أي عضو عشان تشوف ملفه الكامل.
+              {t("البونص غير المحدود يتصدر، وبعده نقاط البونص المسجلة. دوس على أي عضو عشان تشوف ملفه الكامل.", "Unlimited bonuses rank first, followed by recorded bonus points. Select a member to view their profile.")}
             </p>
           </div>
         </div>
         <Button onClick={() => handleOpenAdjust()} icon={<Plus size={17} />} fullOnMobile className="min-h-11">
-          {canRecordRatings ? 'سجّل تقييم جديد' : 'إدارة بونص ∞'}
+          {canRecordRatings ? t('سجّل تقييم جديد', 'Record evaluation') : t('إدارة بونص ∞', 'Manage unlimited bonus')}
         </Button>
       </section>
 
       {/* Top 3 Podium */}
-      <section aria-label="منصة المتصدرين">
+      <section aria-label={t("منصة المتصدرين", "Top performers podium")}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-black text-sm text-[var(--text)] flex items-center gap-2">
             <Award size={18} className="text-amber-500" />
             المتصدرين
           </h3>
-          <span className="text-xs text-[var(--text-muted)]">من إجمالي <b className="tabular-nums text-[var(--text)]">{members.length}</b> عضو</span>
+          <span className="text-xs text-[var(--text-muted)]">{t("من إجمالي", "of")} <b className="tabular-nums text-[var(--text)]">{members.length}</b> {t("عضو", "members")}</span>
         </div>
         <RankingPodium
           topMembers={topThree}
@@ -90,7 +92,7 @@ export default function RankingPage() {
       </section>
 
       {/* Filters and Search */}
-      <section className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-sm)] sm:p-4" aria-label="فلترة جدول الترتيب">
+      <section className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-sm)] sm:p-4" aria-label={t("فلترة جدول الترتيب", "Ranking filters")}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
           <div className="relative">
             <Search size={17} className="pointer-events-none absolute inset-y-0 start-3 my-auto text-[var(--text-muted)]" aria-hidden="true" />
@@ -98,8 +100,8 @@ export default function RankingPage() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="ابحث بالاسم أو البريد..."
-              aria-label="البحث في جدول الترتيب"
+              placeholder={t("ابحث بالاسم أو البريد...", "Search by name or email...")}
+              aria-label={t("البحث في جدول الترتيب", "Search ranking table")}
               className="h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] pe-3 ps-10 text-base placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:outline-none focus:ring-4 focus:ring-[var(--primary-soft)] sm:text-sm"
             />
           </div>
@@ -111,13 +113,13 @@ export default function RankingPage() {
               onChange={(e) => setOnlyWithBonus(e.target.checked)}
               className="size-[18px] shrink-0"
             />
-            <span>اللي عندهم بونص</span>
+            <span>{t("اللي عندهم بونص", "Members with bonuses")}</span>
           </label>
         </div>
       </section>
 
       {/* Ranking Table */}
-      <section aria-label="جدول الترتيب الكامل">
+      <section aria-label={t("جدول الترتيب الكامل", "Full ranking table")}>
         <div className="mb-2 flex items-center justify-between">
           <h3 className="font-black text-sm text-[var(--text)] flex items-center gap-2">
             <Users size={17} className="text-[var(--primary)]" />

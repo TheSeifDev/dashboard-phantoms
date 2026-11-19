@@ -17,6 +17,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
+import { useLocale } from '../../i18n/useLocale';
 
 interface Props {
   isOpen: boolean;
@@ -45,7 +46,16 @@ export function MemberEditor({
   onManageCustomFields,
   onOpenInviteModal,
 }: Props) {
+  const { t, dir } = useLocale();
   const saveCustomField = useSaveMemberCustomField();
+  const fieldTypeLabel = (type: MemberCustomFieldType) => t(CUSTOM_FIELD_TYPE_LABELS[type], ({
+    short_text: 'Free text (any value)',
+    select: 'Choice list',
+    number: 'Number',
+    yes_no: 'Yes / No',
+    date: 'Date',
+    long_text: 'Long text / details',
+  } as const)[type]);
   const [addingInlineField, setAddingInlineField] = useState(false);
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldType, setNewFieldType] = useState<MemberCustomFieldType>('short_text');
@@ -66,7 +76,7 @@ export function MemberEditor({
     </label>
   );
 
-  const selectField = (key: keyof MemberInsert, label: string, options: string[]) => (
+  const selectField = (key: keyof MemberInsert, label: string, options: Array<string | { value: string; label: string }>) => (
     <label className="grid gap-1.5 text-sm font-bold text-[var(--text-2)]">
       {label}
       <select
@@ -74,11 +84,11 @@ export function MemberEditor({
         onChange={(event) => onChange({ ...value, [key]: event.target.value })}
         className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-base font-normal text-[var(--text)]"
       >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option || '— غير محدد —'}
-          </option>
-        ))}
+        {options.map((option) => {
+          const optionValue = typeof option === 'string' ? option : option.value;
+          const optionLabel = typeof option === 'string' ? option : option.label;
+          return <option key={optionValue} value={optionValue}>{optionLabel || t('— غير محدد —', '— Not specified —')}</option>;
+        })}
       </select>
     </label>
   );
@@ -101,12 +111,12 @@ export function MemberEditor({
     setInlineFieldError('');
     const cleanLabel = newFieldLabel.trim();
     if (!cleanLabel) {
-      setInlineFieldError('اكتب عنوان المعلومة الأول (مثال: نوع الثانوية).');
+      setInlineFieldError(t('اكتب عنوان المعلومة الأول (مثال: نوع الثانوية).', 'Enter a field name first (for example: High school type).'));
       return;
     }
     const options = newFieldType === 'select' ? parseOptionsText(newFieldOptions) : [];
     if (newFieldType === 'select' && options.length === 0) {
-      setInlineFieldError('اكتب الاختيارات المتاحة مفصولة بفاصلة.');
+      setInlineFieldError(t('اكتب الاختيارات المتاحة مفصولة بفاصلة.', 'Enter the available choices, separated by commas.'));
       return;
     }
 
@@ -123,7 +133,7 @@ export function MemberEditor({
           sort_order: customFields.length,
         },
       });
-      toast.success(`اتضاف حقل «${cleanLabel}» لكل الأعضاء.`);
+      toast.success(t(`اتضاف حقل «${cleanLabel}» لكل الأعضاء.`, `Added “${cleanLabel}” for all members.`));
       setNewFieldLabel('');
       setNewFieldType('short_text');
       setNewFieldOptions('');
@@ -147,7 +157,7 @@ export function MemberEditor({
           onChange={(e) => updateCustomFieldValue(field, e.target.value || null)}
           className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-base font-normal text-[var(--text)]"
         >
-          <option value="">— اختر —</option>
+          <option value="">{t('— اختر —', '— Select —')}</option>
           {allOptions.map((opt) => (
             <option key={opt} value={opt}>
               {opt}
@@ -173,9 +183,9 @@ export function MemberEditor({
           }}
           className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-base font-normal text-[var(--text)]"
         >
-          <option value="">— غير محدد —</option>
-          <option value="true">نعم</option>
-          <option value="false">لا</option>
+          <option value="">{t('— غير محدد —', '— Not specified —')}</option>
+          <option value="true">{t('نعم', 'Yes')}</option>
+          <option value="false">{t('لا', 'No')}</option>
         </select>
       );
     }
@@ -218,16 +228,16 @@ export function MemberEditor({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={member ? 'تعديل بيانات العضو' : 'إضافة عضو جديد'} maxWidth="lg">
-      <form onSubmit={onSubmit} className="grid gap-4" noValidate>
+    <Modal isOpen={isOpen} onClose={onClose} title={member ? t('تعديل بيانات العضو', 'Edit member') : t('إضافة عضو جديد', 'Add a member')} maxWidth="lg">
+      <form onSubmit={onSubmit} className="grid gap-4" dir={dir} noValidate>
         {!member && onOpenInviteModal && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--primary-soft)] p-3.5">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-black text-[var(--text)]">
-                عايز العضو يملا بياناته بنفسه؟
+                {t('عايز العضو يملا بياناته بنفسه؟', 'Would you like the member to enter their own details?')}
               </p>
               <p className="mt-0.5 text-xs text-[var(--text-2)]">
-                بدل الإدخال اليدوي، ولّد رابط دعوة عشوائي محمي وابعته للعضو يسجّل بيه بياناته كاملة.
+                {t('بدل الإدخال اليدوي، ولّد رابط دعوة عشوائي محمي وابعته للعضو يسجّل بيه بياناته كاملة.', 'Instead of entering details manually, generate a secure invitation link so the member can register their details.')}
               </p>
             </div>
             <button
@@ -236,7 +246,7 @@ export function MemberEditor({
               className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-xs font-bold text-white hover:opacity-95"
             >
               <Link2 size={14} aria-hidden="true" />
-              توليد رابط تسجيل للعضو
+              {t('توليد رابط تسجيل للعضو', 'Generate member registration link')}
             </button>
           </div>
         )}
@@ -251,32 +261,39 @@ export function MemberEditor({
         )}
 
         <div className="grid gap-3 md:grid-cols-2">
-          {textField('full_name', 'الاسم الكامل')}
-          {textField('email', 'البريد الإلكتروني', 'email')}
-          {textField('phone', 'رقم الهاتف (01xxxxxxxxx)', 'tel')}
-          {textField('work_conditions', 'ظروف العمل')}
-          {selectField('device', 'الجهاز المتوفر', [
-            'لابتوب',
-            'كمبيوتر مكتبي (PC)',
-            'بدون جهاز',
-            'هاتف محمول',
-            'لابتوب، هاتف محمول',
-            'لابتوب، جهاز لوحي، هاتف محمول',
+          {textField('full_name', t('الاسم الكامل', 'Full name'))}
+          {textField('email', t('البريد الإلكتروني', 'Email'), 'email')}
+          {textField('phone', t('رقم الهاتف (01xxxxxxxxx)', 'Phone number (01xxxxxxxxx)'), 'tel')}
+          {textField('work_conditions', t('ظروف العمل', 'Work conditions'))}
+          {selectField('device', t('الجهاز المتوفر', 'Available device'), [
+            { value: 'لابتوب', label: t('لابتوب', 'Laptop') },
+            { value: 'كمبيوتر مكتبي (PC)', label: t('كمبيوتر مكتبي (PC)', 'Desktop computer (PC)') },
+            { value: 'بدون جهاز', label: t('بدون جهاز', 'No device') },
+            { value: 'هاتف محمول', label: t('هاتف محمول', 'Mobile phone') },
+            { value: 'لابتوب، هاتف محمول', label: t('لابتوب، هاتف محمول', 'Laptop, mobile phone') },
+            { value: 'لابتوب، جهاز لوحي، هاتف محمول', label: t('لابتوب، جهاز لوحي، هاتف محمول', 'Laptop, tablet, mobile phone') },
           ])}
-          {textField('residence', 'محل الإقامة')}
-          {selectField('gender', 'الجنس', ['', 'ذكر', 'أنثى'])}
-          {selectField('work_status', 'حالة الحساب', ['active', 'inactive'])}
+          {textField('residence', t('محل الإقامة', 'Residence'))}
+          {selectField('gender', t('الجنس', 'Gender'), [
+            { value: '', label: t('— غير محدد —', '— Not specified —') },
+            { value: 'ذكر', label: t('ذكر', 'Male') },
+            { value: 'أنثى', label: t('أنثى', 'Female') },
+          ])}
+          {selectField('work_status', t('حالة الحساب', 'Account status'), [
+            { value: 'active', label: t('active', 'Active') },
+            { value: 'inactive', label: t('inactive', 'Inactive') },
+          ])}
         </div>
 
-        {textField('bio', 'نبذة / الدور')}
+        {textField('bio', t('نبذة / الدور', 'Bio / role'))}
 
         {/* Dynamic Custom Fields Section */}
         <div className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h4 className="text-sm font-black text-[var(--text)]">بيانات إضافية مخصصة</h4>
+              <h4 className="text-sm font-black text-[var(--text)]">{t('بيانات إضافية مخصصة', 'Custom additional details')}</h4>
               <p className="text-xs text-[var(--text-muted)]">
-                ضيف أي خانة جديدة (زي: نوع الثانوية، الكلية، إلخ) وهتظهر لكل الأعضاء تلقائياً
+                {t('ضيف أي خانة جديدة (زي: نوع الثانوية، الكلية، إلخ) وهتظهر لكل الأعضاء تلقائياً', 'Add a field (such as high school type or college) and it will appear for all members.')}
               </p>
             </div>
             <div className="flex items-center gap-1.5">
@@ -289,17 +306,17 @@ export function MemberEditor({
                 className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-[var(--primary-soft)] px-2.5 text-xs font-bold text-[var(--link)] hover:bg-[var(--primary)] hover:text-white"
               >
                 {addingInlineField ? <X size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}
-                {addingInlineField ? 'إغلاق' : 'إضافة معلومة جديدة'}
+                {addingInlineField ? t('إغلاق', 'Close') : t('إضافة معلومة جديدة', 'Add a new field')}
               </button>
               {onManageCustomFields && (
                 <button
                   type="button"
                   onClick={onManageCustomFields}
                   className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-bold text-[var(--text-2)] hover:bg-[var(--bg)]"
-                  title="إدارة وتعديل الحقول المخصصة"
+                  title={t('إدارة وتعديل الحقول المخصصة', 'Manage custom fields')}
                 >
                   <Settings2 size={14} aria-hidden="true" />
-                  إدارة الحقول
+                  {t('إدارة الحقول', 'Manage fields')}
                 </button>
               )}
             </div>
@@ -315,17 +332,17 @@ export function MemberEditor({
               )}
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
-                  اسم المعلومة الجديدة
+                  {t('اسم المعلومة الجديدة', 'New field name')}
                   <input
                     type="text"
-                    placeholder="مثال: نوع الثانوية"
+                    placeholder={t('مثال: نوع الثانوية', 'Example: High school type')}
                     value={newFieldLabel}
                     onChange={(e) => setNewFieldLabel(e.target.value)}
                     className="min-h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2.5 text-sm font-normal text-[var(--text)]"
                   />
                 </label>
                 <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
-                  طريقة الإدخال
+                  {t('طريقة الإدخال', 'Input type')}
                   <select
                     value={newFieldType}
                     onChange={(e) => setNewFieldType(e.target.value as MemberCustomFieldType)}
@@ -333,7 +350,7 @@ export function MemberEditor({
                   >
                     {(Object.keys(CUSTOM_FIELD_TYPE_LABELS) as MemberCustomFieldType[]).map((type) => (
                       <option key={type} value={type}>
-                        {CUSTOM_FIELD_TYPE_LABELS[type]}
+                        {fieldTypeLabel(type)}
                       </option>
                     ))}
                   </select>
@@ -341,10 +358,10 @@ export function MemberEditor({
               </div>
               {newFieldType === 'select' && (
                 <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
-                  الاختيارات المتاحة (افصل بينها بفاصلة «،»)
+                  {t('الاختيارات المتاحة (افصل بينها بفاصلة «،»)', 'Available choices (separate with commas)')}
                   <input
                     type="text"
-                    placeholder="مثال: ثانوي عام، ثانوي أزهري، فني / صناعي، STEM"
+                    placeholder={t('مثال: ثانوي عام، ثانوي أزهري، فني / صناعي، STEM', 'Example: General, Azhar, technical / industrial, STEM')}
                     value={newFieldOptions}
                     onChange={(e) => setNewFieldOptions(e.target.value)}
                     className="min-h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2.5 text-sm font-normal text-[var(--text)]"
@@ -358,10 +375,10 @@ export function MemberEditor({
                     void handleAddInlineField();
                   }}
                   isLoading={saveCustomField.isPending}
-                  loadingText="بنضيف..."
+                  loadingText={t('بنضيف...', 'Adding...')}
                   icon={<Plus size={15} aria-hidden="true" />}
                 >
-                  تثبيت الحقل لكل الأعضاء
+                  {t('تثبيت الحقل لكل الأعضاء', 'Add field for all members')}
                 </Button>
               </div>
             </div>
@@ -384,7 +401,7 @@ export function MemberEditor({
           ) : (
             !addingInlineField && (
               <p className="text-xs text-[var(--text-muted)]">
-                مفيش حقول مخصصة مضافة لسه. اضغط «إضافة معلومة جديدة» لإضافة أي بيان جديد بدون تعديل الكود.
+                {t('مفيش حقول مخصصة مضافة لسه. اضغط «إضافة معلومة جديدة» لإضافة أي بيان جديد بدون تعديل الكود.', 'No custom fields yet. Select “Add a new field” to add one without changing the code.')}
               </p>
             )
           )}
@@ -396,15 +413,15 @@ export function MemberEditor({
             checked={value.can_go_alexandria}
             onChange={(event) => onChange({ ...value, can_go_alexandria: event.target.checked })}
           />
-          جاهز للنزول الميداني واجتماعات الإسكندرية
+          {t('جاهز للنزول الميداني واجتماعات الإسكندرية', 'Available for field work and Alexandria meetings')}
         </label>
 
         <div className="flex flex-col-reverse gap-2 border-t border-[var(--border)] pt-4 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose} fullOnMobile>
-            إلغاء
+            {t('إلغاء', 'Cancel')}
           </Button>
-          <Button type="submit" isLoading={isSaving} loadingText="بنحفظ..." fullOnMobile>
-            {member ? 'حفظ التعديلات' : 'إضافة العضو'}
+          <Button type="submit" isLoading={isSaving} loadingText={t('بنحفظ...', 'Saving...')} fullOnMobile>
+            {member ? t('حفظ التعديلات', 'Save changes') : t('إضافة العضو', 'Add member')}
           </Button>
         </div>
       </form>

@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import type { ConnectionState, WhatsAppStatus } from './api';
 import { WhatsAppQRCodeBox } from './WhatsAppQRCodeBox';
 
+import { useLocale } from '../../i18n/useLocale';
 interface WhatsAppQRViewerProps {
   status: WhatsAppStatus | undefined;
   loading: boolean;
@@ -26,6 +27,7 @@ export function WhatsAppQRViewer({
   onDisconnect,
   onRevoke,
 }: WhatsAppQRViewerProps) {
+  const { t, dir } = useLocale();
   const connectionState: ConnectionState =
     status?.state ??
     (status?.connected
@@ -37,7 +39,7 @@ export function WhatsAppQRViewer({
           : 'disconnected');
 
   return (
-    <Card className="grid gap-5 border-s-4 border-s-emerald-600">
+    <Card className="grid gap-5 border-s-4 border-s-emerald-600" dir={dir}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
         <div className="flex items-center gap-3">
           <div className="grid size-10 place-items-center rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
@@ -45,28 +47,28 @@ export function WhatsAppQRViewer({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-[var(--text)]">حالة اتصال واتساب:</span>
+              <span className="font-extrabold text-[var(--text)]">{t("حالة اتصال واتساب:", "WhatsApp connection:")}</span>
               {loading ? (
-                <Badge variant="neutral">بنراجع...</Badge>
+                <Badge variant="neutral">{t("بنراجع...", "Checking...")}</Badge>
               ) : connectionState === 'connected' ? (
-                <Badge variant="success">متصل بنجاح</Badge>
+                <Badge variant="success">{t("متصل بنجاح", "Connected")}</Badge>
               ) : connectionState === 'qr_ready' ? (
-                <Badge variant="warning">مستني المسح</Badge>
+                <Badge variant="warning">{t("مستني المسح", "Awaiting scan")}</Badge>
               ) : connectionState === 'connecting' ? (
-                <Badge variant="info">بنتصل...</Badge>
+                <Badge variant="info">{t("بنتصل...", "Connecting...")}</Badge>
               ) : (
-                <Badge variant="neutral">مش متصل</Badge>
+                <Badge variant="neutral">{t("مش متصل", "Disconnected")}</Badge>
               )}
             </div>
             <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-              {status?.phone ? `الرقم المرتبط: ${status.phone}` : 'النظام: سيرفر Baileys التجريبي المستقل'}
+              {status?.phone ? t(`الرقم المرتبط: ${status.phone}`, `Linked number: ${status.phone}`) : t('النظام: سيرفر Baileys التجريبي المستقل', 'System: standalone Baileys test server')}
             </p>
           </div>
         </div>
 
         {status?.dryRun && (
           <span className="rounded-lg border border-[var(--primary)] bg-[var(--primary-soft)] px-2.5 py-1 text-xs font-bold text-[var(--link)]">
-            وضع محاكاة معزول (Mock)
+            {t('وضع محاكاة معزول (Mock)', 'Isolated simulation mode (Mock)')}
           </span>
         )}
       </div>
@@ -85,9 +87,9 @@ export function WhatsAppQRViewer({
         <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950 dark:border-emerald-800/60 dark:bg-emerald-950/20 dark:text-emerald-200">
           <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" size={20} aria-hidden="true" />
           <div className="text-sm leading-6">
-            <p className="font-extrabold">جلسة واتساب متصلة وشغالة ({status?.phone ?? 'رقم الإدارة'})</p>
+            <p className="font-extrabold">{t("جلسة واتساب متصلة وشغالة", "WhatsApp session connected and active")} ({status?.phone ?? t('رقم الإدارة', 'Admin number')})</p>
             <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-300">
-              تقدر دلوقتي تختار المهمة وتحدد الأعضاء اللي أكدوا استقبالهم عشان تبعت لهم إشعارات المهام.
+              {t("تقدر دلوقتي تختار المهمة وتحدد الأعضاء اللي أكدوا استقبالهم عشان تبعت لهم إشعارات المهام.", "You can now choose a task and select members who consented to receive task notifications.")}
             </p>
           </div>
         </div>
@@ -109,7 +111,7 @@ export function WhatsAppQRViewer({
             onClick={onConnect}
             fullOnMobile
           >
-            فعّل الربط واطلب رمز QR
+            {t('فعّل الربط واطلب رمز QR', 'Enable connection and request QR code')}
           </Button>
         )}
 
@@ -123,7 +125,7 @@ export function WhatsAppQRViewer({
               onClick={onDisconnect}
               fullOnMobile
             >
-              اقفل الاتصال
+              {t('اقفل الاتصال', 'Disconnect')}
             </Button>
             <Button
               type="button"
@@ -133,7 +135,7 @@ export function WhatsAppQRViewer({
               onClick={onRevoke}
               fullOnMobile
             >
-              افصل الرقم والغي الجلسة نهائيًا
+              {t('افصل الرقم والغي الجلسة نهائيًا', 'Unlink number and end session permanently')}
             </Button>
           </>
         )}
@@ -147,7 +149,7 @@ export function WhatsAppQRViewer({
             onClick={onDisconnect}
             fullOnMobile
           >
-            إلغاء جلسة الربط
+            {t('إلغاء جلسة الربط', 'Cancel connection session')}
           </Button>
         )}
       </div>

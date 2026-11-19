@@ -3,7 +3,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ADMIN_MEMBER_COLUMNS } from '../src/features/members/memberColumns';
-import { formatSigned } from '../src/lib/arabic';
 
 const apiPort = process.env.PHANTOMS_LOCAL_API_PORT ?? '54321';
 const previewPort = process.env.PHANTOMS_LOCAL_PREVIEW_PORT ?? '4173';
@@ -55,7 +54,7 @@ async function loginInBrowser(page: Page): Promise<void> {
   await page.locator('#admin-password').fill(ownerPassword);
   await page.getByRole('button', { name: 'ادخل مركز الإدارة' }).click();
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
-  await expect(page.getByText('مركز عمليات PHANTOMS')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'لوحة الفريق', exact: true })).toBeVisible();
 }
 
 function requestIsAllowed(url: URL): boolean {
@@ -246,10 +245,10 @@ test.describe('disposable local dashboard', () => {
     await loginInBrowser(page);
     await expect(page.getByTestId('dashboard-metrics')).toBeVisible();
     await expect(page.getByTestId('dashboard-widgets')).toBeVisible();
-    await expect(page.getByTestId('dashboard-metrics').getByText('2', { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId('dashboard-metrics').getByText(new Intl.NumberFormat('ar-EG').format(2), { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Disposable local dashboard task').first()).toBeVisible();
-    await expect(page.getByText('Disposable owner ضاف ملاحظة لـ Disposable member one').first()).toBeVisible();
-    await expect(page.getByText(formatSigned(12), { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Disposable owner أضاف ملاحظة لـ Disposable member one').first()).toBeVisible();
+    await expect(page.getByTestId('dashboard-widgets').getByText(new Intl.NumberFormat('ar-EG').format(12), { exact: true }).first()).toBeVisible();
     await expect(page.getByTestId('dashboard-widgets').locator('li').filter({ hasText: 'تحت المراجعة' }).first()).toBeVisible();
     await expect(page.getByTestId('dashboard-widgets').locator('li').filter({ hasText: 'متأخر' }).first()).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
@@ -515,7 +514,7 @@ test.describe('disposable local dashboard', () => {
       gate.setResource403(resource, false);
       await page.getByRole('button', { name: 'إعادة المحاولة' }).click();
       await expect(page.getByRole('alert')).toHaveCount(0);
-      await expect(page.getByTestId('dashboard-metrics').getByText('2', { exact: true }).first()).toBeVisible();
+      await expect(page.getByTestId('dashboard-metrics').getByText(new Intl.NumberFormat('ar-EG').format(2), { exact: true }).first()).toBeVisible();
     }
 
     const screenshots: Array<{ theme: 'light' | 'dark'; viewport: 'desktop' | 'mobile'; path: string }> = [];
@@ -607,7 +606,7 @@ test.describe('disposable local dashboard', () => {
         await page.getByRole('button', { name: longArabicName, exact: true }).click();
         const memberDialog = page.getByRole('dialog', { name: 'ملف العضو' });
         await expect(memberDialog).toBeVisible();
-        await page.waitForTimeout(220);
+        await expect(memberDialog).toHaveCSS('opacity', '1');
         const dialogVisual = await memberDialog.evaluate((dialog) => ({
           opacity: Number.parseFloat(getComputedStyle(dialog).opacity),
           backgroundColor: getComputedStyle(dialog).backgroundColor,
@@ -671,7 +670,9 @@ test.describe('disposable local dashboard', () => {
     expect(restoredMemberName.error).toBeNull();
     expect(restoredMemberName.data?.id).toBe(firstMember.id);
     await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('dashboard-metrics')).toBeVisible();
+    await expect(page.getByTestId('dashboard-contributions').locator('.dashboard-contribution-number')).toHaveText(new Intl.NumberFormat('ar-EG').format(0));
     await assertCorePage(page, '/admin/tasks', /إدارة وتكليف المهام/);
     await expect(page.getByText('Disposable local dashboard task').first()).toBeVisible();
 
@@ -687,6 +688,58 @@ test.describe('disposable local dashboard', () => {
     expect(approvedRead.data).toHaveLength(1);
     expect((approvedRead.data?.[0]?.tracking as Record<string, { status?: string }> | null)?.[String(firstMember?.id)]?.status).toBe('approved');
     expect(gate.pushRequests).toEqual([]);
+
+    await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
+    const contributions = page.getByTestId('dashboard-contributions');
+    await expect(contributions).toBeVisible();
+    await expect.poll(async () => {
+      const box = await contributions.locator('button.dashboard-heatmap-cell').first().boundingBox();
+      return { width: Math.round(box?.width ?? -1), height: Math.round(box?.height ?? -1) };
+    }).toEqual({ width: 10, height: 10 });
+    await expect(contributions.locator('.dashboard-contribution-number')).toHaveText(new Intl.NumberFormat('ar-EG').format(1));
+    await expect(contributions.locator('.dashboard-streak strong').first()).toHaveText(new Intl.NumberFormat('ar-EG').format(1));
+    await expect(contributions.locator('[data-untracked="true"]').first()).toBeVisible();
+    const yearSelect = contributions.getByLabel('سنة سجل المساهمات', { exact: true });
+    const currentYearValue = await yearSelect.inputValue();
+    await yearSelect.selectOption(String(Number(currentYearValue) - 1));
+    await expect(contributions.locator('.dashboard-streak strong').first()).toHaveText('—');
+    await yearSelect.selectOption(currentYearValue);
+    await expect(contributions.locator('.dashboard-contribution-number')).toHaveText(new Intl.NumberFormat('ar-EG').format(1));
+    const designShotDir = process.env.PHANTOMS_REDESIGN_SCREENSHOT_DIR;
+    if (designShotDir && vapidMode === 'missing') await mkdir(designShotDir, { recursive: true, mode: 0o700 });
+    const privateCopy = page.locator('.header-account-copy, .header-avatar, .dashboard-person-name, .dashboard-late-person, .dashboard-activity-copy');
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.getByRole('button', { name: 'شغّل الوضع الفاتح', exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.waitForTimeout(1600); // Recharts finite data-entry animation; not an application delay.
+    if (designShotDir && vapidMode === 'missing') await page.screenshot({ path: path.join(designShotDir, 'dashboard-ar-light.png'), fullPage: true, mask: [privateCopy], maskColor: '#dce5ef' });
+    await page.locator('.language-toggle').click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+    await expect(page.getByRole('heading', { name: 'Team dashboard', exact: true })).toBeVisible();
+    await expect(contributions.locator('.dashboard-contribution-number')).toHaveText('1');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Team dashboard', exact: true })).toBeVisible();
+    await page.waitForTimeout(1600);
+    if (designShotDir && vapidMode === 'missing') await page.screenshot({ path: path.join(designShotDir, 'dashboard-en-light.png'), fullPage: true, mask: [privateCopy], maskColor: '#dce5ef' });
+    await page.getByRole('button', { name: 'Use dark theme', exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    if (designShotDir && vapidMode === 'missing') await page.screenshot({ path: path.join(designShotDir, 'dashboard-en-dark.png'), fullPage: true, mask: [privateCopy], maskColor: '#263b52' });
+    for (const width of [320, 360, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await assertNoHorizontalOverflow(page);
+      await expect(page.getByRole('button', { name: 'Open main menu', exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'Open main menu', exact: true }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+    }
+    if (designShotDir && vapidMode === 'missing') await page.screenshot({ path: path.join(designShotDir, 'dashboard-en-mobile.png'), fullPage: true, mask: [privateCopy], maskColor: '#263b52' });
+    await page.locator('.language-toggle').click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/admin/tasks', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('button', { name: 'اعمل مهمة جديدة', exact: true })).toBeVisible();
 
     // This is the real assignment UI path, not an SDK-only insert. VAPID is a
     // local placeholder, so every task must persist without a push request.
@@ -777,9 +830,11 @@ test.describe('disposable local dashboard', () => {
     await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('dashboard-metrics')).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
-    await expect(page.getByTestId('dashboard-metrics').getByText('0', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('مفيش تكليفات لسه')).toBeVisible();
-    await expect(page.getByText('لسه مفيش بونص متسجل')).toBeVisible();
+    await expect(page.getByTestId('dashboard-metrics').getByText(new Intl.NumberFormat('ar-EG').format(0), { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('لا توجد تكليفات مسندة حتى الآن.')).toBeVisible();
+    await expect(page.getByText('سيظهر الاتجاه بعد تسجيل نقاط فعلية.')).toBeVisible();
+    // Deleting current tasks/members must not silently erase historical approvals.
+    await expect(page.getByTestId('dashboard-contributions').locator('.dashboard-contribution-number')).toHaveText(new Intl.NumberFormat('ar-EG').format(1));
 
     const injectedTaskErrors = requestEvidence.filter((r) => r.status === 400 && r.method === 'POST' && r.endpoint === '/rest/v1/tasks');
     const unexpectedErrorResponses = requestEvidence.filter((r) => r.status === 401 || (r.status >= 400 && !(r.status === 403 && ['/rest/v1/members', '/rest/v1/tasks', '/rest/v1/notes'].includes(r.endpoint)) && !injectedTaskErrors.includes(r)));

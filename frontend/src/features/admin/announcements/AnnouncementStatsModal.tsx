@@ -7,6 +7,7 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { Badge } from '../../../components/ui/Badge';
 
+import { useLocale } from '../../../i18n/useLocale';
 interface AnnouncementStatsModalProps {
   announcementId: number;
   onClose: () => void;
@@ -16,6 +17,7 @@ export default function AnnouncementStatsModal({
   announcementId,
   onClose,
 }: AnnouncementStatsModalProps) {
+  const { t, number, date, dir } = useLocale();
   const [stats, setStats] = useState<AnnouncementStats | null>(null);
   const [details, setDetails] = useState<AnnouncementMemberDetail[]>([]);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
@@ -35,7 +37,7 @@ export default function AnnouncementStatsModal({
       setDetails(detailsData);
       setAnnouncement(announcementData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'حصلت مشكلة مش معروفة');
+      setError(err instanceof Error ? err.message : t('حصلت مشكلة مش معروفة', 'An unknown error occurred.'));
     } finally {
       setLoading(false);
     }
@@ -63,27 +65,21 @@ export default function AnnouncementStatsModal({
 
   const formatDateTime = (value: string | null) => {
     if (!value) return '—';
-    return new Intl.DateTimeFormat('ar-EG-u-nu-latn', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(value));
+    return date(value, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   const memberStatus = (row: AnnouncementMemberDetail): { label: string; variant: 'success' | 'info' | 'warning' | 'neutral' } => {
-    if (row.dismissed_at) return { label: 'خبّاه', variant: 'neutral' };
-    if (row.read_at) return { label: 'قرا الإعلان', variant: 'success' };
-    if (row.viewed_at) return { label: 'فتح ومقراش', variant: 'warning' };
-    return { label: 'لسه ما فتحش', variant: 'info' };
+    if (row.dismissed_at) return { label: t('خبّاه', 'Dismissed'), variant: 'neutral' };
+    if (row.read_at) return { label: t('قرا الإعلان', 'Read'), variant: 'success' };
+    if (row.viewed_at) return { label: t('فتح ومقراش', 'Opened, not read'), variant: 'warning' };
+    return { label: t('لسه ما فتحش', 'Not opened yet'), variant: 'info' };
   };
 
   return (
-    <Modal isOpen onClose={onClose} title="إحصائيات الإعلان" maxWidth="3xl">
-      <div className="grid gap-8 pb-4" dir="rtl">
+    <Modal isOpen onClose={onClose} title={t("إحصائيات الإعلان", "Announcement statistics")} maxWidth="3xl">
+      <div className="grid gap-8 pb-4" dir={dir}>
         {loading ? (
-          <div className="grid gap-4" role="status" aria-label="بنحمّل الإحصائيات">
+          <div className="grid gap-4" role="status" aria-label={t("بنحمّل الإحصائيات", "Loading statistics")}>
             <Skeleton className="h-12 w-1/3" />
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-40 w-full" />
@@ -92,41 +88,41 @@ export default function AnnouncementStatsModal({
           <ErrorState message={error} onRetry={() => { void loadStats(); }} />
         ) : !stats ? (
           <div className="py-12 text-center text-[var(--text-muted)]">
-            مفيش إحصائيات متاحة للإعلان ده
+            {t("مفيش إحصائيات متاحة للإعلان ده", "No statistics are available for this announcement")}
           </div>
         ) : (
           <div className="grid gap-12">
             {/* Editorial Header Stats */}
             <div className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4 border-b border-[var(--border)] pb-8">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">اللي استلموا</p>
-                <p className="font-[Instrument_Serif] text-4xl text-[var(--text)]">{stats.total_recipients}</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t("اللي استلموا", "Recipients")}</p>
+                <p className="font-[Instrument_Serif] text-4xl text-[var(--text)]">{number(stats.total_recipients)}</p>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">اتفتح</p>
-                <p className="font-[Instrument_Serif] text-4xl text-[var(--text)]">{stats.viewed_count}</p>
-                <p className="text-xs mt-1 text-[var(--text-2)]">{getViewedPercentage()}% من الإجمالي</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t("اتفتح", "Opened")}</p>
+                <p className="font-[Instrument_Serif] text-4xl text-[var(--text)]">{number(stats.viewed_count)}</p>
+                <p className="text-xs mt-1 text-[var(--text-2)]">{number(getViewedPercentage())}% {t('من الإجمالي', 'of total')}</p>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">اتقرا</p>
-                <p className="font-[Instrument_Serif] text-4xl text-[var(--text)]">{stats.read_count}</p>
-                <p className="text-xs mt-1 text-[var(--text-2)]">{getReadPercentage()}% من الإجمالي</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t("اتقرا", "Read")}</p>
+                <p className="font-[Instrument_Serif] text-4xl text-[var(--text)]">{number(stats.read_count)}</p>
+                <p className="text-xs mt-1 text-[var(--text-2)]">{number(getReadPercentage())}% {t('من الإجمالي', 'of total')}</p>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">اتمسح</p>
-                <p className="font-[Instrument_Serif] text-4xl text-[var(--text)]">{stats.dismissed_count}</p>
-                <p className="text-xs mt-1 text-[var(--text-2)]">{getDismissedPercentage()}% من الإجمالي</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t("اتمسح", "Dismissed")}</p>
+                <p className="font-[Instrument_Serif] text-4xl text-[var(--text)]">{number(stats.dismissed_count)}</p>
+                <p className="text-xs mt-1 text-[var(--text-2)]">{number(getDismissedPercentage())}% {t('من الإجمالي', 'of total')}</p>
               </div>
             </div>
 
             {/* حالة إرسال الواتساب */}
             {announcement?.send_whatsapp ? (
               <div className="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 text-sm leading-7 text-[var(--text-2)]">
-                <h4 className="mb-1 font-bold text-[var(--text)]">إرسال الواتساب</h4>
+                <h4 className="mb-1 font-bold text-[var(--text)]">{t("إرسال الواتساب", "WhatsApp delivery")}</h4>
                 {announcement.whatsapp_sent_at ? (
                   <>
                     <p>
-                      وصل لـ <strong>{announcement.whatsapp_sent_count}</strong> عضو
+                      {t("وصل لـ", "Sent to")} <strong>{number(announcement.whatsapp_sent_count)}</strong> {t("عضو", "members")}
                       {' — '}{formatDateTime(announcement.whatsapp_sent_at)}
                     </p>
                     {Array.isArray(announcement.whatsapp_errors) && announcement.whatsapp_errors.length > 0 ? (
@@ -136,11 +132,11 @@ export default function AnnouncementStatsModal({
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-emerald-700 dark:text-emerald-300">مفيش أخطاء متسجلة.</p>
+                      <p className="text-emerald-700 dark:text-emerald-300">{t("مفيش أخطاء متسجلة.", "No errors recorded.")}</p>
                     )}
                   </>
                 ) : (
-                  <p>لسه مفيش إرسال واتساب متسجل للإعلان ده (ممكن الطلب يكون فشل قبل ما يوصل للجسر).</p>
+                  <p>{t("لسه مفيش إرسال واتساب متسجل للإعلان ده (ممكن الطلب يكون فشل قبل ما يوصل للجسر).", "No WhatsApp send is recorded for this announcement yet; the request may have failed before reaching the bridge.")}</p>
                 )}
               </div>
             ) : null}
@@ -148,21 +144,21 @@ export default function AnnouncementStatsModal({
             {/* تفاصيل كل عضو */}
             <div>
               <div className="mb-4 flex items-baseline justify-between">
-                <h4 className="font-bold text-[var(--text)]">تفاصيل اللي استلموا ({details.length})</h4>
+                <h4 className="font-bold text-[var(--text)]">{t("تفاصيل اللي استلموا", "Recipient details")} ({number(details.length)})</h4>
               </div>
               {details.length === 0 ? (
-                <p className="text-sm text-[var(--text-muted)]">مفيش حد استلم الإعلان ده.</p>
+                <p className="text-sm text-[var(--text-muted)]">{t("مفيش حد استلم الإعلان ده.", "No one received this announcement.")}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm text-start">
                     <thead className="border-b border-[var(--border)]">
                       <tr className="text-xs text-[var(--text-muted)]">
-                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">العضو</th>
-                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">الحالة</th>
-                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">أول فتح</th>
-                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">آخر فتح (مرات)</th>
-                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">اتقرا</th>
-                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">اتمسح</th>
+                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">{t("العضو", "Member")}</th>
+                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">{t("الحالة", "Status")}</th>
+                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">{t("أول فتح", "First opened")}</th>
+                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">{t("آخر فتح (مرات)", "Last opened (count)")}</th>
+                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">{t("اتقرا", "Read")}</th>
+                        <th className="pb-3 text-start font-bold whitespace-nowrap px-2">{t("اتمسح", "Dismissed")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]">
@@ -198,7 +194,7 @@ export default function AnnouncementStatsModal({
             {stats.total_recipients > 0 && (
               <div className="border-t border-[var(--border)] pt-6 text-sm text-[var(--text-2)] max-w-prose leading-relaxed">
                 <p>
-                  <strong>ملحوظة:</strong> لو نسبة القراءة قليلة، جرّب تغيّر وقت الإرسال أو تستخدم عناوين تشد أكتر. ولو نسبة المسح عالية، راجع محتوى الإعلانات وخليه أفيد.
+                  <strong>{t('ملحوظة:', 'Note:')}</strong> {t('لو نسبة القراءة قليلة، جرّب تغيّر وقت الإرسال أو تستخدم عناوين تشد أكتر. ولو نسبة المسح عالية، راجع محتوى الإعلانات وخليه أفيد.', 'If the read rate is low, try changing the send time or using more engaging titles. If the dismissal rate is high, review the announcement content and make it more useful.')}
                 </p>
               </div>
             )}

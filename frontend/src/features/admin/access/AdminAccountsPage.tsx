@@ -16,11 +16,13 @@ import { useAdminAccess, useAdminAccounts, useAddAdminAccount, useRemoveAdminAcc
 import type { AdminAccount, AdminPermission, AdminPermissions } from '../../../types/db';
 import { ADMIN_PERMISSION_OPTIONS, FULL_ADMIN_PERMISSIONS, normalizeAdminPermissions } from './permissions';
 
+import { useLocale } from '../../../i18n/useLocale';
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium' }).format(new Date(value));
 }
 
 export default function AdminAccountsPage() {
+  const { t, number, dir } = useLocale();
   const user = useAuthStore((state) => state.user);
   const access = useAdminAccess(user?.id ?? null);
   const accounts = useAdminAccounts();
@@ -88,24 +90,24 @@ export default function AdminAccountsPage() {
     return <CardSkeletons count={2} />;
   }
   if (access.isError) {
-    return <ErrorState message="معرفناش نتحقق من صلاحياتك. أعد المحاولة قبل إدارة الحسابات." onRetry={() => { void access.refetch(); }} />;
+    return <ErrorState message={t("معرفناش نتحقق من صلاحياتك. أعد المحاولة قبل إدارة الحسابات.", "Could not verify your permissions. Retry before managing accounts.")} onRetry={() => { void access.refetch(); }} />;
   }
   if (!access.data?.is_owner) {
-    return <EmptyState title="إدارة الحسابات للمالك فقط" description="حسابك يقدر يدير بيانات النظام، لكن إضافة المشرفين أو حذفهم محصورة بمالك النظام." />;
+    return <EmptyState title={t("إدارة الحسابات للمالك فقط", "Account management is restricted to the owner")} description={t("حسابك يقدر يدير بيانات النظام، لكن إضافة المشرفين أو حذفهم محصورة بمالك النظام.", "Your account can manage system data, but only the system owner can add or remove administrators.")} />;
   }
 
   return (
-    <div className="grid gap-4" dir="rtl">
+    <div className="grid gap-4" dir={dir}>
       <PageHeader
         icon={<ShieldCheck size={24} />}
-        title="إدارة المشرفين"
-        description="مالك النظام يملك كامل الصلاحيات. تقدر تحدد الأقسام المتاحة لكل مشرف وتحذف حساب دخوله بالكامل."
+        title={t("إدارة المشرفين", "Manage administrators")}
+        description={t("مالك النظام يملك كامل الصلاحيات. تقدر تحدد الأقسام المتاحة لكل مشرف وتحذف حساب دخوله بالكامل.", "The system owner has full permissions. You can select each administrator’s sections and remove their sign-in account.")}
       />
 
       <Card>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
           <form id="admin-account-email-form" onSubmit={(event) => void addAdmin(event)} className="grid gap-3">
-            <label htmlFor="admin-account-email" className="text-sm font-extrabold">إضافة مشرف بالبريد الإلكتروني</label>
+            <label htmlFor="admin-account-email" className="text-sm font-extrabold">{t("إضافة مشرف بالبريد الإلكتروني", "Add administrator by email")}</label>
             <input
               id="admin-account-email"
               type="email"
@@ -117,14 +119,14 @@ export default function AdminAccountsPage() {
               placeholder="admin@example.com"
               className="min-h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-4 text-start text-base placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:outline-none focus:ring-4 focus:ring-[var(--primary-soft)] sm:text-sm"
             />
-            <p className="text-xs leading-6 text-[var(--text-muted)]">لو الحساب موجود هتتضاف له الصلاحية فوراً، ولو جديد هنبعتله دعوة بالبريد. الحساب الجديد يبدأ بكل الأقسام، وتقدر تخصصها بعد كده.</p>
+            <p className="text-xs leading-6 text-[var(--text-muted)]">{t("لو الحساب موجود هتتضاف له الصلاحية فوراً، ولو جديد هنبعتله دعوة بالبريد. الحساب الجديد يبدأ بكل الأقسام، وتقدر تخصصها بعد كده.", "Existing accounts receive access immediately; new accounts receive an email invitation with all sections enabled, which you can customize later.")}</p>
           </form>
           <Button
             type="submit"
             form="admin-account-email-form"
             icon={<ShieldPlus size={18} />}
             isLoading={addAccount.isPending}
-            loadingText="بنضيف..."
+            loadingText={t("بنضيف...", "Adding...")}
             fullOnMobile
           >
             إضافة مشرف
@@ -135,15 +137,15 @@ export default function AdminAccountsPage() {
       <Card>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="flex items-center gap-2 text-lg font-black"><Users size={20} className="text-[var(--link)]" aria-hidden="true" />حسابات الإدارة</h3>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">{accounts.data?.length ?? 0} حسابات — الصلاحيات تُراجع من الخادم باستمرار.</p>
+            <h3 className="flex items-center gap-2 text-lg font-black"><Users size={20} className="text-[var(--link)]" aria-hidden="true" />{t("حسابات الإدارة", "Administrator accounts")}</h3>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">{number(accounts.data?.length ?? 0)} {t("حسابات — الصلاحيات تُراجع من الخادم باستمرار.", "accounts — permissions are continuously checked by the server.")}</p>
           </div>
-          <Badge variant="success"><KeyRound size={13} aria-hidden="true" />صلاحيات مضبوطة</Badge>
+          <Badge variant="success"><KeyRound size={13} aria-hidden="true" />{t("صلاحيات مضبوطة", "Permissions verified")}</Badge>
         </div>
 
         {accounts.isPending && <CardSkeletons count={2} />}
-        {accounts.isError && <ErrorState message="معرفناش نحمّل حسابات الإدارة." onRetry={() => { void accounts.refetch(); }} />}
-        {accounts.data?.length === 0 && <EmptyState title="مفيش حسابات إدارة" description="حساب المالك يظهر هنا تلقائياً بعد تسجيل الدخول." />}
+        {accounts.isError && <ErrorState message={t("معرفناش نحمّل حسابات الإدارة.", "Could not load administrator accounts.")} onRetry={() => { void accounts.refetch(); }} />}
+        {accounts.data?.length === 0 && <EmptyState title={t("مفيش حسابات إدارة", "No administrator accounts")} description={t("حساب المالك يظهر هنا تلقائياً بعد تسجيل الدخول.", "The owner account appears here automatically after sign-in.")} />}
         {accounts.data && accounts.data.length > 0 && (
           <div className="grid gap-3">
             {accounts.data.map((account) => {
@@ -195,19 +197,19 @@ export default function AdminAccountsPage() {
       <Modal
         isOpen={editingAccount !== null}
         onClose={closePermissions}
-        title="تعديل صلاحيات المشرف"
+        title={t("تعديل صلاحيات المشرف", "Edit administrator permissions")}
         subtitle={editingAccount?.email}
         icon={<ShieldCheck size={20} />}
         maxWidth="xl"
         footer={(
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="secondary" onClick={closePermissions} disabled={updatePermissions.isPending} fullOnMobile>إلغاء</Button>
-            <Button type="submit" form="admin-permissions-form" icon={<Save size={17} />} isLoading={updatePermissions.isPending} loadingText="بنحفظ..." fullOnMobile>حفظ الصلاحيات</Button>
+            <Button type="button" variant="secondary" onClick={closePermissions} disabled={updatePermissions.isPending} fullOnMobile>{t("إلغاء", "Cancel")}</Button>
+            <Button type="submit" form="admin-permissions-form" icon={<Save size={17} />} isLoading={updatePermissions.isPending} loadingText={t("بنحفظ...", "Saving...")} fullOnMobile>{t("حفظ الصلاحيات", "Save permissions")}</Button>
           </div>
         )}
       >
         <form id="admin-permissions-form" onSubmit={(event) => void savePermissions(event)} className="grid gap-3">
-          <p className="text-sm leading-6 text-[var(--text-muted)]">اختار الأقسام اللي يقدر المشرف يفتحها ويديرها. التغيير بيتطبق على الصفحة وعمليات قاعدة البيانات والخدمات المرتبطة.</p>
+          <p className="text-sm leading-6 text-[var(--text-muted)]">{t("اختار الأقسام اللي يقدر المشرف يفتحها ويديرها. التغيير بيتطبق على الصفحة وعمليات قاعدة البيانات والخدمات المرتبطة.", "Select the sections this administrator can access. Changes apply to pages, database operations, and related services.")}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {ADMIN_PERMISSION_OPTIONS.map(({ key, label, description }) => (
               <label key={key} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${permissionDraft[key] ? 'border-[var(--primary)] bg-[var(--primary-soft)]' : 'border-[var(--border)] bg-[var(--bg)]'}`}>

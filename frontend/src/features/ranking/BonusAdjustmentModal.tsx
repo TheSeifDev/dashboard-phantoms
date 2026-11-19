@@ -6,6 +6,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { useCreateMemberRating, useSetMemberInfiniteBonus } from './api';
 
+import { useLocale } from '../../i18n/useLocale';
 interface BonusAdjustmentModalProps {
   isOpen: boolean;
   member: Member | null;
@@ -16,6 +17,7 @@ interface BonusAdjustmentModalProps {
 }
 
 export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings, onClose, onSuccess }: BonusAdjustmentModalProps) {
+  const { t, dir, number } = useLocale();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [points, setPoints] = useState<number>(1);
   const [mode, setMode] = useState<'rating' | 'infinite'>('rating');
@@ -42,12 +44,12 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (mode === 'rating' && !canRecordRatings) {
-      setError('يلزم امتلاك صلاحية ترتيب الفريق لتسجيل التقييم.');
+      setError(t('يلزم امتلاك صلاحية ترتيب الفريق لتسجيل التقييم.', 'Team ranking permission is required to record a rating.'));
       return;
     }
     if (mode === 'infinite') {
       if (reason.trim().length < 3) {
-        setError('اكتب سبباً من 3 أحرف على الأقل عشان يتسجل في سجل التغييرات.');
+        setError(t('اكتب سبباً من 3 أحرف على الأقل عشان يتسجل في سجل التغييرات.', 'Enter a reason of at least 3 characters so it can be recorded in the change log.'));
         return;
       }
       try {
@@ -61,13 +63,13 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
         onSuccess?.();
         onClose();
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'معرفناش نحدّث حالة البونص غير المحدود.');
+        setError(cause instanceof Error ? cause.message : t('معرفناش نحدّث حالة البونص غير المحدود.', 'Could not update the unlimited bonus status.'));
       }
       return;
     }
 
     if (!reason.trim()) {
-      setError('اكتب سبب التقييم عشان نوثّق الملاحظة في السجل.');
+      setError(t('اكتب سبب التقييم عشان نوثّق الملاحظة في السجل.', 'Enter a rating reason so the note can be recorded in the log.'));
       return;
     }
 
@@ -84,7 +86,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
       onSuccess?.();
       onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'معرفناش نسجل نقاط التقييم.');
+      setError(cause instanceof Error ? cause.message : t('معرفناش نسجل نقاط التقييم.', 'Could not record the rating points.'));
     }
   };
 
@@ -92,8 +94,8 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
   const negativeOptions = [-1, -2, -3, -4, -5];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="تقييم العضو والبونص" maxWidth="md">
-      <form onSubmit={handleSubmit} className="grid gap-4 text-start" dir="rtl">
+    <Modal isOpen={isOpen} onClose={onClose} title={t("تقييم العضو والبونص", "Member evaluation and bonus")} maxWidth="md">
+      <form onSubmit={handleSubmit} className="grid gap-4 text-start" dir={dir}>
         {error && (
           <p className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100" role="alert">
             <AlertCircle size={18} className="shrink-0 mt-0.5" />
@@ -103,7 +105,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
 
         {/* Member selector + preview header */}
         <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]">
-          العضو المطلوب تقييمه
+          {t('العضو المطلوب تقييمه', 'Member to evaluate')}
           <select
             value={selectedMember.id}
             onChange={(event) => {
@@ -131,15 +133,15 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
         {canRecordRatings ? (
           <div className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--surface-2)] p-1">
             <button type="button" onClick={() => { setMode('rating'); setReason(''); setError(''); }} aria-pressed={mode === 'rating'} className={`min-h-11 rounded-lg px-3 text-sm font-black ${mode === 'rating' ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)]'}`}>
-              تقييم رقمي
+              {t('تقييم رقمي', 'Numeric rating')}
             </button>
             <button type="button" onClick={() => { setMode('infinite'); setReason(''); setError(''); }} aria-pressed={mode === 'infinite'} className={`min-h-11 rounded-lg px-3 text-sm font-black ${mode === 'infinite' ? 'bg-[var(--surface)] text-[var(--primary)] shadow-sm' : 'text-[var(--text-muted)]'}`}>
-              بونص ∞
+              {t('بونص ∞', 'Infinite bonus ∞')}
             </button>
           </div>
         ) : (
           <p className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm leading-6 text-[var(--text-muted)]">
-            صلاحية ترتيب الفريق تتيح إدارة علامة ∞. تسجيل التقييم الرقمي يتطلب نفس الصلاحية.
+            {t('صلاحية ترتيب الفريق تتيح إدارة علامة ∞. تسجيل التقييم الرقمي يتطلب نفس الصلاحية.', 'Team ranking permission allows managing the ∞ marker. Recording a numeric rating requires the same permission.')}
           </p>
         )}
 
@@ -147,7 +149,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
         {/* Bonus selection */}
         <div>
           <label className="block text-sm font-bold text-[var(--text)] mb-2">
-            قيمة التقييم اللي هتتضاف أو تتخصم
+            {t('قيمة التقييم اللي هتتضاف أو تتخصم', 'Rating value to add or subtract')}
           </label>
           <div className="grid gap-2">
             {/* Zero (document only) */}
@@ -161,13 +163,13 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
                     : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--primary)]'
                 }`}
               >
-                0 — توثيق من غير نقاط
+                {t('0 — توثيق من غير نقاط', '0 — Log without points')}
               </button>
             </div>
             {/* Positive Options */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 ms-1">
-                <Plus size={13} /> إضافة:
+                <Plus size={13} /> {t('إضافة:', 'Add:')}
               </span>
               {positiveOptions.map((val) => (
                 <button
@@ -180,7 +182,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
                       : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-emerald-400'
                   }`}
                 >
-                  +{val}
+                  +{number(val)}
                 </button>
               ))}
             </div>
@@ -188,7 +190,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
             {/* Negative Options */}
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
               <span className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1 ms-1">
-                <Minus size={13} /> خصم:
+                <Minus size={13} /> {t('خصم:', 'Subtract:')}
               </span>
               {negativeOptions.map((val) => (
                 <button
@@ -201,7 +203,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
                       : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-red-400'
                   }`}
                 >
-                  {val}
+                  {number(val)}
                 </button>
               ))}
             </div>
@@ -211,9 +213,9 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
             <Award size={14} className="text-[var(--primary)]" />
             <span>
               {points === 0 ? (
-                <>توثيق ملاحظة من غير نقاط (الترتيب مش هيتأثر)</>
+                <>{t('توثيق ملاحظة من غير نقاط (الترتيب مش هيتأثر)', 'Log a note without points (ranking will not be affected)')}</>
               ) : (
-                <>القيمة اللي اخترتها: <b className={points > 0 ? 'text-emerald-600' : 'text-red-600'}>{points > 0 ? `+${points}` : points} نقطة</b> (هيتسجل الوسم {points > 0 ? `[B:+${points}]` : `[B:${points}]`})</>
+                <>{t('القيمة اللي اخترتها:', 'Selected value:')} <b className={points > 0 ? 'text-emerald-600' : 'text-red-600'}>{points > 0 ? `+${number(points)}` : number(points)} {t('نقطة', 'points')}</b> {t('(هيتسجل الوسم', '(the recorded tag will be')} {points > 0 ? `[B:+${points}]` : `[B:${points}]`})</>
               )}
             </span>
           </div>
@@ -221,20 +223,20 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
 
         {/* Reason / Note text */}
         <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]">
-          سبب التقييم والملاحظة المسجلة *
+          {t("سبب التقييم والملاحظة المسجلة *", "Evaluation reason and note *")}
           <textarea
             required
             rows={3}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="مثال: التزام ممتاز بتسليم المهمة قبل الموعد، أو تفاعل كويس في الاجتماع..."
+          placeholder={t('مثال: التزام ممتاز بتسليم المهمة قبل الموعد، أو تفاعل كويس في الاجتماع...', 'Example: excellent commitment to submitting a task before the deadline, or good engagement in a meeting...')}
             className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 text-sm leading-relaxed"
           />
         </label>
 
         {/* Author */}
         <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]">
-          اسم المسؤول / الكاتب
+          {t('اسم المسؤول / الكاتب', 'Administrator / author name')}
           <input
             type="text"
             value={author}
@@ -244,11 +246,11 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
         </label>
         </> : <>
           <div className={`grid gap-1 rounded-xl border p-3 text-sm ${selectedMember.bonus_infinite ? 'border-[var(--primary)]/30 bg-[var(--primary-soft)] text-[var(--primary-ink)]' : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)]'}`}>
-            <strong>{selectedMember.bonus_infinite ? 'البونص غير المحدود مفعّل ∞' : 'البونص غير المحدود غير مفعّل'}</strong>
-            <span className="leading-6">{selectedMember.bonus_infinite ? 'إلغاء العلامة يرجّع عرض رصيد النقاط المسجلة كما هو، من غير حذف أو خصم.' : 'تفعيل العلامة يضع العضو فوق كل الأرصدة الرقمية. نقاطه الحالية تظل محفوظة.'}</span>
+            <strong>{selectedMember.bonus_infinite ? t('البونص غير المحدود مفعّل ∞', 'Unlimited bonus is enabled ∞') : t('البونص غير المحدود غير مفعّل', 'Unlimited bonus is not enabled')}</strong>
+            <span className="leading-6">{selectedMember.bonus_infinite ? t('إلغاء العلامة يرجّع عرض رصيد النقاط المسجلة كما هو، من غير حذف أو خصم.', 'Removing the marker restores the recorded points balance display as-is, without deleting or subtracting points.') : t('تفعيل العلامة يضع العضو فوق كل الأرصدة الرقمية. نقاطه الحالية تظل محفوظة.', 'Enabling the marker places the member above all numeric balances. Their current points remain saved.')}</span>
           </div>
           <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]">
-            سبب {selectedMember.bonus_infinite ? 'الإلغاء' : 'التفعيل'} *
+            {selectedMember.bonus_infinite ? t('سبب الإلغاء *', 'Reason for disabling *') : t('سبب التفعيل *', 'Reason for enabling *')}
             <textarea
               required
               minLength={3}
@@ -256,7 +258,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
               rows={3}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="اكتب سبب التفعيل أو الإلغاء؛ هيتحفظ باسم حسابك ووقت الإجراء."
+              placeholder={t('اكتب سبب التفعيل أو الإلغاء؛ هيتحفظ باسم حسابك ووقت الإجراء.', 'Enter a reason for enabling or disabling; it will be saved with your account name and the action time.')}
               className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 text-sm leading-relaxed"
             />
           </label>
@@ -265,10 +267,10 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
         {/* Form Actions */}
         <div className="flex flex-col-reverse gap-2 border-t border-[var(--border)] pt-4 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose} fullOnMobile className="min-h-11">
-            إلغاء
+            {t('إلغاء', 'Cancel')}
           </Button>
-          <Button type="submit" variant={mode === 'infinite' && selectedMember.bonus_infinite ? 'danger' : 'primary'} isLoading={createRating.isPending || setInfiniteBonus.isPending} loadingText="بنسجل..." fullOnMobile className="min-h-11">
-            {mode === 'infinite' ? (selectedMember.bonus_infinite ? 'إلغاء بونص ∞' : 'تفعيل بونص ∞') : 'حفظ التقييم والملاحظة'}
+          <Button type="submit" variant={mode === 'infinite' && selectedMember.bonus_infinite ? 'danger' : 'primary'} isLoading={createRating.isPending || setInfiniteBonus.isPending} loadingText={t('بنسجل...', 'Saving...')} fullOnMobile className="min-h-11">
+            {mode === 'infinite' ? (selectedMember.bonus_infinite ? t('إلغاء بونص ∞', 'Disable bonus ∞') : t('تفعيل بونص ∞', 'Enable bonus ∞')) : t('حفظ التقييم والملاحظة', 'Save rating and note')}
           </Button>
         </div>
       </form>

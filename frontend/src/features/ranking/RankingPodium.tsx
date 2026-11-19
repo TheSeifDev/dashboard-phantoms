@@ -2,6 +2,7 @@ import { Trophy, Medal, Award, User } from 'lucide-react';
 import type { Member } from '../../types/db';
 import { formatSigned } from '../../lib/arabic';
 
+import { useLocale } from '../../i18n/useLocale';
 export interface RankedMember extends Member {
   totalBonus: number;
   rank: number;
@@ -14,6 +15,7 @@ interface RankingPodiumProps {
 }
 
 export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: RankingPodiumProps) {
+  const { t } = useLocale();
   if (topMembers.length === 0) return null;
 
   // Podium order: Silver (#2), Gold (#1), Bronze (#3) for aesthetic balance
@@ -22,9 +24,9 @@ export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: Ran
   const third = topMembers[2];
 
   const podiumSlots = [
-    { member: second, rank: 2, label: 'المركز الثاني', colorBg: 'bg-slate-500', colorText: 'text-slate-600 dark:text-slate-300', borderColor: 'border-slate-300 dark:border-slate-700', icon: Medal, height: 'sm:min-h-[220px]' },
-    { member: first, rank: 1, label: 'المركز الأول', colorBg: 'bg-amber-500', colorText: 'text-amber-600 dark:text-amber-400', borderColor: 'border-amber-400 dark:border-amber-600', icon: Trophy, height: 'sm:min-h-[250px]' },
-    { member: third, rank: 3, label: 'المركز الثالث', colorBg: 'bg-amber-700', colorText: 'text-amber-800 dark:text-amber-600', borderColor: 'border-amber-600 dark:border-amber-800', icon: Award, height: 'sm:min-h-[200px]' },
+    { member: second, rank: 2, label: t('المركز الثاني', 'Second place'), colorBg: 'bg-slate-500', colorText: 'text-slate-600 dark:text-slate-300', borderColor: 'border-slate-300 dark:border-slate-700', icon: Medal, height: 'sm:min-h-[220px]' },
+    { member: first, rank: 1, label: t('المركز الأول', 'First place'), colorBg: 'bg-amber-500', colorText: 'text-amber-600 dark:text-amber-400', borderColor: 'border-amber-400 dark:border-amber-600', icon: Trophy, height: 'sm:min-h-[250px]' },
+    { member: third, rank: 3, label: t('المركز الثالث', 'Third place'), colorBg: 'bg-amber-700', colorText: 'text-amber-800 dark:text-amber-600', borderColor: 'border-amber-600 dark:border-amber-800', icon: Award, height: 'sm:min-h-[200px]' },
   ];
 
   return (
@@ -40,7 +42,7 @@ export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: Ran
                 <Icon size={18} />
               </div>
               <span className="text-xs font-bold">{label}</span>
-              <span className="text-[11px] text-[var(--text-muted)] mt-1">لسه فاضي</span>
+              <span className="text-[11px] text-[var(--text-muted)] mt-1">{t("لسه فاضي", "Vacant")}</span>
             </div>
           );
         }
@@ -77,7 +79,7 @@ export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: Ran
               {/* Bonus score */}
               <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary)] font-black text-sm">
                 <span>{member.bonus_infinite === true ? '∞' : formatSigned(member.totalBonus)}</span>
-                <span className="text-xs font-semibold">{member.bonus_infinite === true ? 'بونص غير محدود' : 'نقطة'}</span>
+                <span className="text-xs font-semibold">{member.bonus_infinite === true ? t('بونص غير محدود', 'Unlimited bonus') : t('نقطة', 'points')}</span>
               </div>
             </div>
 

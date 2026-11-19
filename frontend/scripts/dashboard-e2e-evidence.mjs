@@ -1,7 +1,7 @@
 const SCREENSHOT_KEYS = ['theme', 'viewport'];
 const SCREENSHOT_EXPECTED = ['dark:desktop', 'dark:mobile', 'light:desktop', 'light:mobile'];
 const MOBILE_CASE_KEYS = ['width', 'theme', 'drawerFullScreen', 'nameFromDatabase', 'nameWrapped', 'closeButton', 'escapeClose'];
-const CLEANUP_KEYS = ['authUsers', 'adminAccounts', 'members', 'memberBindings', 'tasks', 'notes', 'customFields', 'legacyInvites'];
+const CLEANUP_KEYS = ['authUsers', 'adminAccounts', 'members', 'memberBindings', 'tasks', 'notes', 'customFields', 'legacyInvites', 'contributionEvents'];
 
 function record(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -91,7 +91,7 @@ export function isCompleteDashboardEvidence(evidence, expectedMode) {
 
 export function isCompleteDashboardCleanupEvidence(evidence, expectedMode) {
   if (!exactKeys(evidence, ['schema', 'vapidMode', 'passed', 'remaining'])
-    || evidence.schema !== 'phantoms-dashboard-fixture-cleanup/v1'
+    || evidence.schema !== 'phantoms-dashboard-fixture-cleanup/v2'
     || !['missing', 'invalid'].includes(evidence.vapidMode)
     || (expectedMode && evidence.vapidMode !== expectedMode)
     || evidence.passed !== true

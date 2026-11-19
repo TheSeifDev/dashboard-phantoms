@@ -1,9 +1,8 @@
 import { Trophy, Medal, Award, User, Edit3 } from 'lucide-react';
 import type { Member } from '../../types/db';
 import type { RankedMember } from './RankingPodium';
-import { formatDate } from '../../lib/dateUtils';
-import { formatSigned } from '../../lib/arabic';
 
+import { useLocale } from '../../i18n/useLocale';
 interface RankingTableProps {
   members: RankedMember[];
   onSelectMember?: (member: Member) => void;
@@ -11,12 +10,13 @@ interface RankingTableProps {
 }
 
 export function RankingTable({ members, onSelectMember, onAdjustBonus }: RankingTableProps) {
+  const { t, number, date } = useLocale();
   if (members.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center text-[var(--text-muted)] bg-[var(--surface)] rounded-[var(--radius-lg)] border border-[var(--border)]">
         <Trophy size={36} className="mb-3 opacity-30 text-[var(--primary)]" />
-        <h4 className="font-black text-base text-[var(--text)] mb-1">مفيش أعضاء في الترتيب</h4>
-        <p className="text-xs text-[var(--text-muted)]">ملقيناش أعضاء مطابقين لفلترة دلوقتي.</p>
+        <h4 className="font-black text-base text-[var(--text)] mb-1">{t("مفيش أعضاء في الترتيب", "No ranked members")}</h4>
+        <p className="text-xs text-[var(--text-muted)]">{t("ملقيناش أعضاء مطابقين لفلترة دلوقتي.", "No members match the current filters.")}</p>
       </div>
     );
   }
@@ -26,7 +26,7 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
       <table className="data-table w-full text-start text-sm">
         <thead className="bg-[var(--bg)] text-[var(--text-muted)]">
           <tr>
-            {['الترتيب', 'العضو', 'نقاط البونص', 'رتبة الإنجاز', 'تاريخ الانضمام', 'الإجراءات'].map((label, idx) => (
+            {[t('الترتيب','Rank'),t('العضو','Member'),t('نقاط البونص','Bonus points'),t('رتبة الإنجاز','Completion rank'),t('تاريخ الانضمام','Joined'),t('الإجراءات','Actions')].map((label, idx) => (
               <th
                 key={idx}
                 className="font-bold"
@@ -49,7 +49,7 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                 className="hover:bg-[var(--bg)] transition-colors group cursor-pointer"
               >
                 {/* Rank number */}
-                <td data-label="الترتيب">
+                <td data-label={t("الترتيب", "Rank")}>
                   <span className="inline-flex items-center gap-1.5">
                     {isTop1 ? (
                       <span className="inline-flex items-center justify-center size-8 rounded-lg bg-amber-500 text-white font-black text-xs shadow-sm">
@@ -72,7 +72,7 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                 </td>
 
                 {/* Member Info */}
-                <td data-label="العضو">
+                <td data-label={t("العضو", "Member")}>
                   <span className="flex items-center gap-3">
                     <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] font-bold text-[var(--primary)] text-sm">
                       {member.full_name.trim().charAt(0)}
@@ -89,7 +89,7 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                 </td>
 
                 {/* Bonus Score */}
-                <td data-label="نقاط البونص">
+                <td data-label={t("نقاط البونص", "Bonus points")}>
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black border ${
                       member.bonus_infinite === true
@@ -101,26 +101,26 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                         : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]'
                     }`}
                   >
-                    {member.bonus_infinite === true ? <span aria-label="بونص غير محدود">∞ بونص غير محدود</span> : `${formatSigned(member.totalBonus)} نقطة`}
+                    {member.bonus_infinite === true ? <span aria-label={t("بونص غير محدود", "Unlimited bonus")}>∞ {t("بونص غير محدود", "Unlimited bonus")}</span> : `${number(member.totalBonus)} ${t('نقطة','points')}`}
                   </span>
                 </td>
 
                 {/* Completion Rank */}
-                <td data-label="رتبة الإنجاز" className="text-xs font-bold text-[var(--text-muted)]">
+                <td data-label={t("رتبة الإنجاز", "Completion rank")} className="text-xs font-bold text-[var(--text-muted)]">
                   {member.completion_rank ? `#${member.completion_rank}` : '—'}
                 </td>
 
                 {/* Date */}
-                <td data-label="تاريخ الانضمام" className="whitespace-nowrap text-xs font-medium text-[var(--text-muted)]">
-                  {member.created_at ? formatDate(member.created_at, 'd MMMM yyyy') : '—'}
+                <td data-label={t("تاريخ الانضمام", "Joined")} className="whitespace-nowrap text-xs font-medium text-[var(--text-muted)]">
+                  {member.created_at ? date(member.created_at,{day:'numeric',month:'long',year:'numeric'}) : '—'}
                 </td>
 
                 {/* Actions */}
-                <td data-label="الإجراءات">
+                <td data-label={t("الإجراءات", "Actions")}>
                   <span className="flex items-center gap-1.5 sm:justify-end">
                     <button
                       type="button"
-                      aria-label={`اعرض الملف الشخصي لـ ${member.full_name}`}
+                      aria-label={t(`اعرض الملف الشخصي لـ ${member.full_name}`, `View ${member.full_name}’s profile`)}
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectMember?.(member);
@@ -132,7 +132,7 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                     {onAdjustBonus && (
                       <button
                         type="button"
-                        aria-label={`عدّل نقاط البونص لـ ${member.full_name}`}
+                        aria-label={t(`عدّل نقاط البونص لـ ${member.full_name}`, `Edit ${member.full_name}’s bonus points`)}
                         onClick={(e) => {
                           e.stopPropagation();
                           onAdjustBonus(member);

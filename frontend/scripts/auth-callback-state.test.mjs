@@ -67,6 +67,8 @@ async function writeHarnessFiles(harnessRoot) {
     'src/store',
     'src/lib/supabase',
     'src/features/admin/access',
+    'src/i18n',
+    'src/components/motion',
   ];
   await Promise.all(paths.map((path) => mkdir(join(harnessRoot, path), { recursive: true })));
 
@@ -76,6 +78,15 @@ async function writeHarnessFiles(harnessRoot) {
   ]);
   await writeFile(join(harnessRoot, 'src/features/auth/AdminSetPasswordPage.js'), compileCommonJs(componentSource, componentSourcePath));
   await writeFile(join(harnessRoot, 'src/features/auth/auth-flow.js'), compileCommonJs(authFlowSource, authFlowSourcePath));
+
+  const localeSourcePath = join(frontendRoot, 'src/i18n/useLocale.ts');
+  await writeFile(join(harnessRoot, 'src/i18n/useLocale.js'), compileCommonJs(await readFile(localeSourcePath, 'utf8'), localeSourcePath));
+  await writeFile(join(harnessRoot, 'src/components/motion/PhantomLoader.js'), `
+const React = require('react');
+exports.PhantomLoader = function PhantomLoader({ label, message, children }) {
+  return React.createElement('div', { role: 'status' }, label || message || children || 'جارٍ التحميل');
+};
+`);
 
   await writeFile(join(harnessRoot, 'src/components/layout/AuthShell.js'), `
 const React = require('react');

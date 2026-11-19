@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the reconciled forward migration preserves original provenance and canonical bytes outside initialization history', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 12);
+  assert.equal(forward.length, 13);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');
@@ -94,7 +94,10 @@ test('the reconciled forward migration preserves original provenance and canonic
   assert.equal(forward[11].remote_applied_timestamp, '20261119054418');
   assert.equal(forward[11].canonical_repository_filename, 'backend/supabase/migrations/20261119005000_member_password_owner_join_review.sql');
   assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[11].canonical_repository_filename))).digest('hex'), forward[11].sha256);
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[11].canonical_repository_filename))).digest('hex'), forward[11].sha256);
+  assert.equal(forward[12].version, '20261119183000');
+  assert.equal(forward[12].production_status, 'applied');
+  assert.equal(forward[12].remote_applied_timestamp, '20261119193932');
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[12].canonical_repository_filename))).digest('hex'), forward[12].sha256);
 });
 
 test('new manifest provenance is anchored to the historical 85a36fc manifest and canonical bytes', () => {

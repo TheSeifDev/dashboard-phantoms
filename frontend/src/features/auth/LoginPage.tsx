@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, CheckCircle2 } from 'lucide-react';
 import { AuthShell } from '../../components/layout/AuthShell';
+import { useLocale } from '../../i18n/useLocale';
 import {
   clearDeviceToken,
   getMemberRemember,
@@ -26,13 +27,13 @@ class MemberLoginError extends Error {
   }
 }
 
-function loginErrorMessage(code: string): string {
-  if (code === 'MEMBER_PENDING_REVIEW') return memberAuthErrorMessage(code);
-  if (code === 'MEMBER_DISABLED') return memberAuthErrorMessage(code);
-  if (code === 'IDENTITY_CONFLICT' || code === 'MEMBER_NOT_FOUND') return 'الحساب غير مرتبط بعضوية PHANTOMS مفعّلة.';
-  if (code === 'DEVICE_CONFLICT') return 'الحساب ده مفتوح من متصفح أو جهاز تاني. اخرج من الجهاز الأول وجرّب تاني.';
-  if (code === 'SERVER_UNAVAILABLE') return 'تعذر الوصول للخدمة حالياً. حاول مرة أخرى لاحقاً.';
-  return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+function loginErrorMessage(code: string, t: (arabic: string, english: string) => string): string {
+  if (code === 'MEMBER_PENDING_REVIEW') return t(memberAuthErrorMessage(code), 'Your details were received. Your account is awaiting admin review and activation; you cannot sign in before then.');
+  if (code === 'MEMBER_DISABLED') return t(memberAuthErrorMessage(code), 'This membership is not active right now. Contact the team administrator.');
+  if (code === 'IDENTITY_CONFLICT' || code === 'MEMBER_NOT_FOUND') return t('الحساب غير مرتبط بعضوية PHANTOMS مفعّلة.', 'This account is not linked to an active PHANTOMS membership.');
+  if (code === 'DEVICE_CONFLICT') return t('الحساب ده مفتوح من متصفح أو جهاز تاني. اخرج من الجهاز الأول وجرّب تاني.', 'This account is open in another browser or device. Sign out there, then try again.');
+  if (code === 'SERVER_UNAVAILABLE') return t('تعذر الوصول للخدمة حالياً. حاول مرة أخرى لاحقاً.', 'The service is unavailable right now. Please try again later.');
+  return t('البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'The email or password is incorrect.');
 }
 
 async function localMemberAuthCleanup(logoutMember: () => void): Promise<void> {
@@ -44,6 +45,7 @@ async function localMemberAuthCleanup(logoutMember: () => void): Promise<void> {
 export default function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLocale();
   const logoutMember = useAuthStore((state) => state.logoutMember);
   const setMember = useAuthStore((state) => state.setMember);
   const [email, setEmail] = useState('');
@@ -54,8 +56,8 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState(() => {
     const state = location.state as { enrollmentComplete?: boolean; registrationPending?: boolean } | null;
-    if (state?.registrationPending) return 'تم استلام بياناتك وكلمة مرورك. عضويتك الآن بانتظار مراجعة الإدارة وتفعيلها؛ لن تتمكن من الدخول قبل ذلك.';
-    return state?.enrollmentComplete ? 'تم إعداد الحساب بنجاح. يمكنك تسجيل الدخول الآن بكلمة المرور الجديدة.' : '';
+    if (state?.registrationPending) return t('تم استلام بياناتك وكلمة مرورك. عضويتك الآن بانتظار مراجعة الإدارة وتفعيلها؛ لن تتمكن من الدخول قبل ذلك.', 'Your details and password were received. Your membership is awaiting admin review and activation; you cannot sign in before then.');
+    return state?.enrollmentComplete ? t('تم إعداد الحساب بنجاح. يمكنك تسجيل الدخول الآن بكلمة المرور الجديدة.', 'Your account is ready. You can now sign in with your new password.') : '';
   });
   const liveRef = useRef(true);
   const submitLatchRef = useRef<Promise<void> | null>(null);
@@ -84,11 +86,11 @@ export default function LoginPage() {
         return;
       }
       if (!cleanEmail || !isValidEmail(cleanEmail)) {
-        if (liveRef.current) setError('اكتب بريدك الإلكتروني بصيغة صحيحة.');
+        if (liveRef.current) setError(t('اكتب بريدك الإلكتروني بصيغة صحيحة.', 'Enter a valid email address.'));
         return;
       }
       if (!submittedPassword) {
-        if (liveRef.current) setError('اكتب كلمة المرور.');
+        if (liveRef.current) setError(t('اكتب كلمة المرور.', 'Enter your password.'));
         return;
       }
 
@@ -143,7 +145,7 @@ export default function LoginPage() {
         await localMemberAuthCleanup(logoutMember);
         if (liveRef.current) {
           const code = cause instanceof MemberLoginError ? cause.code : 'SERVER_UNAVAILABLE';
-          setError(loginErrorMessage(code));
+          setError(loginErrorMessage(code, t));
         }
       } finally {
         if (liveRef.current) setLoading(false);
@@ -158,13 +160,13 @@ export default function LoginPage() {
   return (
     <AuthShell
       audience="member"
-      badge="مساحة العمل والتكليفات"
-      title="دخول أعضاء PHANTOMS"
-      description="استخدم البريد المسجل وكلمة المرور التي أعددتها عبر دعوة الفريق."
+      badge={t('مساحة العمل والتكليفات', 'Workspace and tasks')}
+      title={t('دخول أعضاء PHANTOMS', 'PHANTOMS member sign-in')}
+      description={t('استخدم البريد المسجل وكلمة المرور التي أعددتها عبر دعوة الفريق.', 'Use your registered email and the password you set through your team invitation.')}
       footer={(
         <div className="grid gap-2 text-center text-sm text-[var(--text-2)]">
-          <p>نسيت كلمة المرور؟ تواصل مع مسؤول الفريق لإصدار دعوة إعادة ضبط يدوية لمرة واحدة. لا نرسل رسائل استعادة تلقائية.</p>
-          <Link className="auth-inline-link justify-center" to="/join">لديك دعوة؟ إنشاء كلمة مرور</Link>
+          <p>{t('نسيت كلمة المرور؟ تواصل مع مسؤول الفريق لإصدار دعوة إعادة ضبط يدوية لمرة واحدة. لا نرسل رسائل استعادة تلقائية.', 'Forgot your password? Contact the team administrator for a one-time reset invitation. Automatic recovery emails are not sent.')}</p>
+          <Link className="auth-inline-link justify-center" to="/join">{t('لديك دعوة؟ إنشاء كلمة مرور', 'Have an invitation? Set a password')}</Link>
         </div>
       )}
     >
@@ -176,19 +178,19 @@ export default function LoginPage() {
         </div>
       )}
       <form onSubmit={handleMemberLogin} method="post" className="auth-form" noValidate>
-        <label className="auth-field" htmlFor="member-email">البريد الإلكتروني للعضو
+        <label className="auth-field" htmlFor="member-email">{t('البريد الإلكتروني للعضو', 'Member email')}
           <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="member-email" type="email" dir="ltr" autoComplete="email" required placeholder="name@phantoms.com" value={email} disabled={loading} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(error) || undefined} /></span>
         </label>
-        <label className="auth-field" htmlFor="member-password">كلمة المرور
-          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="member-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="current-password" required value={password} disabled={loading} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(error) || undefined} /><button type="button" className="auth-password-toggle" disabled={loading} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></span>
+        <label className="auth-field" htmlFor="member-password">{t('كلمة المرور', 'Password')}
+          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="member-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="current-password" required value={password} disabled={loading} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(error) || undefined} /><button type="button" className="auth-password-toggle" disabled={loading} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></span>
         </label>
         <label className="auth-remember" htmlFor="member-remember">
           <input id="member-remember" type="checkbox" checked={remember} disabled={loading} onChange={(event) => setRemember(event.target.checked)} />
           <span className="auth-remember-box" aria-hidden="true" />
-          <span>تذكرني على هذا الجهاز</span>
+          <span>{t('تذكرني على هذا الجهاز', 'Remember me on this device')}</span>
         </label>
         <button type="submit" className="auth-submit" disabled={loading} aria-busy={loading || undefined}>
-          {loading ? 'بنتحقق بأمان...' : 'دخول بوابة الأعضاء'}
+          {loading ? t('بنتحقق بأمان...', 'Verifying securely...') : t('دخول بوابة الأعضاء', 'Sign in to the member portal')}
           {!loading && <ArrowLeft size={18} aria-hidden="true" />}
         </button>
       </form>

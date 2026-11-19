@@ -41,11 +41,11 @@ test('PHANTOMS Brand Transition Verification Suite', async (t) => {
 
   await t.test('4. Navigation & Layout Branding', () => {
     const sidebar = read('src/components/layout/AppSidebar.tsx');
-    assert.match(sidebar, /aria-label="PHANTOMS — الرئيسية"/);
+    assert.match(sidebar, /aria-label=\{t\('PHANTOMS — الرئيسية', 'PHANTOMS — Home'\)\}/);
     assert.match(sidebar, /<span>PHANTOMS<\/span>/);
 
     const authShell = read('src/components/layout/AuthShell.tsx');
-    assert.match(authShell, /aria-label="PHANTOMS — الرئيسية"/);
+    assert.match(authShell, /aria-label=\{t\('PHANTOMS — الرئيسية', 'PHANTOMS — Home'\)\}/);
     assert.match(authShell, /<strong>PHANTOMS<\/strong>/);
     assert.match(authShell, /© 2026 PHANTOMS/);
 
@@ -55,20 +55,20 @@ test('PHANTOMS Brand Transition Verification Suite', async (t) => {
 
   await t.test('5. Authentication Screens Branding', () => {
     const login = read('src/features/auth/LoginPage.tsx');
-    assert.match(login, /title="دخول أعضاء PHANTOMS"/);
+    assert.match(login, /title=\{t\('دخول أعضاء PHANTOMS', 'PHANTOMS member sign-in'\)\}/);
     assert.match(login, /name@phantoms\.com/);
 
     const adminLogin = read('src/features/auth/AdminLoginPage.tsx');
-    assert.match(adminLogin, /title="دخول إدارة PHANTOMS"/);
+    assert.match(adminLogin, /title=\{t\('دخول إدارة PHANTOMS', 'PHANTOMS administrator sign-in'\)\}/);
     assert.match(adminLogin, /admin@phantoms\.com/);
 
     const adminSetPassword = read('src/features/auth/AdminSetPasswordPage.tsx');
-    assert.match(adminSetPassword, /badge="دعوة إدارة PHANTOMS"/);
+    assert.match(adminSetPassword, /badge=\{t\('دعوة إدارة PHANTOMS', 'PHANTOMS administrator invitation'\)\}/);
   });
 
   await t.test('6. AI Operations Assistant Identity & Safety', () => {
     const header = read('src/components/layout/AdminHeader.tsx');
-    assert.match(header, /'\/admin\/ai-assistant': 'مساعد PHANTOMS الذكي'/);
+    assert.match(header, /path: '\/admin\/ai-assistant', ar: 'مساعد PHANTOMS الذكي', en: 'AI assistant'/);
 
     const aiPage = read('src/features/ai-assistant/AiAssistantPage.tsx');
     assert.match(aiPage, /مساعد PHANTOMS الذكي \(PHANTOMS Assistant\)/);
@@ -100,8 +100,9 @@ test('PHANTOMS Brand Transition Verification Suite', async (t) => {
 
   await t.test('8. Feature Pages & Notification Surfaces', () => {
     const dashboard = read('src/features/dashboard/DashboardPage.tsx');
-    assert.match(dashboard, /مركز عمليات PHANTOMS/);
-    assert.match(dashboard, /مساعد PHANTOMS/);
+    assert.match(dashboard, /لوحة الفريق', 'Team dashboard'/);
+    assert.match(dashboard, /PhantomsSymbol/);
+    assert.match(dashboard, /'المساعد الذكي', 'AI assistant'/);
 
     const pwa = read('src/hooks/usePWA.ts');
     assert.match(pwa, /تم تفعيل إشعارات PHANTOMS/);

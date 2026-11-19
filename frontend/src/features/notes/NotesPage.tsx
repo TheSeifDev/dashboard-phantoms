@@ -8,11 +8,13 @@ import { toast } from '../../store/toast';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
-import { AR, arCount, normalizeArabic } from '../../lib/arabic';
 
+import { useLocale } from '../../i18n/useLocale';
+import { normalizeArabic } from '../../lib/arabic';
 type TargetFilter = 'ALL' | 'GENERAL' | 'MEMBER';
 
 export default function NotesPage() {
+  const { t, number, dir } = useLocale();
   const notesQuery = useNotes();
   const membersQuery = useMembers();
   const deleteNote = useDeleteNote();
@@ -52,20 +54,20 @@ export default function NotesPage() {
   };
 
   const tabs: Array<{ value: TargetFilter; label: string }> = [
-    { value: 'ALL', label: 'الكل' },
-    { value: 'GENERAL', label: 'عامة' },
-    { value: 'MEMBER', label: 'لأعضاء' },
+    { value: 'ALL', label: t('الكل', 'All') },
+    { value: 'GENERAL', label: t('عامة', 'General') },
+    { value: 'MEMBER', label: t('لأعضاء', 'Members') },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4" dir="rtl">
+    <div className="grid grid-cols-1 gap-4" dir={dir}>
       <section className="grid gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-6">
         <div className="grid gap-3 sm:flex sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-[var(--fs-xl)] font-black"><StickyNote size={23} className="shrink-0 text-[var(--link)]" aria-hidden="true" />سجل الملاحظات والتوجيهات</h2>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">{notesQuery.isLoading ? 'بنحمّل...' : `${arCount(notes.length, AR.note)} — توجيهات عامة ونقط بونص وخصم للأعضاء.`}</p>
+            <h2 className="flex items-center gap-2 text-[var(--fs-xl)] font-black"><StickyNote size={23} className="shrink-0 text-[var(--link)]" aria-hidden="true" />{t("سجل الملاحظات والتوجيهات", "Notes and guidance")}</h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">{notesQuery.isLoading ? t('بنحمّل...', 'Loading...') : `${number(notes.length)} ${t('ملاحظة', 'notes')} — ${t('توجيهات عامة ونقط بونص وخصم للأعضاء.', 'Team guidance, bonus points, and member deductions.')}`}</p>
           </div>
-          <Button onClick={() => setIsEditorOpen(true)} icon={<Plus size={18} />} fullOnMobile>اكتب ملاحظة</Button>
+          <Button onClick={() => setIsEditorOpen(true)} icon={<Plus size={18} />} fullOnMobile>{t("اكتب ملاحظة", "Write a note")}</Button>
         </div>
         <div className="grid gap-3 border-t border-[var(--border)] pt-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div className="relative">
@@ -74,15 +76,15 @@ export default function NotesPage() {
               type="search"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="دوّر في الملاحظات أو باسم العضو..."
-              aria-label="البحث في الملاحظات"
+              placeholder={t("دوّر في الملاحظات أو باسم العضو...", "Search notes or member names...")}
+              aria-label={t("البحث في الملاحظات", "Search notes")}
               className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] pe-10 ps-10 text-base placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:outline-none focus:ring-4 focus:ring-[var(--primary-soft)] sm:text-sm"
             />
             {searchTerm && (
-              <button type="button" onClick={() => setSearchTerm('')} className="absolute inset-y-0 end-1 my-auto grid size-9 min-h-0 min-w-0 place-items-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-2)]" aria-label="مسح البحث"><X size={16} aria-hidden="true" /></button>
+              <button type="button" onClick={() => setSearchTerm('')} className="absolute inset-y-0 end-1 my-auto grid size-9 min-h-0 min-w-0 place-items-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-2)]" aria-label={t("مسح البحث", "Clear search")}><X size={16} aria-hidden="true" /></button>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-[var(--surface-2)] p-1 md:flex" role="tablist" aria-label="فلترة الملاحظات">
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-[var(--surface-2)] p-1 md:flex" role="tablist" aria-label={t("فلترة الملاحظات", "Filter notes")}>
             {tabs.map((tab) => {
               const active = targetFilter === tab.value;
               return (
@@ -107,7 +109,7 @@ export default function NotesPage() {
         isLoading={notesQuery.isLoading}
         isError={notesQuery.isError}
         isFiltered={notes.length > 0}
-        emptyAction={<Button onClick={() => setIsEditorOpen(true)} icon={<Plus size={17} />}>اكتب أول ملاحظة</Button>}
+        emptyAction={<Button onClick={() => setIsEditorOpen(true)} icon={<Plus size={17} />}>{t("اكتب أول ملاحظة", "Write the first note")}</Button>}
         onRetry={() => { void notesQuery.refetch(); }}
         onDelete={setPendingDeleteId}
       />
@@ -115,17 +117,17 @@ export default function NotesPage() {
       <Modal
         isOpen={pendingDeleteId != null}
         onClose={() => setPendingDeleteId(null)}
-        title="تمسح الملاحظة؟"
-        subtitle="هتتمسح نهائي، ولو فيها نقط بونص أو خصم رصيد العضو هيتغيّر."
+        title={t("تمسح الملاحظة؟", "Delete this note?")}
+        subtitle={t("هتتمسح نهائي، ولو فيها نقط بونص أو خصم رصيد العضو هيتغيّر.", "This note will be permanently deleted. Any bonus or deduction it contains will be removed from the member’s balance.")}
         maxWidth="sm"
         footer={
           <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
-            <Button variant="secondary" onClick={() => setPendingDeleteId(null)}>إلغاء</Button>
-            <Button variant="danger" onClick={() => void confirmDeleteNote()} isLoading={deleteNote.isPending} loadingText="بنمسح...">مسح نهائي</Button>
+            <Button variant="secondary" onClick={() => setPendingDeleteId(null)}>{t("إلغاء", "Cancel")}</Button>
+            <Button variant="danger" onClick={() => void confirmDeleteNote()} isLoading={deleteNote.isPending} loadingText={t("بنمسح...", "Deleting...")}>{t("مسح نهائي", "Delete permanently")}</Button>
           </div>
         }
       >
-        <p className="text-sm leading-7 text-[var(--text-2)]">مينفعش ترجع في الإجراء ده.</p>
+        <p className="text-sm leading-7 text-[var(--text-2)]">{t("مينفعش ترجع في الإجراء ده.", "This action cannot be undone.")}</p>
       </Modal>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { useLocale } from '../../i18n/useLocale';
 
 interface ModalProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth = 'md',
 }) => {
+  const { t, dir } = useLocale();
   const dialogRef = useRef<HTMLElement>(null);
   const titleId = useId();
   const subtitleId = useId();
@@ -91,14 +93,14 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[var(--z-modal)] flex items-end justify-center md:items-center md:p-4" role="presentation" dir="rtl">
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-end justify-center md:items-center md:p-4" role="presentation" dir={dir}>
       <button
         type="button"
         tabIndex={-1}
         className="absolute inset-0 cursor-default bg-slate-950/55 backdrop-blur-[2px]"
         style={{ animation: 'app-scrim-in 160ms ease-out' }}
         onClick={onClose}
-        aria-label="اقفل النافذة"
+        aria-label={t("اقفل النافذة", "Close dialog")}
       />
       <section
         ref={dialogRef}
@@ -122,7 +124,7 @@ export const Modal: React.FC<ModalProps> = ({
             type="button"
             onClick={onClose}
             className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--border)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-            aria-label="اقفل"
+            aria-label={t("اقفل", "Close")}
           >
             <X size={20} aria-hidden="true" />
           </button>

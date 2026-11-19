@@ -1,4 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
 
 const apiPort = process.env.PHANTOMS_LOCAL_API_PORT ?? '54321';
 const previewPort = process.env.PHANTOMS_LOCAL_PREVIEW_PORT ?? '4173';
@@ -327,9 +329,36 @@ test.describe('disposable local Auth', () => {
           await expect(page.locator('.auth-story')).toBeHidden();
           await assertAuthPageFits(page, width);
         }
+        const designShotDir = process.env.PHANTOMS_REDESIGN_SCREENSHOT_DIR;
+        if (designShotDir) await mkdir(designShotDir, { recursive: true, mode: 0o700 });
+        await page.setViewportSize({ width: 1440, height: 960 });
+        await page.goto('/admin/login', { waitUntil: 'domcontentloaded' });
+        await expect(page.locator('#admin-email')).toBeVisible();
+        await expect(page.locator('.auth-story')).toBeVisible();
+        await assertAuthPageFits(page, 1440);
+        await expect(page.locator('.phantom-network__line').last()).toHaveCSS('stroke-dashoffset', '0px');
+        if (designShotDir) await page.screenshot({ path: path.join(designShotDir, 'admin-login-ar-light.png'), animations: 'disabled' });
+        await page.locator('.language-toggle').click();
+        await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+        await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+        await expect(page.getByRole('button', { name: 'Open administrator workspace' })).toBeVisible();
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+        await expect(page.locator('#admin-email')).toBeVisible();
+        await expect(page.locator('.phantom-network__line').last()).toHaveCSS('stroke-dashoffset', '0px');
+        if (designShotDir) await page.screenshot({ path: path.join(designShotDir, 'admin-login-en-light.png'), animations: 'disabled' });
+        await page.locator('.auth-theme-toggle').click();
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+        if (designShotDir) await page.screenshot({ path: path.join(designShotDir, 'admin-login-en-dark.png'), animations: 'disabled' });
+        await page.locator('.auth-theme-toggle').click();
+        await page.locator('.language-toggle').click();
+        await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+        await page.setViewportSize({ width: 320, height: 780 });
+        await assertAuthPageFits(page, 320);
+        if (designShotDir) await page.screenshot({ path: path.join(designShotDir, 'admin-login-ar-mobile.png'), animations: 'disabled' });
         await page.setViewportSize({ width: 1280, height: 900 });
         await loginAdmin(page);
-        await expect(page.getByRole('heading', { name: /مركز عمليات PHANTOMS|dashboard/i }).first()).toBeVisible();
+        await expect(page.getByRole('heading', { name: /لوحة الفريق|team dashboard/i }).first()).toBeVisible();
         existingInvite = await issueInvite(page, {
           memberId: existingMemberId,
           email: existingMemberEmail,

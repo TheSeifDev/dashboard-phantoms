@@ -6,14 +6,17 @@ import { parseMemberWorkbook, downloadMembersWorkbook } from './memberExcel';
 import { Modal } from '../../components/ui/Modal';
 import { toast } from '../../store/toast';
 import { Button } from '../../components/ui/Button';
+import { useLocale } from '../../i18n/useLocale';
 
 /**
  * Feature gate: XLSX importing is temporarily disabled pending safe parser upgrades (CVE-2026-78206).
  * Export functionality (downloadMembersWorkbook) remains fully enabled and secured.
  */
 const XLSX_IMPORT_DISABLED = true;
-const XLSX_DISABLED_MESSAGE =
+const XLSX_DISABLED_MESSAGE_AR =
   'تم إيقاف استيراد ملفات Excel (XLSX) مؤقتًا لدواعي الأمان والتوافقية الهندسية (CVE-2026-78206). ميزة تصدير البيانات مستمرة بالكامل.';
+const XLSX_DISABLED_MESSAGE_EN =
+  'Excel (XLSX) file imports are temporarily disabled for security and engineering compatibility (CVE-2026-78206). Data export remains fully available.';
 
 export function MemberExcelActions({
   members,
@@ -22,34 +25,39 @@ export function MemberExcelActions({
   members: Member[];
   customFields?: MemberCustomField[];
 }) {
+  const { t, number } = useLocale();
+  const xlsxDisabledMessage = t(XLSX_DISABLED_MESSAGE_AR, XLSX_DISABLED_MESSAGE_EN);
   const inputRef = useRef<HTMLInputElement>(null);
   const importMembers = useBulkUpsertMembers();
   const [isOpen, setIsOpen] = useState(false);
   const [rows, setRows] = useState<MemberInsert[]>([]);
-  const [message, setMessage] = useState(XLSX_IMPORT_DISABLED ? XLSX_DISABLED_MESSAGE : '');
+  const [message, setMessage] = useState(XLSX_IMPORT_DISABLED ? xlsxDisabledMessage : '');
+  const displayMessage = message === XLSX_DISABLED_MESSAGE_AR || message === XLSX_DISABLED_MESSAGE_EN
+    ? xlsxDisabledMessage
+    : message;
 
   const chooseFile = async (file: File | undefined) => {
     if (XLSX_IMPORT_DISABLED) {
-      setMessage(XLSX_DISABLED_MESSAGE);
+      setMessage(xlsxDisabledMessage);
       return;
     }
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      setMessage('حجم الملف كبير جدًا. الحد الأقصى المسموح لملفات Excel هو 5 ميجابايت.');
+      setMessage(t('حجم الملف كبير جدًا. الحد الأقصى المسموح لملفات Excel هو 5 ميجابايت.', 'The file is too large. The maximum allowed Excel file size is 5 MB.'));
       return;
     }
     try {
       const parsed = await parseMemberWorkbook(await file.arrayBuffer(), members, customFields);
       setRows(parsed.members);
-      setMessage(`اتجهز ${parsed.members.length} عضو. اتساب ${parsed.skipped} صف عشان البيانات ناقصة أو مكررة.`);
+      setMessage(t(`اتجهز ${number(parsed.members.length)} عضو. اتساب ${number(parsed.skipped)} صف عشان البيانات ناقصة أو مكررة.`, `${number(parsed.members.length)} members are ready. ${number(parsed.skipped)} rows were skipped because data was missing or duplicated.`));
     } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : 'معرفناش نقرا ملف Excel.');
+      setMessage(cause instanceof Error ? cause.message : t('معرفناش نقرا ملف Excel.', 'Could not read the Excel file.'));
     }
   };
 
   const confirmImport = async () => {
     if (XLSX_IMPORT_DISABLED) {
-      toast.warning(XLSX_DISABLED_MESSAGE);
+      toast.warning(xlsxDisabledMessage);
       return;
     }
     try {
@@ -57,9 +65,9 @@ export function MemberExcelActions({
       setRows([]);
       setIsOpen(false);
       setMessage('');
-      toast.success('بيانات الأعضاء اتستوردت بنجاح.');
+      toast.success(t('بيانات الأعضاء اتستوردت بنجاح.', 'Member data was imported successfully.'));
     } catch (cause) {
-      const msg = cause instanceof Error ? cause.message : 'حصلت مشكلة في الاستيراد.';
+      const msg = cause instanceof Error ? cause.message : t('حصلت مشكلة في الاستيراد.', 'There was a problem importing the data.');
       setMessage(msg);
       toast.error(msg);
     }
@@ -78,20 +86,20 @@ export function MemberExcelActions({
         fullOnMobile
         className="whitespace-nowrap"
       >
-        استيراد بيانات
+        {t('استيراد بيانات', 'Import data')}
       </Button>
       <Button
         variant="secondary"
         onClick={() =>
-          members.length ? downloadMembersWorkbook(members, customFields) : toast.warning('مفيش بيانات نصدّرها.')
+          members.length ? downloadMembersWorkbook(members, customFields) : toast.warning(t('مفيش بيانات نصدّرها.', 'There is no data to export.'))
         }
         icon={<Download size={17} />}
         fullOnMobile
         className="whitespace-nowrap"
       >
-        تصدير Excel
+        {t('تصدير Excel', 'Export Excel')}
       </Button>
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="استيراد بيانات الأعضاء من Excel" maxWidth="xl">
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={t('استيراد بيانات الأعضاء من Excel', 'Import member data from Excel')} maxWidth="xl">
         <div className="grid gap-4">
           {XLSX_IMPORT_DISABLED && (
             <div
@@ -100,8 +108,8 @@ export function MemberExcelActions({
             >
               <ShieldAlert size={20} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
               <div>
-                <p className="font-bold text-amber-800 dark:text-amber-300">استيراد ملفات Excel معطّل مؤقتًا</p>
-                <p className="mt-1 text-[var(--text-2)]">{XLSX_DISABLED_MESSAGE}</p>
+                <p className="font-bold text-amber-800 dark:text-amber-300">{t('استيراد ملفات Excel معطّل مؤقتًا', 'Excel file imports are temporarily disabled')}</p>
+                <p className="mt-1 text-[var(--text-2)]">{xlsxDisabledMessage}</p>
               </div>
             </div>
           )}
@@ -112,7 +120,7 @@ export function MemberExcelActions({
           >
             <FileSpreadsheet size={34} className="mx-auto text-emerald-700 dark:text-emerald-300" />
             <span className="text-sm font-bold">
-              {XLSX_IMPORT_DISABLED ? 'الاستيراد معطّل مؤقتًا لدواعي الأمان' : 'اختار ملف Excel أو CSV'}
+              {XLSX_IMPORT_DISABLED ? t('الاستيراد معطّل مؤقتًا لدواعي الأمان', 'Import is temporarily disabled for security reasons') : t('اختار ملف Excel أو CSV', 'Choose an Excel or CSV file')}
             </span>
             <input
               ref={inputRef}
@@ -125,9 +133,9 @@ export function MemberExcelActions({
               className="min-h-11 text-sm disabled:cursor-not-allowed"
             />
           </label>
-          {message && (
+          {displayMessage && (
             <p className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm" role="status">
-              {message}
+              {displayMessage}
             </p>
           )}
           {rows.length > 0 && (
@@ -136,43 +144,43 @@ export function MemberExcelActions({
                 <table className="data-table w-full text-start text-sm">
                   <thead>
                     <tr>
-                      <th>الاسم</th>
-                      <th>البريد الإلكتروني</th>
-                      <th>حالة العمل</th>
-                      <th>الجهاز</th>
+                      <th>{t('الاسم', 'Name')}</th>
+                      <th>{t('البريد الإلكتروني', 'Email')}</th>
+                      <th>{t('حالة العمل', 'Work status')}</th>
+                      <th>{t('الجهاز', 'Device')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.slice(0, 10).map((row) => (
                       <tr key={row.email}>
-                        <td data-label="الاسم">{row.full_name}</td>
-                        <td data-label="البريد الإلكتروني" dir="ltr">
+                        <td data-label={t('الاسم', 'Name')}>{row.full_name}</td>
+                        <td data-label={t('البريد الإلكتروني', 'Email')} dir="ltr">
                           {row.email}
                         </td>
-                        <td data-label="حالة العمل">{row.work_status || '—'}</td>
-                        <td data-label="الجهاز">{row.device || '—'}</td>
+                        <td data-label={t('حالة العمل', 'Work status')}>{row.work_status || '—'}</td>
+                        <td data-label={t('الجهاز', 'Device')}>{row.device || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               <p className="text-sm text-[var(--text-muted)]">
-                هيتحدّث الأعضاء المطابقين للإيميل، وهينضاف الأعضاء الجدد.
+                {t('هيتحدّث الأعضاء المطابقين للإيميل، وهينضاف الأعضاء الجدد.', 'Members with matching email addresses will be updated, and new members will be added.')}
               </p>
             </>
           )}
           <div className="flex flex-col-reverse gap-2 border-t border-[var(--border)] pt-4 sm:flex-row sm:justify-end">
             <Button variant="secondary" onClick={() => setIsOpen(false)} fullOnMobile>
-              إلغاء
+              {t('إلغاء', 'Cancel')}
             </Button>
             <Button
               onClick={() => void confirmImport()}
               disabled={!rows.length}
               isLoading={importMembers.isPending}
-              loadingText="بنستورد..."
+              loadingText={t('بنستورد...', 'Importing...')}
               fullOnMobile
             >
-              تأكيد الاستيراد
+              {t('تأكيد الاستيراد', 'Confirm import')}
             </Button>
           </div>
         </div>

@@ -30,10 +30,10 @@ function evidence(mode = 'missing') {
 
 function cleanupEvidence(mode = 'missing') {
   return {
-    schema: 'phantoms-dashboard-fixture-cleanup/v1',
+    schema: 'phantoms-dashboard-fixture-cleanup/v2',
     vapidMode: mode,
     passed: true,
-    remaining: { authUsers: 0, adminAccounts: 0, members: 0, memberBindings: 0, tasks: 0, notes: 0, customFields: 0, legacyInvites: 0 },
+    remaining: { authUsers: 0, adminAccounts: 0, members: 0, memberBindings: 0, tasks: 0, notes: 0, customFields: 0, legacyInvites: 0, contributionEvents: 0 },
   };
 }
 
@@ -70,4 +70,14 @@ test('requires all 360/390 light/dark real mobile cases and visible cleanup proo
   assert.equal(isCompleteDashboardEvidence(noDatabaseName), false);
   assert.equal(isCompleteDashboardCleanupEvidence(residue), false);
   assert.equal(isCompleteDashboardCleanupEvidence({ ...cleanupEvidence(), unknown: true }), false);
+});
+
+test('cleanup v2 refuses old schemas, omitted ledger inventory and residual contribution events', () => {
+  const residue = cleanupEvidence();
+  residue.remaining.contributionEvents = 1;
+  assert.equal(isCompleteDashboardCleanupEvidence(residue), false);
+  assert.equal(isCompleteDashboardCleanupEvidence({ ...cleanupEvidence(), schema: 'phantoms-dashboard-fixture-cleanup/v1' }), false);
+  const omitted = cleanupEvidence();
+  delete omitted.remaining.contributionEvents;
+  assert.equal(isCompleteDashboardCleanupEvidence(omitted), false);
 });

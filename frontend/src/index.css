@@ -6,6 +6,7 @@
 @import "./styles/tables.css" layer(components);
 @import "./styles/sidebar.css" layer(components);
 @import "./styles/members.css" layer(components);
+@import "./styles/workspace.css" layer(components);
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -23,6 +24,8 @@
     text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
   }
+
+  html[lang="en"] { font-family: var(--font-english); }
 
   body {
     min-width: 320px;

@@ -26,6 +26,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
 
+import { useLocale } from '../../i18n/useLocale';
 type ReadStatusFilter = 'ALL' | 'READ' | 'UNREAD';
 
 export function getGradeBadgeVariant(
@@ -46,6 +47,7 @@ export function getGradeBadgeVariant(
 }
 
 export default function EvaluationsPage() {
+  const { t, number, dir } = useLocale();
   const evaluationsQuery = useAdminEvaluations();
   const membersQuery = useMembers();
   const deleteEval = useDeleteEvaluation();
@@ -128,7 +130,7 @@ export default function EvaluationsPage() {
 
   if (evaluationsQuery.isLoading || membersQuery.isLoading) {
     return (
-      <div className="grid gap-4" dir="rtl">
+      <div className="grid gap-4" dir={dir}>
         <CardSkeletons count={4} />
       </div>
     );
@@ -136,9 +138,9 @@ export default function EvaluationsPage() {
 
   if (evaluationsQuery.isError) {
     return (
-      <div className="grid gap-4" dir="rtl">
+      <div className="grid gap-4" dir={dir}>
         <ErrorState
-          message="معرفناش نحمّل سجل التقييمات."
+          message={t("معرفناش نحمّل سجل التقييمات.", "Could not load the evaluation history.")}
           onRetry={() => {
             void evaluationsQuery.refetch();
           }}
@@ -148,7 +150,7 @@ export default function EvaluationsPage() {
   }
 
   return (
-    <section className="flex min-w-0 w-full flex-col gap-4" dir="rtl">
+    <section className="flex min-w-0 w-full flex-col gap-4" dir={dir}>
       {/* Header */}
       <div className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div className="flex min-w-0 items-center gap-3.5">
@@ -163,7 +165,7 @@ export default function EvaluationsPage() {
               تقييمات الأعضاء ومتابعة الاطلاع
             </h1>
             <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-              أرسل تقييمات الأداء والملاحظات للأعضاء لتظهر لهم مباشرة في بوابتهم بجانب المهام والإعلانات.
+              {t("أرسل تقييمات الأداء والملاحظات للأعضاء لتظهر لهم مباشرة في بوابتهم بجانب المهام والإعلانات.", "Send performance evaluations and notes to appear in members’ portal alongside tasks and announcements.")}
             </p>
           </div>
         </div>
@@ -181,19 +183,19 @@ export default function EvaluationsPage() {
       {/* Summary Stats */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
-          <p className="text-xs font-bold text-[var(--text-muted)]">إجمالي التقييمات المرسلة</p>
-          <p className="mt-1 text-2xl font-black tabular-nums text-[var(--text)]">{stats.total}</p>
+          <p className="text-xs font-bold text-[var(--text-muted)]">{t("إجمالي التقييمات المرسلة", "Evaluations sent")}</p>
+          <p className="mt-1 text-2xl font-black tabular-nums text-[var(--text)]">{number(stats.total)}</p>
         </div>
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
-          <p className="text-xs font-bold text-[var(--text-muted)]">اطّلع عليها الأعضاء</p>
+          <p className="text-xs font-bold text-[var(--text-muted)]">{t("اطّلع عليها الأعضاء", "Read by members")}</p>
           <p className="mt-1 text-2xl font-black tabular-nums text-emerald-700 dark:text-emerald-400">
-            {stats.readOrViewed}
+            {number(stats.readOrViewed)}
           </p>
         </div>
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
-          <p className="text-xs font-bold text-[var(--text-muted)]">بانتظار اطلاع العضو</p>
+          <p className="text-xs font-bold text-[var(--text-muted)]">{t("بانتظار اطلاع العضو", "Awaiting member review")}</p>
           <p className="mt-1 text-2xl font-black tabular-nums text-amber-700 dark:text-amber-400">
-            {stats.unread}
+            {number(stats.unread)}
           </p>
         </div>
       </div>
@@ -208,7 +210,7 @@ export default function EvaluationsPage() {
           />
           <input
             type="search"
-            placeholder="ابحث بالاسم أو عنوان التقييم..."
+            placeholder={t("ابحث بالاسم أو عنوان التقييم...", "Search by name or evaluation title...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] pe-3 ps-9 text-sm text-[var(--text)]"
@@ -218,10 +220,10 @@ export default function EvaluationsPage() {
         <select
           value={memberFilter}
           onChange={(e) => setMemberFilter(e.target.value)}
-          aria-label="تصفية حسب العضو"
+          aria-label={t("تصفية حسب العضو", "Filter by member")}
           className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-bold text-[var(--text)]"
         >
-          <option value="ALL">كل الأعضاء ({members.length})</option>
+          <option value="ALL">{t("كل الأعضاء", "All members")} ({number(members.length)})</option>
           {members.map((m) => (
             <option key={m.id} value={String(m.id)}>
               {m.full_name}
@@ -232,10 +234,10 @@ export default function EvaluationsPage() {
         <select
           value={gradeFilter}
           onChange={(e) => setGradeFilter(e.target.value)}
-          aria-label="تصفية حسب التقدير"
+          aria-label={t("تصفية حسب التقدير", "Filter by grade")}
           className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-bold text-[var(--text)]"
         >
-          <option value="ALL">كل التقديرات</option>
+          <option value="ALL">{t("كل التقديرات", "All grades")}</option>
           {(Object.keys(EVALUATION_GRADE_LABELS) as EvaluationGrade[]).map((g) => (
             <option key={g} value={g}>
               {EVALUATION_GRADE_LABELS[g]}
@@ -246,12 +248,12 @@ export default function EvaluationsPage() {
         <select
           value={readFilter}
           onChange={(e) => setReadFilter(e.target.value as ReadStatusFilter)}
-          aria-label="تصفية حسب حالة القراءة"
+          aria-label={t("تصفية حسب حالة القراءة", "Filter by read status")}
           className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-bold text-[var(--text)]"
         >
-          <option value="ALL">كل حالات الاطلاع</option>
-          <option value="READ">اطّلع عليه العضو</option>
-          <option value="UNREAD">لم يطلع عليه بعد</option>
+          <option value="ALL">{t("كل حالات الاطلاع", "All read statuses")}</option>
+          <option value="READ">{t("اطّلع عليه العضو", "Read by member")}</option>
+          <option value="UNREAD">{t("لم يطلع عليه بعد", "Not yet read")}</option>
         </select>
       </div>
 
@@ -259,8 +261,8 @@ export default function EvaluationsPage() {
       {filteredEvaluations.length === 0 ? (
         <div className="py-10">
           <EmptyState
-            title="مفيش تقييمات مسجلة"
-            description="اضغط «إضافة تقييم جديد» لإرسال أول تقييم لأي عضو في الفريق ليظهر له في بوابته."
+            title={t("مفيش تقييمات مسجلة", "No evaluations recorded")}
+            description={t("اضغط «إضافة تقييم جديد» لإرسال أول تقييم لأي عضو في الفريق ليظهر له في بوابته.", "Select “Add evaluation” to send a member their first evaluation in the portal.")}
           />
         </div>
       ) : (

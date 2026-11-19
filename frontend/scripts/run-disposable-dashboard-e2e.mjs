@@ -211,7 +211,33 @@ async function stopPreview(preview) {
   });
 }
 
-async function cleanupFixtures(service, admin, createdUserIds = [], evidenceMode = null) {
+function cleanupContributionFixtures(status, taskIds, memberIds) {
+  if (!status?.db) fail('local DB status is required for exact ledger fixture cleanup.');
+  const target = new URL(status.db);
+  if (target.hostname !== '127.0.0.1' || target.port !== String(DB_PORT)) fail('ledger cleanup refuses a non-owned loopback database.');
+  if (![...taskIds, ...memberIds].every((id) => Number.isSafeInteger(id) && id > 0)) fail('ledger cleanup requires exact positive numeric fixture IDs.');
+  const scope = taskIds.length && memberIds.length
+    ? `task_id IN (${taskIds.join(',')}) AND member_id IN (${memberIds.join(',')})`
+    : 'FALSE';
+  const sql = `BEGIN;
+    ALTER TABLE public.task_contribution_events DISABLE TRIGGER task_contribution_events_append_only;
+    DELETE FROM public.task_contribution_events WHERE ${scope};
+    ALTER TABLE public.task_contribution_events ENABLE TRIGGER task_contribution_events_append_only;
+    SELECT (SELECT count(*) FROM public.task_contribution_events WHERE ${scope})::text || '|' ||
+      (SELECT (tgenabled = 'O')::text FROM pg_catalog.pg_trigger WHERE tgrelid = 'public.task_contribution_events'::regclass AND tgname = 'task_contribution_events_append_only' LIMIT 1);
+    COMMIT;`;
+  let output;
+  try {
+    output = execFileSync('psql', ['-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1'], {
+      input: sql, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], cwd: ROOT,
+      env: childEnvironment(null, { PGHOST: target.hostname, PGPORT: target.port, PGUSER: decodeURIComponent(target.username), PGPASSWORD: decodeURIComponent(target.password), PGDATABASE: target.pathname.slice(1), PGCONNECT_TIMEOUT: '8' }),
+    }).trim();
+  } catch { fail('exact-owned ledger fixture cleanup failed; details withheld.'); }
+  if (output !== '0|true') fail('ledger cleanup could not prove zero residue and append-only trigger restoration.');
+  return 0;
+}
+
+async function cleanupFixtures(service, admin, createdUserIds = [], evidenceMode = null, status = null, knownFixtures = { memberIds: [], taskIds: [] }) {
   const failures = [];
   const memberEmails = [MEMBER_ONE_EMAIL, MEMBER_TWO_EMAIL];
   const taskTitles = [TASK_TITLE, UI_SPECIFIC_TASK_TITLE, UI_ALL_TASK_TITLE, UI_RESTORED_TASK_TITLE];
@@ -232,9 +258,11 @@ async function cleanupFixtures(service, admin, createdUserIds = [], evidenceMode
     return result && !result.error && Array.isArray(result.data) ? result.data : null;
   };
   const memberRows = await rows('member inventory', () => service.from('members').select('id').in('email', memberEmails).limit(10));
-  const memberIds = (memberRows ?? []).map((row) => row.id);
+  const memberIds = [...new Set([...(memberRows ?? []).map((row) => row.id), ...knownFixtures.memberIds])];
   const taskRows = await rows('task inventory', () => service.from('tasks').select('id').in('title', taskTitles).limit(10));
-  const taskIds = (taskRows ?? []).map((row) => row.id);
+  const taskIds = [...new Set([...(taskRows ?? []).map((row) => row.id), ...knownFixtures.taskIds])];
+  const ledgerResult = await attempt('contribution ledger cleanup', async () => ({ data: cleanupContributionFixtures(status, taskIds, memberIds), error: null }));
+  const contributionEvents = ledgerResult?.data === 0 ? 0 : null;
   const listOwnedUsers = async (label) => {
     const matching = new Map();
     let complete = false;
@@ -292,9 +320,10 @@ async function cleanupFixtures(service, admin, createdUserIds = [], evidenceMode
     notes: notesByText === null || notesByTask === null ? null : noteIds.size,
     customFields,
     legacyInvites: invites,
+    contributionEvents,
   };
   const passed = failures.length === 0 && Object.values(remaining).every((count) => count === 0);
-  const cleanupEvidence = { schema: 'phantoms-dashboard-fixture-cleanup/v1', vapidMode: evidenceMode, passed, remaining };
+  const cleanupEvidence = { schema: 'phantoms-dashboard-fixture-cleanup/v2', vapidMode: evidenceMode, passed, remaining };
   if (evidenceMode === 'missing' || evidenceMode === 'invalid') {
     const evidenceDir = path.join(FRONTEND, 'test-results');
     mkdirSync(evidenceDir, { recursive: true, mode: 0o700 });
@@ -308,8 +337,9 @@ async function seedFixtures(status, evidenceMode) {
   const service = createClient(status.api, status.serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const admin = service.auth.admin;
   const createdUserIds = [];
+  const knownFixtures = { memberIds: [], taskIds: [] };
   try {
-    await cleanupFixtures(service, admin);
+    await cleanupFixtures(service, admin, [], null, status);
   const inviteToken = `disposable-dashboard-${randomBytes(24).toString('hex')}`;
   const inviteHash = createHash('sha256').update(inviteToken).digest('hex');
 
@@ -330,6 +360,7 @@ async function seedFixtures(status, evidenceMode) {
     { email: MEMBER_TWO_EMAIL, full_name: 'Disposable member two', completion_rank: 47, team_notes: 'Second reserved fixture', residence: 'Cairo', work_conditions: 'onsite', bio: 'Second reserved fixture', phone: '+201000000002', device: 'كمبيوتر', gender: 'male', meeting_attendance: 'regular', work_status: 'active', can_go_alexandria: false, custom_fields: {} },
   ]).select('id,email,full_name');
   if (memberInsert.error || !memberInsert.data || memberInsert.data.length !== 2) fail('could not seed the two disposable members.');
+  knownFixtures.memberIds.push(...memberInsert.data.map((member) => member.id));
   const first = memberInsert.data.find((member) => member.email === MEMBER_ONE_EMAIL);
   const second = memberInsert.data.find((member) => member.email === MEMBER_TWO_EMAIL);
   if (!first || !second) fail('disposable member ids were not returned.');
@@ -347,6 +378,7 @@ async function seedFixtures(status, evidenceMode) {
     bonus_points: 4,
   }).select('id,title').single();
   if (taskInsert.error) fail('could not seed the disposable task.');
+  knownFixtures.taskIds.push(taskInsert.data.id);
 
   const noteInsert = await service.from('notes').insert([
     { text: NOTE_TEXT, author: 'Disposable owner', author_role: 'Admin', date: '2026-01-01', target_member_id: first.id, target_name: 'Disposable member one', source_task_id: taskInsert.data?.id ?? null, source_member_id: first.id },
@@ -359,10 +391,10 @@ async function seedFixtures(status, evidenceMode) {
   const inviteInsert = await service.from('member_registration_invites').insert({ token_hash: inviteHash, note: INVITE_NOTE, expires_at: '2099-12-31T00:00:00Z', created_by: ownerId }).select('id').single();
   if (inviteInsert.error) fail('could not seed the disposable invite row.');
 
-    return { cleanup: () => cleanupFixtures(service, admin, createdUserIds, evidenceMode) };
+    return { cleanup: () => cleanupFixtures(service, admin, createdUserIds, evidenceMode, status, knownFixtures) };
   } catch (error) {
     try {
-      await cleanupFixtures(service, admin, createdUserIds);
+      await cleanupFixtures(service, admin, createdUserIds, null, status, knownFixtures);
     } catch (cleanupError) {
       fail(`fixture setup and cleanup failed: ${redact(cleanupError instanceof Error ? cleanupError.message : cleanupError)}`);
     }

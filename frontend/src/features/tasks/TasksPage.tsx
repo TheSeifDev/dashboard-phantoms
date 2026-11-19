@@ -17,9 +17,11 @@ import { TaskReviewModal } from './TaskReviewModal';
 import { TaskDeleteModal } from './TaskDeleteModal';
 import { summarizeTask } from './taskMeta';
 
+import { useLocale } from '../../i18n/useLocale';
 type ReviewItem = { task: Task; memberId: number; entry: TaskTrackingEntry };
 
 export default function TasksPage() {
+  const { t, dir } = useLocale();
   const tasksQuery = useTasks();
   const membersQuery = useMembers();
   const deleteTask = useDeleteTask();
@@ -46,27 +48,27 @@ export default function TasksPage() {
   };
 
   return (
-    <section className="grid grid-cols-1 gap-4" id="page-tasks" dir="rtl">
+    <section className="grid grid-cols-1 gap-4" id="page-tasks" dir={dir}>
       <header className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:flex sm:items-center sm:justify-between sm:p-6">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-[var(--fs-xl)] font-black"><CheckSquare size={23} className="shrink-0 text-[var(--link)]" aria-hidden="true" />إدارة وتكليف المهام</h2>
+          <h2 className="flex items-center gap-2 text-[var(--fs-xl)] font-black"><CheckSquare size={23} className="shrink-0 text-[var(--link)]" aria-hidden="true" />{t("إدارة وتكليف المهام", "Task management and assignment")}</h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
-            {tasksQuery.isLoading ? 'بنحمّل المهام...' : `${stats} — تابع التسليمات وراجع الإنجاز.`}
+            {tasksQuery.isLoading ? t('بنحمّل المهام...', 'Loading tasks...') : `${stats} — ${t('تابع التسليمات وراجع الإنجاز.', 'Track submissions and review progress.')}`}
           </p>
         </div>
         <div className="grid gap-2 sm:flex sm:shrink-0">
-          <Button onClick={() => setCreateOpen(true)} icon={<Plus size={18} />} fullOnMobile>اعمل مهمة جديدة</Button>
+          <Button onClick={() => setCreateOpen(true)} icon={<Plus size={18} />} fullOnMobile>{t("اعمل مهمة جديدة", "Create task")}</Button>
           {tasks.length > 0 && (
             <Button variant="secondary" onClick={() => setView((current) => current === 'cards' ? 'table' : 'cards')} icon={view === 'cards' ? <List size={17} /> : <Layers size={17} />} fullOnMobile aria-pressed={view === 'table'}>
-              {view === 'cards' ? 'عرض جدول' : 'عرض بطاقات'}
+              {view === 'cards' ? t('عرض جدول', 'Table view') : t('عرض بطاقات', 'Card view')}
             </Button>
           )}
         </div>
       </header>
 
       {tasksQuery.isLoading ? <CardSkeletons count={3} />
-        : tasksQuery.isError ? <ErrorState message="معرفناش نحمّل المهام والتكليفات." onRetry={() => { void tasksQuery.refetch(); }} />
-          : tasks.length === 0 ? <EmptyState title="مفيش مهام دلوقتي" description="اعمل أول تكليف للفريق عشان تتابع الإنجاز وتراجع التسليمات." action={<Button onClick={() => setCreateOpen(true)} icon={<Plus size={17} />} fullOnMobile>اعمل أول مهمة</Button>} />
+        : tasksQuery.isError ? <ErrorState message={t("معرفناش نحمّل المهام والتكليفات.", "Could not load tasks and assignments.")} onRetry={() => { void tasksQuery.refetch(); }} />
+          : tasks.length === 0 ? <EmptyState title={t("مفيش مهام دلوقتي", "No tasks yet")} description={t("اعمل أول تكليف للفريق عشان تتابع الإنجاز وتراجع التسليمات.", "Create the team's first assignment to track progress and review submissions.")} action={<Button onClick={() => setCreateOpen(true)} icon={<Plus size={17} />} fullOnMobile>{t("اعمل أول مهمة", "Create the first task")}</Button>} />
             : view === 'cards' ? <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-3">{tasks.map((task) => <TaskCard key={task.id} task={task} members={members} onReview={setReview} onDelete={setRemove} />)}</div>
               : <TaskTable tasks={tasks} members={members} onReview={setReview} onDelete={setRemove} />}
 

@@ -29,17 +29,21 @@ function runCheck() {
   });
 }
 
-test('local inventory check matches all production-applied password migrations without inventing a pending entry', () => {
+test('local inventory records all thirteen forward migrations as production-applied', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
+  assert.equal(applied, 13);
   assert.ok(result.stdout.includes(`All ${24 + entries.length} canonical migrations are present (${pending} pending forward, ${applied} applied forward)`));
   const ownerReview = entries.find((entry) => entry.version === '20261119005000');
   assert.equal(ownerReview.production_status, 'applied');
   assert.equal(ownerReview.remote_applied_timestamp, '20261119054418');
+  const contribution = entries.find((entry) => entry.version === '20261119183000');
+  assert.equal(contribution.production_status, 'applied');
+  assert.equal(contribution.remote_applied_timestamp, '20261119193932');
 });
 
 test('remote commands are not printed when target is omitted', () => {

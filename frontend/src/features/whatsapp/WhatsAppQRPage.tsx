@@ -16,7 +16,9 @@ import { WhatsAppDispatch } from './WhatsAppDispatch';
 import { WhatsAppMemberPicker } from './WhatsAppMemberPicker';
 import { WhatsAppQRViewer } from './WhatsAppQRViewer';
 
+import { useLocale } from '../../i18n/useLocale';
 export default function WhatsAppQRPage() {
+  const { t, dir } = useLocale();
   const [taskId, setTaskId] = useState('');
   const [memberIds, setMemberIds] = useState<number[]>([]);
   const queryClient = useQueryClient();
@@ -68,15 +70,15 @@ export default function WhatsAppQRPage() {
   };
 
   return (
-    <section className="grid gap-4" dir="rtl">
+    <section className="grid gap-4" dir={dir}>
       <header className="flex items-start gap-3">
         <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
           <MessageCircle />
         </span>
         <div>
-          <h2 className="text-[var(--fs-xl)] font-black">ربط واتساب عن طريق QR (Baileys Mock)</h2>
+          <h2 className="text-[var(--fs-xl)] font-black">{t("ربط واتساب عن طريق QR (Baileys Mock)", "Connect WhatsApp via QR (Baileys Mock)")}</h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
-            اربط رقم البعت التاني باستخدام محاكاة Baileys، وبعد كده اختار الأعضاء عشان تبعت لهم التكليفات مرة واحدة.
+            {t('اربط رقم البعت التاني باستخدام محاكاة Baileys، وبعد كده اختار الأعضاء عشان تبعت لهم التكليفات مرة واحدة.', 'Connect a separate sending number using the Baileys mock, then choose members to send their task assignments.')}
           </p>
         </div>
       </header>
@@ -94,7 +96,7 @@ export default function WhatsAppQRPage() {
 
       <Card className="grid gap-4">
         <label className="grid gap-2 text-sm font-bold">
-          اختار المهمة
+          {t('اختار المهمة', 'Select a task')}
           <select
             className="min-h-11 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-base"
             value={taskId}
@@ -104,7 +106,7 @@ export default function WhatsAppQRPage() {
               dispatch.reset();
             }}
           >
-            <option value="">اختار مهمة...</option>
+            <option value="">{t("اختار مهمة...", "Select a task...")}</option>
             {(tasks.data ?? []).map((item) => (
               <option key={item.id} value={item.id}>
                 {item.title}
@@ -115,9 +117,9 @@ export default function WhatsAppQRPage() {
 
         {tasks.isError && (
           <p role="alert" className="text-sm text-[var(--danger)]">
-            منعرفناش نحمّل المهام.{' '}
+            {t("منعرفناش نحمّل المهام.", "Could not load tasks.")}{' '}
             <button className="underline" onClick={() => void tasks.refetch()}>
-              جرّب تاني
+              {t('جرّب تاني', 'Try again')}
             </button>
           </p>
         )}
@@ -149,7 +151,7 @@ export default function WhatsAppQRPage() {
       <Card className="flex items-start gap-3 bg-amber-50 text-sm leading-6 text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
         <AlertTriangle className="mt-1 shrink-0" size={18} />
         <p>
-          تنبيه: Baileys عميل مش رسمي، واستخدامه ممكن يخالف إرشادات واتساب ويعرّض الرقم للإيقاف. استخدمه على مسؤوليتك، وللتواصل الداخلي المسموح بس. مفيش رسائل تلقائية أو بعت جماعي؛ راجع موافقة العضو وشكل كل رسالة قبل ما تأكدها.
+          {t('تنبيه: Baileys عميل مش رسمي، واستخدامه ممكن يخالف إرشادات واتساب ويعرّض الرقم للإيقاف. استخدمه على مسؤوليتك، وللتواصل الداخلي المسموح بس. مفيش رسائل تلقائية أو بعت جماعي؛ راجع موافقة العضو وشكل كل رسالة قبل ما تأكدها.', 'Warning: Baileys is an unofficial client. Its use may violate WhatsApp guidelines and put the number at risk of suspension. Use it at your own risk and only for permitted internal communication. There are no automatic or bulk messages; verify consent and review every message before confirming.')}
         </p>
       </Card>
     </section>

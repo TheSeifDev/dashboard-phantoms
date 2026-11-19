@@ -19,6 +19,14 @@ import { Drawer } from '../ui/Drawer';
 import { PhantomsLogo } from '../brand/PhantomsLogo';
 import type { AdminPermission, AdminPermissions } from '../../types/db';
 import { clearAdminSetupIntent } from '../../features/auth/auth-flow';
+import { useLocale } from '../../i18n/useLocale';
+
+const EN: Record<string, string> = {
+  'نظرة عامة': 'Overview', 'العمليات': 'Operations', 'التواصل': 'Communication', 'الحساب': 'Account', 'إدارة النظام': 'Administration',
+  'الرئيسية': 'Dashboard', 'المهام': 'Tasks', 'الأعضاء': 'Members', 'التقييمات': 'Evaluations', 'ترتيب الفريق': 'Leaderboard',
+  'الملاحظات': 'Notes', 'الإعلانات': 'Announcements', 'إرسال المهام عبر واتساب': 'WhatsApp assignments', 'المساعد الذكي': 'AI assistant',
+  'بوابة الأعضاء': 'Member portal', 'إدارة المشرفين': 'Administrators',
+};
 
 interface SidebarLink {
   to: string;
@@ -110,6 +118,7 @@ function SidebarLinks({
   isOwner: boolean;
   permissions: Partial<AdminPermissions>;
 }) {
+  const { t } = useLocale();
   const canSee = (item: SidebarLink) =>
     (!item.ownerOnly || isOwner) &&
     (!item.permission || isOwner || permissions[item.permission] === true);
@@ -118,7 +127,7 @@ function SidebarLinks({
       {GROUPS.filter((group) => group.items.some(canSee)).map((group) => (
         <div key={group.title}>
           <p className="app-sidebar-group-title" aria-hidden="true">
-            {group.title}
+            {t(group.title, EN[group.title] ?? group.title)}
           </p>
           <ul className="app-sidebar-group">
             {group.items.filter(canSee).map(({ to, label, icon: Icon, end }) => (
@@ -127,9 +136,9 @@ function SidebarLinks({
                   to={to}
                   end={end}
                   onClick={onNavigate}
-                  title={label}
-                  aria-label={label}
-                  data-tip={railTips ? label : undefined}
+                  title={t(label, EN[label] ?? label)}
+                  aria-label={t(label, EN[label] ?? label)}
+                  data-tip={railTips ? t(label, EN[label] ?? label) : undefined}
                   className={({ isActive }) =>
                     `app-sidebar-item${isActive ? ' is-active' : ''}${
                       railTips ? ' app-sidebar-tip' : ''
@@ -137,7 +146,7 @@ function SidebarLinks({
                   }
                 >
                   <Icon size={20} aria-hidden="true" />
-                  <span className="app-sidebar-item-label">{label}</span>
+                  <span className="app-sidebar-item-label">{t(label, EN[label] ?? label)}</span>
                 </NavLink>
               </li>
             ))}
@@ -161,6 +170,7 @@ export function AppSidebar({
   drawerOpen: boolean;
   onCloseDrawer: () => void;
 }) {
+  const { t } = useLocale();
   const clear = useAuthStore((state) => state.clear);
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -182,40 +192,40 @@ export function AppSidebar({
 
   return (
     <>
-      <aside className="app-sidebar" aria-label="الشريط الجانبي">
-        <NavLink to="/admin" className="app-sidebar-brand" aria-label="PHANTOMS — الرئيسية">
+      <aside className="app-sidebar" aria-label={t('الشريط الجانبي', 'Sidebar')}>
+        <NavLink to="/admin" className="app-sidebar-brand" aria-label={t('PHANTOMS — الرئيسية', 'PHANTOMS — Home')}>
           <PhantomsLogo size="md" className="app-sidebar-logo" />
           <span className="sr-only"><span>PHANTOMS</span></span>
         </NavLink>
-        <nav aria-label="التنقل الرئيسي" className="app-sidebar-nav">
+        <nav aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-sidebar-nav">
           <SidebarLinks railTips isOwner={isOwner} permissions={permissions} />
         </nav>
         <div className="app-sidebar-footer">
           <button
             type="button"
             onClick={() => void logout()}
-            title="سجّل الخروج"
-            aria-label="سجّل الخروج"
-            data-tip="سجّل الخروج"
+            title={t('سجّل الخروج', 'Sign out')}
+            aria-label={t('سجّل الخروج', 'Sign out')}
+            data-tip={t('سجّل الخروج', 'Sign out')}
             className="app-sidebar-item app-sidebar-tip app-sidebar-logout"
           >
             <LogOut size={20} aria-hidden="true" />
-            <span className="app-sidebar-item-label">سجّل الخروج</span>
+            <span className="app-sidebar-item-label">{t('سجّل الخروج', 'Sign out')}</span>
           </button>
         </div>
       </aside>
 
-      <Drawer isOpen={drawerOpen} onClose={onCloseDrawer} title="القائمة الرئيسية">
-        <div className="app-drawer-user" aria-label="المستخدم الحالي">
+      <Drawer isOpen={drawerOpen} onClose={onCloseDrawer} title={t('القائمة الرئيسية', 'Main menu')}>
+        <div className="app-drawer-user" aria-label={t('المستخدم الحالي', 'Current user')}>
           <span className="app-drawer-user-avatar" aria-hidden="true">
             {userName.trim().charAt(0) || 'م'}
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-black text-[var(--text)]">{userName}</p>
-            <p className="text-xs font-bold text-[var(--text-muted)]">مدير النظام</p>
+            <p className="text-xs font-bold text-[var(--text-muted)]">{t('مدير النظام', 'Administrator')}</p>
           </div>
         </div>
-        <nav aria-label="التنقل الرئيسي" className="app-drawer-nav flex flex-col gap-4 py-4">
+        <nav aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-drawer-nav flex flex-col gap-4 py-4">
           <SidebarLinks onNavigate={onCloseDrawer} isOwner={isOwner} permissions={permissions} />
           <button
             type="button"
@@ -223,7 +233,7 @@ export function AppSidebar({
             className="app-sidebar-item app-sidebar-logout app-drawer-nav"
           >
             <LogOut size={20} aria-hidden="true" />
-            <span className="app-sidebar-item-label">سجّل الخروج</span>
+            <span className="app-sidebar-item-label">{t('سجّل الخروج', 'Sign out')}</span>
           </button>
           <span className="sr-only">{userName}</span>
         </nav>

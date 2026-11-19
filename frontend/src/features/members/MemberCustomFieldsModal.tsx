@@ -11,6 +11,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
+import { useLocale } from '../../i18n/useLocale';
 
 interface Props {
   isOpen: boolean;
@@ -60,6 +61,7 @@ export function parseOptionsText(text: string): string[] {
 }
 
 export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
+  const { t, dir } = useLocale();
   const saveField = useSaveMemberCustomField();
   const deleteField = useDeleteMemberCustomField();
   const [draft, setDraft] = useState<DraftState>(() => emptyDraft(fields.length));
@@ -90,13 +92,13 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
 
     const cleanLabel = draft.label.trim();
     if (!cleanLabel) {
-      setError('اكتب اسم الحقل أو المعلومة الأول (مثال: نوع الثانوية).');
+      setError(t('اكتب اسم الحقل أو المعلومة الأول (مثال: نوع الثانوية).', 'Enter a field name first (for example: High school type).'));
       return;
     }
 
     const options = draft.field_type === 'select' ? parseOptionsText(draft.optionsText) : [];
     if (draft.field_type === 'select' && options.length === 0) {
-      setError('اكتب اختيارين على الأقل لقائمة الاختيارات (افصل بينهم بفاصلة أو سطر جديد).');
+      setError(t('اكتب اختيارين على الأقل لقائمة الاختيارات (افصل بينهم بفاصلة أو سطر جديد).', 'Enter at least two choices for this list, separated by commas or new lines.'));
       return;
     }
 
@@ -113,7 +115,7 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
 
     try {
       await saveField.mutateAsync({ id: draft.id, field: payload });
-      toast.success(draft.id ? 'اتحدّث الحقل المخصص بنجاح.' : `اتضاف حقل «${cleanLabel}» لكل الأعضاء.`);
+      toast.success(draft.id ? t('اتحدّث الحقل المخصص بنجاح.', 'Custom field updated.') : t(`اتضاف حقل «${cleanLabel}» لكل الأعضاء.`, `Added “${cleanLabel}” for all members.`));
       resetDraft();
     } catch (cause) {
       setError(handleSupabaseError(cause).message);
@@ -124,17 +126,17 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
     try {
       await deleteField.mutateAsync(field.id);
       if (draft.id === field.id) resetDraft();
-      toast.success(`اتحذف حقل «${field.label}».`);
+      toast.success(t(`اتحذف حقل «${field.label}».`, `Deleted the “${field.label}” field.`));
     } catch (cause) {
       toast.error(handleSupabaseError(cause).message);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="إدارة الحقول المخصصة لبيانات الأعضاء" maxWidth="2xl">
-      <div className="grid gap-5" dir="rtl">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('إدارة الحقول المخصصة لبيانات الأعضاء', 'Manage custom member fields')} maxWidth="2xl">
+      <div className="grid gap-5" dir={dir}>
         <p className="text-sm leading-6 text-[var(--text-muted)]">
-          أي حقل تضيفه هنا هيظهر تلقائيًا في نافذة «تعديل بيانات العضو» و«إضافة عضو» وفي ملف العضو وشيت الإكسيل، بدون أي تعديل في الكود.
+          {t('أي حقل تضيفه هنا هيظهر تلقائيًا في نافذة «تعديل بيانات العضو» و«إضافة عضو» وفي ملف العضو وشيت الإكسيل، بدون أي تعديل في الكود.', 'Fields added here appear automatically in the Edit Member and Add Member forms, member profiles, and Excel exports, without code changes.')}
         </p>
 
         {/* Form to add or edit a field */}
@@ -147,7 +149,7 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
         >
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-black text-[var(--text)]">
-              {draft.id ? `تعديل حقل: ${draft.label}` : 'إضافة معلومة / حقل جديد للأعضاء'}
+              {draft.id ? t(`تعديل حقل: ${draft.label}`, `Edit field: ${draft.label}`) : t('إضافة معلومة / حقل جديد للأعضاء', 'Add a new member field')}
             </h3>
             {draft.id && (
               <button
@@ -156,7 +158,7 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
                 className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-bold text-[var(--text-2)] hover:bg-[var(--bg)]"
               >
                 <X size={14} aria-hidden="true" />
-                إلغاء التعديل
+                {t('إلغاء التعديل', 'Cancel editing')}
               </button>
             )}
           </div>
@@ -172,11 +174,11 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1.5 text-sm font-bold text-[var(--text-2)]">
-              اسم المعلومة / الحقل
+              {t('اسم المعلومة / الحقل', 'Field name')}
               <input
                 type="text"
                 required
-                placeholder="مثال: نوع الثانوية / الكلية / سنة التخرج"
+                placeholder={t('مثال: نوع الثانوية / الكلية / سنة التخرج', 'Example: High school type / college / graduation year')}
                 value={draft.label}
                 onChange={(e) => setDraft((curr) => ({ ...curr, label: e.target.value }))}
                 className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-normal text-[var(--text)]"
@@ -184,7 +186,7 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
             </label>
 
             <label className="grid gap-1.5 text-sm font-bold text-[var(--text-2)]">
-              نوع الحقل
+              {t('نوع الحقل', 'Field type')}
               <select
                 value={draft.field_type}
                 onChange={(e) =>
@@ -194,7 +196,7 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
               >
                 {FIELD_TYPES.map((type) => (
                   <option key={type} value={type}>
-                    {CUSTOM_FIELD_TYPE_LABELS[type]}
+                    {t(CUSTOM_FIELD_TYPE_LABELS[type], ({ short_text: 'Free text', select: 'Choice list', number: 'Number', yes_no: 'Yes / No', date: 'Date', long_text: 'Long text / details' } as const)[type])}
                   </option>
                 ))}
               </select>
@@ -203,10 +205,10 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
 
           {draft.field_type === 'select' ? (
             <label className="grid gap-1.5 text-sm font-bold text-[var(--text-2)]">
-              الاختيارات المتاحة (افصل بين كل اختيار بفاصلة «،» أو سطر جديد)
+              {t('الاختيارات المتاحة (افصل بين كل اختيار بفاصلة «،» أو سطر جديد)', 'Available choices (separate each with a comma or new line)')}
               <input
                 type="text"
-                placeholder="مثال: ثانوي عام، ثانوي أزهري، فني / صناعي، STEM"
+                placeholder={t('مثال: ثانوي عام، ثانوي أزهري، فني / صناعي، STEM', 'Example: General, Azhar, technical / industrial, STEM')}
                 value={draft.optionsText}
                 onChange={(e) => setDraft((curr) => ({ ...curr, optionsText: e.target.value }))}
                 className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-normal text-[var(--text)]"
@@ -214,10 +216,10 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
             </label>
           ) : (
             <label className="grid gap-1.5 text-sm font-bold text-[var(--text-2)]">
-              نص توضيحي داخل الخانة (اختياري)
+              {t('نص توضيحي داخل الخانة (اختياري)', 'Placeholder text (optional)')}
               <input
                 type="text"
-                placeholder="مثال: اكتب نوع الثانوية أو الشعبة..."
+                placeholder={t('مثال: اكتب نوع الثانوية أو الشعبة...', 'Example: Enter high school type or section...')}
                 value={draft.placeholder}
                 onChange={(e) => setDraft((curr) => ({ ...curr, placeholder: e.target.value }))}
                 className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-normal text-[var(--text)]"
@@ -232,16 +234,16 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
                 checked={draft.show_in_card}
                 onChange={(e) => setDraft((curr) => ({ ...curr, show_in_card: e.target.checked }))}
               />
-              إظهار هذه المعلومة في الكارت الخارجي للعضو
+              {t('إظهار هذه المعلومة في الكارت الخارجي للعضو', 'Show this field on the member card')}
             </label>
 
             <Button
               type="submit"
               isLoading={saveField.isPending}
-              loadingText="بنحفظ..."
+              loadingText={t('بنحفظ...', 'Saving...')}
               icon={<Plus size={16} aria-hidden="true" />}
             >
-              {draft.id ? 'حفظ تعديل الحقل' : 'إضافة الحقل للنظام'}
+              {draft.id ? t('حفظ تعديل الحقل', 'Save field changes') : t('إضافة الحقل للنظام', 'Add field')}
             </Button>
           </div>
         </form>
@@ -250,17 +252,17 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
         <div className="grid gap-2.5">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-black text-[var(--text)]">
-              الحقول المضافة حالياً ({fields.length})
+              {t('الحقول المضافة حالياً', 'Current fields')} ({fields.length})
             </h4>
           </div>
 
           {fields.length === 0 ? (
             <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-6 text-center text-sm text-[var(--text-muted)]">
               <ListPlus size={24} className="mx-auto mb-2 text-[var(--text-muted)]" aria-hidden="true" />
-              مفيش حقول إضافية مضافة لسه. ضيف أي معلومة فوق (زي «نوع الثانوية») وهتظهر فوراً لكل الأعضاء.
+              {t('مفيش حقول إضافية مضافة لسه. ضيف أي معلومة فوق (زي «نوع الثانوية») وهتظهر فوراً لكل الأعضاء.', 'No custom fields yet. Add a field above and it will appear for all members immediately.')}
             </div>
           ) : (
-            <ul className="grid gap-2" aria-label="قائمة الحقول المخصصة">
+            <ul className="grid gap-2" aria-label={t('قائمة الحقول المخصصة', 'Custom fields list')}>
               {fields.map((field) => (
                 <li
                   key={field.id}
@@ -270,17 +272,17 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
                     <div className="flex flex-wrap items-center gap-2">
                       <strong className="text-sm font-black text-[var(--text)]">{field.label}</strong>
                       <span className="rounded-md bg-[var(--primary-soft)] px-2 py-0.5 text-xs font-bold text-[var(--link)]">
-                        {CUSTOM_FIELD_TYPE_LABELS[field.field_type]}
+                          {t(CUSTOM_FIELD_TYPE_LABELS[field.field_type], ({ short_text: 'Free text', select: 'Choice list', number: 'Number', yes_no: 'Yes / No', date: 'Date', long_text: 'Long text / details' } as const)[field.field_type])}
                       </span>
                       {field.show_in_card && (
                         <span className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
-                          يظهر في الكارت
+                          {t('يظهر في الكارت', 'Shown on card')}
                         </span>
                       )}
                     </div>
                     {field.field_type === 'select' && field.options.length > 0 && (
                       <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
-                        الاختيارات: {field.options.join(' ، ')}
+                        {t('الاختيارات:', 'Choices:')} {field.options.join(' ، ')}
                       </p>
                     )}
                   </div>
@@ -290,10 +292,10 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
                       type="button"
                       onClick={() => startEdit(field)}
                       className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-xs font-bold text-[var(--text-2)] hover:bg-[var(--primary-soft)] hover:text-[var(--link)]"
-                      aria-label={`تعديل حقل ${field.label}`}
+                      aria-label={t(`تعديل حقل ${field.label}`, `Edit field ${field.label}`)}
                     >
                       <Edit2 size={14} aria-hidden="true" />
-                      تعديل
+                      {t('تعديل', 'Edit')}
                     </button>
                     <button
                       type="button"
@@ -302,10 +304,10 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
                       }}
                       disabled={deleteField.isPending}
                       className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-xs font-bold text-[var(--danger)] hover:bg-red-50 dark:hover:bg-red-950/30"
-                      aria-label={`حذف حقل ${field.label}`}
+                      aria-label={t(`حذف حقل ${field.label}`, `Delete field ${field.label}`)}
                     >
                       <Trash2 size={14} aria-hidden="true" />
-                      حذف
+                      {t('حذف', 'Delete')}
                     </button>
                   </div>
                 </li>
@@ -316,7 +318,7 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
 
         <div className="flex justify-end border-t border-[var(--border)] pt-3">
           <Button type="button" variant="secondary" onClick={onClose}>
-            إغلاق
+            {t('إغلاق', 'Close')}
           </Button>
         </div>
       </div>

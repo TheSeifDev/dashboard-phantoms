@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import MainLayout from '../components/layout/MainLayout';
+import { PhantomLoader } from '../components/motion/PhantomLoader';
 import { supabase } from '../lib/supabase/client';
 import { useAdminAccess } from '../features/admin/access/api';
 import { Button } from '../components/ui/Button';
@@ -11,6 +12,7 @@ import { firstAllowedAdminPath } from '../features/admin/access/permissions';
 import type { AdminPermission } from '../types/db';
 import { clearAdminSetupIntent, inspectAdminCallback } from '../features/auth/auth-flow';
 import { MemberAccessGuard } from '../features/auth/MemberAccessGuard';
+import { useLocale } from '../i18n/useLocale';
 
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 const AdminLoginPage = lazy(() => import('../features/auth/AdminLoginPage'));
@@ -31,7 +33,7 @@ const AnnouncementsPage = lazy(() => import('../features/admin/announcements/Ann
 const AdminAccountsPage = lazy(() => import('../features/admin/access/AdminAccountsPage'));
 
 function PageFallback() {
-  return <div className="grid min-h-40 place-items-center text-sm font-bold text-[var(--text-muted)]" role="status">بنحمّل الصفحة...</div>;
+  return <PhantomLoader className="page-fallback" />;
 }
 
 function Page({ children }: { children: React.ReactNode }) {
@@ -44,6 +46,7 @@ function hasAdminCallbackMaterial(): boolean {
 
 /** حارس لوحة الإدارة — ينتظر فحص الجلسة الأولي قبل الحسم */
 function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
+  const { t, dir } = useLocale();
   const user = useAuthStore((s) => s.user);
   const ready = useAuthStore((s) => s.ready);
   const clear = useAuthStore((s) => s.clear);
@@ -55,38 +58,30 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   };
   // لا تحسم قبل اكتمال فحص supabase.auth.getSession — وإلا وَمَضت
   // إعادة التوجيه إلى تسجيل الدخول مع كل تحديث للصفحة
-  if (!ready) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl">
-        <span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">
-          بنتأكد من الجلسة...
-        </span>
-      </div>
-    );
-  }
+  if (!ready) return <PhantomLoader message={t('بنتأكد من الجلسة...', 'Checking your session...')} />;
   if (!user) return <Navigate to="/admin/login" replace />;
-  if (access.isPending) {
-    return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl"><span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">بنتأكد من صلاحيات الإدارة...</span></div>;
-  }
+  if (access.isPending) return <PhantomLoader message={t('بنتأكد من صلاحيات الإدارة...', 'Checking administrator access...')} />;
   if (access.isError) {
-    return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir="rtl"><ErrorState message="معرفناش نتحقق من صلاحيات الإدارة. مفيش صفحات هتفتح قبل نجاح التحقق." onRetry={() => { void access.refetch(); }} /><Button variant="secondary" onClick={() => void handleLogout()}>تسجيل الخروج</Button></div>;
+    return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir={dir}><ErrorState message={t('معرفناش نتحقق من صلاحيات الإدارة. مفيش صفحات هتفتح قبل نجاح التحقق.', 'Could not verify administrator access. No pages will open until verification succeeds.')} onRetry={() => { void access.refetch(); }} /><Button variant="secondary" onClick={() => void handleLogout()}>{t('تسجيل الخروج', 'Sign out')}</Button></div>;
   }
   if (!access.data?.is_admin) {
-    return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir="rtl"><ErrorState message="الحساب ده مش مضاف كحساب إداري. تواصل مع مالك النظام لو محتاج صلاحية." /><Button variant="secondary" onClick={() => void handleLogout()}>تسجيل الخروج</Button></div>;
+    return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir={dir}><ErrorState message={t('الحساب ده مش مضاف كحساب إداري. تواصل مع مالك النظام لو محتاج صلاحية.', 'This account is not registered as an administrator. Contact the system owner if you need access.')} /><Button variant="secondary" onClick={() => void handleLogout()}>{t('تسجيل الخروج', 'Sign out')}</Button></div>;
   }
   return <>{children}</>;
 }
 
 function ProtectedOwnerRoute({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale();
   const user = useAuthStore((s) => s.user);
   const access = useAdminAccess(user?.id ?? null);
-  if (access.isPending) return <PageFallback />;
-  if (access.isError) return <ErrorState message="معرفناش نتحقق من صلاحية المالك." onRetry={() => { void access.refetch(); }} />;
+  if (access.isPending) return <PhantomLoader message={t('بنتأكد من صلاحية المالك...', 'Checking owner access...')} />;
+  if (access.isError) return <ErrorState message={t('معرفناش نتحقق من صلاحية المالك.', 'Could not verify owner access.')} onRetry={() => { void access.refetch(); }} />;
   if (!access.data?.is_owner) return <Navigate to="/admin" replace />;
   return <>{children}</>;
 }
 
 function NoAdminSections() {
+  const { t } = useLocale();
   const clear = useAuthStore((s) => s.clear);
   const logout = async () => {
     await supabase.auth.signOut();
@@ -96,27 +91,29 @@ function NoAdminSections() {
   return (
     <div className="grid min-h-64 place-items-center">
       <div className="grid max-w-lg gap-3">
-        <EmptyState title="مفيش أقسام متاحة للحساب ده" description="اطلب من مالك النظام يفتح لك قسم واحد على الأقل من شاشة إدارة المشرفين." />
-        <Button variant="secondary" onClick={() => void logout()}>تسجيل الخروج</Button>
+        <EmptyState title={t('مفيش أقسام متاحة للحساب ده', 'No sections are available for this account')} description={t('اطلب من مالك النظام يفتح لك قسم واحد على الأقل من شاشة إدارة المشرفين.', 'Ask the system owner to enable at least one section from administrator management.')} />
+        <Button variant="secondary" onClick={() => void logout()}>{t('تسجيل الخروج', 'Sign out')}</Button>
       </div>
     </div>
   );
 }
 
 function AdminStartRedirect() {
+  const { t } = useLocale();
   const user = useAuthStore((s) => s.user);
   const access = useAdminAccess(user?.id ?? null);
-  if (access.isPending) return <PageFallback />;
-  if (access.isError) return <ErrorState message="معرفناش نتحقق من صلاحياتك." onRetry={() => { void access.refetch(); }} />;
+  if (access.isPending) return <PhantomLoader message={t('بنتأكد من صلاحياتك...', 'Checking your access...')} />;
+  if (access.isError) return <ErrorState message={t('معرفناش نتحقق من صلاحياتك.', 'Could not verify your access.')} onRetry={() => { void access.refetch(); }} />;
   const path = firstAllowedAdminPath(access.data?.permissions);
   return path ? <Navigate to={path} replace /> : <NoAdminSections />;
 }
 
 function RequireAdminPermission({ permission, children }: { permission: AdminPermission; children: React.ReactNode }) {
+  const { t } = useLocale();
   const user = useAuthStore((s) => s.user);
   const access = useAdminAccess(user?.id ?? null);
-  if (access.isPending) return <PageFallback />;
-  if (access.isError) return <ErrorState message="معرفناش نتحقق من صلاحيات القسم." onRetry={() => { void access.refetch(); }} />;
+  if (access.isPending) return <PhantomLoader message={t('بنتأكد من صلاحيات القسم...', 'Checking section access...')} />;
+  if (access.isError) return <ErrorState message={t('معرفناش نتحقق من صلاحية القسم.', 'Could not verify access to this section.')} onRetry={() => { void access.refetch(); }} />;
   if (access.data?.is_owner || access.data?.permissions?.[permission] === true) return <>{children}</>;
   const path = firstAllowedAdminPath(access.data?.permissions);
   return path ? <Navigate to={path} replace /> : <NoAdminSections />;
@@ -135,20 +132,13 @@ function ProtectedMemberRoute({ children }: { children: React.ReactNode }) {
 
 /** الجذر: وجّه الجلسات المحفوظة (تذكرني) مباشرة بدل رمي الجميع على الدخول */
 function RootRedirect() {
+  const { t } = useLocale();
   const member = useAuthStore((s) => s.currentMember);
   const user = useAuthStore((s) => s.user);
   const ready = useAuthStore((s) => s.ready);
   if (hasAdminCallbackMaterial()) return <Page><AdminRecoveryCallbackPage /></Page>;
   if (member) return <Navigate to="/portal" replace />;
-  if (!ready) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl">
-        <span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">
-          بنتأكد من الجلسة...
-        </span>
-      </div>
-    );
-  }
+  if (!ready) return <PhantomLoader message={t('بنتأكد من الجلسة...', 'Checking your session...')} />;
   if (user) return <Navigate to="/admin" replace />;
   return <Navigate to="/login" replace />;
 }

@@ -6,6 +6,8 @@ import { clearDeviceToken, getDeviceToken, useAuthStore } from '../../store/auth
 import { fetchMemberByEmail } from '../members/api';
 import { getMemberPasswordAccess } from './member-password-access';
 import { memberAuthErrorMessage, normalizeAuthEmail } from './member-password';
+import { PhantomLoader } from '../../components/motion/PhantomLoader';
+import { useLocale } from '../../i18n/useLocale';
 
 type GuardState = 'checking' | 'allowed' | 'denied';
 
@@ -85,6 +87,7 @@ async function cleanupMemberState(snapshot?: CleanupSnapshot, latestAuthSignal?:
 }
 
 export function MemberAccessGuard({ children }: { children: ReactNode }) {
+  const { t } = useLocale();
   const currentMember = useAuthStore((state) => state.currentMember);
   const currentMemberId = currentMember?.id ?? null;
   const currentMemberEmail = normalizeAuthEmail(currentMember?.email ?? '');
@@ -200,13 +203,7 @@ export function MemberAccessGuard({ children }: { children: ReactNode }) {
 
   if (visibleState === 'denied') return <Navigate to="/login" replace />;
   if (visibleState === 'checking') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]" dir="rtl">
-        <span className="text-xs font-bold text-[var(--text-muted)] animate-pulse">
-          بنتأكد من جلسة العضو وصلاحية الجهاز...
-        </span>
-      </div>
-    );
+    return <PhantomLoader message={t('بنتأكد من جلسة العضو وصلاحية الجهاز...', 'Verifying the member session and device access...')} />;
   }
   return <>{children}</>;
 }

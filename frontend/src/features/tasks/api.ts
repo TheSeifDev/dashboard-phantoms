@@ -239,6 +239,7 @@ export const useApproveTaskSubmission = () => {
       qc.invalidateQueries({ queryKey: ['notes'] });
       qc.invalidateQueries({ queryKey: ['member-bonus'] });
       qc.invalidateQueries({ queryKey: ['member-tasks'] });
+      qc.invalidateQueries({ queryKey: ['task-contributions'] });
     },
   });
 };
@@ -262,6 +263,7 @@ export const useRevokeTaskApproval = () => {
         qc.invalidateQueries({ queryKey: ['notes'] }),
         qc.invalidateQueries({ queryKey: ['member-bonus'] }),
         qc.invalidateQueries({ queryKey: ['member-tasks'] }),
+        qc.invalidateQueries({ queryKey: ['task-contributions'] }),
       ]);
     },
   });

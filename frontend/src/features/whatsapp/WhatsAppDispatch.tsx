@@ -7,6 +7,7 @@ import { WhatsAppConfirmModal } from './WhatsAppConfirmModal';
 import { formatDeadline } from '../../lib/dateUtils';
 import { taskBonus } from '../tasks/taskMeta';
 
+import { useLocale } from '../../i18n/useLocale';
 interface Props {
   task: Task;
   members: Member[];
@@ -48,6 +49,7 @@ export function WhatsAppDispatch({
   error,
   onSend,
 }: Props) {
+  const { t, dir, number } = useLocale();
   const [openModal, setOpenModal] = useState(false);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [previewMemberIndex, setPreviewMemberIndex] = useState(0);
@@ -66,19 +68,19 @@ export function WhatsAppDispatch({
   };
 
   return (
-    <div className="grid gap-4 border-t border-[var(--border)] pt-4" dir="rtl">
+    <div className="grid gap-4 border-t border-[var(--border)] pt-4" dir={dir}>
       {/* Per-recipient Message Preview */}
       {activeMember && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-6">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 font-extrabold text-[var(--text)]">
               <Eye size={16} className="text-[var(--primary)]" aria-hidden="true" />
-              <span>معاينة رسالة المستلم:</span>
+              <span>{t("معاينة رسالة المستلم:", "Recipient message preview:")}</span>
             </span>
 
             {members.length > 1 && (
               <label className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                <span>اختار العضو للمعاينة:</span>
+                <span>{t("اختار العضو للمعاينة:", "Choose member to preview:")}</span>
                 <select
                   value={previewMemberIndex}
                   onChange={(e) => setPreviewMemberIndex(Number(e.target.value))}
@@ -109,7 +111,7 @@ export function WhatsAppDispatch({
           onChange={(event) => setConsentConfirmed(event.target.checked)}
         />
         <span>
-          بأكد إن الأعضاء المحددين وافقوا قبل كده وبشكل واضح على استلام إشعارات المهام على واتساب، وإن المحتوى خاص بمهام متسندة لهم بس.
+          {t("بأكد إن الأعضاء المحددين وافقوا قبل كده وبشكل واضح على استلام إشعارات المهام على واتساب، وإن المحتوى خاص بمهام متسندة لهم بس.", "I confirm the selected members explicitly consented to WhatsApp task notifications and that messages concern only their assigned tasks.")}
         </span>
       </label>
 
@@ -120,12 +122,12 @@ export function WhatsAppDispatch({
         onClick={handleOpenModal}
         fullOnMobile
       >
-        كمّل وراجع الإرسال ({members.length} عضو)
+        {t('كمّل وراجع الإرسال', 'Continue and review send')} ({number(members.length)} {t('عضو', 'members')})
       </Button>
 
       {!isConnected && (
         <p className="text-sm text-[var(--text-muted)]">
-          اربط رقم واتساب الأول عن طريق رمز QR عشان تقدر تفعّل الإرسال التجريبي.
+          {t("اربط رقم واتساب الأول عن طريق رمز QR عشان تقدر تفعّل الإرسال التجريبي.", "Link a WhatsApp number with the QR code before enabling test sends.")}
         </p>
       )}
 
@@ -141,17 +143,17 @@ export function WhatsAppDispatch({
         <div className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-6">
           <p className="mb-2 flex items-center gap-2 font-bold text-[var(--text)]">
             <CheckCircle2 size={18} className="text-emerald-600" aria-hidden="true" />
-            <span>نتائج البعت التجريبي:</span>
+            <span>{t("نتائج البعت التجريبي:", "Test send results:")}</span>
           </p>
           <ul className="list-inside list-disc">
             <li>
-              البعت التجريبي نجح لـ: <b>{result.sent}</b>
+              {t("البعت التجريبي نجح لـ:", "Test send succeeded for:")} <b>{result.sent}</b>
             </li>
             <li>
-              البعت فشل لـ: <b>{result.failed}</b>
+              {t("البعت فشل لـ:", "Test send failed for:")} <b>{result.failed}</b>
             </li>
             {result.errors && result.errors.length > 0 && (
-              <li className="text-[var(--danger)]">الأخطاء: {result.errors.join('، ')}</li>
+              <li className="text-[var(--danger)]">{t('الأخطاء:', 'Errors:')} {result.errors.join('، ')}</li>
             )}
           </ul>
         </div>

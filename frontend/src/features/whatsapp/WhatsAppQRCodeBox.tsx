@@ -3,6 +3,7 @@ import { AlertCircle, Clock, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '../../components/ui/Button';
 
+import { useLocale } from '../../i18n/useLocale';
 interface WhatsAppQRCodeBoxProps {
   qr: string;
   qrExpiresAt: string | null;
@@ -18,6 +19,7 @@ export function WhatsAppQRCodeBox({
   onRefresh,
   onSimulatePair,
 }: WhatsAppQRCodeBoxProps) {
+  const { t, number } = useLocale();
   const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function WhatsAppQRCodeBox({
           value={qr}
           size={210}
           level="M"
-          aria-label="رمز QR لربط واتساب"
+          aria-label={t("رمز QR لربط واتساب", "WhatsApp linking QR code")}
           className={isExpired ? 'opacity-15 blur-[1px]' : ''}
         />
 
@@ -57,8 +59,8 @@ export function WhatsAppQRCodeBox({
             className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-slate-950/85 p-4 text-white"
           >
             <AlertCircle size={30} className="text-amber-400" aria-hidden="true" />
-            <p className="text-sm font-extrabold text-amber-200">انتهت صلاحية الرمز</p>
-            <p className="text-xs text-slate-300">مهلة الـ 60 ثانية لمسح الرمز خلصت.</p>
+            <p className="text-sm font-extrabold text-amber-200">{t("انتهت صلاحية الرمز", "QR code expired")}</p>
+            <p className="text-xs text-slate-300">{t("مهلة الـ 60 ثانية لمسح الرمز خلصت.", "The 60-second QR scanning window has expired.")}</p>
             <Button
               type="button"
               variant="primary"
@@ -67,7 +69,7 @@ export function WhatsAppQRCodeBox({
               onClick={onRefresh}
               className="mt-2 min-h-[44px] text-xs font-bold"
             >
-              حدّث الرمز
+              {t('حدّث الرمز', 'Refresh code')}
             </Button>
           </div>
         )}
@@ -76,12 +78,12 @@ export function WhatsAppQRCodeBox({
       {!isExpired && (
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
           <Clock size={15} className="text-[var(--primary)]" aria-hidden="true" />
-          <span>الرمز صلاحيته هتخلص خلال: {secondsRemaining} ثانية</span>
+          <span>{t("الرمز صلاحيته هتخلص خلال:", "Code expires in:")} {number(secondsRemaining)} {t("ثانية", "seconds")}</span>
         </div>
       )}
 
       <p className="text-xs leading-5 text-slate-600">
-        من تطبيق واتساب على موبايلك: روح لـ <strong>الأجهزة المرتبطة ← ربط جهاز</strong> وبعدين امسح الرمز.
+        {t("من تطبيق واتساب على موبايلك: روح لـ", "In WhatsApp on your phone, go to")} <strong>{t("الأجهزة المرتبطة ← ربط جهاز", "Linked devices ← Link a device")}</strong> {t("وبعدين امسح الرمز.", "then scan the code.")}
       </p>
 
       <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
@@ -93,7 +95,7 @@ export function WhatsAppQRCodeBox({
           onClick={onRefresh}
           className="min-h-[44px] text-xs"
         >
-          طلّع رمز جديد
+          {t('طلّع رمز جديد', 'Generate a new code')}
         </Button>
         <Button
           type="button"
@@ -102,7 +104,7 @@ export function WhatsAppQRCodeBox({
           onClick={onSimulatePair}
           className="min-h-[44px] text-xs"
         >
-          جرّب إتمام المسح
+          {t('جرّب إتمام المسح', 'Simulate scan completion')}
         </Button>
       </div>
     </div>

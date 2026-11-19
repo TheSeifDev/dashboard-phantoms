@@ -80,6 +80,7 @@ function isPasswordImplementation(path, source = '') {
   const name = path.toLowerCase();
   return name === loginPath.toLowerCase()
     || name === joinPath.toLowerCase()
+    || name.endsWith('i18n/uselocale.ts')
     || name.includes('member-password')
     || name.includes('password-access')
     || name.endsWith('memberaccessguard.tsx')
@@ -107,6 +108,11 @@ async function writeMockFor(harnessRoot, sourcePath) {
 exports.AuthShell = function AuthShell({ title, description, children, footer }) {
   return React.createElement('section', { 'data-auth-shell': 'true' },
     React.createElement('h1', null, title), React.createElement('p', null, description), children, footer);
+};\n`;
+  } else if (normalized.endsWith('components/motion/PhantomLoader.tsx')) {
+    body = `const React = require('react');
+exports.PhantomLoader = function PhantomLoader({ label, message, children }) {
+  return React.createElement('div', { role: 'status' }, label || message || children || 'جارٍ التحميل');
 };\n`;
   } else if (normalized.endsWith('lib/validators.ts')) {
     body = `exports.isValidEmail = (value) => /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value);\n`;

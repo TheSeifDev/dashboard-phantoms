@@ -18,7 +18,7 @@ import { formatCustomFieldValue, getMemberCustomFieldValue, useMemberCustomField
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { calculateBonus } from '../dashboard/metrics';
-import { formatSigned } from '../../lib/arabic';
+import { useLocale } from '../../i18n/useLocale';
 
 interface MemberProfileModalProps {
   isOpen: boolean;
@@ -41,6 +41,7 @@ export function MemberProfileModal({
   onAdjustBonus,
   onDelete,
 }: MemberProfileModalProps) {
+  const { t, number } = useLocale();
   const { data: queriedFields } = useMemberCustomFields();
   const activeCustomFields = customFields ?? queriedFields ?? [];
   const bonus = useMemo(() => {
@@ -64,36 +65,36 @@ export function MemberProfileModal({
     return {
       icon: Tag,
       label: field.label,
-      val: formatted || 'مش محدد',
+      val: formatted || t('مش محدد', 'Not specified'),
       dir: undefined,
       isAlex: false,
     };
   });
 
   const infoItems = [
-    { icon: Phone, label: 'رقم الهاتف', val: member.phone || 'مش متسجل', dir: 'ltr' as const, isAlex: false },
-    { icon: MapPin, label: 'محل الإقامة', val: member.residence || 'مش محدد', dir: undefined, isAlex: false },
+    { icon: Phone, label: t('رقم الهاتف', 'Phone number'), val: member.phone || t('مش متسجل', 'Not provided'), dir: 'ltr' as const, isAlex: false },
+    { icon: MapPin, label: t('محل الإقامة', 'Residence'), val: member.residence || t('مش محدد', 'Not specified'), dir: undefined, isAlex: false },
     {
       icon: Laptop,
-      label: 'العتاد وجاهزية اللابتوب',
-      val: `${member.device || 'بدون جهاز'} ${hasLaptop ? '(معاه لابتوب)' : ''}`,
+      label: t('العتاد وجاهزية اللابتوب', 'Equipment and laptop readiness'),
+      val: `${member.device || t('بدون جهاز', 'No device')} ${hasLaptop ? t('(معاه لابتوب)', '(laptop available)') : ''}`,
       dir: undefined,
       isAlex: false,
     },
     {
       icon: member.can_go_alexandria ? CheckCircle2 : XCircle,
-      label: 'النزول لاجتماع الإسكندرية',
-      val: member.can_go_alexandria ? 'جاهز للنزول الميداني' : 'مش متاح دلوقتي',
+      label: t('النزول لاجتماع الإسكندرية', 'Alexandria in-person meetings'),
+      val: member.can_go_alexandria ? t('جاهز للنزول الميداني', 'Available for field work') : t('مش متاح دلوقتي', 'Currently unavailable'),
       dir: undefined,
       isAlex: true,
     },
-    { icon: Briefcase, label: 'ظروف العمل / الدراسة', val: member.work_conditions || 'مفيش تفاصيل', dir: undefined, isAlex: false },
-    { icon: Shield, label: 'رتبة الإنجاز', val: member.completion_rank ? `#${member.completion_rank}` : 'مش محدد', dir: undefined, isAlex: false },
+    { icon: Briefcase, label: t('ظروف العمل / الدراسة', 'Work / study conditions'), val: member.work_conditions || t('مفيش تفاصيل', 'No details'), dir: undefined, isAlex: false },
+    { icon: Shield, label: t('رتبة الإنجاز', 'Completion rank'), val: member.completion_rank ? `#${number(member.completion_rank)}` : t('مش محدد', 'Not specified'), dir: undefined, isAlex: false },
     ...customInfoItems,
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="ملف العضو" maxWidth="3xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={t("ملف العضو", "Member profile")} maxWidth="3xl">
       <div className="grid gap-5 text-start" dir="rtl">
         {/* Header Summary */}
         <div className="flex flex-col gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -111,7 +112,7 @@ export function MemberProfileModal({
                       : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
                   }`}
                 >
-                  {member.work_status === 'active' ? 'نشط' : 'غير نشط'}
+                  {member.work_status === 'active' ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-[var(--text-muted)]" dir="ltr">
@@ -122,7 +123,7 @@ export function MemberProfileModal({
 
           {/* Bonus Badge */}
           <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-            <div className="text-xs font-bold text-[var(--text-muted)]">رصيد التقييم (البونص)</div>
+            <div className="text-xs font-bold text-[var(--text-muted)]">{t("رصيد التقييم (البونص)", "Evaluation bonus balance")}</div>
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex items-center gap-1 rounded-xl border px-3 py-1 text-sm font-black ${
@@ -137,9 +138,9 @@ export function MemberProfileModal({
               >
                 <Award size={15} />
                 {member.bonus_infinite === true ? (
-                  <span aria-label="بونص غير محدود">بونص غير محدود</span>
+                  <span aria-label={t("بونص غير محدود", "Unlimited bonus")}>{t("بونص غير محدود", "Unlimited bonus")}</span>
                 ) : (
-                  `${formatSigned(bonus)} نقطة`
+                  `${number(bonus)} ${t("نقطة", "points")}`
                 )}
               </span>
               {onAdjustBonus && (
@@ -186,7 +187,7 @@ export function MemberProfileModal({
         {/* Bio */}
         {member.bio && (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5">
-            <span className="block text-xs font-bold text-[var(--text-muted)]">نبذة / التخصص</span>
+            <span className="block text-xs font-bold text-[var(--text-muted)]">{t("نبذة / التخصص", "Bio / specialty")}</span>
             <p className="mt-1 text-sm leading-relaxed text-[var(--text)]">{member.bio}</p>
           </div>
         )}
@@ -194,7 +195,7 @@ export function MemberProfileModal({
         {/* Team Notes */}
         {member.team_notes && (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--primary-soft)] p-3.5">
-            <span className="block text-xs font-bold text-[var(--primary)]">ملاحظات الإدارة على العضو</span>
+            <span className="block text-xs font-bold text-[var(--primary)]">{t("ملاحظات الإدارة على العضو", "Admin notes about member")}</span>
             <p className="mt-1 text-sm leading-relaxed text-[var(--text)]">{member.team_notes}</p>
           </div>
         )}
@@ -210,7 +211,7 @@ export function MemberProfileModal({
               {memberNotes.slice(0, 5).map((n) => (
                 <div key={n.id} className="py-2 text-xs">
                   <div className="flex items-center justify-between font-bold text-[var(--text-2)]">
-                    <span>{n.author || 'الإدارة'}</span>
+                    <span>{n.author || t('الإدارة', 'Admin')}</span>
                     <span className="text-[10px] text-[var(--text-muted)]">{n.date || ''}</span>
                   </div>
                   <p className="mt-0.5 text-[var(--text)]">{n.text}</p>
@@ -218,7 +219,7 @@ export function MemberProfileModal({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-[var(--text-muted)]">مفيش ملاحظات متسجلة للعضو ده لسه.</p>
+            <p className="text-xs text-[var(--text-muted)]">{t("مفيش ملاحظات متسجلة للعضو ده لسه.", "No notes have been recorded for this member yet.")}</p>
           )}
         </div>
 

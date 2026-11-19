@@ -3,6 +3,7 @@ import { formatCustomFieldValue, getMemberCustomFieldValue } from './customField
 import { DeviceChips, ReadinessChip, WorkStatusChip } from './MemberCells';
 import { parseBio } from './memberDisplay';
 import { Eye, MapPin, Pencil, Trash2 } from 'lucide-react';
+import { useLocale } from '../../i18n/useLocale';
 
 export function MemberCards({
   members,
@@ -17,10 +18,11 @@ export function MemberCards({
   onEdit: (member: Member) => void;
   onDelete: (member: Member) => void;
 }) {
+  const { t } = useLocale();
   const cardFields = customFields.filter((f) => f.show_in_card !== false);
 
   return (
-    <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3" aria-label="قائمة الأعضاء">
+    <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3" aria-label={t('قائمة الأعضاء', 'Member list')}>
       {members.map((member) => {
         const { specialization } = parseBio(member.bio);
         return (
@@ -48,7 +50,7 @@ export function MemberCards({
                     specialization ? 'text-[var(--text-2)]' : 'text-[var(--text-muted)]'
                   }`}
                 >
-                  {specialization || 'التخصص مش محدد'}
+                  {specialization || t('التخصص مش محدد', 'Specialization not specified')}
                 </span>
               </div>
               <WorkStatusChip status={member.work_status} />
@@ -58,18 +60,18 @@ export function MemberCards({
               <div className="flex items-center justify-between gap-3">
                 <dt className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-muted)]">
                   <MapPin size={14} aria-hidden="true" />
-                  الإقامة
+                  {t('الإقامة', 'Residence')}
                 </dt>
                 <dd className="truncate font-bold text-[var(--text-2)]">{member.residence || '—'}</dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-xs font-semibold text-[var(--text-muted)]">النزول الميداني</dt>
+                <dt className="text-xs font-semibold text-[var(--text-muted)]">{t('النزول الميداني', 'Field availability')}</dt>
                 <dd>
                   <ReadinessChip ready={Boolean(member.can_go_alexandria)} />
                 </dd>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <dt className="text-xs font-semibold text-[var(--text-muted)]">الأجهزة</dt>
+                <dt className="text-xs font-semibold text-[var(--text-muted)]">{t('الأجهزة', 'Devices')}</dt>
                 <dd className="min-w-0">
                   <DeviceChips device={member.device} />
                 </dd>
@@ -92,21 +94,21 @@ export function MemberCards({
                 onClick={() => onView(member)}
                 className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--primary-soft)] px-3 text-sm font-bold text-[var(--link)] transition-colors hover:bg-[var(--primary)] hover:text-white"
               >
-                <Eye size={16} aria-hidden="true" /> الملف
+                <Eye size={16} aria-hidden="true" /> {t('الملف', 'Profile')}
               </button>
               <button
                 type="button"
                 onClick={() => onEdit(member)}
                 className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] px-3 text-sm font-bold text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
               >
-                <Pencil size={16} aria-hidden="true" /> تعديل
+                <Pencil size={16} aria-hidden="true" /> {t('تعديل', 'Edit')}
               </button>
               <button
                 type="button"
                 onClick={() => onDelete(member)}
                 className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
-                aria-label={`امسح ${member.full_name}`}
-                title="مسح العضو"
+                aria-label={`${t('امسح', 'Delete')} ${member.full_name}`}
+                title={t('مسح العضو', 'Delete member')}
               >
                 <Trash2 size={16} aria-hidden="true" />
               </button>

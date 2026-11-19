@@ -130,10 +130,11 @@ test('owner join-review queue uses the guarded Edge actions, displays submitted 
   assert.match(reviewQueue, /member-join-review-email-mismatch/);
   assert.match(reviewQueue, /disabled=\{approve\.isPending \|\| !review\.emailIdentityMatches\}/);
   assert.match(reviewQueue, /عرض الطلبات الأقدم/);
-  assert.match(reviewQueue, /toast\.success\('وصل طلب انضمام جديد للمراجعة\.'/);
+  assert.match(reviewQueue, /toast\.success\(t\('وصل طلب انضمام جديد للمراجعة\.', 'A new join request is ready for review\.'/);
   assert.match(reviewQueue, /function isNewerReview/);
-  assert.match(reviewQueue, /description="[^"]*سيتم تسجيل قرار المراجعة/);
-  assert.match(reviewQueue, /confirmLabel="موافقة وتفعيل"/);
+  assert.match(reviewQueue, /description=\{t\(["'][^"']*سيتم تسجيل قرار المراجعة/);
+  assert.match(reviewQueue, /The review decision will be recorded/);
+  assert.match(reviewQueue, /confirmLabel=\{t\('موافقة وتفعيل', 'Approve and activate'\)\}/);
   assert.doesNotMatch(`${inviteApi}\n${reviewQueue}`, /\.from\(['"]members['"]\)\.(?:update|insert)\s*\(/);
   assert.match(memberSelfRegister, /تنبيه قبل الإرسال: الطلب لم يُسجّل بعد/);
   assert.match(memberSelfRegister, /data-testid="member-enrollment-success"/);

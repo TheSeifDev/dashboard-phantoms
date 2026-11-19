@@ -5,6 +5,7 @@ import {
 import type { Member } from '../../types/db';
 import { StatusChip } from '../../components/ui/StatusChip';
 import { detectDevices, type DeviceKind } from './memberDisplay';
+import { useLocale } from '../../i18n/useLocale';
 
 const deviceMeta: Record<Exclude<DeviceKind, 'none'>, { label: string; Icon: typeof Laptop }> = {
   laptop: { label: 'لابتوب', Icon: Laptop },
@@ -14,17 +15,18 @@ const deviceMeta: Record<Exclude<DeviceKind, 'none'>, { label: string; Icon: typ
 };
 
 export function DeviceChips({ device, full }: { device: string | null | undefined; full?: string }) {
+  const { t } = useLocale();
   const kinds = detectDevices(device);
   if (kinds[0] === 'none') {
     return (
       <span className="inline-flex items-center gap-1.5 text-[var(--text-muted)]" title={full ?? device ?? ''}>
         <Minus size={16} aria-hidden="true" />
-        <span className="whitespace-nowrap text-xs font-bold">بدون جهاز</span>
+        <span className="whitespace-nowrap text-xs font-bold">{t("بدون جهاز", "No device")}</span>
       </span>
     );
   }
   return (
-    <span className="inline-flex max-w-full items-center gap-2 overflow-hidden" title={full ?? device ?? ''} role="img" aria-label={`الأجهزة: ${device}`}>
+    <span className="inline-flex max-w-full items-center gap-2 overflow-hidden" title={full ?? device ?? ''} role="img" aria-label={t(`الأجهزة: ${device}`, `Devices: ${device}`)}>
       {kinds.filter((k) => k !== 'none').map((kind) => {
         const { label, Icon } = deviceMeta[kind as Exclude<DeviceKind, 'none'>];
         return (
@@ -39,19 +41,21 @@ export function DeviceChips({ device, full }: { device: string | null | undefine
 }
 
 export function ReadinessChip({ ready }: { ready: boolean }) {
+  const { t } = useLocale();
   return ready ? (
     <StatusChip tone="success">
       <CheckCircle2 size={14} aria-hidden="true" />
       جاهز للنزول
     </StatusChip>
   ) : (
-    <StatusChip tone="muted">مش متاح</StatusChip>
+    <StatusChip tone="muted">{t("مش متاح", "Unavailable")}</StatusChip>
   );
 }
 
 export function WorkStatusChip({ status }: { status: string | null | undefined }) {
+  const { t } = useLocale();
   const active = status === 'active';
-  return <StatusChip tone={active ? 'success' : 'muted'}>{active ? 'نشط' : 'غير نشط'}</StatusChip>;
+  return <StatusChip tone={active ? 'success' : 'muted'}>{active ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}</StatusChip>;
 }
 
 import { createPortal } from 'react-dom';
@@ -68,6 +72,7 @@ export function MemberRowMenu({
   onEdit: (member: Member) => void;
   onDelete: (member: Member) => void;
 }) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -114,7 +119,7 @@ export function MemberRowMenu({
         ref={btnRef}
         type="button"
         onClick={toggle}
-        aria-label={`خيارات ${member.full_name}`}
+        aria-label={t(`خيارات ${member.full_name}`, `Options for ${member.full_name}`)}
         aria-haspopup="menu"
         aria-expanded={open}
         className="member-kebab grid size-11 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:bg-[var(--surface-2)]"
@@ -125,7 +130,7 @@ export function MemberRowMenu({
         <div 
           ref={portalRef}
           role="menu" 
-          aria-label={`خيارات ${member.full_name}`} 
+          aria-label={t(`خيارات ${member.full_name}`, `Options for ${member.full_name}`)}
           className="fixed z-[var(--z-toast)] w-44 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-lg)]" 
           style={{ animation: 'app-kebab-in 140ms ease', top: pos.top, left: pos.left + pos.width - 176 /* 176 is w-44 in px */ }}
         >

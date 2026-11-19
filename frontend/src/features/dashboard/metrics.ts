@@ -6,6 +6,8 @@ export interface ActivityItem {
   id: string;
   type: 'note' | 'task' | 'member';
   title: string;
+  subject: string;
+  actor?: string;
   description: string;
   date: Date;
   meta: string;
@@ -145,34 +147,44 @@ export function getDashboardMetrics(members: Member[], tasks: Task[], notes: Not
   const recentActivity: ActivityItem[] = [];
   
   notes.forEach(n => {
+    const date = new Date(n.created_at);
+    if (!Number.isFinite(date.getTime())) return;
     recentActivity.push({
       id: `n-${n.id}`,
       type: 'note',
       title: `${n.author} ضاف ملاحظة لـ ${n.target_name || 'عضو'}`,
+      subject: n.target_name || '',
+      actor: n.author || '',
       description: n.text || '',
-      date: new Date(n.created_at || Date.now()),
+      date,
       meta: 'الملاحظات'
     });
   });
 
   tasks.forEach(t => {
+    const date = new Date(t.created_at);
+    if (!Number.isFinite(date.getTime())) return;
     recentActivity.push({
       id: `t-${t.id}`,
       type: 'task',
       title: `اتعمل تكليف جديد: ${t.title}`,
-      description: t.description || 'مفيش وصف',
-      date: new Date(t.created_at || Date.now()),
+      subject: t.title,
+      description: t.description || '',
+      date,
       meta: 'المهام'
     });
   });
 
   members.forEach(m => {
+    const date = new Date(m.created_at);
+    if (!Number.isFinite(date.getTime())) return;
     recentActivity.push({
       id: `m-${m.id}`,
       type: 'member',
       title: `عضو جديد انضم: ${m.full_name}`,
-      description: `مكان الإقامة: ${m.residence || 'مش محدد'}`,
-      date: new Date(m.created_at || Date.now()),
+      subject: m.full_name,
+      description: '',
+      date,
       meta: 'الأعضاء'
     });
   });

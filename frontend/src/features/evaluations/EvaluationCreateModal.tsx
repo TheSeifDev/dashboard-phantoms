@@ -13,6 +13,7 @@ import { handleSupabaseError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
 import { sendPushNotification } from '../../lib/api/push';
 
+import { useLocale } from '../../i18n/useLocale';
 interface Props {
   isOpen: boolean;
   members: Member[];
@@ -44,6 +45,7 @@ export function EvaluationCreateModal({
   preselectedMemberId,
   onClose,
 }: Props) {
+  const { t, dir } = useLocale();
   const createEvaluations = useCreateEvaluations();
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -153,8 +155,8 @@ export function EvaluationCreateModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="إضافة تقييم جديد للأعضاء" maxWidth="lg">
-      <form onSubmit={handleSubmit} className="grid gap-4 text-start" dir="rtl" noValidate>
+    <Modal isOpen={isOpen} onClose={onClose} title={t("إضافة تقييم جديد للأعضاء", "Add a new member evaluation")} maxWidth="lg">
+      <form onSubmit={handleSubmit} className="grid gap-4 text-start" dir={dir} noValidate>
         {error && (
           <p
             className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-900"
@@ -198,7 +200,7 @@ export function EvaluationCreateModal({
             />
             <input
               type="search"
-              placeholder="ابحث عن عضو بالاسم..."
+              placeholder={t("ابحث عن عضو بالاسم...", "Search members by name...")}
               value={memberSearch}
               onChange={(e) => setMemberSearch(e.target.value)}
               className="min-h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] pe-3 ps-9 text-xs text-[var(--text)]"
@@ -236,7 +238,7 @@ export function EvaluationCreateModal({
             id="eval-title-input"
             type="text"
             required
-            placeholder="مثال: تقييم الأداء الأسبوعي"
+            placeholder={t("مثال: تقييم الأداء الأسبوعي", "Example: Weekly performance review")}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm text-[var(--text)]"
@@ -261,7 +263,7 @@ export function EvaluationCreateModal({
 
         {/* 3) التقدير العام */}
         <div className="grid gap-1.5">
-          <span className="text-sm font-bold text-[var(--text)]">التقدير العام *</span>
+          <span className="text-sm font-bold text-[var(--text)]">{t("التقدير العام *", "Overall grade *")}</span>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {GRADES_ORDER.map((g) => {
               const active = grade === g;

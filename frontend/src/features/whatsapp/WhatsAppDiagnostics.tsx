@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase/client';
 import { toast } from '../../store/toast';
 import { getBridgeDiagnostics, getBridgeUrl, BRIDGE_MISCONFIGURED_MESSAGE, type BridgeDiagnostics, type DiagCheck } from './api';
 
+import { useLocale } from '../../i18n/useLocale';
 const STATUS_META: Record<DiagCheck['status'], { icon: typeof CheckCircle2; label: string; chip: string }> = {
   ok: { icon: CheckCircle2, label: 'سليم', chip: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' },
   warn: { icon: AlertTriangle, label: 'تحذير', chip: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
@@ -21,18 +22,19 @@ const CATEGORY_LABELS: Record<DiagCheck['category'], string> = {
   cloud: 'السحابة الرسمية',
 };
 
-function verdict(data: BridgeDiagnostics | undefined): string {
+function verdict(data: BridgeDiagnostics | undefined, t: (arabic: string, english: string) => string): string {
   if (!data) return '';
   const firstFail = data.checks.find((c) => c.status === 'fail');
   if (!firstFail) {
     return data.summary.warns > 0
-      ? 'الجسر شغال — فيه تحذيرات بسيطة تحت.'
-      : 'كل الفحوصات تمام — الجسر جاهز للربط والإرسال.';
+      ? t('الجسر شغال — فيه تحذيرات بسيطة تحت.', 'The bridge is running, with some warnings below.')
+      : t('كل الفحوصات تمام — الجسر جاهز للربط والإرسال.', 'All checks passed — the bridge is ready to connect and send.') ;
   }
-  return `أقرب سبب للعطل: ${firstFail.label} — ${firstFail.detail}`;
+  return t(`أقرب سبب للعطل: ${firstFail.label} — ${firstFail.detail}`, `Likely cause: ${firstFail.label} — ${firstFail.detail}`);
 }
 
 export default function WhatsAppDiagnostics() {
+  const { t, dir, number, date } = useLocale();
   const [sessionOk, setSessionOk] = useState<boolean | null>(null);
   const queryKey = ['whatsapp-diagnostics'];
   const bridgeUrl = getBridgeUrl();
@@ -50,29 +52,29 @@ export default function WhatsAppDiagnostics() {
   const copyReport = async () => {
     if (!diag.data) return;
     const lines = [
-      `تقرير فحص جسر واتساب — ${new Date(diag.data.generatedAt).toLocaleString('ar-EG-u-nu-latn')} (وضع ${diag.data.mode})`,
-      `الملخص: ${diag.data.summary.total} فحص — أعطال ${diag.data.summary.fails} — تحذيرات ${diag.data.summary.warns}`,
+      t(`تقرير فحص جسر واتساب — ${date(diag.data.generatedAt, { dateStyle: 'medium', timeStyle: 'short' })} (وضع ${diag.data.mode})`, `WhatsApp bridge diagnostics — ${date(diag.data.generatedAt, { dateStyle: 'medium', timeStyle: 'short' })} (mode ${diag.data.mode})`),
+      t(`الملخص: ${diag.data.summary.total} فحص — أعطال ${diag.data.summary.fails} — تحذيرات ${diag.data.summary.warns}`, `Summary: ${number(diag.data.summary.total)} checks — ${number(diag.data.summary.fails)} failures — ${number(diag.data.summary.warns)} warnings`),
       '',
-      ...diag.data.checks.map((c) => `[${c.status === 'ok' ? 'سليم' : c.status === 'warn' ? 'تحذير' : 'عطل'}] ${c.label}: ${c.detail}${c.fix ? ` | الحل: ${c.fix}` : ''}`),
+      ...diag.data.checks.map((c) => `[${t(c.status === 'ok' ? 'سليم' : c.status === 'warn' ? 'تحذير' : 'عطل', c.status === 'ok' ? 'OK' : c.status === 'warn' ? 'Warning' : 'Failure')}] ${c.label}: ${c.detail}${c.fix ? ` | ${t('الحل:', 'Fix:')} ${c.fix}` : ''}`),
     ];
     try {
       await navigator.clipboard.writeText(lines.join('\n'));
-      toast.success('التقرير اتنسخ — مفيهوش أي أسرار.');
+      toast.success(t('التقرير اتنسخ — مفيهوش أي أسرار.', 'Report copied — it contains no secrets.'));
     } catch {
-      toast.error('منعرفناش ننسخ من المتصفح.');
+      toast.error(t('منعرفناش ننسخ من المتصفح.', 'Could not copy from the browser.'));
     }
   };
 
   return (
-    <section className="grid gap-4" dir="rtl">
+    <section className="grid gap-4" dir={dir}>
       <header className="flex items-start gap-3">
         <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--link)]">
           <Activity />
         </span>
         <div>
-          <h2 className="text-[var(--fs-xl)] font-black">فحص الجسر بالتفصيل</h2>
+          <h2 className="text-[var(--fs-xl)] font-black">{t("فحص الجسر بالتفصيل", "Detailed bridge diagnostics")}</h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
-            بيفحص كل طبقة (إعدادات، شبكة، تسجيل دخول، خدمة، سحابة) وبيحدد السبب بدقة — التقرير مفيهوش أي أسرار.
+            {t('بيفحص كل طبقة (إعدادات، شبكة، تسجيل دخول، خدمة، سحابة) وبيحدد السبب بدقة — التقرير مفيهوش أي أسرار.', 'Checks each layer (configuration, network, sign-in, service, cloud) to pinpoint issues. The report contains no secrets.')}
           </p>
         </div>
       </header>
@@ -85,43 +87,43 @@ export default function WhatsAppDiagnostics() {
             : <span className="text-[var(--danger)]">{BRIDGE_MISCONFIGURED_MESSAGE}</span>}
         </span>
         <span className="text-xs text-[var(--text-muted)]">
-          جلسة الإدارة: {sessionOk === null ? '…' : sessionOk ? 'موجودة' : 'مش موجودة — سجّل الدخول'}
+          {t("جلسة الإدارة:", "Admin session:")} {sessionOk === null ? '…' : sessionOk ? t('موجودة', 'Present') : t('مش موجودة — سجّل الدخول', 'Missing — sign in')}
         </span>
         <span className="ms-auto flex gap-2">
-          <Button variant="secondary" onClick={() => void diag.refetch()} isLoading={diag.isFetching} loadingText="بنَفحص..." icon={<RefreshCw size={16} />}>
-            افحص تاني
+          <Button variant="secondary" onClick={() => void diag.refetch()} isLoading={diag.isFetching} loadingText={t('بنَفحص...', 'Checking...')} icon={<RefreshCw size={16} />}>
+            {t('افحص تاني', 'Check again')}
           </Button>
           <Button variant="secondary" onClick={() => void copyReport()} disabled={!diag.data} icon={<Copy size={16} />}>
-            نسخ التقرير
+            {t('نسخ التقرير', 'Copy report')}
           </Button>
         </span>
       </Card>
 
       {diag.isPending ? (
-        <Card><p className="text-sm text-[var(--text-muted)]" role="status">بنَفحص الجسر…</p></Card>
+        <Card><p className="text-sm text-[var(--text-muted)]" role="status">{t('بنَفحص الجسر…', 'Checking the bridge…')}</p></Card>
       ) : diag.isError ? (
         <Card>
           <p role="alert" className="flex items-start gap-2 text-sm font-bold text-[var(--danger)]">
             <XCircle size={18} className="mt-0.5 shrink-0" />
-            منقدرناش نوصل للجسر: {diag.error.message}
+            {t('منقدرناش نوصل للجسر:', 'Could not reach the bridge:')} {diag.error.message}
           </p>
           <ul className="mt-3 grid gap-1.5 text-sm leading-6 text-[var(--text-2)]">
-            <li>• لو الرسالة عن اتصال مرفوض: الجسر مطفي — شغّله على نفس العنوان اللي فوق.</li>
-            <li>• لو كانت 401: الجسر شغال بس من غير مفاتيح تحقق — راجع `.env.local` وشغّله تاني.</li>
-            <li>• لو كانت 403: جلستك صالحة بس إيميلك مش ضمن مديري الجسر.</li>
+            <li>• {t('لو الرسالة عن اتصال مرفوض: الجسر مطفي — شغّله على نفس العنوان اللي فوق.', 'If the error says the connection was refused, the bridge is stopped — start it at the URL above.')}</li>
+            <li>• {t('لو كانت 401: الجسر شغال بس من غير مفاتيح تحقق — راجع `.env.local` وشغّله تاني.', 'For 401: the bridge is running without verification credentials — check `.env.local` and restart it.')}</li>
+            <li>• {t('لو كانت 403: جلستك صالحة بس إيميلك مش ضمن مديري الجسر.', 'For 403: your session is valid, but your email is not listed as a bridge administrator.')}</li>
           </ul>
         </Card>
       ) : diag.data ? (
         <>
           <Card className={diag.data.summary.fails > 0 ? 'border-red-300' : 'border-emerald-300'}>
-            <p className="text-sm font-black leading-7">{verdict(diag.data)}</p>
+            <p className="text-sm font-black leading-7">{verdict(diag.data, t)}</p>
           </Card>
           {(Object.keys(CATEGORY_LABELS) as Array<DiagCheck['category']>).map((cat) => {
             const items = diag.data?.checks.filter((c) => c.category === cat) ?? [];
             if (items.length === 0) return null;
             return (
               <Card key={cat} className="grid gap-3">
-                <h3 className="font-black text-[var(--text)]">{CATEGORY_LABELS[cat]}</h3>
+                <h3 className="font-black text-[var(--text)]">{t(CATEGORY_LABELS[cat], ({ env: 'Server configuration', network: 'Network', auth: 'Sign-in', service: 'Service', cloud: 'Official cloud' } as const)[cat])}</h3>
                 <ul className="grid gap-2">
                   {items.map((check) => {
                     const meta = STATUS_META[check.status];
@@ -131,10 +133,10 @@ export default function WhatsAppDiagnostics() {
                         <p className="flex items-center gap-2 font-bold">
                           <Icon size={17} aria-hidden="true" />
                           {check.label}
-                          <span className={`ms-auto rounded-full px-2 py-0.5 text-xs font-black ${meta.chip}`}>{meta.label}</span>
+                          <span className={`ms-auto rounded-full px-2 py-0.5 text-xs font-black ${meta.chip}`}>{t(meta.label, ({ ok: 'OK', warn: 'Warning', fail: 'Failure' } as const)[check.status])}</span>
                         </p>
                         <p className="text-sm leading-6 text-[var(--text-2)]">{check.detail}</p>
-                        {check.fix && <p className="text-sm leading-6 font-bold text-[var(--link)]">الحل: {check.fix}</p>}
+                        {check.fix && <p className="text-sm leading-6 font-bold text-[var(--link)]">{t('الحل:', 'Fix:')} {check.fix}</p>}
                       </li>
                     );
                   })}

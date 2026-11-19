@@ -23,6 +23,7 @@ import { handleSupabaseError, logError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
 import { useMemberDeletionStore } from '../../store/memberDeletion';
 
+import { useLocale } from '../../i18n/useLocale';
 const emptyMember: MemberInsert = {
   email: '',
   full_name: '',
@@ -44,6 +45,7 @@ const PAGE_SIZES = [12, 24, 48] as const;
 const DELETE_UNDO_MS = 5000;
 
 export default function MembersPage() {
+  const { t, number, dir } = useLocale();
   const query = useMembers();
   const customFieldsQuery = useMemberCustomFields();
   const notesQuery = useNotes();
@@ -155,18 +157,18 @@ export default function MembersPage() {
     const trimmedEmail = form.email.trim().toLowerCase();
 
     if (!trimmedName || !trimmedEmail) {
-      setFormError('الاسم والبريد الإلكتروني لازم يتكتبوا.');
+      setFormError(t('الاسم والبريد الإلكتروني لازم يتكتبوا.', 'Name and email are required.'));
       return;
     }
 
     if (!isValidEmail(trimmedEmail)) {
-      setFormError('البريد الإلكتروني مش صالح. لازم يكون فيه @ ونطاق صحيح.');
+      setFormError(t('البريد الإلكتروني مش صالح. لازم يكون فيه @ ونطاق صحيح.', 'Enter a valid email address.'));
       return;
     }
 
     const trimmedPhone = (form.phone || '').trim();
     if (trimmedPhone && !isValidEgyptianPhone(trimmedPhone)) {
-      setFormError('رقم الهاتف مش صالح. استخدم رقم مصري صحيح: 01xxxxxxxxx أو +20xxxxxxxxxx.');
+      setFormError(t('رقم الهاتف مش صالح. استخدم رقم مصري صحيح: 01xxxxxxxxx أو +20xxxxxxxxxx.', 'Enter a valid Egyptian phone number (01xxxxxxxxx or +20xxxxxxxxxx).'));
       return;
     }
 
@@ -183,7 +185,7 @@ export default function MembersPage() {
       if (editing) await update.mutateAsync({ id: editing.id, ...cleanedForm });
       else await add.mutateAsync(cleanedForm);
       setDialogOpen(false);
-      toast.success(editing ? 'بيانات العضو اتحفظت بنجاح.' : 'العضو الجديد اتسجّل بنجاح.');
+      toast.success(editing ? t('بيانات العضو اتحفظت بنجاح.', 'Member details saved.') : t('العضو الجديد اتسجّل بنجاح.', 'Member added successfully.'));
     } catch (cause) {
       logError(cause, 'MembersPage.save');
       const error = handleSupabaseError(cause);
@@ -210,7 +212,7 @@ export default function MembersPage() {
   };
 
   return (
-    <section className="flex min-w-0 w-full flex-col gap-4" id="page-members" dir="rtl">
+    <section className="flex min-w-0 w-full flex-col gap-4" id="page-members" dir={dir}>
       {/* Brand Header */}
       <div className="grid gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -222,10 +224,10 @@ export default function MembersPage() {
               <Users size={24} />
             </span>
             <div className="min-w-0">
-              <h1 className="m-0 text-[var(--fs-xl)] font-black text-[var(--text)]">دليل الأعضاء وجاهزيتهم</h1>
+              <h1 className="m-0 text-[var(--fs-xl)] font-black text-[var(--text)]">{t("دليل الأعضاء وجاهزيتهم", "Members and readiness")}</h1>
               <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                حالة الشغل والأجهزة والاستعداد للنزول الميداني —{' '}
-                <span className="font-bold tabular-nums text-[var(--link)]">{query.data?.length ?? 0}</span> عضو مسجّل.
+                {t("حالة الشغل والأجهزة والاستعداد للنزول الميداني —", "Work status, devices, and field readiness —")}{' '}
+                <span className="font-bold tabular-nums text-[var(--link)]">{number(query.data?.length ?? 0)}</span> {t("عضو مسجّل.", "registered members.")}
               </p>
             </div>
           </div>
