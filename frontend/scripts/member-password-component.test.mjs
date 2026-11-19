@@ -803,11 +803,13 @@ async function main() {
       assert.equal(Object.hasOwn(body, 'memberId'), false); assert.equal(Object.hasOwn(body, 'role'), false); assert.equal(Object.hasOwn(body, 'authUserId'), false);
       assert.equal(control.signInCalls.length, 0);
       await act(async () => { await settleMore(); });
-      assert.ok(locationHistory.includes('/login'), `expected login redirect, got ${locationHistory.join(',')}`);
+      assert.equal(currentPath, '/join', 'successful join remains on the explicit confirmation screen');
+      const confirmation = container.querySelector('[data-testid="member-enrollment-success"]');
+      assert.ok(confirmation, 'successful join must show server-confirmed completion');
+      assert.match(confirmation.textContent ?? '', /وصلت بياناتك للإدارة/);
       assert.equal(container.querySelector('#join-password'), null);
       assert.equal(container.querySelector('#join-confirm-password'), null);
       assert.equal(container.querySelector('#join-token'), null);
-      assert.equal(input(container, 'member-password').value, '');
       for (const storage of [dom.window.localStorage, dom.window.sessionStorage]) {
         for (let i = 0; i < storage.length; i += 1) {
           const value = storage.getItem(storage.key(i)) ?? '';
@@ -832,8 +834,10 @@ async function main() {
       assert.equal(Object.hasOwn(body, 'profile'), false);
       assert.equal(control.signInCalls.length, 0);
       await act(async () => { await settleMore(); });
-      assert.ok(locationHistory.includes('/login'));
-      assert.match(textOf(container), /كلمة المرور/);
+      assert.equal(currentPath, '/reset', 'successful password reset remains on its confirmation screen');
+      const confirmation = container.querySelector('[data-testid="member-enrollment-success"]');
+      assert.ok(confirmation, 'successful reset must show server-confirmed completion');
+      assert.match(confirmation.textContent ?? '', /تم حفظ كلمة المرور الجديدة/);
     }, `/reset#invite=${TOKEN}`);
 
     for (const code of ['EXPIRED', 'REVOKED', 'ALREADY_USED', 'INVALID_TOKEN']) {
