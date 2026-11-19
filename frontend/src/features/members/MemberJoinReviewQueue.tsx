@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Clock3, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -19,12 +19,33 @@ function reviewActionError(error: unknown): string {
   return 'تعذر اعتماد العضوية. حدّث القائمة وحاول مرة أخرى.';
 }
 
+function isNewerReview(candidate: MemberJoinReview, previous: MemberJoinReview): boolean {
+  const candidateTime = Date.parse(candidate.submittedAt);
+  const previousTime = Date.parse(previous.submittedAt);
+  if (candidateTime !== previousTime) return candidateTime > previousTime;
+  if (candidate.memberId !== previous.memberId) return candidate.memberId > previous.memberId;
+  return candidate.invitationId > previous.invitationId;
+}
+
 export function MemberJoinReviewQueue() {
   const reviewsQuery = usePendingMemberJoinReviews();
   const approve = useApproveMemberJoin();
   const [target, setTarget] = useState<MemberJoinReview | null>(null);
   const [actionError, setActionError] = useState('');
   const reviews = reviewsQuery.data?.pages.flatMap((page) => page) ?? [];
+  const latestReview = reviewsQuery.data?.pages[0]?.[0] ?? null;
+  const hasLoadedQueue = useRef(false);
+  const newestSeenReview = useRef<MemberJoinReview | null>(null);
+
+  useEffect(() => {
+    if (!reviewsQuery.isSuccess) return;
+    const previous = newestSeenReview.current;
+    if (hasLoadedQueue.current && latestReview && (!previous || isNewerReview(latestReview, previous))) {
+      toast.success('وصل طلب انضمام جديد للمراجعة.');
+    }
+    if (latestReview && (!previous || isNewerReview(latestReview, previous))) newestSeenReview.current = latestReview;
+    hasLoadedQueue.current = true;
+  }, [latestReview?.invitationId, latestReview?.memberId, latestReview?.submittedAt, reviewsQuery.isSuccess]);
 
   const confirmApproval = async () => {
     if (!target) return;
@@ -61,7 +82,7 @@ export function MemberJoinReviewQueue() {
               </span>
             </h2>
             <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-              لا يظهر الطلب إلا بعد أن يحفظ العضو بياناته وكلمة مروره بنجاح. راجع الملف ثم وافق لتفعيل العضوية.
+              لا يظهر الطلب إلا بعد حفظ العضو بياناته وكلمة مروره بنجاح. القائمة تتحدّث تلقائيًا كل 15 ثانية أثناء فتح الصفحة.
             </p>
           </div>
         </div>

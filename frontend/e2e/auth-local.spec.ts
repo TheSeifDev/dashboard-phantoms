@@ -135,6 +135,23 @@ async function loginMember(page: Page, email: string, password: string): Promise
   await memberSubmit(page).click();
 }
 
+async function assertAuthPageFits(page: Page, expectedWidth: number): Promise<void> {
+  const metrics = await page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>('.auth-panel');
+    const rect = panel?.getBoundingClientRect();
+    return {
+      viewport: window.innerWidth,
+      document: document.documentElement.scrollWidth,
+      panelLeft: rect?.left ?? -1,
+      panelRight: rect?.right ?? Number.POSITIVE_INFINITY,
+    };
+  });
+  expect(metrics.viewport).toBe(expectedWidth);
+  expect(metrics.document, `auth horizontal overflow at ${expectedWidth}px`).toBeLessThanOrEqual(expectedWidth + 1);
+  expect(metrics.panelLeft, `auth panel left=${metrics.panelLeft} at ${expectedWidth}px`).toBeGreaterThanOrEqual(0);
+  expect(metrics.panelRight, `auth panel right=${metrics.panelRight} at ${expectedWidth}px`).toBeLessThanOrEqual(expectedWidth + 1);
+}
+
 async function logoutMember(page: Page): Promise<void> {
   await page.getByRole('button', { name: /خروج|تسجيل الخروج|logout/i }).click();
   await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
@@ -221,10 +238,11 @@ async function enrollFromJoin(
   email: string,
   token: string,
   password: string,
-  options: { mode?: 'join' | 'reset'; fullName?: string } = {},
+  options: { mode?: 'join' | 'reset'; fullName?: string; viewport?: { width: number; height: number } } = {},
 ): Promise<void> {
   const mode = options.mode ?? 'join';
   const route = mode === 'reset' ? '/reset' : '/join';
+  if (options.viewport) await page.setViewportSize(options.viewport);
   await page.goto(`${route}#invite=${encodeURIComponent(token)}`, { waitUntil: 'domcontentloaded' });
   const emailInput = page.locator('#join-email, #member-join-email, input[type="email"]').first();
   await expect(emailInput).toBeVisible({ timeout: 30_000 });
@@ -236,8 +254,12 @@ async function enrollFromJoin(
   await expect(passwords).toHaveCount(2, { timeout: 10_000 });
   await passwords.nth(0).fill(password);
   await passwords.nth(1).fill(password);
+  await expect(page.getByTestId('join-submit-notice')).toContainText(mode === 'join' ? 'الطلب لم يُسجّل بعد' : 'كلمة المرور لم تتحدّث بعد');
+  if (options.viewport) await assertAuthPageFits(page, options.viewport.width);
   await joinSubmit(page).click();
-  await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
+  await expect.poll(() => new URL(page.url()).pathname).toBe(route);
+  await expect(page.getByTestId('member-enrollment-success')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('form.auth-form')).toHaveCount(0);
 }
 
 async function setPasswordFromActionLink(page: Page, action: 'invite' | 'recovery'): Promise<void> {
@@ -291,6 +313,21 @@ test.describe('disposable local Auth', () => {
       let joinInvite!: { id: string; token: string };
 
       await test.step('admin login', async () => {
+        for (const width of [320, 360, 390]) {
+          await page.setViewportSize({ width, height: 780 });
+          await page.goto('/login', { waitUntil: 'domcontentloaded' });
+          await expect(memberEmailInput(page)).toBeVisible();
+          await expect(memberSubmit(page)).toBeVisible();
+          await expect(page.locator('.auth-story')).toBeHidden();
+          await assertAuthPageFits(page, width);
+
+          await page.goto('/admin/login', { waitUntil: 'domcontentloaded' });
+          await expect(page.locator('#admin-email')).toBeVisible({ timeout: 15_000 });
+          await expect(page.getByRole('button', { name: /ادخل مركز الإدارة|دخول الإدارة|sign in/i })).toBeVisible();
+          await expect(page.locator('.auth-story')).toBeHidden();
+          await assertAuthPageFits(page, width);
+        }
+        await page.setViewportSize({ width: 1280, height: 900 });
         await loginAdmin(page);
         await expect(page.getByRole('heading', { name: /مركز عمليات PHANTOMS|dashboard/i }).first()).toBeVisible();
         existingInvite = await issueInvite(page, {
@@ -359,7 +396,8 @@ test.describe('disposable local Auth', () => {
         expect(before.count).toBe(0);
         await enrollFromJoin(page, firstTimeMemberEmail, firstTimeInvite.token, FIRST_TIME_MEMBER_PASSWORD, { fullName: 'Disposable first-time password member' });
         await expect(page).not.toHaveURL(/\/portal$/);
-        await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
+        await expect(page).toHaveURL(/\/join$/);
+        await expect(page.getByTestId('member-enrollment-success')).toContainText('تم حفظ كلمة المرور بنجاح');
         const after = await fixtureIdentity(firstTimeMemberEmail);
         expect(after.count).toBe(1);
         await loginMember(page, firstTimeMemberEmail, FIRST_TIME_MEMBER_PASSWORD);
@@ -370,9 +408,9 @@ test.describe('disposable local Auth', () => {
       await test.step('new self-service join waits for Admin review and never opens the portal', async () => {
         const before = await fixtureIdentity(joinMemberEmail);
         expect(before.count).toBe(0);
-        await enrollFromJoin(page, joinMemberEmail, joinInvite.token, 'Disposable-Join-Member-2026!', { fullName: 'Self-entered pending-review member' });
-        await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
-        await expect(page.getByText(/تم استلام بياناتك وكلمة مرورك.*بانتظار مراجعة الإدارة/s)).toBeVisible();
+        await enrollFromJoin(page, joinMemberEmail, joinInvite.token, 'Disposable-Join-Member-2026!', { fullName: 'Self-entered pending-review member', viewport: { width: 390, height: 844 } });
+        await expect(page).toHaveURL(/\/join$/);
+        await expect(page.getByTestId('member-enrollment-success')).toContainText('وصلت بياناتك للإدارة');
         const after = await fixtureIdentity(joinMemberEmail);
         expect(after.count).toBe(1);
         await loginMember(page, joinMemberEmail, 'Disposable-Join-Member-2026!');
@@ -428,7 +466,8 @@ test.describe('disposable local Auth', () => {
       await test.step('reset invitation exact ID and one-use', async () => {
         expect(resetInvite.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
         await enrollFromJoin(page, existingMemberEmail, resetInvite.token, RESET_MEMBER_PASSWORD, { mode: 'reset' });
-        await expect(page).toHaveURL(/\/login(?:[?#].*)?$/);
+        await expect(page).toHaveURL(/\/reset$/);
+        await expect(page.getByTestId('member-enrollment-success')).toContainText('تم حفظ كلمة المرور الجديدة');
         const reused = await publicEnrollmentRequest(page, {
           email: existingMemberEmail,
           token: resetInvite.token,

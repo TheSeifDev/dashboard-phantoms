@@ -14,6 +14,7 @@ const inviteApi = readSource('src/features/members/memberInviteApi.ts');
 const inviteModal = readSource('src/features/members/MemberInviteModal.tsx');
 const reviewQueue = readSource('src/features/members/MemberJoinReviewQueue.tsx');
 const memberSelfRegister = readSource('src/features/members/MemberSelfRegisterPage.tsx');
+const authStyles = readSource('src/styles/auth.css');
 const joinReviewMigration = readSource('../backend/supabase/migrations/20261119005000_member_password_owner_join_review.sql');
 
 const ADMIN_COLUMNS = [
@@ -116,6 +117,9 @@ test('owner join-review queue uses the guarded Edge actions, displays submitted 
   assert.match(inviteApi, /useInfiniteQuery/);
   assert.match(inviteApi, /getNextPageParam/);
   assert.match(inviteApi, /MEMBER_JOIN_REVIEW_PAGE_SIZE = 100/);
+  assert.match(inviteApi, /MEMBER_JOIN_REVIEW_REFRESH_MS = 15_000/);
+  assert.match(inviteApi, /refetchInterval: MEMBER_JOIN_REVIEW_REFRESH_MS/);
+  assert.match(inviteApi, /refetchIntervalInBackground: false/);
   assert.match(inviteApi, /cursor: pageParam/);
   assert.match(inviteApi, /action: 'approve_join', memberId/);
   assert.match(inviteApi, /MEMBER_JOIN_REVIEWS_KEY/);
@@ -126,10 +130,14 @@ test('owner join-review queue uses the guarded Edge actions, displays submitted 
   assert.match(reviewQueue, /member-join-review-email-mismatch/);
   assert.match(reviewQueue, /disabled=\{approve\.isPending \|\| !review\.emailIdentityMatches\}/);
   assert.match(reviewQueue, /عرض الطلبات الأقدم/);
+  assert.match(reviewQueue, /toast\.success\('وصل طلب انضمام جديد للمراجعة\.'/);
+  assert.match(reviewQueue, /function isNewerReview/);
   assert.match(reviewQueue, /description="[^"]*سيتم تسجيل قرار المراجعة/);
   assert.match(reviewQueue, /confirmLabel="موافقة وتفعيل"/);
   assert.doesNotMatch(`${inviteApi}\n${reviewQueue}`, /\.from\(['"]members['"]\)\.(?:update|insert)\s*\(/);
-  assert.match(memberSelfRegister, /بعد حفظ تسجيلك بنجاح سيظهر طلبك للإدارة/);
+  assert.match(memberSelfRegister, /تنبيه قبل الإرسال: الطلب لم يُسجّل بعد/);
+  assert.match(memberSelfRegister, /data-testid="member-enrollment-success"/);
+  assert.match(memberSelfRegister, /setCompletion\(/);
   assert.match(readSource('src/features/members/MembersPage.tsx'), /<MemberJoinReviewQueue\s*\/>/);
   assert.match(joinReviewMigration, /CREATE OR REPLACE FUNCTION public\.member_password_list_join_reviews[\s\S]*?SECURITY DEFINER SET search_path = ''/);
   assert.match(joinReviewMigration, /CREATE OR REPLACE FUNCTION public\.member_password_approve_join[\s\S]*?SECURITY DEFINER SET search_path = ''/);
@@ -163,4 +171,10 @@ test('member result selections exclude secrets while write-field protections rem
   assert.doesNotMatch(`${api}\n${inviteApi}`, /\.select\([^)]*(?:session_token|push_subscription)/);
   assert.match(api, /MEMBER_WRITABLE_FIELDS/);
   assert.match(api, /session_token: _st, push_subscription: _ps/);
+});
+
+test('auth screens use a compact, vertically scrollable mobile layout', () => {
+  assert.match(authStyles, /\.auth-shell\s*\{[^}]*overflow-x:\s*clip;/);
+  assert.match(authStyles, /@media\s*\(max-width:\s*767px\)[\s\S]*?\.auth-story\s*\{\s*display:\s*none;/);
+  assert.match(authStyles, /@media\s*\(max-width:\s*360px\)/);
 });

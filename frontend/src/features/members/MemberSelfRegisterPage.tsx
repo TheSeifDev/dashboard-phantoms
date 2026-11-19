@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, LockKeyhole, Mail, ShieldAlert, UserRound } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, Info, LockKeyhole, Mail, ShieldAlert, UserRound } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AuthShell } from '../../components/layout/AuthShell';
 import { enrollMemberPassword, MemberPasswordApiError } from '../auth/member-password-api';
@@ -38,6 +38,7 @@ export default function MemberSelfRegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [completion, setCompletion] = useState<'pending_review' | 'password_updated' | 'enrollment_ready' | null>(null);
   const capturedRef = useRef(false);
   const liveRef = useRef(true);
   const submitLatchRef = useRef<Promise<void> | null>(null);
@@ -125,14 +126,9 @@ export default function MemberSelfRegisterPage() {
         setConfirmPassword('');
         setToken('');
         setProfile(EMPTY_PROFILE);
-        if (liveRef.current) {
-          navigate('/login', {
-            replace: true,
-            state: membership === 'pending_review'
-              ? { registrationPending: true }
-              : { enrollmentComplete: true },
-          });
-        }
+        if (liveRef.current) setCompletion(
+          membership === 'pending_review' ? 'pending_review' : isPasswordReset ? 'password_updated' : 'enrollment_ready',
+        );
       } catch (cause) {
         if (liveRef.current) {
           const code = cause instanceof MemberPasswordApiError ? cause.code : 'SERVER_UNAVAILABLE';
@@ -147,6 +143,32 @@ export default function MemberSelfRegisterPage() {
       if (submitLatchRef.current === attempt) submitLatchRef.current = null;
     });
   };
+
+  if (completion) {
+    const completionTitle = completion === 'pending_review' ? 'طلبك اتسجّل بنجاح'
+      : completion === 'password_updated' ? 'كلمة المرور اتحدّثت'
+        : 'تم إعداد كلمة المرور';
+    const completionMessage = completion === 'pending_review'
+      ? 'وصلت بياناتك للإدارة وعضويتك غير مفعّلة الآن. تقدر تدخل للبوابة بعد موافقة الإدارة فقط.'
+      : completion === 'password_updated'
+        ? 'تم حفظ كلمة المرور الجديدة. ارجع لبوابة الأعضاء وسجّل دخولك بها.'
+        : 'تم حفظ كلمة المرور بنجاح. ارجع لبوابة الأعضاء لتسجيل الدخول.';
+    return (
+      <AuthShell
+        audience="member"
+        badge="تم الحفظ بنجاح"
+        title={completionTitle}
+        description={completion === 'pending_review' ? 'حالة الطلب: بانتظار مراجعة الإدارة.' : 'بيانات الدخول جاهزة للاستخدام.'}
+        footer={<Link className="auth-inline-link justify-center" to="/login">العودة إلى تسجيل الدخول</Link>}
+      >
+        <div data-testid="member-enrollment-success" className="grid justify-items-center gap-3 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-5 text-center" role="status" aria-live="polite">
+          <CheckCircle2 size={28} className="text-[var(--primary)]" aria-hidden="true" />
+          <p className="m-0 text-sm font-bold leading-7 text-[var(--text)]">{completionMessage}</p>
+        </div>
+        <Link to="/login" className="auth-submit mt-4 px-4 py-3 text-center no-underline">العودة إلى تسجيل الدخول</Link>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell
@@ -211,9 +233,11 @@ export default function MemberSelfRegisterPage() {
           {!submitting && <ArrowLeft size={18} aria-hidden="true" />}
         </button>
       </form>
-      <div className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--primary)]/20 bg-[var(--primary-soft)] p-3 text-xs leading-6 text-[var(--text-2)]" role="note">
-        <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[var(--primary)]" aria-hidden="true" />
-          <span>{isPasswordReset ? 'سيتم تحديث كلمة المرور فقط، ولن نُسجّل دخولك تلقائياً.' : 'لن نُسجّل دخولك تلقائياً. بعد حفظ تسجيلك بنجاح سيظهر طلبك للإدارة، وستبقى العضوية غير مفعّلة حتى الموافقة.'}</span>
+      <div data-testid="join-submit-notice" className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-xs leading-6 text-[var(--text-2)]" role="note">
+        <Info size={16} className="mt-0.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+        <span>{isPasswordReset
+          ? 'تنبيه قبل الحفظ: كلمة المرور لم تتحدّث بعد. اضغط «تحديث كلمة المرور»؛ هتظهر رسالة تأكيد منفصلة بعد نجاح الحفظ.'
+          : 'تنبيه قبل الإرسال: الطلب لم يُسجّل بعد. اضغط «حفظ البيانات وكلمة المرور»؛ لن يظهر للإدارة إلا بعد نجاح الحفظ. لو فشل، هتظهر رسالة الخطأ فوق النموذج.'}</span>
       </div>
     </AuthShell>
   );

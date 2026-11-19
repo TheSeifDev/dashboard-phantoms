@@ -13,6 +13,7 @@ import {
 export const MEMBER_INVITES_KEY = ['member_password_invites'] as const;
 export const MEMBER_JOIN_REVIEWS_KEY = ['member_password_join_reviews'] as const;
 export const MEMBER_JOIN_REVIEW_PAGE_SIZE = 100;
+export const MEMBER_JOIN_REVIEW_REFRESH_MS = 15_000;
 export type MemberInvitePurpose = 'join' | 'enroll' | 'reset';
 export type MemberInviteStatus = 'pending' | 'reserved' | 'review_required';
 
@@ -235,6 +236,9 @@ export function usePendingMemberJoinReviews(enabled = true) {
   return useInfiniteQuery({
     queryKey: MEMBER_JOIN_REVIEWS_KEY,
     enabled,
+    refetchInterval: MEMBER_JOIN_REVIEW_REFRESH_MS,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
     initialPageParam: null as MemberJoinReviewCursor | null,
     queryFn: async ({ pageParam }): Promise<MemberJoinReview[]> => {
       const { data, error } = await supabase.functions.invoke<{ reviews?: unknown[]; code?: string }>(

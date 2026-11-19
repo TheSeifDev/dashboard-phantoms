@@ -423,8 +423,18 @@ test.describe('disposable local dashboard', () => {
         gender: 'ذكر',
         submitted_at: '2026-11-19T00:00:00.000Z',
       };
+      const newestReview = {
+        ...pendingReview,
+        invitation_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        member_id: 4546,
+        full_name: 'Newest self-service member',
+        email: 'newest-review@phantoms-test.example',
+        invitation_email: 'newest-review@phantoms-test.example',
+        submitted_at: '2026-11-19T00:01:00.000Z',
+      };
       let approved = false;
       let emailMatches = false;
+      let mockNewReviewArrived = false;
       let approvalPayload: unknown = null;
       const mockReviewActions = async (route: Route) => {
         if (route.request().method() !== 'POST') {
@@ -433,10 +443,14 @@ test.describe('disposable local dashboard', () => {
         }
         const payload = route.request().postDataJSON() as { action?: string; memberId?: number };
         if (payload.action === 'list_join_reviews') {
+          const reviews = [
+            ...(mockNewReviewArrived ? [newestReview] : []),
+            ...(!approved ? [{ ...pendingReview, email_identity_matches: emailMatches }] : []),
+          ];
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify({ reviews: approved ? [] : [{ ...pendingReview, email_identity_matches: emailMatches }] }),
+            body: JSON.stringify({ reviews }),
           });
           return;
         }
@@ -455,7 +469,7 @@ test.describe('disposable local dashboard', () => {
         const queue = page.getByTestId('member-join-review-queue');
         await expect(queue).toBeVisible();
         await expect(queue.getByTestId('member-join-review-count')).toHaveText('1');
-        const item = page.getByTestId('member-join-review-item');
+        const item = page.getByTestId('member-join-review-item').filter({ hasText: 'Self-service pending member' });
         await expect(item).toContainText('Self-service pending member');
         await expect(item).toContainText('pending-review@phantoms-test.example');
         await expect(item).toContainText('Student supplied profile');
@@ -466,6 +480,11 @@ test.describe('disposable local dashboard', () => {
         await expect(item.getByTestId('member-join-review-email-mismatch')).toHaveCount(0);
         await expect(item.getByRole('button', { name: 'قبول وتفعيل العضوية' })).toBeVisible();
         await expect(item.getByRole('button', { name: 'قبول وتفعيل العضوية' })).toBeEnabled();
+        mockNewReviewArrived = true;
+        await queue.getByRole('button', { name: 'تحديث الطلبات' }).click();
+        await expect(queue.getByTestId('member-join-review-count')).toHaveText('2');
+        await expect(page.getByText('وصل طلب انضمام جديد للمراجعة.', { exact: true })).toBeVisible();
+        await expect(queue.getByTestId('member-join-review-item').filter({ hasText: 'Newest self-service member' })).toBeVisible();
         const reviewScreenshotDir = process.env.PHANTOMS_MOBILE_SCREENSHOT_DIR;
         if (reviewScreenshotDir && vapidMode === 'missing') {
           await mkdir(path.resolve(reviewScreenshotDir), { recursive: true, mode: 0o700 });
@@ -476,7 +495,8 @@ test.describe('disposable local dashboard', () => {
         await expect(confirm).toBeVisible();
         await expect(page.getByText(/بعد الموافقة ستصبح العضوية نشطة/)).toBeVisible();
         await page.getByRole('button', { name: 'موافقة وتفعيل', exact: true }).click();
-        await expect(queue.getByTestId('member-join-review-empty')).toBeVisible();
+        await expect(queue.getByTestId('member-join-review-count')).toHaveText('1');
+        await expect(queue.getByTestId('member-join-review-item')).toContainText('Newest self-service member');
         expect(approvalPayload).toEqual({ action: 'approve_join', memberId: pendingReview.member_id });
         await expect(page.getByText('تم قبول Self-service pending member وتفعيل عضويته.', { exact: true })).toBeVisible();
         await assertNoHorizontalOverflow(page);
