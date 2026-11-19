@@ -27,6 +27,8 @@ export function validateForwardMigrations({ rootDir, lastInitializationVersion, 
   const files = [];
   const seen = new Set(initializationFiles);
   let previousVersion = lastInitializationVersion;
+  let previousRemoteTimestamp = null;
+  let pendingSeen = false;
   for (const [index, entry] of entries.entries()) {
     const label = `Forward entry ${index + 1}`;
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
@@ -40,9 +42,18 @@ export function validateForwardMigrations({ rootDir, lastInitializationVersion, 
     if (typeof name !== 'string' || !NAME.test(name)) errors.push(`${label}: invalid migration name.`);
     if (typeof sha256 !== 'string' || !HASH.test(sha256)) errors.push(`${label}: invalid SHA-256.`);
     const pendingState = status === 'not_applied' && remote === null;
-    const appliedState = status === 'applied' && typeof remote === 'string' && TIMESTAMP.test(remote) && remote === version;
+    const appliedState = status === 'applied' && typeof remote === 'string' && TIMESTAMP.test(remote);
     if (!pendingState && !appliedState) {
-      errors.push(`${label}: production_status/remote_applied_timestamp must be either not_applied/null or applied with a timestamp equal to version.`);
+      errors.push(`${label}: production_status/remote_applied_timestamp must be either not_applied/null or applied with a valid remote timestamp.`);
+    }
+    if (pendingState) pendingSeen = true;
+    if (appliedState) {
+      if (pendingSeen) errors.push(`${label}: an applied migration cannot follow an unapplied forward migration.`);
+      if (typeof version === 'string' && remote < version) errors.push(`${label}: remote_applied_timestamp cannot precede the source migration version.`);
+      if (previousRemoteTimestamp !== null && remote <= previousRemoteTimestamp) {
+        errors.push(`${label}: remote_applied_timestamp values must be strictly increasing.`);
+      }
+      previousRemoteTimestamp = remote;
     }
     if (typeof originalVersion !== 'string' || !TIMESTAMP.test(originalVersion)) {
       errors.push(`${label}: invalid original source version.`);

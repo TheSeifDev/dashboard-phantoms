@@ -237,6 +237,29 @@ function validateRevoke(body: Record<string, unknown>): { ok: true; inviteId: st
   return { ok: true, inviteId: body.inviteId };
 }
 
+function validateApproveJoin(body: Record<string, unknown>): { ok: true; memberId: number } | { ok: false; code: string } {
+  if (!hasExactKeys(body, ['action', 'memberId']) || typeof body.memberId !== 'number'
+      || !Number.isSafeInteger(body.memberId) || body.memberId <= 0) return { ok: false, code: 'INVALID_INPUT' };
+  return { ok: true, memberId: body.memberId };
+}
+
+type JoinReviewCursor = { submittedAt: string; memberId: number; invitationId: string };
+function validateListJoinReviews(body: Record<string, unknown>):
+  | { ok: true; cursor: JoinReviewCursor | null }
+  | { ok: false; code: string } {
+  const hasCursor = Object.hasOwn(body, 'cursor');
+  if (!hasExactKeys(body, hasCursor ? ['action', 'cursor'] : ['action'])) return { ok: false, code: 'INVALID_INPUT' };
+  if (!hasCursor) return { ok: true, cursor: null };
+  const cursor = parseObject(body.cursor);
+  if (!cursor || !hasExactKeys(cursor, ['submittedAt', 'memberId', 'invitationId'])
+      || typeof cursor.submittedAt !== 'string'
+      || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(cursor.submittedAt)
+      || !Number.isFinite(Date.parse(cursor.submittedAt))
+      || typeof cursor.memberId !== 'number' || !Number.isSafeInteger(cursor.memberId) || cursor.memberId <= 0
+      || typeof cursor.invitationId !== 'string' || !UUID_RE.test(cursor.invitationId)) return { ok: false, code: 'INVALID_INPUT' };
+  return { ok: true, cursor: { submittedAt: cursor.submittedAt, memberId: cursor.memberId, invitationId: cursor.invitationId } };
+}
+
 async function enroll(runtime: ControllerRuntime, body: Record<string, unknown>, req: Request, origin: string): Promise<Response> {
   const parsed = validateEnroll(body);
   if (!parsed.ok) return errorResponse(parsed.code, statusForCode(parsed.code), origin);
@@ -431,6 +454,37 @@ async function adminAction(runtime: ControllerRuntime, body: Record<string, unkn
     if (result.error || !Array.isArray(result.data)) return errorResponse('SERVER_UNAVAILABLE', 503, origin);
     return response({ invites: result.data }, 200, origin);
   }
+  if (body.action === 'list_join_reviews') {
+    const parsed = validateListJoinReviews(body);
+    if (!parsed.ok) return errorResponse(parsed.code, statusForCode(parsed.code), origin);
+    const result = await runtime.adminDb.rpc('member_password_list_join_reviews', {
+      p_actor_user_id: actor.userId,
+      p_before_submitted_at: parsed.cursor?.submittedAt ?? null,
+      p_before_member_id: parsed.cursor?.memberId ?? null,
+      p_before_invitation_id: parsed.cursor?.invitationId ?? null,
+    });
+    if (result.error) {
+      const code = errorCode(result.error) ?? 'SERVER_UNAVAILABLE';
+      return errorResponse(SAFE_CODES.has(code) ? code : 'SERVER_UNAVAILABLE', statusForCode(code), origin);
+    }
+    if (!Array.isArray(result.data)) return errorResponse('SERVER_UNAVAILABLE', 503, origin);
+    return response({ reviews: result.data }, 200, origin);
+  }
+  if (body.action === 'approve_join') {
+    const parsed = validateApproveJoin(body);
+    if (!parsed.ok) return errorResponse(parsed.code, statusForCode(parsed.code), origin);
+    const result = await runtime.adminDb.rpc<Record<string, unknown>>('member_password_approve_join', {
+      p_member_id: parsed.memberId,
+      p_actor_user_id: actor.userId,
+    });
+    if (result.error) {
+      const code = errorCode(result.error) ?? 'SERVER_UNAVAILABLE';
+      return errorResponse(SAFE_CODES.has(code) ? code : 'SERVER_UNAVAILABLE', statusForCode(code), origin);
+    }
+    if (result.data?.approved === true) return response({ ok: true, approved: true }, 200, origin);
+    if (result.data?.status === 'already_approved') return response({ ok: true, approved: false, alreadyApproved: true }, 200, origin);
+    return errorResponse('REVIEW_REQUIRED', 409, origin);
+  }
   return errorResponse('INVALID_INPUT', 400, origin);
 }
 
@@ -448,7 +502,8 @@ export function createMemberPasswordEnrollmentController(runtime: ControllerRunt
       if (!body || typeof body.action !== 'string') return errorResponse('INVALID_INPUT', 400, origin);
       const authorization = req.headers.get('Authorization') ?? '';
       if (body.action === 'enroll') return await enroll(runtime, body, req, origin);
-      if (body.action === 'issue' || body.action === 'revoke' || body.action === 'list') {
+      if (body.action === 'issue' || body.action === 'revoke' || body.action === 'list'
+          || body.action === 'list_join_reviews' || body.action === 'approve_join') {
         if (!authorization) return errorResponse('UNAUTHORIZED', 401, origin);
         return await adminAction(runtime, body, authorization, origin);
       }

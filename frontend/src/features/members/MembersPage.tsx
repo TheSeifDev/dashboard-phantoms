@@ -16,6 +16,7 @@ import { MemberProfileModal } from './MemberProfileModal';
 import { MemberEditor } from './MemberEditor';
 import { MemberCustomFieldsModal } from './MemberCustomFieldsModal';
 import { MemberInviteModal } from './MemberInviteModal';
+import { MemberJoinReviewQueue } from './MemberJoinReviewQueue';
 import { MemberExcelActions } from './MemberExcelActions';
 import { sanitizeText, isValidEmail, isValidEgyptianPhone } from '../../lib/validators';
 import { handleSupabaseError, logError } from '../../lib/errorHandler';
@@ -267,6 +268,8 @@ export default function MembersPage() {
           </div>
         </div>
       </div>
+
+      <MemberJoinReviewQueue />
 
       {/* Filters Section */}
       <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-sm)] sm:p-4">

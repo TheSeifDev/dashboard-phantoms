@@ -17,6 +17,8 @@ type State = {
   authUpdateError: string | null;
   calls: Array<{ client: string; name: string; args?: Record<string, unknown> }>;
   reviews: Array<{ invitation_id: string; claim_id: string }>;
+  joinReviews: unknown[];
+  approvalResult: 'approved' | 'already_approved' | 'rejected';
 };
 
 const baseState = (): State => ({
@@ -33,6 +35,8 @@ const baseState = (): State => ({
   authUpdateError: null,
   calls: [],
   reviews: [],
+  joinReviews: [],
+  approvalResult: 'approved',
 });
 
 function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
@@ -62,6 +66,12 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
       } as T, error: null };
       if (rpcName === 'member_password_revoke_invitation') return { data: true as T, error: null };
       if (rpcName === 'member_password_list_invitations') return { data: [] as T, error: null };
+      if (rpcName === 'member_password_list_join_reviews') return { data: state.joinReviews as T, error: null };
+      if (rpcName === 'member_password_approve_join') return state.approvalResult === 'rejected'
+        ? { data: null, error: { message: 'REVIEW_REQUIRED' } }
+        : { data: (state.approvalResult === 'already_approved'
+          ? { approved: false, status: 'already_approved' }
+          : { approved: true, member_id: args?.p_member_id }) as T, error: null };
       return { data: null, error: { message: 'unexpected rpc' } };
     },
   });
@@ -374,6 +384,77 @@ test('admin list and revoke require admin permission and expose no token materia
   assert.deepEqual(revoke, { ok: true });
   const outsider = await json(await createMemberPasswordEnrollmentController(fakeRuntime(baseState(), false))(request({ action: 'list' }, { Authorization: 'Bearer admin' })));
   assert.equal(outsider.code, 'UNAUTHORIZED');
+});
+
+test('authorized Admin can list completed join reviews without exposing invitation secrets', async () => {
+  const state = baseState();
+  state.joinReviews = [{ member_id: 41, full_name: 'Pending Member', email: 'pending@phantoms-test.example' }];
+  const controller = createMemberPasswordEnrollmentController(fakeRuntime(state));
+  const list = await json(await controller(request({ action: 'list_join_reviews' }, { Authorization: 'Bearer admin' })));
+  assert.deepEqual(list, { reviews: state.joinReviews });
+  const firstPageArgs = state.calls.find((call) => call.name === 'member_password_list_join_reviews')?.args;
+  assert.equal(firstPageArgs?.p_actor_user_id, '66666666-6666-4666-8666-666666666666');
+  assert.equal(firstPageArgs?.p_before_submitted_at, null);
+  assert.equal(firstPageArgs?.p_before_member_id, null);
+  assert.equal(firstPageArgs?.p_before_invitation_id, null);
+  assert.equal(JSON.stringify(list).includes('token'), false);
+
+  const cursor = {
+    submittedAt: '2026-11-19T00:00:00.000Z',
+    memberId: 41,
+    invitationId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  };
+  const nextPage = await json(await controller(request({ action: 'list_join_reviews', cursor }, { Authorization: 'Bearer admin' })));
+  assert.deepEqual(nextPage, { reviews: state.joinReviews });
+  const nextPageArgs = state.calls.filter((call) => call.name === 'member_password_list_join_reviews')[1]?.args;
+  assert.equal(nextPageArgs?.p_before_submitted_at, cursor.submittedAt);
+  assert.equal(nextPageArgs?.p_before_member_id, cursor.memberId);
+  assert.equal(nextPageArgs?.p_before_invitation_id, cursor.invitationId);
+
+  const invalid = await json(await controller(request({ action: 'list_join_reviews', memberId: 41 }, { Authorization: 'Bearer admin' })));
+  assert.equal(invalid.code, 'INVALID_INPUT');
+  for (const malformedCursor of [
+    null,
+    {},
+    { submittedAt: 'not-a-date', memberId: 41, invitationId: cursor.invitationId },
+    { submittedAt: cursor.submittedAt, memberId: 0, invitationId: cursor.invitationId },
+    { submittedAt: cursor.submittedAt, memberId: 41, invitationId: 'not-a-uuid' },
+    { ...cursor, unexpected: true },
+  ]) {
+    const response = await json(await controller(request(
+      { action: 'list_join_reviews', cursor: malformedCursor }, { Authorization: 'Bearer admin' },
+    )));
+    assert.equal(response.code, 'INVALID_INPUT');
+  }
+  assert.equal(state.calls.filter((call) => call.name === 'member_password_list_join_reviews').length, 2);
+  const outsider = await json(await createMemberPasswordEnrollmentController(fakeRuntime(baseState(), false))(
+    request({ action: 'list_join_reviews' }, { Authorization: 'Bearer admin' }),
+  ));
+  assert.equal(outsider.code, 'UNAUTHORIZED');
+});
+
+test('join approval validates member ID, uses the authenticated Admin actor, and handles repeat approval safely', async () => {
+  const state = baseState();
+  const controller = createMemberPasswordEnrollmentController(fakeRuntime(state));
+  const body = { action: 'approve_join', memberId: 41 };
+  const approved = await json(await controller(request(body, { Authorization: 'Bearer admin' })));
+  assert.deepEqual(approved, { ok: true, approved: true });
+  const call = state.calls.find((entry) => entry.name === 'member_password_approve_join');
+  assert.equal(call?.args?.p_member_id, 41);
+  assert.equal(call?.args?.p_actor_user_id, '66666666-6666-4666-8666-666666666666');
+
+  state.approvalResult = 'already_approved';
+  const repeated = await json(await controller(request(body, { Authorization: 'Bearer admin' })));
+  assert.deepEqual(repeated, { ok: true, approved: false, alreadyApproved: true });
+
+  for (const memberId of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, '41', null]) {
+    const invalid = await json(await controller(request({ ...body, memberId }, { Authorization: 'Bearer admin' })));
+    assert.equal(invalid.code, 'INVALID_INPUT');
+  }
+  const extra = await json(await controller(request({ ...body, approved: true }, { Authorization: 'Bearer admin' })));
+  assert.equal(extra.code, 'INVALID_INPUT');
+  const unauthorized = await json(await controller(request(body)));
+  assert.equal(unauthorized.code, 'UNAUTHORIZED');
 });
 
 test('origin, method, max body, and CORS behavior are fail-closed', async () => {

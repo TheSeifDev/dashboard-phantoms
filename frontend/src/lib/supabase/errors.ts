@@ -42,6 +42,7 @@ export function toAppError(raw: unknown, fallback: string): Error {
       INVALID_TASK_ID: 'معرّف المهمة مش صحيح.',
       INVALID_URL: 'رابط التسليم لازم يبدأ بـ http:// أو https://.',
       INVALID_VALUE: 'قيمة الجاهزية مش صحيحة.',
+      JOIN_REVIEW_REQUIRED: 'التسجيل ده لسه محتاج مراجعة. استخدم قائمة مراجعة تسجيلات الأعضاء الجدد للموافقة والتفعيل.',
       INVITE_CREATED_GRANT_FAILED: 'اتعمل الحساب لكن منح الصلاحية ما اكتملش. أعد المحاولة من إدارة المشرفين.',
       INVITE_SEND_FAILED: 'معرفناش نبعت الدعوة. اتأكد من إعداد بريد Supabase وجرّب تاني.',
       MEMBER_NOT_FOUND: 'العضو ده مش موجود.',
@@ -52,7 +53,7 @@ export function toAppError(raw: unknown, fallback: string): Error {
       SERVER_CONFIG: 'إعداد خدمة الدعوات مش مكتمل على الخادم.',
       UNAUTHORIZED: 'بيانات الدخول مش مطابقة. راجعها وجرّب تاني.',
     };
-    const code = msg.match(/\b([A-Z_]{4,}):/)?.[1];
+    const code = msg.match(/\b([A-Z_]{4,})(?::|$)/)?.[1];
     if (code && codeMessages[code]) {
       return new Error(codeMessages[code]);
     }

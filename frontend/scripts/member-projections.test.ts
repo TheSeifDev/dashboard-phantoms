@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ADMIN_MEMBER_COLUMNS, PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS } from '../src/features/members/memberColumns.ts';
+import { toAppError } from '../src/lib/supabase/errors.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(here, '..');
@@ -11,7 +12,9 @@ const readSource = (relativePath: string) => readFileSync(path.join(FRONTEND, re
 const api = readSource('src/features/members/api.ts');
 const inviteApi = readSource('src/features/members/memberInviteApi.ts');
 const inviteModal = readSource('src/features/members/MemberInviteModal.tsx');
+const reviewQueue = readSource('src/features/members/MemberJoinReviewQueue.tsx');
 const memberSelfRegister = readSource('src/features/members/MemberSelfRegisterPage.tsx');
+const joinReviewMigration = readSource('../backend/supabase/migrations/20261119005000_member_password_owner_join_review.sql');
 
 const ADMIN_COLUMNS = [
   'id', 'created_at', 'email', 'full_name', 'completion_rank', 'team_notes',
@@ -106,6 +109,54 @@ test('Admin join form has no email field, always issues an unbound link, and kee
   assert.match(inviteApi, /interface IssueInput[\s\S]*?email: string \| null/);
   assert.match(inviteApi, /input\.purpose === 'join'[\s\S]*?email === null/);
   assert.match(memberSelfRegister, /id="join-email" type="email"[^>]*required/);
+});
+
+test('owner join-review queue uses the guarded Edge actions, displays submitted data, confirms activation, and refreshes member state', () => {
+  assert.match(inviteApi, /action: 'list_join_reviews'/);
+  assert.match(inviteApi, /useInfiniteQuery/);
+  assert.match(inviteApi, /getNextPageParam/);
+  assert.match(inviteApi, /MEMBER_JOIN_REVIEW_PAGE_SIZE = 100/);
+  assert.match(inviteApi, /cursor: pageParam/);
+  assert.match(inviteApi, /action: 'approve_join', memberId/);
+  assert.match(inviteApi, /MEMBER_JOIN_REVIEWS_KEY/);
+  assert.match(inviteApi, /invalidateQueries\(\{ queryKey: MEMBER_JOIN_REVIEWS_KEY \}\)/);
+  assert.match(inviteApi, /invalidateQueries\(\{ queryKey: \['members'\] \}\)/);
+  assert.match(reviewQueue, /data-testid="member-join-review-queue"/);
+  assert.match(reviewQueue, /review\.fullName[\s\S]*?review\.email[\s\S]*?review\.phone[\s\S]*?review\.residence[\s\S]*?review\.bio/);
+  assert.match(reviewQueue, /member-join-review-email-mismatch/);
+  assert.match(reviewQueue, /disabled=\{approve\.isPending \|\| !review\.emailIdentityMatches\}/);
+  assert.match(reviewQueue, /عرض الطلبات الأقدم/);
+  assert.match(reviewQueue, /description="[^"]*سيتم تسجيل قرار المراجعة/);
+  assert.match(reviewQueue, /confirmLabel="موافقة وتفعيل"/);
+  assert.doesNotMatch(`${inviteApi}\n${reviewQueue}`, /\.from\(['"]members['"]\)\.(?:update|insert)\s*\(/);
+  assert.match(memberSelfRegister, /بعد حفظ تسجيلك بنجاح سيظهر طلبك للإدارة/);
+  assert.match(readSource('src/features/members/MembersPage.tsx'), /<MemberJoinReviewQueue\s*\/>/);
+  assert.match(joinReviewMigration, /CREATE OR REPLACE FUNCTION public\.member_password_list_join_reviews[\s\S]*?SECURITY DEFINER SET search_path = ''/);
+  assert.match(joinReviewMigration, /CREATE OR REPLACE FUNCTION public\.member_password_approve_join[\s\S]*?SECURITY DEFINER SET search_path = ''/);
+  assert.match(joinReviewMigration, /REVOKE ALL ON FUNCTION public\.member_password_list_join_reviews\(UUID, TIMESTAMPTZ, BIGINT, UUID\) FROM PUBLIC, anon, authenticated;[\s\S]*?GRANT EXECUTE ON FUNCTION public\.member_password_list_join_reviews\(UUID, TIMESTAMPTZ, BIGINT, UUID\) TO service_role/);
+  assert.match(joinReviewMigration, /REVOKE ALL ON FUNCTION public\.member_password_approve_join\(BIGINT, UUID\) FROM PUBLIC, anon, authenticated;[\s\S]*?GRANT EXECUTE ON FUNCTION public\.member_password_approve_join\(BIGINT, UUID\) TO service_role/);
+  assert.match(joinReviewMigration, /auth\.role\(\) IS DISTINCT FROM 'service_role'[\s\S]*?RAISE EXCEPTION 'JOIN_REVIEW_REQUIRED'/);
+  const activationGuard = joinReviewMigration.match(/FUNCTION public\.guard_pending_member_join_activation[\s\S]*?\$\$;[\s\S]*?CREATE TRIGGER/)?.[0] ?? '';
+  assert.ok(activationGuard);
+  assert.match(activationGuard, /NEW\.work_status IS DISTINCT FROM 'inactive'/);
+  assert.doesNotMatch(activationGuard, /COALESCE\(OLD\.work_status, ''\)\s*=\s*'inactive'/);
+  const listFunction = joinReviewMigration.match(/FUNCTION public\.member_password_list_join_reviews[\s\S]*?\$\$;[\s\S]*?REVOKE ALL/)?.[0] ?? '';
+  assert.ok(listFunction);
+  const exposedFields = listFunction.match(/jsonb_build_object\(([\s\S]*?)\) ORDER BY/)?.[1] ?? '';
+  assert.ok(exposedFields);
+  assert.doesNotMatch(exposedFields, /token_hash|expected_auth_user_id|auth_user_id/);
+  assert.match(exposedFields, /invitation_email/);
+  assert.match(exposedFields, /email_identity_matches/);
+  assert.match(listFunction, /i\.normalized_email = b\.normalized_email/);
+  assert.match(listFunction, /b\.normalized_email = pg_catalog\.lower\(pg_catalog\.btrim\(COALESCE\(recipient\.email, ''\)\)\)/);
+  assert.match(listFunction, /LIMIT 100/);
+  assert.match(listFunction, /\(i\.completed_at, m\.id, i\.id\) < \(p_before_submitted_at, p_before_member_id, p_before_invitation_id\)/);
+  assert.match(joinReviewMigration, /b\.normalized_email = v_invitation\.normalized_email[\s\S]*?FOR UPDATE OF b, recipient/);
+});
+
+test('generic member activation guard gives the Admin an actionable review-queue message', () => {
+  const error = toAppError({ message: 'JOIN_REVIEW_REQUIRED' }, 'fallback');
+  assert.equal(error.message, 'التسجيل ده لسه محتاج مراجعة. استخدم قائمة مراجعة تسجيلات الأعضاء الجدد للموافقة والتفعيل.');
 });
 
 test('member result selections exclude secrets while write-field protections remain intact', () => {

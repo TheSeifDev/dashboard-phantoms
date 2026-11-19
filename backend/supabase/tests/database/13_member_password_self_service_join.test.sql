@@ -175,6 +175,115 @@ SELECT phantoms_test.clear_auth();
 SELECT is(public.get_member_pending_review(), NULL::jsonb,
           'unauthenticated callers receive no pending-review status');
 
+SELECT phantoms_test.as_service();
+SELECT ok(NOT has_function_privilege('anon', 'public.member_password_list_join_reviews(uuid,timestamptz,bigint,uuid)', 'EXECUTE')
+          AND NOT has_function_privilege('authenticated', 'public.member_password_list_join_reviews(uuid,timestamptz,bigint,uuid)', 'EXECUTE')
+          AND has_function_privilege('service_role', 'public.member_password_list_join_reviews(uuid,timestamptz,bigint,uuid)', 'EXECUTE')
+          AND NOT has_function_privilege('authenticated', 'public.member_password_approve_join(bigint,uuid)', 'EXECUTE')
+          AND has_function_privilege('service_role', 'public.member_password_approve_join(bigint,uuid)', 'EXECUTE'),
+          'Admin review RPCs are service-only and direct browser execution is revoked');
+SELECT is(jsonb_array_length(public.member_password_list_join_reviews(phantoms_test.uid('join_admin'))), 1,
+          'Owner-permitted Admin sees the completed inactive join, not unused links');
+SELECT is((public.member_password_list_join_reviews(phantoms_test.uid('join_admin')) -> 0 ->> 'full_name'),
+          'Self Service Member', 'review queue exposes the member-entered profile to an authorized reviewer');
+SELECT is((public.member_password_list_join_reviews(phantoms_test.uid('join_admin')) -> 0 ->> 'email'),
+          'new-self@phantoms-test.example', 'review queue includes the email the member submitted');
+SELECT throws_like($$SELECT public.member_password_list_join_reviews(phantoms_test.uid('join_new'))$$,
+                   '%UNAUTHORIZED%', 'a member cannot use the service review function as an Admin');
+SELECT throws_like($$SELECT public.member_password_approve_join(
+  (SELECT id FROM public.members WHERE email = 'new-self@phantoms-test.example'),
+  phantoms_test.uid('join_new'))$$, '%UNAUTHORIZED%', 'a member cannot approve their own registration');
+RESET ROLE;
+
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT phantoms_test.login_as('join_admin');
+SELECT throws_like($$UPDATE public.members SET work_status = NULL
+  WHERE email = 'new-self@phantoms-test.example'$$, '%JOIN_REVIEW_REQUIRED%',
+  'generic Admin cannot move a completed unapproved join to a nullable intermediary state');
+SELECT is((SELECT work_status FROM public.members WHERE email = 'new-self@phantoms-test.example'), 'inactive',
+          'a rejected intermediary-state update leaves the join inactive and reviewable');
+SELECT throws_like($$UPDATE public.members SET work_status = 'active'
+  WHERE email = 'new-self@phantoms-test.example'$$, '%JOIN_REVIEW_REQUIRED%',
+  'generic Admin member updates cannot bypass the first-activation review guard');
+SELECT is((SELECT work_status FROM public.members WHERE email = 'new-self@phantoms-test.example'), 'inactive',
+          'a rejected direct activation leaves the join inactive and without approval');
+RESET ROLE;
+UPDATE auth.users SET email = 'new-self-drift@phantoms-test.example'
+WHERE id = '40000000-0000-4000-8000-000000000001';
+SELECT phantoms_test.as_service();
+SELECT is(jsonb_array_length(public.member_password_list_join_reviews(phantoms_test.uid('join_admin'))), 1,
+          'review queue keeps a completed join visible when its current Auth email has drifted');
+SELECT is((public.member_password_list_join_reviews(phantoms_test.uid('join_admin')) -> 0 ->> 'email_identity_matches')::boolean, false,
+          'email drift is surfaced as a blocked review item without exposing current Auth email');
+SELECT throws_like($$SELECT public.member_password_approve_join(
+  (SELECT id FROM public.members WHERE email = 'new-self@phantoms-test.example'),
+  phantoms_test.uid('join_admin'))$$, '%REVIEW_REQUIRED%',
+  'approval rejects a completed join whose current Auth email no longer matches');
+RESET ROLE;
+UPDATE auth.users SET email = 'new-self@phantoms-test.example'
+WHERE id = '40000000-0000-4000-8000-000000000001';
+SELECT phantoms_test.as_service();
+SELECT is(jsonb_array_length(public.member_password_list_join_reviews(phantoms_test.uid('join_admin'))), 1,
+          'restoring the exact Auth email makes the still-unapproved request reviewable again');
+SELECT is((public.member_password_list_join_reviews(phantoms_test.uid('join_admin')) -> 0 ->> 'email_identity_matches')::boolean, true,
+          'restored Auth email clears the review blocker');
+RESET ROLE;
+
+UPDATE public.members SET email = 'new-self-member-drift@phantoms-test.example'
+WHERE email = 'new-self@phantoms-test.example';
+SELECT phantoms_test.as_service();
+SELECT is(jsonb_array_length(public.member_password_list_join_reviews(phantoms_test.uid('join_admin'))), 1,
+          'review queue keeps a completed join visible when the member email has drifted');
+SELECT is((public.member_password_list_join_reviews(phantoms_test.uid('join_admin')) -> 0 ->> 'email_identity_matches')::boolean, false,
+          'member email drift is surfaced as a blocked review item');
+SELECT throws_like($$SELECT public.member_password_approve_join(
+  (SELECT id FROM public.members WHERE email = 'new-self-member-drift@phantoms-test.example'),
+  phantoms_test.uid('join_admin'))$$, '%REVIEW_REQUIRED%',
+  'approval rejects a visible completed join whose member email no longer matches');
+RESET ROLE;
+UPDATE public.members SET email = 'new-self@phantoms-test.example'
+WHERE email = 'new-self-member-drift@phantoms-test.example';
+SELECT phantoms_test.as_service();
+SELECT is((public.member_password_list_join_reviews(phantoms_test.uid('join_admin')) -> 0 ->> 'email_identity_matches')::boolean, true,
+          'restoring the member email clears the review blocker');
+SELECT is(jsonb_array_length(public.member_password_list_join_reviews(
+  phantoms_test.uid('join_admin'),
+  (SELECT completed_at FROM public.member_password_invitations WHERE normalized_email = 'new-self@phantoms-test.example' AND purpose = 'join'),
+  (SELECT id FROM public.members WHERE email = 'new-self@phantoms-test.example'),
+  (SELECT id FROM public.member_password_invitations WHERE normalized_email = 'new-self@phantoms-test.example' AND purpose = 'join')
+)), 0, 'review pagination cursor excludes the last row and cannot repeat it');
+RESET ROLE;
+
+SELECT phantoms_test.as_service();
+SELECT is((public.member_password_approve_join(
+  (SELECT id FROM public.members WHERE email = 'new-self@phantoms-test.example'),
+  phantoms_test.uid('join_admin')) ->> 'approved'), 'true',
+  'authorized Admin approval activates the reviewed member');
+SELECT is((SELECT work_status FROM public.members WHERE email = 'new-self@phantoms-test.example'), 'active',
+          'approved self-service member becomes active');
+SELECT is((SELECT count(*)::int FROM public.member_password_audit
+           WHERE member_id = (SELECT id FROM public.members WHERE email = 'new-self@phantoms-test.example')
+             AND invitation_id = (SELECT id FROM public.member_password_invitations
+                                  WHERE normalized_email = 'new-self@phantoms-test.example' AND purpose = 'join')
+             AND action = 'admin_approved'), 1,
+          'approval is recorded exactly once against the completed join and member');
+SELECT is((SELECT actor_user_id FROM public.member_password_audit
+           WHERE member_id = (SELECT id FROM public.members WHERE email = 'new-self@phantoms-test.example')
+             AND action = 'admin_approved'), phantoms_test.uid('join_admin'),
+          'approval audit records the authenticated Admin actor');
+SELECT is(jsonb_array_length(public.member_password_list_join_reviews(phantoms_test.uid('join_admin'))), 0,
+          'approved membership leaves the pending-review queue');
+SELECT is((public.member_password_approve_join(
+  (SELECT id FROM public.members WHERE email = 'new-self@phantoms-test.example'),
+  phantoms_test.uid('join_admin')) ->> 'status'), 'already_approved',
+  'repeated approval is idempotently reported and does not create a second audit row');
+SELECT is((SELECT count(*)::int FROM public.member_password_audit
+           WHERE action = 'admin_approved'
+             AND member_id = (SELECT id FROM public.members WHERE email = 'new-self@phantoms-test.example')), 1,
+          'retry leaves the single approval audit record intact');
+RESET ROLE;
+SELECT phantoms_test.clear_auth();
+
 -- An Admin may leave the join email blank. The member's first valid submission
 -- is bound atomically under the shared email-registration lock before Auth.
 SELECT phantoms_test.as_service();

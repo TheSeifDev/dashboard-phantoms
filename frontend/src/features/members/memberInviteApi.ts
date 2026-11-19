@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase/client';
 import type { Member } from '../../types/db';
 import {
@@ -11,6 +11,8 @@ import {
 } from '../auth/member-password';
 
 export const MEMBER_INVITES_KEY = ['member_password_invites'] as const;
+export const MEMBER_JOIN_REVIEWS_KEY = ['member_password_join_reviews'] as const;
+export const MEMBER_JOIN_REVIEW_PAGE_SIZE = 100;
 export type MemberInvitePurpose = 'join' | 'enroll' | 'reset';
 export type MemberInviteStatus = 'pending' | 'reserved' | 'review_required';
 
@@ -34,6 +36,28 @@ export interface MemberInviteMemberOption {
   email: string;
   full_name: string;
   work_status: string | null;
+}
+
+export interface MemberJoinReview {
+  invitationId: string;
+  memberId: number;
+  fullName: string;
+  email: string;
+  invitationEmail: string;
+  emailIdentityMatches: boolean;
+  phone: string | null;
+  residence: string | null;
+  workConditions: string | null;
+  bio: string | null;
+  device: string | null;
+  gender: string | null;
+  submittedAt: string;
+}
+
+export interface MemberJoinReviewCursor {
+  submittedAt: string;
+  memberId: number;
+  invitationId: string;
 }
 
 export class MemberInviteApiError extends Error {
@@ -72,6 +96,44 @@ function mapInviteRow(value: unknown): MemberInviteRecord | null {
     note: typeof row.note === 'string' ? row.note : null,
     expires_at: row.expires_at,
     created_at: row.created_at,
+  };
+}
+
+function mapJoinReview(value: unknown): MemberJoinReview | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const invitationId = typeof row.invitation_id === 'string' ? row.invitation_id : null;
+  const email = normalizeAuthEmail(typeof row.email === 'string' ? row.email : '');
+  const invitationEmail = normalizeAuthEmail(typeof row.invitation_email === 'string' ? row.invitation_email : '');
+  const emailIdentityMatches = typeof row.email_identity_matches === 'boolean' ? row.email_identity_matches : null;
+  const nullableText = (key: string): string | null | undefined =>
+    row[key] === null ? null : typeof row[key] === 'string' ? row[key] as string : undefined;
+  const phone = nullableText('phone');
+  const residence = nullableText('residence');
+  const workConditions = nullableText('work_conditions');
+  const bio = nullableText('bio');
+  const device = nullableText('device');
+  const gender = nullableText('gender');
+  if (!invitationId || !isMemberInviteId(invitationId)
+      || typeof row.member_id !== 'number' || !Number.isSafeInteger(row.member_id) || row.member_id <= 0
+      || typeof row.full_name !== 'string' || !row.full_name.trim() || row.full_name.length > 160
+      || !email || !invitationEmail || emailIdentityMatches === null
+      || [phone, residence, workConditions, bio, device, gender].includes(undefined)
+      || typeof row.submitted_at !== 'string' || !Number.isFinite(Date.parse(row.submitted_at))) return null;
+  return {
+    invitationId,
+    memberId: row.member_id,
+    fullName: row.full_name,
+    email,
+    invitationEmail,
+    emailIdentityMatches,
+    phone: phone ?? null,
+    residence: residence ?? null,
+    workConditions: workConditions ?? null,
+    bio: bio ?? null,
+    device: device ?? null,
+    gender: gender ?? null,
+    submittedAt: row.submitted_at,
   };
 }
 
@@ -165,6 +227,54 @@ export function usePendingMemberInvites(enabled = true) {
       if (error) throw new MemberInviteApiError(await readMemberEndpointCode(error));
       if (!Array.isArray(data?.invites)) throw new MemberInviteApiError(await readMemberEndpointCode(data));
       return data.invites.map(mapInviteRow).filter((row): row is MemberInviteRecord => row !== null);
+    },
+  });
+}
+
+export function usePendingMemberJoinReviews(enabled = true) {
+  return useInfiniteQuery({
+    queryKey: MEMBER_JOIN_REVIEWS_KEY,
+    enabled,
+    initialPageParam: null as MemberJoinReviewCursor | null,
+    queryFn: async ({ pageParam }): Promise<MemberJoinReview[]> => {
+      const { data, error } = await supabase.functions.invoke<{ reviews?: unknown[]; code?: string }>(
+        'member-password-enrollment', {
+          body: pageParam
+            ? { action: 'list_join_reviews', cursor: pageParam }
+            : { action: 'list_join_reviews' },
+        },
+      );
+      if (error) throw new MemberInviteApiError(await readMemberEndpointCode(error));
+      if (!Array.isArray(data?.reviews)) throw new MemberInviteApiError(await readMemberEndpointCode(data));
+      const reviews = data.reviews.map(mapJoinReview);
+      if (reviews.some((review) => review === null)) throw new MemberInviteApiError('SERVER_UNAVAILABLE');
+      return reviews as MemberJoinReview[];
+    },
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < MEMBER_JOIN_REVIEW_PAGE_SIZE) return undefined;
+      const last = lastPage[lastPage.length - 1];
+      return last ? { submittedAt: last.submittedAt, memberId: last.memberId, invitationId: last.invitationId } : undefined;
+    },
+  });
+}
+
+export function useApproveMemberJoin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (memberId: number): Promise<{ alreadyApproved: boolean }> => {
+      if (!Number.isSafeInteger(memberId) || memberId <= 0) throw new MemberInviteApiError('INVALID_INPUT');
+      const { data, error } = await supabase.functions.invoke<{
+        ok?: boolean; approved?: boolean; alreadyApproved?: boolean; code?: string;
+      }>('member-password-enrollment', { body: { action: 'approve_join', memberId } });
+      if (error) throw new MemberInviteApiError(await readMemberEndpointCode(error));
+      if (data?.ok !== true || (data.approved !== true && data.alreadyApproved !== true)) {
+        throw new MemberInviteApiError(await readMemberEndpointCode(data));
+      }
+      return { alreadyApproved: data.alreadyApproved === true };
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: MEMBER_JOIN_REVIEWS_KEY });
+      void qc.invalidateQueries({ queryKey: ['members'] });
     },
   });
 }

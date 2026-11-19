@@ -52,13 +52,13 @@ function withFixture(body) {
   try { body(f); } finally { f.cleanup(); }
 }
 
-test('repository retains 24 initialized files, the applied correction and ten pending password migrations', () => {
+test('repository retains 24 initialized files, one applied correction, and eleven applied password/owner-review migrations', () => {
   const result = validateMigrationManifest({ rootDir: root });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, 24);
-  assert.equal(result.forwardEntryCount, 11);
-  assert.equal(result.migrationFiles.length, 35);
-  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql', '20261118200500_member_password_optional_join_email.sql']);
+  assert.equal(result.forwardEntryCount, 12);
+  assert.equal(result.migrationFiles.length, 36);
+  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql', '20261118200500_member_password_optional_join_email.sql', '20261119005000_member_password_owner_join_review.sql']);
   const entries = JSON.parse(readFileSync(join(root, FORWARD_MANIFEST_PATH), 'utf8'));
   assert.equal(entries[0].version, forwardVersion);
   assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
@@ -67,45 +67,34 @@ test('repository retains 24 initialized files, the applied correction and ten pe
   assert.equal(entries[0].original_source_version, originalVersion);
   assert.equal(entries[0].original_source_filename, `backend/supabase/migrations/${originalVersion}_${forwardName}.sql`);
   assert.equal(entries[0].sha256, 'c3ec586e6fc50bc31733fcffbb8e3903eb87fe2979ee2fc8906f725168916be6');
-  assert.equal(entries[1].version, '20261116234800');
-  assert.equal(entries[1].production_status, 'not_applied');
-  assert.equal(entries[1].remote_applied_timestamp, null);
-  assert.equal(entries[1].original_source_version, entries[1].version);
-  assert.equal(entries[1].original_source_filename, entries[1].canonical_repository_filename);
-  assert.equal(entries[2].version, '20261117163000');
-  assert.equal(entries[2].production_status, 'not_applied');
-  assert.equal(entries[2].remote_applied_timestamp, null);
-  assert.equal(entries[2].original_source_version, entries[2].version);
-  assert.equal(entries[2].original_source_filename, entries[2].canonical_repository_filename);
-  assert.equal(entries[3].version, '20261117164800');
-  assert.equal(entries[3].production_status, 'not_applied');
-  assert.equal(entries[3].remote_applied_timestamp, null);
-  assert.equal(entries[3].original_source_version, entries[3].version);
-  assert.equal(entries[3].original_source_filename, entries[3].canonical_repository_filename);
-  assert.equal(entries[4].version, '20261117170000');
-  assert.equal(entries[4].production_status, 'not_applied');
-  assert.equal(entries[4].remote_applied_timestamp, null);
-  assert.equal(entries[4].original_source_version, entries[4].version);
-  assert.equal(entries[4].original_source_filename, entries[4].canonical_repository_filename);
-  assert.equal(entries[5].version, '20261117172500');
-  assert.equal(entries[5].production_status, 'not_applied');
-  assert.equal(entries[5].remote_applied_timestamp, null);
-  assert.equal(entries[5].original_source_version, entries[5].version);
-  assert.equal(entries[7].version, '20261117174000');
-  assert.equal(entries[7].production_status, 'not_applied');
-  assert.equal(entries[7].remote_applied_timestamp, null);
-  assert.equal(entries[7].original_source_version, entries[7].version);
-  assert.equal(entries[7].original_source_filename, entries[7].canonical_repository_filename);
-  assert.equal(entries[6].version, '20261117173500');
-  assert.equal(entries[6].remote_applied_timestamp, null);
-  assert.equal(entries[6].original_source_version, entries[6].version);
-  assert.equal(entries[5].original_source_filename, entries[5].canonical_repository_filename);
-  assert.equal(entries[10].version, '20261118200500');
-  assert.equal(entries[10].production_status, 'not_applied');
-  assert.equal(entries[10].remote_applied_timestamp, null);
-  assert.equal(entries[10].original_source_version, entries[10].version);
-  assert.equal(entries[10].original_source_filename, entries[10].canonical_repository_filename);
+  const remotelyAppliedPasswordMigrations = new Map([
+    ['20261116234800', '20261118213009'],
+    ['20261117163000', '20261118213050'],
+    ['20261117164800', '20261118213127'],
+    ['20261117170000', '20261118213154'],
+    ['20261117172500', '20261118213219'],
+    ['20261117173500', '20261118213253'],
+    ['20261117174000', '20261118213313'],
+    ['20261117175500', '20261118213334'],
+    ['20261118153000', '20261118213439'],
+    ['20261118200500', '20261118213525'],
+    ['20261119005000', '20261119054418'],
+  ]);
+  assert.equal(entries.slice(1, 12).length, remotelyAppliedPasswordMigrations.size);
+  for (const entry of entries.slice(1, 12)) {
+    assert.equal(entry.production_status, 'applied');
+    assert.equal(entry.remote_applied_timestamp, remotelyAppliedPasswordMigrations.get(entry.version));
+    assert.equal(entry.original_source_version, entry.version);
+    assert.equal(entry.original_source_filename, entry.canonical_repository_filename);
+  }
+  assert.equal(entries[9].sha256, createHash('sha256').update(readFileSync(join(root, entries[9].canonical_repository_filename))).digest('hex'));
   assert.equal(entries[10].sha256, createHash('sha256').update(readFileSync(join(root, entries[10].canonical_repository_filename))).digest('hex'));
+  assert.equal(entries[11].version, '20261119005000');
+  assert.equal(entries[11].production_status, 'applied');
+  assert.equal(entries[11].remote_applied_timestamp, '20261119054418');
+  assert.equal(entries[11].original_source_version, entries[11].version);
+  assert.equal(entries[11].original_source_filename, entries[11].canonical_repository_filename);
+  assert.equal(entries[11].sha256, createHash('sha256').update(readFileSync(join(root, entries[11].canonical_repository_filename))).digest('hex'));
 });
 
 test('a valid separate forward registration does not change initialization provenance', () => {
@@ -163,11 +152,11 @@ test('path traversal, mismatched names and invalid timestamps are rejected', () 
   });
 });
 
-test('an applied registration with a mismatched timestamp is rejected', () => {
+test('an applied registration with a remote timestamp before its source version is rejected', () => {
   withFixture((f) => {
     f.entry.production_status = 'applied';
-    f.entry.remote_applied_timestamp = '20261116110000';
-    invalid(f, /production_status\/remote_applied_timestamp/);
+    f.entry.remote_applied_timestamp = '20261116090000';
+    invalid(f, /remote_applied_timestamp cannot precede the source migration version/);
   });
 });
 
@@ -180,18 +169,27 @@ test('an applied registration with matching version and timestamp is accepted', 
   });
 });
 
+test('an applied registration with a distinct actual remote timestamp is accepted', () => {
+  withFixture((f) => {
+    f.entry.production_status = 'applied';
+    f.entry.remote_applied_timestamp = '20261116110000';
+    const result = validateMigrationManifest({ rootDir: f.dir });
+    assert.equal(result.valid, true, result.errors.join('\n'));
+  });
+});
+
 test('inconsistent forward status and timestamp pairs are rejected fail-closed', () => {
   for (const [status, remote] of [
     ['pending', null],
     ['applied', null],
-    ['applied', '20261116110000'],
+    ['applied', '20261116090000'],
     ['applied', 'not-a-timestamp'],
     ['not_applied', '20261116110000'],
   ]) {
     withFixture((f) => {
       f.entry.production_status = status;
       f.entry.remote_applied_timestamp = remote;
-      invalid(f, /production_status\/remote_applied_timestamp/);
+      invalid(f, /production_status\/remote_applied_timestamp|remote_applied_timestamp cannot precede/);
     });
   }
 });

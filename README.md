@@ -87,7 +87,7 @@
 - **Spreadsheet Security:** Archive validation safeguards (`safeXlsxGuard.ts`) enforce total decompress size bounds, entry caps, and compression ratio limits. Untrusted file uploads remain feature-gated.
 - **Secret Isolation:** Environment secrets (`.env`) are untracked and excluded from version control.
 
-The password-auth forward migrations are **local, not-applied production candidates**. They do not silently map existing users, change Owner/Admin credentials or configure production signup/SMTP. Reserved or uncertain Auth writes are quarantined without automatic retry/release. Run real disposable Supabase/GoTrue, Edge and browser tests and obtain independent review plus explicit approval before any production installation; SQL fixtures and mounted mocks are not real Auth validation.
+The production Supabase migration history was verified after release through remote migration version `20261119054418`, which records source migration `20261119005000_member_password_owner_join_review`; its matching Edge function is deployed. The dashboard queue source is included in the `main` release; automatic hosted UI publication was not independently verified, and Vercel was not accessed. An issued or opened invitation alone does not create a member, and do not activate registrations by direct SQL. Approval requires a completed join and a current exact email match across Auth, invitation, binding, and member records; mismatches remain visible as blocked items rather than disappearing. The queue uses a cursor to retrieve older pages beyond its first 100 items. Generic status changes away from `inactive`—including a `NULL` intermediate state—are blocked until the audited Owner/Admin approval path runs. Existing identities are never silently mapped, Owner/Admin credentials are not changed, production signup/SMTP is not configured, and uncertain Auth writes remain quarantined without automatic retry or release.
 
 ---
 
@@ -170,7 +170,7 @@ dashboard-phantoms/
 ├── backend/
 │   ├── scripts/                  # Migration manifest, runtime validation, and operator inventory
 │   ├── supabase/
-│   │   ├── migrations/           # Canonical SQL (24 historical + 11 forward; see forward manifest)
+│   │   ├── migrations/           # Canonical SQL (24 historical + 12 forward; see forward manifest)
 │   │   ├── functions/            # Edge Functions, including member-password-enrollment
 │   │   └── tests/database/       # Database security and pgTAP suites
 │   ├── whatsapp-service/         # WhatsApp notification API service

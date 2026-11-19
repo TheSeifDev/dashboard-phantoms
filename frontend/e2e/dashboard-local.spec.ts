@@ -261,6 +261,10 @@ test.describe('disposable local dashboard', () => {
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ invites: [] }) });
           return;
         }
+        if (payload.action === 'list_join_reviews') {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ reviews: [] }) });
+          return;
+        }
         if (payload.action !== 'issue' || payload.memberId !== null || payload.purpose !== 'join' || payload.email !== null) {
           await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'INVALID_INPUT' }) });
           return;
@@ -389,6 +393,85 @@ test.describe('disposable local dashboard', () => {
         await page.setViewportSize({ width: 1440, height: 1000 });
       } finally {
         await page.unroute(invitationEndpoint, mockJoinIssue);
+      }
+    });
+
+    await test.step('Owner can review a completed self-service registration and explicitly activate it', async () => {
+      const reviewEndpoint = `${API_ORIGIN}/functions/v1/member-password-enrollment`;
+      const pendingReview = {
+        invitation_id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+        member_id: 4545,
+        full_name: 'Self-service pending member',
+        email: 'pending-review@phantoms-test.example',
+        invitation_email: 'pending-review@phantoms-test.example',
+        email_identity_matches: true,
+        phone: '+201011112222',
+        residence: 'Cairo',
+        work_conditions: 'Remote',
+        bio: 'Student supplied profile',
+        device: 'لابتوب',
+        gender: 'ذكر',
+        submitted_at: '2026-11-19T00:00:00.000Z',
+      };
+      let approved = false;
+      let emailMatches = false;
+      let approvalPayload: unknown = null;
+      const mockReviewActions = async (route: Route) => {
+        if (route.request().method() !== 'POST') {
+          await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ code: 'INVALID_INPUT' }) });
+          return;
+        }
+        const payload = route.request().postDataJSON() as { action?: string; memberId?: number };
+        if (payload.action === 'list_join_reviews') {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ reviews: approved ? [] : [{ ...pendingReview, email_identity_matches: emailMatches }] }),
+          });
+          return;
+        }
+        if (payload.action === 'approve_join' && payload.memberId === pendingReview.member_id) {
+          approvalPayload = payload;
+          approved = true;
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, approved: true }) });
+          return;
+        }
+        await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'INVALID_INPUT' }) });
+      };
+      await page.route(reviewEndpoint, mockReviewActions);
+      try {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto('/admin/members', { waitUntil: 'domcontentloaded' });
+        const queue = page.getByTestId('member-join-review-queue');
+        await expect(queue).toBeVisible();
+        await expect(queue.getByTestId('member-join-review-count')).toHaveText('1');
+        const item = page.getByTestId('member-join-review-item');
+        await expect(item).toContainText('Self-service pending member');
+        await expect(item).toContainText('pending-review@phantoms-test.example');
+        await expect(item).toContainText('Student supplied profile');
+        await expect(item.getByTestId('member-join-review-email-mismatch')).toBeVisible();
+        await expect(item.getByRole('button', { name: 'قبول وتفعيل العضوية' })).toBeDisabled();
+        emailMatches = true;
+        await queue.getByRole('button', { name: 'تحديث الطلبات' }).click();
+        await expect(item.getByTestId('member-join-review-email-mismatch')).toHaveCount(0);
+        await expect(item.getByRole('button', { name: 'قبول وتفعيل العضوية' })).toBeVisible();
+        await expect(item.getByRole('button', { name: 'قبول وتفعيل العضوية' })).toBeEnabled();
+        const reviewScreenshotDir = process.env.PHANTOMS_MOBILE_SCREENSHOT_DIR;
+        if (reviewScreenshotDir && vapidMode === 'missing') {
+          await mkdir(path.resolve(reviewScreenshotDir), { recursive: true, mode: 0o700 });
+          await item.screenshot({ path: path.join(path.resolve(reviewScreenshotDir), 'owner-join-review-queue-390.png') });
+        }
+        await item.getByRole('button', { name: 'قبول وتفعيل العضوية' }).click();
+        const confirm = page.getByRole('heading', { name: 'تأكيد تفعيل العضوية' });
+        await expect(confirm).toBeVisible();
+        await expect(page.getByText(/بعد الموافقة ستصبح العضوية نشطة/)).toBeVisible();
+        await page.getByRole('button', { name: 'موافقة وتفعيل', exact: true }).click();
+        await expect(queue.getByTestId('member-join-review-empty')).toBeVisible();
+        expect(approvalPayload).toEqual({ action: 'approve_join', memberId: pendingReview.member_id });
+        await expect(page.getByText('تم قبول Self-service pending member وتفعيل عضويته.', { exact: true })).toBeVisible();
+        await assertNoHorizontalOverflow(page);
+      } finally {
+        await page.unroute(reviewEndpoint, mockReviewActions);
       }
     });
 

@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the reconciled forward migration preserves original provenance and canonical bytes outside initialization history', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 11);
+  assert.equal(forward.length, 12);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');
@@ -68,48 +68,33 @@ test('the reconciled forward migration preserves original provenance and canonic
   assert.equal(entry.canonical_repository_filename, 'backend/supabase/migrations/20261116100646_admin_member_column_access.sql');
   assert.equal(existsSync(join(repositoryRoot, entry.original_source_filename)), false);
   assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, entry.canonical_repository_filename))).digest('hex'), entry.sha256);
-  assert.equal(forward[1].version, '20261116234800');
-  assert.equal(forward[1].production_status, 'not_applied');
-  assert.equal(forward[1].remote_applied_timestamp, null);
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[1].canonical_repository_filename))).digest('hex'), forward[1].sha256);
-  assert.equal(forward[2].version, '20261117163000');
-  assert.equal(forward[2].production_status, 'not_applied');
-  assert.equal(forward[2].remote_applied_timestamp, null);
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[2].canonical_repository_filename))).digest('hex'), forward[2].sha256);
-  assert.equal(forward[3].version, '20261117164800');
-  assert.equal(forward[3].production_status, 'not_applied');
-  assert.equal(forward[3].remote_applied_timestamp, null);
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[3].canonical_repository_filename))).digest('hex'), forward[3].sha256);
-  assert.equal(forward[4].version, '20261117170000');
-  assert.equal(forward[4].production_status, 'not_applied');
-  assert.equal(forward[4].remote_applied_timestamp, null);
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[4].canonical_repository_filename))).digest('hex'), forward[4].sha256);
-  assert.equal(forward[5].version, '20261117172500');
-  assert.equal(forward[5].production_status, 'not_applied');
-  assert.equal(forward[5].remote_applied_timestamp, null);
-  assert.equal(forward[7].version, '20261117174000');
-  assert.equal(forward[7].production_status, 'not_applied');
-  assert.equal(forward[7].remote_applied_timestamp, null);
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[7].canonical_repository_filename))).digest('hex'), forward[7].sha256);
-  assert.equal(forward[8].version, '20261117175500');
-  assert.equal(forward[8].production_status, 'not_applied');
-  assert.equal(forward[8].remote_applied_timestamp, null);
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[8].canonical_repository_filename))).digest('hex'), forward[8].sha256);
-  assert.equal(forward[9].version, '20261118153000');
-  assert.equal(forward[9].production_status, 'not_applied');
-  assert.equal(forward[9].remote_applied_timestamp, null);
-  assert.equal(forward[9].canonical_repository_filename, 'backend/supabase/migrations/20261118153000_member_password_self_service_join.sql');
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[9].canonical_repository_filename))).digest('hex'), forward[9].sha256);
-  assert.equal(forward[10].version, '20261118200500');
-  assert.equal(forward[10].production_status, 'not_applied');
-  assert.equal(forward[10].remote_applied_timestamp, null);
-  assert.equal(forward[10].canonical_repository_filename, 'backend/supabase/migrations/20261118200500_member_password_optional_join_email.sql');
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[10].canonical_repository_filename))).digest('hex'), forward[10].sha256);
-  assert.equal(forward[6].version, '20261117173500');
-  assert.equal(forward[6].production_status, 'not_applied');
-  assert.equal(forward[6].remote_applied_timestamp, null);
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[6].canonical_repository_filename))).digest('hex'), forward[6].sha256);
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[5].canonical_repository_filename))).digest('hex'), forward[5].sha256);
+  const appliedPasswordMigrations = [
+    ['20261116234800', '20261118213009'],
+    ['20261117163000', '20261118213050'],
+    ['20261117164800', '20261118213127'],
+    ['20261117170000', '20261118213154'],
+    ['20261117172500', '20261118213219'],
+    ['20261117173500', '20261118213253'],
+    ['20261117174000', '20261118213313'],
+    ['20261117175500', '20261118213334'],
+    ['20261118153000', '20261118213439'],
+    ['20261118200500', '20261118213525'],
+    ['20261119005000', '20261119054418'],
+  ];
+  assert.equal(forward.slice(1, 12).length, appliedPasswordMigrations.length);
+  for (const [index, [version, remoteTimestamp]] of appliedPasswordMigrations.entries()) {
+    const applied = forward[index + 1];
+    assert.equal(applied.version, version);
+    assert.equal(applied.production_status, 'applied');
+    assert.equal(applied.remote_applied_timestamp, remoteTimestamp);
+    assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, applied.canonical_repository_filename))).digest('hex'), applied.sha256);
+  }
+  assert.equal(forward[11].version, '20261119005000');
+  assert.equal(forward[11].production_status, 'applied');
+  assert.equal(forward[11].remote_applied_timestamp, '20261119054418');
+  assert.equal(forward[11].canonical_repository_filename, 'backend/supabase/migrations/20261119005000_member_password_owner_join_review.sql');
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[11].canonical_repository_filename))).digest('hex'), forward[11].sha256);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[11].canonical_repository_filename))).digest('hex'), forward[11].sha256);
 });
 
 test('new manifest provenance is anchored to the historical 85a36fc manifest and canonical bytes', () => {

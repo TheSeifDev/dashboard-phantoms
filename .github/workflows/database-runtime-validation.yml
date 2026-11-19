@@ -478,12 +478,12 @@ jobs:
           with open(sys.argv[1], encoding='utf-8') as handle:
               evidence = json.load(handle)
           assert set(evidence) == {'schema', 'mode', 'boundary', 'pg17', 'passed', 'checks', 'cleanupStatus'}
-          assert evidence['schema'] == 'phantoms-local-pg17-sql-concurrency/v2'
+          assert evidence['schema'] == 'phantoms-local-pg17-sql-concurrency/v3'
           assert evidence['mode'] == 'local-supabase-pg17-sql-only'
           assert evidence['boundary'] == 'PostgreSQL only; fabricated Auth rows, not GoTrue'
           assert evidence['pg17'] is True and evidence['passed'] is True
           assert evidence['cleanupStatus'] == 'completed-exact-fixtures'
-          assert isinstance(evidence['checks'], list) and len(evidence['checks']) == 5
+          assert isinstance(evidence['checks'], list) and len(evidence['checks']) == 6
           expected = [
               ({'name', 'connections', 'successfulClaims', 'reviewRejected', 'durableClaims', 'passed'},
                {'name': 'eight simultaneous reserve transactions', 'connections': 8, 'successfulClaims': 1, 'reviewRejected': 7, 'durableClaims': 1}),
@@ -495,6 +495,8 @@ jobs:
                {'name': 'two simultaneous reset password writes', 'connections': 2, 'allowedWrites': 1, 'blockedWrites': 1, 'exactUuidMarkers': 1}),
               ({'name', 'connections', 'durableAttempts', 'passed'},
                {'name': 'twelve simultaneous limiter increments', 'connections': 12, 'durableAttempts': 12}),
+              ({'name', 'connections', 'authEmailChangeCommitted', 'staleApprovalRejected', 'approvalWaitedForIdentityUpdate', 'memberStayedInactiveWithoutApprovalAudit', 'passed'},
+               {'name': 'Owner approval serializes with Auth email change', 'connections': 2, 'authEmailChangeCommitted': True, 'staleApprovalRejected': True, 'approvalWaitedForIdentityUpdate': True, 'memberStayedInactiveWithoutApprovalAudit': True}),
           ]
           for check, (fields, values) in zip(evidence['checks'], expected):
               assert set(check) == fields and check['passed'] is True
@@ -538,7 +540,7 @@ jobs:
             && expected.every((key) => Object.hasOwn(value, key));
           const exactSqlChecks = (sql) => {
             if (!exactKeys(sql, ['schema', 'mode', 'boundary', 'pg17', 'passed', 'checks', 'cleanupStatus'])
-              || !Array.isArray(sql.checks) || sql.checks.length !== 5) return false;
+              || !Array.isArray(sql.checks) || sql.checks.length !== 6) return false;
             const expected = [
               {
                 keys: ['name', 'connections', 'successfulClaims', 'reviewRejected', 'durableClaims', 'passed'],
@@ -560,6 +562,10 @@ jobs:
                 keys: ['name', 'connections', 'durableAttempts', 'passed'],
                 values: { name: 'twelve simultaneous limiter increments', connections: 12, durableAttempts: 12 },
               },
+              {
+                keys: ['name', 'connections', 'authEmailChangeCommitted', 'staleApprovalRejected', 'approvalWaitedForIdentityUpdate', 'memberStayedInactiveWithoutApprovalAudit', 'passed'],
+                values: { name: 'Owner approval serializes with Auth email change', connections: 2, authEmailChangeCommitted: true, staleApprovalRejected: true, approvalWaitedForIdentityUpdate: true, memberStayedInactiveWithoutApprovalAudit: true },
+              },
             ];
             if (!sql.checks.every((check, index) => exactKeys(check, expected[index].keys)
               && check.passed === true
@@ -578,7 +584,7 @@ jobs:
           if (!isCompleteInventoryPaginationEvidence(inventory)) throw new Error('Required inventory pagination evidence is missing or incomplete.');
           const sql = readJson('test-results/member-password-sql-concurrency.json');
           if (!exactSqlChecks(sql)
-            || sql.schema !== 'phantoms-local-pg17-sql-concurrency/v2'
+            || sql.schema !== 'phantoms-local-pg17-sql-concurrency/v3'
             || sql.mode !== 'local-supabase-pg17-sql-only'
             || sql.boundary !== 'PostgreSQL only; fabricated Auth rows, not GoTrue'
             || sql.pg17 !== true

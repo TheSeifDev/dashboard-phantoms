@@ -213,7 +213,7 @@ export default function MemberSelfRegisterPage() {
       </form>
       <div className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--primary)]/20 bg-[var(--primary-soft)] p-3 text-xs leading-6 text-[var(--text-2)]" role="note">
         <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[var(--primary)]" aria-hidden="true" />
-          <span>{isPasswordReset ? 'سيتم تحديث كلمة المرور فقط، ولن نُسجّل دخولك تلقائياً.' : 'لن نُسجّل دخولك تلقائياً. إذا كنت عضواً جديداً، ستبقى عضويتك غير مفعّلة حتى تراجعها الإدارة.'}</span>
+          <span>{isPasswordReset ? 'سيتم تحديث كلمة المرور فقط، ولن نُسجّل دخولك تلقائياً.' : 'لن نُسجّل دخولك تلقائياً. بعد حفظ تسجيلك بنجاح سيظهر طلبك للإدارة، وستبقى العضوية غير مفعّلة حتى الموافقة.'}</span>
       </div>
     </AuthShell>
   );
