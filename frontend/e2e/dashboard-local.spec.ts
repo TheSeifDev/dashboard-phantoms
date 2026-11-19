@@ -10,6 +10,9 @@ const previewPort = process.env.PHANTOMS_LOCAL_PREVIEW_PORT ?? '4173';
 if (![apiPort, previewPort].every((port) => /^\d{4,5}$/.test(port) && Number(port) >= 1024 && Number(port) <= 65535)) throw new Error('Invalid disposable loopback ports.');
 const API_ORIGIN = `http://127.0.0.1:${apiPort}`;
 const PREVIEW_ORIGIN = `http://127.0.0.1:${previewPort}`;
+const MEMBER_PASSWORD_ENDPOINT = new RegExp(
+  `^${API_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/functions/v1/member-password-enrollment(?:/)?(?:\\?.*)?$`,
+);
 const SAFE_MEMBER_COLUMNS = ADMIN_MEMBER_COLUMNS;
 const ownerEmail = process.env.PHANTOMS_DASHBOARD_OWNER_EMAIL ?? '';
 const ownerPassword = process.env.PHANTOMS_DASHBOARD_OWNER_PASSWORD ?? '';
@@ -78,6 +81,13 @@ async function installRequestGate(page: Page): Promise<{ blocked: string[]; push
     }
     if (url.origin === API_ORIGIN && url.pathname === '/functions/v1/push-notify') {
       pushRequests.push(`${route.request().method()} ${url.pathname}`);
+    }
+    if (url.origin === API_ORIGIN && url.pathname === '/functions/v1/member-password-enrollment' && route.request().method() === 'POST') {
+      const payload = route.request().postDataJSON() as { action?: string } | null;
+      if (payload?.action === 'list_join_reviews') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ reviews: [] }) });
+        return;
+      }
     }
     if (url.origin === API_ORIGIN && url.pathname === '/rest/v1/tasks' && route.request().method() === 'POST' && taskInsertFailureTitle) {
       const payload = route.request().postDataJSON() as { title?: string } | Array<{ title?: string }> | null;
@@ -249,7 +259,7 @@ test.describe('disposable local dashboard', () => {
     expect(requestEvidence.some((r) => r.endpoint === '/rest/v1/members' && r.columns === SAFE_MEMBER_COLUMNS && r.status === 200)).toBe(true);
 
     await test.step('Admin invitation UI is email-free and copies either the link or WhatsApp invitation', async () => {
-      const invitationEndpoint = `${API_ORIGIN}/functions/v1/member-password-enrollment`;
+      const invitationEndpoint = MEMBER_PASSWORD_ENDPOINT;
       let joinIssuePayload: { action?: string; memberId?: number | null; purpose?: string; email?: string | null; expiresInHours?: number } | null = null;
       const mockJoinIssue = async (route: Route) => {
         if (route.request().method() !== 'POST') {
@@ -397,7 +407,7 @@ test.describe('disposable local dashboard', () => {
     });
 
     await test.step('Owner can review a completed self-service registration and explicitly activate it', async () => {
-      const reviewEndpoint = `${API_ORIGIN}/functions/v1/member-password-enrollment`;
+      const reviewEndpoint = MEMBER_PASSWORD_ENDPOINT;
       const pendingReview = {
         invitation_id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
         member_id: 4545,
