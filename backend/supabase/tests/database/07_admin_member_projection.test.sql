@@ -21,11 +21,11 @@ BEGIN
   WHERE email = 'alice@phantoms-test.example';
 END $$;
 
--- Migration history: disposable applies 36 while the historical cohort remains 24.
-SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 36,
-  'local migration history records 36 migrations including owner join review');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261119005000',
-  'local migration history ends at owner join review');
+-- Migration history: disposable applies 37 while the historical cohort remains 24.
+SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 37,
+  'local migration history records 37 migrations including task contribution ledger');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261119183000',
+  'local migration history ends at task contribution ledger');
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
            WHERE version <= '20261114164006'), 24,
   'historical migration cohort through 20261114164006 remains exactly 24 migrations');
