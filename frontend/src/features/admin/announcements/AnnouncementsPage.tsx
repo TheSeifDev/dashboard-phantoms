@@ -114,9 +114,9 @@ export default function AnnouncementsPage() {
   const todayKey = new Date().toDateString();
   const stats = [
     { label: t('كل الإعلانات','All announcements'), value: announcements.length, icon: MessageSquare, tone: 'bg-[var(--primary-soft)] text-[var(--link)]' },
-    { label: t('نشطة دلوقتي','Active now'), value: announcements.filter((a) => a.is_active).length, icon: Users, tone: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' },
+    { label: t('نشطة دلوقتي','Active now'), value: announcements.filter((a) => a.is_active).length, icon: Users, tone: 'bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success-text)]' },
     { label: t('أولوية عالية','High priority'), value: announcements.filter((a) => a.priority === 'high' || a.priority === 'urgent').length, icon: AlertTriangle, tone: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
-    { label: t('اتنشرت النهارده','Published today'), value: announcements.filter((a) => new Date(a.created_at).toDateString() === todayKey).length, icon: Clock, tone: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300' },
+    { label: t('اتنشرت النهارده','Published today'), value: announcements.filter((a) => new Date(a.created_at).toDateString() === todayKey).length, icon: Clock, tone: 'bg-[var(--info-soft)] text-[var(--info-text)] dark:text-[var(--info-text)]' },
   ];
 
   return (
@@ -171,7 +171,7 @@ export default function AnnouncementsPage() {
                   <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-[var(--text-muted)]">
                     <span className="inline-flex items-center gap-1"><Clock size={13} aria-hidden="true" />{formatDate(announcement.created_at)}</span>
                     <span className="inline-flex items-center gap-1"><Users size={13} aria-hidden="true" />{t(AnnouncementsAPI.getAudienceLabel(announcement.target_audience), announcement.target_audience?.type === 'all' ? 'All members' : announcement.target_audience?.type === 'specific' ? `${number(announcement.target_audience.member_ids?.length ?? 0)} selected members` : 'Not specified')}</span>
-                    {announcement.send_whatsapp && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">{t("واتساب", "WhatsApp")}</span>}
+                    {announcement.send_whatsapp && <span className="rounded-full bg-[var(--success-soft)] px-2 py-0.5 text-[var(--success-text)] dark:text-[var(--success-text)]">{t("واتساب", "WhatsApp")}</span>}
                     {announcement.send_push && <span className="rounded-full bg-[var(--primary-soft)] px-2 py-0.5 text-[var(--link)]">{t("إشعار فوري", "Push notification")}</span>}
                   </p>
                 </div>
@@ -186,7 +186,7 @@ export default function AnnouncementsPage() {
                   <button
                     type="button"
                     onClick={() => setPendingDelete(announcement)}
-                    className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
+                    className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger-text)] dark:hover:bg-[var(--danger-soft)]"
                     aria-label={t(`امسح إعلان ${announcement.title}`, `Delete announcement ${announcement.title}`)}
                     title={t("حذف الإعلان", "Delete announcement")}
                   >

@@ -270,7 +270,7 @@ export async function ensureAndroidNotificationChannel(): Promise<void> {
       visibility: 1,
       vibration: true,
       lights: true,
-      lightColor: '#E51C19',
+      lightColor: '#DC143C',
     });
     androidChannelInitialized = true;
   } catch {

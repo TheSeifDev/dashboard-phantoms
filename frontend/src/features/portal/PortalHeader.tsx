@@ -26,7 +26,7 @@ export function PortalHeader({ onLogout }: { onLogout: () => void }) {
         >
           <Bell size={19} />
           {unreadCount > 0 && (
-            <span className="absolute -end-1 -top-1 grid min-w-5 place-items-center rounded-full bg-emerald-600 px-1 text-[10px] font-black text-white tabular-nums">
+            <span className="absolute -end-1 -top-1 grid min-w-5 place-items-center rounded-full bg-[var(--success)] px-1 text-[10px] font-black text-[var(--on-success)] tabular-nums">
               {unreadCount > 9 ? '+9' : unreadCount}
             </span>
           )}

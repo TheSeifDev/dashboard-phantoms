@@ -132,7 +132,7 @@ export default function AnnouncementStatsModal({
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-emerald-700 dark:text-emerald-300">{t("مفيش أخطاء متسجلة.", "No errors recorded.")}</p>
+                      <p className="text-[var(--success-text)] dark:text-[var(--success-text)]">{t("مفيش أخطاء متسجلة.", "No errors recorded.")}</p>
                     )}
                   </>
                 ) : (

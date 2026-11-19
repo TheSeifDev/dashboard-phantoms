@@ -159,7 +159,7 @@ export function EvaluationCreateModal({
       <form onSubmit={handleSubmit} className="grid gap-4 text-start" dir={dir} noValidate>
         {error && (
           <p
-            className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-900"
+            className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)]"
             role="alert"
           >
             {error}
@@ -302,7 +302,7 @@ export function EvaluationCreateModal({
             >
               0 (بدون تغيير نقاط)
             </button>
-            <span className="ms-1 flex items-center gap-0.5 text-xs font-bold text-emerald-700">
+            <span className="ms-1 flex items-center gap-0.5 text-xs font-bold text-[var(--success-text)]">
               <Plus size={12} aria-hidden="true" /> مكافأة:
             </span>
             {POSITIVE_POINTS.map((val) => (
@@ -312,14 +312,14 @@ export function EvaluationCreateModal({
                 onClick={() => setPoints(val)}
                 className={`min-h-9 min-w-9 rounded-lg px-2.5 text-xs font-black transition-colors ${
                   points === val
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-[var(--success)] text-[var(--on-success)]'
                     : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'
                 }`}
               >
                 +{val}
               </button>
             ))}
-            <span className="ms-1 flex items-center gap-0.5 text-xs font-bold text-red-700">
+            <span className="ms-1 flex items-center gap-0.5 text-xs font-bold text-[var(--danger-text)]">
               <Minus size={12} aria-hidden="true" /> خصم:
             </span>
             {NEGATIVE_POINTS.map((val) => (
@@ -329,7 +329,7 @@ export function EvaluationCreateModal({
                 onClick={() => setPoints(val)}
                 className={`min-h-9 min-w-9 rounded-lg px-2.5 text-xs font-black transition-colors ${
                   points === val
-                    ? 'bg-red-600 text-white'
+                    ? 'bg-[var(--danger)] text-[var(--on-danger)]'
                     : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'
                 }`}
               >

@@ -99,6 +99,7 @@ jobs:
           ../frontend/node_modules/.bin/tsx --test scripts/member-password.test.ts
           node --test scripts/member-password-component.test.mjs
           node --test scripts/auth-callback-state.test.mjs
+          node --test scripts/sidebar-navigation.test.mjs
           ../frontend/node_modules/.bin/tsx --test \
             ../backend/supabase/functions/member-password-enrollment/controller.test.ts \
             ../backend/supabase/functions/member-password-enrollment/pureorigins.test.ts \
@@ -109,7 +110,8 @@ jobs:
             scripts/dashboard-state.test.ts \
             scripts/task-contributions.test.ts \
             scripts/task-contribution-invalidation.test.ts \
-            scripts/redesign-locale.test.ts
+            scripts/redesign-locale.test.ts \
+            scripts/phantoms-palette.test.ts
 
       - name: Run security, runtime, push, brand, and supporting regressions
         run: |

@@ -51,7 +51,7 @@ export function TaskCard({ task, members, onReview, onDelete }: { task: Task; me
           <h3 className="min-w-0 break-words text-base font-black leading-7">{task.title}</h3>
           <button
             type="button"
-            className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-lg border border-transparent text-[var(--text-muted)] transition-colors hover:border-red-200 hover:bg-red-50 hover:text-[var(--danger)] dark:hover:border-red-900 dark:hover:bg-red-950/40"
+            className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-lg border border-transparent text-[var(--text-muted)] transition-colors hover:border-[var(--danger-border)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] dark:hover:border-[var(--danger-border)] dark:hover:bg-[var(--danger-soft)]"
             aria-label={t(`امسح مهمة ${task.title}`, `Delete task ${task.title}`)}
             title={t('امسح المهمة', 'Delete task')}
             onClick={() => onDelete(task)}
@@ -105,7 +105,7 @@ export function TaskCard({ task, members, onReview, onDelete }: { task: Task; me
                   <span className={`inline-flex h-9 items-center gap-1 rounded-lg border px-2.5 text-xs font-bold ${meta.tone}`}>
                     <CheckCircle2 size={14} aria-hidden="true" />{statusLabel}
                   </span>
-                  <button type="button" onClick={() => onReview({ task, memberId, entry })} className="inline-flex h-9 items-center gap-1 rounded-lg border border-red-200 px-2 text-xs font-bold text-red-800 hover:bg-red-50 dark:border-red-900 dark:text-red-200 dark:hover:bg-red-950/40" aria-label={t(`إلغاء اعتماد مهمة ${name}`, `Revoke approval for ${name}’s task`)}>
+                  <button type="button" onClick={() => onReview({ task, memberId, entry })} className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--danger-border)] px-2 text-xs font-bold text-[var(--danger-text)] hover:bg-[var(--danger-soft)] dark:border-[var(--danger-border)] dark:text-[var(--danger-text)] dark:hover:bg-[var(--danger-soft)]" aria-label={t(`إلغاء اعتماد مهمة ${name}`, `Revoke approval for ${name}’s task`)}>
                     <RotateCcw size={13} aria-hidden="true" />{t('إلغاء', 'Revoke')}
                   </button>
                 </span>
@@ -133,7 +133,7 @@ export function TaskCard({ task, members, onReview, onDelete }: { task: Task; me
 
       <footer className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border)] pt-3 text-xs text-[var(--text-muted)]">
         <span>{t('اتسندت في', 'Assigned on')} {date(task.created_at, { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-        {summary.isComplete && <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300"><CheckCircle2 size={14} aria-hidden="true" />{t('مكتملة', 'Complete')}</span>}
+        {summary.isComplete && <span className="inline-flex items-center gap-1 font-bold text-[var(--success-text)] dark:text-[var(--success-text)]"><CheckCircle2 size={14} aria-hidden="true" />{t('مكتملة', 'Complete')}</span>}
       </footer>
     </article>
   );

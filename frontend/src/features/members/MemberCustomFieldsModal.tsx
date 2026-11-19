@@ -165,7 +165,7 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
 
           {error && (
             <p
-              className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-900 dark:border-red-800 dark:bg-red-950/50 dark:text-red-100"
+              className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]"
               role="alert"
             >
               {error}
@@ -303,7 +303,7 @@ export function MemberCustomFieldsModal({ isOpen, fields, onClose }: Props) {
                         void handleRemove(field);
                       }}
                       disabled={deleteField.isPending}
-                      className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-xs font-bold text-[var(--danger)] hover:bg-red-50 dark:hover:bg-red-950/30"
+                      className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 text-xs font-bold text-[var(--danger)] hover:bg-[var(--danger-soft)] dark:hover:bg-[var(--danger-soft)]"
                       aria-label={t(`حذف حقل ${field.label}`, `Delete field ${field.label}`)}
                     >
                       <Trash2 size={14} aria-hidden="true" />

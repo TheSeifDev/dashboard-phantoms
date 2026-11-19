@@ -188,7 +188,7 @@ export default function EvaluationsPage() {
         </div>
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]">
           <p className="text-xs font-bold text-[var(--text-muted)]">{t("اطّلع عليها الأعضاء", "Read by members")}</p>
-          <p className="mt-1 text-2xl font-black tabular-nums text-emerald-700 dark:text-emerald-400">
+          <p className="mt-1 text-2xl font-black tabular-nums text-[var(--success-text)] dark:text-[var(--success-text)]">
             {number(stats.readOrViewed)}
           </p>
         </div>
@@ -309,7 +309,7 @@ export default function EvaluationsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-3">
                   <div className="flex items-center gap-2 text-xs font-bold">
                     {ev.read_at ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
+                      <span className="inline-flex items-center gap-1 text-[var(--success-text)] dark:text-[var(--success-text)]">
                         <CheckCheck size={15} aria-hidden="true" />
                         أكد العضو قراءة التقييم ({formatDate(ev.read_at)})
                       </span>
@@ -338,7 +338,7 @@ export default function EvaluationsPage() {
                     <button
                       type="button"
                       onClick={() => setEvalToDelete(ev)}
-                      className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 text-xs font-bold text-[var(--danger)] hover:bg-red-50"
+                      className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 text-xs font-bold text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                     >
                       <Trash2 size={14} aria-hidden="true" />
                       حذف

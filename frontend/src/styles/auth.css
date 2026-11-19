@@ -1,8 +1,8 @@
 @layer components {
   .auth-shell {
-    --auth-ice: var(--chart-ice, #edf4fb);
+    --auth-ice: var(--chart-ice, var(--surface-2));
     --auth-navy: var(--text);
-    --auth-blue: var(--chart-blue, #4b77a5);
+    --auth-blue: var(--chart-blue, var(--info));
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
@@ -65,7 +65,7 @@
   .auth-theme-toggle:hover {
     border-color: var(--border-strong);
     background: var(--surface-2);
-    color: var(--primary);
+    color: var(--primary-ink);
   }
   .auth-controls :focus-visible {
     outline: 2px solid var(--focus-ring, var(--primary));
@@ -140,7 +140,7 @@
     letter-spacing: .09em;
     line-height: 1.7;
   }
-  .auth-eyebrow span { color: var(--primary); }
+  .auth-eyebrow span { color: var(--primary-ink); }
   .auth-story h1 {
     margin: 0;
     color: var(--auth-navy);
@@ -153,7 +153,7 @@
   .auth-story h1 span {
     display: inline-block;
     margin-block-start: 6px;
-    color: var(--primary);
+    color: var(--primary-ink);
     font-family: var(--font-english);
     font-size: .86em;
     font-weight: 800;
@@ -206,13 +206,13 @@
   .phantom-network__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
   .phantom-network__line {
     fill: none;
-    stroke: var(--auth-network-line, var(--chart-blue, #7793b1));
+    stroke: var(--auth-network-line, var(--chart-blue, var(--info-text)));
     stroke-width: 1.15;
     stroke-linecap: round;
     opacity: .36;
     vector-effect: non-scaling-stroke;
   }
-  .phantom-network__node { fill: var(--auth-node, var(--chart-blue, #819db9)); opacity: .75; }
+  .phantom-network__node { fill: var(--auth-node, var(--chart-blue, var(--info))); opacity: .75; }
   .phantom-network__node--accent { fill: var(--primary); opacity: .84; }
   .phantom-network__center {
     position: absolute;
@@ -242,7 +242,7 @@
     color: var(--auth-navy);
     box-shadow: 0 8px 20px color-mix(in srgb, var(--auth-navy) 7%, transparent);
   }
-  .phantom-network__glyph svg { color: var(--primary); }
+  .phantom-network__glyph svg { color: var(--primary-ink); }
   .phantom-network__glyph span { font-family: var(--font-english); font-size: .57rem; font-weight: 800; letter-spacing: .07em; }
   .phantom-network__glyph--team { inset-block-start: 10%; inset-inline-start: 13%; }
   .phantom-network__glyph--tasks { inset-block-end: 12%; inset-inline-end: 10%; }
@@ -293,7 +293,7 @@
     border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
     border-radius: var(--radius-full);
     background: var(--primary-soft);
-    color: var(--primary);
+    color: var(--primary-ink);
     font-family: var(--font-arabic);
     font-size: .72rem;
     font-weight: 800;
@@ -405,7 +405,7 @@
     justify-content: center;
     gap: 9px;
     padding: 10px 16px;
-    border: 1px solid color-mix(in srgb, var(--primary) 88%, #781915);
+    border: 1px solid color-mix(in srgb, var(--primary) 88%, var(--danger));
     border-radius: var(--radius);
     background: var(--primary);
     color: var(--on-primary);
@@ -504,7 +504,7 @@
     font-weight: 700;
     letter-spacing: .09em;
   }
-  .auth-page-footer span { color: var(--primary); }
+  .auth-page-footer span { color: var(--primary-ink); }
   .auth-page-footer strong { margin-inline-start: 8px; color: var(--text-2); }
 
   .phantom-loader {
@@ -539,11 +539,11 @@
 
   [data-theme="dark"] .auth-story {
     --auth-navy: var(--text);
-    --auth-blue: var(--chart-blue, #9bb9d8);
+    --auth-blue: var(--chart-blue, var(--info));
     --auth-story-surface: var(--surface);
-    --auth-network-line: var(--chart-blue, #6984a1);
-    --auth-node: var(--chart-blue, #8eaac6);
-    border-color: color-mix(in srgb, var(--chart-blue, #9bb9d8) 15%, transparent);
+    --auth-network-line: var(--chart-blue, var(--info-text));
+    --auth-node: var(--chart-blue, var(--info));
+    border-color: color-mix(in srgb, var(--chart-blue, var(--info)) 15%, transparent);
   }
   [data-theme="dark"] .auth-story h1 { color: var(--auth-navy); }
   [data-theme="dark"] .auth-benefit-pill,

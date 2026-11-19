@@ -37,17 +37,17 @@ export function WhatsAppConfirmModal({
         {/* Summary Info Cards */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
-            <Users className="text-[var(--primary)]" size={20} aria-hidden="true" />
+            <Users className="text-[var(--primary-ink)]" size={20} aria-hidden="true" />
             <div>
               <p className="text-xs text-[var(--text-muted)]">{t("إجمالي المستلمين:", "Total recipients:")}</p>
               <p className="text-sm font-extrabold text-[var(--text)]">{number(recipientCount)} {t('عضو متأكد منهم', 'consenting members')}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/20">
-            <CheckCircle2 className="text-emerald-600 dark:text-emerald-400" size={20} aria-hidden="true" />
+          <div className="flex items-center gap-3 rounded-xl border border-[var(--success-border)] bg-[var(--success-soft)] p-3 dark:border-[var(--success-border)] dark:bg-[var(--success-soft)]">
+            <CheckCircle2 className="text-[var(--success-text)] dark:text-[var(--success-text)]" size={20} aria-hidden="true" />
             <div>
-              <p className="text-xs text-emerald-800 dark:text-emerald-300">{t("تأكيد الموافقة الصريحة:", "Consent confirmation:")}</p>
-              <p className="text-sm font-extrabold text-emerald-900 dark:text-emerald-200">{t("متأكد ومعتمد إداريًا", "Confirmed and approved")}</p>
+              <p className="text-xs text-[var(--success-text)] dark:text-[var(--success-text)]">{t("تأكيد الموافقة الصريحة:", "Consent confirmation:")}</p>
+              <p className="text-sm font-extrabold text-[var(--success-text)] dark:text-[var(--success-text)]">{t("متأكد ومعتمد إداريًا", "Confirmed and approved")}</p>
             </div>
           </div>
         </div>

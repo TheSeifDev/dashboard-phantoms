@@ -1,14 +1,23 @@
 # TODO
 
 ## إعادة تصميم PHANTOMS — الخطة المعتمدة 2026-11-19
-- [x] قشرة Dashboard تحليلية مطابقة لتوزيع المرجع: شريط جانبي/علوي، بطاقات أرقام الفريق الحقيقية، heatmap، اتجاه الإنجاز وتوزيع الحالات والنشاط؛ أسطح باردة ثلجية/كحلية مع أحمر PHANTOMS، light/dark متناسقان، وتوحيد الحقول والبطاقات والجداول عبر صفحات الإدارة دون حذف الوظائف.
+- [x] قشرة Dashboard تحليلية مطابقة لتوزيع المرجع: شريط جانبي/علوي، بطاقات أرقام الفريق الحقيقية، heatmap، اتجاه الإنجاز وتوزيع الحالات والنشاط؛ أسطح باردة ثلجية/كحلية مع Crimson وEmerald، light/dark متناسقان، وتوحيد الحقول والبطاقات والجداول عبر صفحات الإدارة دون حذف الوظائف.
 - [x] اختيار عربي/إنجليزي محفوظ (العربية افتراضيًا)، مع `lang`/`dir` فعليين وانعكاس الشريط الجانبي وRTL/LTR، وترجمة تسميات التنقل والدخول وواجهة الإدارة الثابتة وتنسيق التواريخ/الأرقام؛ بيانات الأعضاء والمهام المكتوبة تبقى كما أُدخلت.
 - [x] دخول split-screen وشبكة PHANTOMS SVG أصلية، وloading إبداعي بـGSAP مع نص فوري مقروء؛ دخول البطاقات والأرقام والـheatmap وتحريك محسوب، تنظيف timelines عند unmount واحترام `prefers-reduced-motion`، دون تأخير نموذج/قرار صلاحيات أو تحريك حقول أثناء استخدامها.
 - [x] Heatmap سنوي واختيار الفريق/عضو وcurrent/best streak؛ اليوم النشط = اعتماد إداري واحد على الأقل بتوقيت Africa/Cairo. دفتر أحداث اعتماد/إلغاء append-only ذري داخل RPCs، وقراءة ملخص محمية؛ تعبئة الاعتمادات الحالية فقط وإظهار حدود التاريخ القديم وعدم اختلاق اعتمادات أُلغيت قبل إطلاق السجل.
 - [x] موبايل 320/360/390px بلا قص حقول أو أزرار، قائمة drawer، بطاقات تتكدس، وتمرير heatmap داخل حاويتها فقط؛ حماية تدفقات الدخول/الأعضاء/Owner review وحالات loading/error/empty دون أرقام وهمية.
-- [ ] بعد مراجعة النتائج وموافقة الإصدار المنفصلة، طبّق migration 37، ثم commit/push الواجهة المختبرة إلى `main` مع قبول احتمال auto-deploy. migration مطبقة الآن كـremote version `20261119193932`؛ يبقى الدفع والتحقق من SHA/CI.
+- [x] إصدار redesign السابق: migration37 مطبقة كـremote version `20261119193932`، والواجهة مدفوعة إلى `main` على `9e02d2e6` مع CI ناجح. هذا status لا يشمل تلوين/Sidebar follow-up الحالي.
 
-**QA المحلي النهائي:** 14 pgTAP suites = 600/600 مع canonical-snapshot regression؛ Auth E2E الحقيقي ناجح، وDashboard Chromium 1/1 لكل من missing/invalid VAPID في run نهائية معزولة. اختُبر تحديث contributions من cache جديدة فور اعتماد UI، وخلايا 10px حقيقية، واللغتان/الثيمان والموبايل. اختبارات اللغة/التباين والتغطية التاريخية وcache وbrand/security/push والمكوّنات ناجحة، وكذلك TypeScript/lint/build/secret audit. strict CI validator يقبل JSON الثمانية فقط بما فيها cleanup v2 بصفر contribution fixtures. resources المحلية توقفت؛ migration37 مطبقة production كـ`20261119193932`، والـmanifest يثبت 13 forward applied وصفر pending. HEAD لم يتغير بعد؛ push وCI هما بوابة الإصدار المفتوحة.
+**QA للإصدار السابق:** 14 pgTAP suites = 600/600؛ Auth E2E الحقيقي وDashboard Chromium في وضعي VAPID ناجحة؛ TypeScript/lint/build/secret audit والـstrict evidence cleanup ناجحة. resources المحلية توقفت؛ migration37 مطبقة production كـ`20261119193932`، والـmanifest يثبت 13 forward applied وصفر pending. HEAD الحالي `9e02d2e6` وCI السابق ناجح.
+
+## تحديث palette وSidebar — الطلب الأحدث
+- [x] كل الأحمر على مستوى الموقع يستخدم عائلة Crimson؛ الجذر `#DC143C` والـtints الضرورية للتباين، دون ترك red/rose palette قديمة في الأزرار أو الحالات أو الرسوم. الشعار الرسمي متعدد الطبقات محفوظ كما هو.
+- [x] كل الأخضر يستخدم عائلة Emerald؛ الجذر `#10B981` للنجاح/النشاط وheatmap مع تدرجات متباينة light/dark.
+- [x] درجات الأزرق الباردة مشتقة من Prussian Blue؛ الخلفية الأساسية الداكنة exact `#00072D`، ولا يبقى cobalt/sky/blue palette مستقلة. يبقى light theme الفاتح المتاح متناسقًا.
+- [x] Sidebar مثل المرجع: الخلفية Prussian Blue، شعار PHANTOMS أعلى، groups وعناوينها الصغيرة، icons 20px مع labels 14px RTL/LTR بلا اقتطاع، active row بتعبئة icy-blue وindicator أزرق فاتح على الحافة المنطقية (لا Crimson)، والخروج Crimson مثبت أسفل؛ نفس المظهر في mobile drawer مع عدم تغيير قائمة المسارات أو الصلاحيات. زر دائري يطوي/يوسع sidebar إلى rail أيقونات بتفضيل محفوظ، مع aria labels وروابط قابلة للوصول عند الطيّ وعدم لمس مخزن Auth. تظهر tooltips على hover/focus، ومسار sign-out الفاشل يعطي رسالة عامة ولا يعلن خروجًا زائفًا.
+- [x] المستخدم وافق صراحةً على commit/push لهذا التعديل إلى `main` وقبول احتمال النشر التلقائي؛ إنه تعديل واجهة فقط، ولا يحتاج migration أو نشر Edge.
+
+**QA لهذا التعديل:** Sidebar mounted 8/8، palette 7/7، locale 4/4، member-projection/brand 22/22، وmounted join/reset/Admin callbacks 10/10. TypeScript/lint/build/secret audit ناجحة؛ Chromium على المكونات الفعلية أثبت 244→76px و10 حالات عربي/إنجليزي وثيم فاتح/داكن وموبايل، مع active row icy-blue، عدم اقتطاع labels، focus tooltips، وعدم وجود overflow؛ أُعيد فحص mobile drawer وfocus/Escape/scroll. لا API أو DB أو Auth fixtures.
 
 ## إصلاح تجربة الدخول وتأكيد طلب الانضمام
 - [x] صفحات دخول الإدارة والعضو تتكيف مع شاشات 320 و360 و390px بلا قص أو تمرير أفقي، مع بقاء حقول الدخول والأزرار قابلة للوصول.

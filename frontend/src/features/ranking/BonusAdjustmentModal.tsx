@@ -97,7 +97,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
     <Modal isOpen={isOpen} onClose={onClose} title={t("تقييم العضو والبونص", "Member evaluation and bonus")} maxWidth="md">
       <form onSubmit={handleSubmit} className="grid gap-4 text-start" dir={dir}>
         {error && (
-          <p className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100" role="alert">
+          <p className="flex items-start gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]" role="alert">
             <AlertCircle size={18} className="shrink-0 mt-0.5" />
             <span>{error}</span>
           </p>
@@ -135,7 +135,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
             <button type="button" onClick={() => { setMode('rating'); setReason(''); setError(''); }} aria-pressed={mode === 'rating'} className={`min-h-11 rounded-lg px-3 text-sm font-black ${mode === 'rating' ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)]'}`}>
               {t('تقييم رقمي', 'Numeric rating')}
             </button>
-            <button type="button" onClick={() => { setMode('infinite'); setReason(''); setError(''); }} aria-pressed={mode === 'infinite'} className={`min-h-11 rounded-lg px-3 text-sm font-black ${mode === 'infinite' ? 'bg-[var(--surface)] text-[var(--primary)] shadow-sm' : 'text-[var(--text-muted)]'}`}>
+            <button type="button" onClick={() => { setMode('infinite'); setReason(''); setError(''); }} aria-pressed={mode === 'infinite'} className={`min-h-11 rounded-lg px-3 text-sm font-black ${mode === 'infinite' ? 'bg-[var(--surface)] text-[var(--primary-ink)] shadow-sm' : 'text-[var(--text-muted)]'}`}>
               {t('بونص ∞', 'Infinite bonus ∞')}
             </button>
           </div>
@@ -168,7 +168,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
             </div>
             {/* Positive Options */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 ms-1">
+              <span className="text-xs font-bold text-[var(--success-text)] dark:text-[var(--success-text)] flex items-center gap-1 ms-1">
                 <Plus size={13} /> {t('إضافة:', 'Add:')}
               </span>
               {positiveOptions.map((val) => (
@@ -178,8 +178,8 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
                   onClick={() => setPoints(val)}
                   className={`min-h-11 min-w-11 px-3 rounded-xl text-sm font-black transition-colors ${
                     points === val
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-emerald-400'
+                      ? 'bg-[var(--success)] text-[var(--on-success)] shadow-sm'
+                      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--success-border)]'
                   }`}
                 >
                   +{number(val)}
@@ -189,7 +189,7 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
 
             {/* Negative Options */}
             <div className="flex flex-wrap items-center gap-1.5 mt-1">
-              <span className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1 ms-1">
+              <span className="text-xs font-bold text-[var(--danger-text)] dark:text-[var(--danger-text)] flex items-center gap-1 ms-1">
                 <Minus size={13} /> {t('خصم:', 'Subtract:')}
               </span>
               {negativeOptions.map((val) => (
@@ -199,8 +199,8 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
                   onClick={() => setPoints(val)}
                   className={`min-h-11 min-w-11 px-3 rounded-xl text-sm font-black transition-colors ${
                     points === val
-                      ? 'bg-red-600 text-white shadow-sm'
-                      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-red-400'
+                      ? 'bg-[var(--danger)] text-[var(--on-danger)] shadow-sm'
+                      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--danger-border)]'
                   }`}
                 >
                   {number(val)}
@@ -210,12 +210,12 @@ export function BonusAdjustmentModal({ isOpen, member, members, canRecordRatings
           </div>
 
           <div className="mt-2 text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
-            <Award size={14} className="text-[var(--primary)]" />
+            <Award size={14} className="text-[var(--primary-ink)]" />
             <span>
               {points === 0 ? (
                 <>{t('توثيق ملاحظة من غير نقاط (الترتيب مش هيتأثر)', 'Log a note without points (ranking will not be affected)')}</>
               ) : (
-                <>{t('القيمة اللي اخترتها:', 'Selected value:')} <b className={points > 0 ? 'text-emerald-600' : 'text-red-600'}>{points > 0 ? `+${number(points)}` : number(points)} {t('نقطة', 'points')}</b> {t('(هيتسجل الوسم', '(the recorded tag will be')} {points > 0 ? `[B:+${points}]` : `[B:${points}]`})</>
+                <>{t('القيمة اللي اخترتها:', 'Selected value:')} <b className={points > 0 ? 'text-[var(--success-text)]' : 'text-[var(--danger-text)]'}>{points > 0 ? `+${number(points)}` : number(points)} {t('نقطة', 'points')}</b> {t('(هيتسجل الوسم', '(the recorded tag will be')} {points > 0 ? `[B:+${points}]` : `[B:${points}]`})</>
               )}
             </span>
           </div>

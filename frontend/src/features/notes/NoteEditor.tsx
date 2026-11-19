@@ -65,7 +65,7 @@ export function NoteEditor({ isOpen, members, onClose }: { isOpen: boolean; memb
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t("اكتب ملاحظة وتوجيه جديد", "Write a new note or instruction")} maxWidth="md">
       <form onSubmit={submit} className="grid gap-4">
-        {formError && <p className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100" role="alert"><AlertCircle size={18} />{formError}</p>}
+        {formError && <p className="flex items-start gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]" role="alert"><AlertCircle size={18} />{formError}</p>}
         <label className="grid gap-2 text-sm font-bold">{t("اكتب الملاحظة والتوجيه *", "Note or instruction *")}
           <textarea rows={4} required value={text} onChange={(event) => setText(event.target.value)} placeholder={t("اكتب التوجيه أو الملاحظة هنا بالتفصيل...", "Write the note or instruction in detail...")} className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 leading-6" />
         </label>
@@ -85,10 +85,10 @@ export function NoteEditor({ isOpen, members, onClose }: { isOpen: boolean; memb
           <div className="flex flex-wrap items-center gap-1.5">
             <button type="button" onClick={() => pickPoints(0)} className={`min-h-11 px-3 rounded-xl text-sm font-black transition-colors ${points === 0 ? 'bg-[var(--primary)] text-white' : 'border border-[var(--border)] bg-[var(--bg)] hover:border-[var(--primary)]'}`}>{t("0 — بدون", "0 — None")}</button>
             {[1, 2, 3, 4, 5].map((val) => (
-              <button type="button" key={`pos-${val}`} onClick={() => pickPoints(val)} className={`min-h-11 min-w-11 px-3 rounded-xl text-sm font-black transition-colors ${points === val ? 'bg-emerald-600 text-white' : 'border border-[var(--border)] bg-[var(--bg)] hover:border-emerald-400'}`}>+{val}</button>
+              <button type="button" key={`pos-${val}`} onClick={() => pickPoints(val)} className={`min-h-11 min-w-11 px-3 rounded-xl text-sm font-black transition-colors ${points === val ? 'bg-[var(--success)] text-[var(--on-success)]' : 'border border-[var(--border)] bg-[var(--bg)] hover:border-[var(--success-border)]'}`}>+{val}</button>
             ))}
             {[-1, -2, -3, -4, -5].map((val) => (
-              <button type="button" key={`neg-${val}`} onClick={() => pickPoints(val)} className={`min-h-11 min-w-11 px-3 rounded-xl text-sm font-black transition-colors ${points === val ? 'bg-red-600 text-white' : 'border border-[var(--border)] bg-[var(--bg)] hover:border-red-400'}`}>{val}</button>
+              <button type="button" key={`neg-${val}`} onClick={() => pickPoints(val)} className={`min-h-11 min-w-11 px-3 rounded-xl text-sm font-black transition-colors ${points === val ? 'bg-[var(--danger)] text-[var(--on-danger)]' : 'border border-[var(--border)] bg-[var(--bg)] hover:border-[var(--danger-border)]'}`}>{val}</button>
             ))}
           </div>
           <p className="text-xs font-semibold text-[var(--text-muted)]">{points === 0 ? t('ملاحظة للتوثيق من غير نقط.', 'A note for the record, with no points.') : t(`الوسم ${points > 0 ? `[B:+${points}]` : `[B:${points}]`} هيتسجّل ويتحسب في ترتيب العضو.`, `The ${points > 0 ? `[B:+${points}]` : `[B:${points}]`} tag will be saved and counted in the member ranking.`)}</p>

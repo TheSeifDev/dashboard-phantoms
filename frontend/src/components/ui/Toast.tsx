@@ -9,7 +9,7 @@ const icons: Record<ToastKind, typeof CheckCircle2> = {
 };
 
 const styles: Record<ToastKind, string> = {
-  success: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success)]',
+  success: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success-text)]',
   error: 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)] dark:text-[var(--danger)]',
   info: 'border-[var(--info-border)] bg-[var(--info-soft)] text-[var(--info-text)] dark:text-[var(--info)]',
   warning: 'border-[var(--warning-border)] bg-[var(--warning-soft)] text-[var(--warning-text)] dark:text-[var(--warning)]',

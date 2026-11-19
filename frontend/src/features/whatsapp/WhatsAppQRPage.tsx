@@ -72,7 +72,7 @@ export default function WhatsAppQRPage() {
   return (
     <section className="grid gap-4" dir={dir}>
       <header className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--success-soft)] text-[var(--success-text)] dark:bg-[var(--success-soft)] dark:text-[var(--success-text)]">
           <MessageCircle />
         </span>
         <div>

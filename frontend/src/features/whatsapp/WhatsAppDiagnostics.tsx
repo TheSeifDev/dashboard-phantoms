@@ -9,9 +9,9 @@ import { getBridgeDiagnostics, getBridgeUrl, BRIDGE_MISCONFIGURED_MESSAGE, type 
 
 import { useLocale } from '../../i18n/useLocale';
 const STATUS_META: Record<DiagCheck['status'], { icon: typeof CheckCircle2; label: string; chip: string }> = {
-  ok: { icon: CheckCircle2, label: 'سليم', chip: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' },
+  ok: { icon: CheckCircle2, label: 'سليم', chip: 'bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success-text)]' },
   warn: { icon: AlertTriangle, label: 'تحذير', chip: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
-  fail: { icon: XCircle, label: 'عطل', chip: 'bg-red-500/10 text-red-700 dark:text-red-300' },
+  fail: { icon: XCircle, label: 'عطل', chip: 'bg-[var(--danger-soft)] text-[var(--danger-text)] dark:text-[var(--danger-text)]' },
 };
 
 const CATEGORY_LABELS: Record<DiagCheck['category'], string> = {
@@ -115,7 +115,7 @@ export default function WhatsAppDiagnostics() {
         </Card>
       ) : diag.data ? (
         <>
-          <Card className={diag.data.summary.fails > 0 ? 'border-red-300' : 'border-emerald-300'}>
+          <Card className={diag.data.summary.fails > 0 ? 'border-[var(--danger-border)]' : 'border-[var(--success-border)]'}>
             <p className="text-sm font-black leading-7">{verdict(diag.data, t)}</p>
           </Card>
           {(Object.keys(CATEGORY_LABELS) as Array<DiagCheck['category']>).map((cat) => {

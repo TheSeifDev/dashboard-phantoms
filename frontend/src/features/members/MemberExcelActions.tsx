@@ -118,7 +118,7 @@ export function MemberExcelActions({
               XLSX_IMPORT_DISABLED ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
             }`}
           >
-            <FileSpreadsheet size={34} className="mx-auto text-emerald-700 dark:text-emerald-300" />
+            <FileSpreadsheet size={34} className="mx-auto text-[var(--success-text)] dark:text-[var(--success-text)]" />
             <span className="text-sm font-bold">
               {XLSX_IMPORT_DISABLED ? t('الاستيراد معطّل مؤقتًا لدواعي الأمان', 'Import is temporarily disabled for security reasons') : t('اختار ملف Excel أو CSV', 'Choose an Excel or CSV file')}
             </span>

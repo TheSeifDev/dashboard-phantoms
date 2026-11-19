@@ -74,7 +74,7 @@ export function WhatsAppDispatch({
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-6">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 font-extrabold text-[var(--text)]">
-              <Eye size={16} className="text-[var(--primary)]" aria-hidden="true" />
+              <Eye size={16} className="text-[var(--primary-ink)]" aria-hidden="true" />
               <span>{t("معاينة رسالة المستلم:", "Recipient message preview:")}</span>
             </span>
 
@@ -142,7 +142,7 @@ export function WhatsAppDispatch({
       {result && (
         <div className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-6">
           <p className="mb-2 flex items-center gap-2 font-bold text-[var(--text)]">
-            <CheckCircle2 size={18} className="text-emerald-600" aria-hidden="true" />
+            <CheckCircle2 size={18} className="text-[var(--success-text)]" aria-hidden="true" />
             <span>{t("نتائج البعت التجريبي:", "Test send results:")}</span>
           </p>
           <ul className="list-inside list-disc">

@@ -108,7 +108,7 @@ export function MemberProfileModal({
                 <span
                   className={`rounded-md px-2 py-0.5 text-xs font-bold ${
                     member.work_status === 'active'
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      ? 'bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success-text)]'
                       : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
                   }`}
                 >
@@ -130,9 +130,9 @@ export function MemberProfileModal({
                   member.bonus_infinite === true
                     ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--link)]'
                     : bonus > 0
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                    ? 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:border-[var(--success-border)] dark:bg-[var(--success-soft)] dark:text-[var(--success-text)]'
                     : bonus < 0
-                    ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300'
+                    ? 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]'
                     : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)]'
                 }`}
               >
@@ -147,7 +147,7 @@ export function MemberProfileModal({
                 <button
                   type="button"
                   onClick={() => onAdjustBonus(member)}
-                  className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-bold text-[var(--primary)] hover:bg-[var(--primary-soft)]"
+                  className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-bold text-[var(--primary-ink)] hover:bg-[var(--primary-soft)]"
                 >
                   تعديل
                 </button>
@@ -167,7 +167,7 @@ export function MemberProfileModal({
                 className={`grid size-9 shrink-0 place-items-center rounded-lg ${
                   isAlex
                     ? member.can_go_alexandria
-                      ? 'bg-emerald-500/10 text-emerald-600'
+                      ? 'bg-[var(--success-soft)] text-[var(--success-text)]'
                       : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
                     : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
                 }`}
@@ -195,7 +195,7 @@ export function MemberProfileModal({
         {/* Team Notes */}
         {member.team_notes && (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--primary-soft)] p-3.5">
-            <span className="block text-xs font-bold text-[var(--primary)]">{t("ملاحظات الإدارة على العضو", "Admin notes about member")}</span>
+            <span className="block text-xs font-bold text-[var(--primary-ink)]">{t("ملاحظات الإدارة على العضو", "Admin notes about member")}</span>
             <p className="mt-1 text-sm leading-relaxed text-[var(--text)]">{member.team_notes}</p>
           </div>
         )}
@@ -252,7 +252,7 @@ export function MemberProfileModal({
               }}
               icon={<Trash2 size={16} />}
               fullOnMobile
-              className="min-h-11 border-red-200 text-[var(--danger)] hover:border-red-300 hover:bg-red-50 dark:border-red-900/30 dark:hover:bg-red-950/30"
+              className="min-h-11 border-[var(--danger-border)] text-[var(--danger)] hover:border-[var(--danger-border)] hover:bg-[var(--danger-soft)] dark:border-[var(--danger-border)] dark:hover:bg-[var(--danger-soft)]"
             >
               مسح العضو
             </Button>

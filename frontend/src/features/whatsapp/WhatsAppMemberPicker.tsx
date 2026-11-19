@@ -27,7 +27,7 @@ export function WhatsAppMemberPicker({
           <div className="flex gap-2">
             <button
               type="button"
-              className="text-xs font-bold text-[var(--primary)] hover:underline"
+              className="text-xs font-bold text-[var(--primary-ink)] hover:underline"
               onClick={onSelectAll}
             >
               {t('تحديد الكل', 'Select all')}

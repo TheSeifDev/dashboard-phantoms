@@ -42,7 +42,7 @@ export function WhatsAppQRViewer({
     <Card className="grid gap-5 border-s-4 border-s-emerald-600" dir={dir}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
         <div className="flex items-center gap-3">
-          <div className="grid size-10 place-items-center rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+          <div className="grid size-10 place-items-center rounded-xl bg-[var(--success-soft)] text-[var(--success-text)] dark:bg-[var(--success-soft)] dark:text-[var(--success-text)]">
             <QrCode size={20} aria-hidden="true" />
           </div>
           <div>
@@ -84,11 +84,11 @@ export function WhatsAppQRViewer({
       )}
 
       {connectionState === 'connected' && (
-        <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950 dark:border-emerald-800/60 dark:bg-emerald-950/20 dark:text-emerald-200">
-          <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" size={20} aria-hidden="true" />
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--success-border)] bg-[var(--success-soft)] p-4 text-[var(--success-text)] dark:border-[var(--success-border)] dark:bg-[var(--success-soft)] dark:text-[var(--success-text)]">
+          <CheckCircle2 className="mt-0.5 shrink-0 text-[var(--success-text)] dark:text-[var(--success-text)]" size={20} aria-hidden="true" />
           <div className="text-sm leading-6">
             <p className="font-extrabold">{t("جلسة واتساب متصلة وشغالة", "WhatsApp session connected and active")} ({status?.phone ?? t('رقم الإدارة', 'Admin number')})</p>
-            <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-300">
+            <p className="mt-1 text-xs text-[var(--success-text)] dark:text-[var(--success-text)]">
               {t("تقدر دلوقتي تختار المهمة وتحدد الأعضاء اللي أكدوا استقبالهم عشان تبعت لهم إشعارات المهام.", "You can now choose a task and select members who consented to receive task notifications.")}
             </p>
           </div>

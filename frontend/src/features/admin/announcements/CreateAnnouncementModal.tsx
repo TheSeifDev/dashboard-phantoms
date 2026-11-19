@@ -202,7 +202,7 @@ export default function CreateAnnouncementModal({
     <Modal isOpen onClose={onClose} title={t("اعمل إعلان جديد", "Create an announcement")} maxWidth="lg">
       <form onSubmit={handleSubmit} className="grid gap-4" dir={dir} noValidate>
         {error && (
-          <p className="flex items-center gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-900 dark:border-red-800 dark:bg-red-950/50 dark:text-red-100" role="alert">
+          <p className="flex items-center gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]" role="alert">
             <AlertCircle size={20} aria-hidden="true" className="shrink-0" />
             <span>{error}</span>
           </p>

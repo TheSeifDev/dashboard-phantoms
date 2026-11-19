@@ -48,7 +48,7 @@ export default function AdminForgotPasswordPage() {
       footer={<Link to="/admin/login" className="auth-inline-link"><span>{t('العودة لدخول الإدارة', 'Back to administrator sign-in')}</span><ArrowLeft size={16} /></Link>}
     >
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
-      {info && <div className="flex items-start gap-2.5 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-3.5 text-xs font-semibold leading-5 text-[var(--text)]" role="status"><Mail size={17} className="mt-0.5 shrink-0 text-[var(--primary)]" aria-hidden="true" /><span>{info}</span></div>}
+      {info && <div className="flex items-start gap-2.5 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-3.5 text-xs font-semibold leading-5 text-[var(--text)]" role="status"><Mail size={17} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" aria-hidden="true" /><span>{info}</span></div>}
       <form onSubmit={(event) => void requestRecovery(event)} method="post" className="auth-form" noValidate>
         <label className="auth-field" htmlFor="admin-recovery-email">{t('البريد الإلكتروني', 'Email address')}
           <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="admin-recovery-email" type="email" dir="ltr" autoComplete="email" required placeholder="admin@phantoms.com" value={email} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }} /></span>

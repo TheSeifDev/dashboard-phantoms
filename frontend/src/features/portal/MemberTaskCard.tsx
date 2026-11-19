@@ -27,7 +27,7 @@ export function MemberTaskCard({ task, memberId, onStart, onSubmit }: { task: Ta
         {(deadline || bonus > 0) && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             {deadline && (
-              <p className={`flex items-center gap-2 text-sm font-bold ${late || urgent ? 'text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-300'}`}>
+              <p className={`flex items-center gap-2 text-sm font-bold ${late || urgent ? 'text-[var(--danger-text)] dark:text-[var(--danger-text)]' : 'text-amber-800 dark:text-amber-300'}`}>
                 {late ? <AlertCircle size={16} aria-hidden="true" /> : <Clock3 size={16} aria-hidden="true" />}
                 <span>
                   {late ? 'الموعد خلص: ' : 'الموعد النهائي: '}{formatDeadline(deadline, { weekday: true })}
@@ -40,7 +40,7 @@ export function MemberTaskCard({ task, memberId, onStart, onSubmit }: { task: Ta
         )}
         {tracking.note && (
           needsRevision || approvalWasReversed ? (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm leading-6 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100">
+            <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm leading-6 text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]">
               <strong className="mb-1 flex items-center gap-1.5"><MessageSquareWarning size={16} aria-hidden="true" />{approvalWasReversed ? 'سبب إلغاء الاعتماد' : 'ملاحظات الإدارة للتعديل'}</strong>
               <span className="whitespace-pre-line">{tracking.note}</span>
             </div>
@@ -50,7 +50,7 @@ export function MemberTaskCard({ task, memberId, onStart, onSubmit }: { task: Ta
         )}
       </div>
       <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
-        {isApproved ? <span className="flex min-h-11 items-center gap-2 text-sm font-bold text-emerald-800 dark:text-emerald-300"><CheckCircle2 size={18} />المهمة اتعتمدت</span>
+        {isApproved ? <span className="flex min-h-11 items-center gap-2 text-sm font-bold text-[var(--success-text)] dark:text-[var(--success-text)]"><CheckCircle2 size={18} />المهمة اتعتمدت</span>
           : isUnderReview ? <span className="flex min-h-11 items-center gap-2 text-sm font-bold text-amber-800 dark:text-amber-300"><Clock3 size={18} />مستنية مراجعة الإدارة</span>
             : <>
               {tracking.status === 'pending' && <Button variant="secondary" onClick={() => onStart(task)} fullOnMobile>ابدأ الشغل</Button>}

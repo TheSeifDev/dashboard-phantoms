@@ -158,7 +158,7 @@ export function MemberEvaluations({ memberId }: Props) {
                         اطلعت على التقييم
                       </Button>
                     ) : (
-                      <span className="flex min-h-9 items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                      <span className="flex min-h-9 items-center gap-1.5 text-xs font-bold text-[var(--success-text)] dark:text-[var(--success-text)]">
                         <CheckCheck size={16} aria-hidden="true" />
                         تم الاطلاع
                       </span>

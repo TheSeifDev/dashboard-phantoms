@@ -372,19 +372,19 @@ export function WhatsAppNotificationCenter({
           dir="rtl"
           className="fixed inset-x-0 top-0 z-[130] mx-auto w-full max-w-xl px-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4"
         >
-          <div className="overflow-hidden rounded-2xl border border-emerald-700/30 border-s-4 border-s-emerald-600 bg-[var(--surface)] p-3.5 shadow-[var(--shadow-lg)]">
+          <div className="overflow-hidden rounded-2xl border border-[var(--success-border)] border-s-4 border-s-emerald-600 bg-[var(--surface)] p-3.5 shadow-[var(--shadow-lg)]">
             <div className="flex items-start gap-3">
-              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-600 text-white">
+              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--success)] text-[var(--on-success)]">
                 <BellRing size={20} aria-hidden="true" />
               </span>
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
+                    <span className="text-xs font-black text-[var(--success-text)] dark:text-[var(--success-text)]">
                       {activeBanner.senderName || 'PHANTOMS — الإدارة'}
                     </span>
-                    <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                    <span className="rounded-md bg-[var(--success-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--success-text)] dark:text-[var(--success-text)]">
                       {categoryLabel(activeBanner.category)}
                     </span>
                   </div>
@@ -402,7 +402,7 @@ export function WhatsAppNotificationCenter({
                   <button
                     type="button"
                     onClick={() => handleOpenItem(activeBanner)}
-                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-black text-white transition-colors hover:bg-emerald-700"
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[var(--success)] px-3 text-xs font-black text-[var(--on-success)] transition-colors hover:bg-[var(--success)]"
                   >
                     <CheckCheck size={14} aria-hidden="true" />
                     <span>عرض التفاصيل الآن</span>
@@ -446,7 +446,7 @@ export function WhatsAppNotificationCenter({
             {/* رأس نافذة الإشعارات */}
             <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3.5">
               <div className="flex items-center gap-2.5">
-                <span className="grid size-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                <span className="grid size-10 place-items-center rounded-xl bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success-text)]">
                   <BellRing size={20} aria-hidden="true" />
                 </span>
                 <div>
@@ -473,7 +473,7 @@ export function WhatsAppNotificationCenter({
                   onClick={() => setSoundEnabled(!soundEnabled)}
                   className={`inline-flex min-h-9 items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition-colors ${
                     soundEnabled
-                      ? 'border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                      ? 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success-text)]'
                       : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)]'
                   }`}
                 >
@@ -504,7 +504,7 @@ export function WhatsAppNotificationCenter({
                   <button
                     type="button"
                     onClick={() => clearAll(memberId)}
-                    className="text-xs font-bold text-[var(--text-muted)] hover:text-red-600"
+                    className="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--danger-text)]"
                   >
                     مسح السجل
                   </button>
@@ -526,7 +526,7 @@ export function WhatsAppNotificationCenter({
                   <button
                     type="button"
                     onClick={onTestNotification}
-                    className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-black text-white hover:bg-emerald-700"
+                    className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-xl bg-[var(--success)] px-4 text-xs font-black text-[var(--on-success)] hover:bg-[var(--success)]"
                   >
                     <BellRing size={15} />
                     <span>جرّب إشعار وصوت دلوقتي</span>
@@ -539,13 +539,13 @@ export function WhatsAppNotificationCenter({
                     type="button"
                     onClick={() => handleOpenItem(item)}
                     className={`flex w-full items-start gap-3 px-4 py-3.5 text-start transition-colors hover:bg-[var(--surface-2)] ${
-                      !item.read ? 'bg-emerald-500/5' : ''
+                      !item.read ? 'bg-[var(--success-soft)]' : ''
                     }`}
                   >
                     <span
                       className={`grid size-11 shrink-0 place-items-center rounded-full ${
                         !item.read
-                          ? 'bg-emerald-600 text-white'
+                          ? 'bg-[var(--success)] text-[var(--on-success)]'
                           : 'bg-[var(--surface-2)] text-[var(--text-2)]'
                       }`}
                     >
@@ -554,7 +554,7 @@ export function WhatsAppNotificationCenter({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
+                        <span className="text-xs font-black text-[var(--success-text)] dark:text-[var(--success-text)]">
                           {categoryLabel(item.category)}
                         </span>
                         <time className="shrink-0 text-[11px] font-semibold text-[var(--text-muted)]">
@@ -573,12 +573,12 @@ export function WhatsAppNotificationCenter({
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--text-muted)]">
                           <CheckCheck
                             size={14}
-                            className={item.read ? 'text-emerald-600' : 'text-[var(--text-muted)]'}
+                            className={item.read ? 'text-[var(--success-text)]' : 'text-[var(--text-muted)]'}
                           />
                           <span>{item.read ? 'تمت المشاهدة' : 'جديد — اضغط للفتح'}</span>
                         </span>
                         {!item.read && (
-                          <span className="size-2.5 rounded-full bg-emerald-600" aria-label="غير مقروء" />
+                          <span className="size-2.5 rounded-full bg-[var(--success)]" aria-label="غير مقروء" />
                         )}
                       </div>
                     </div>

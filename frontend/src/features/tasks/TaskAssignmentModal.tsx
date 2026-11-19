@@ -230,7 +230,7 @@ export function TaskAssignmentModal({
     >
       <form id={formId} onSubmit={(event) => void submit(event)} noValidate className="grid gap-5">
         {serverError && (
-          <div role="alert" className="flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-sm font-bold leading-6 text-red-900 dark:border-red-800 dark:bg-red-950/50 dark:text-red-100">
+          <div role="alert" className="flex items-start gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold leading-6 text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]">
             <AlertCircle size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
             <span>{serverError}</span>
           </div>

@@ -66,10 +66,10 @@ export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: Ran
 
             {/* Member Details */}
             <div className="my-4 flex flex-col items-center text-center">
-              <div className="size-14 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] grid place-items-center text-lg font-black text-[var(--primary)] mb-2.5">
+              <div className="size-14 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] grid place-items-center text-lg font-black text-[var(--primary-ink)] mb-2.5">
                 {member.full_name ? member.full_name.charAt(0) : <User size={22} />}
               </div>
-              <h4 className="font-black text-base text-[var(--text)] group-hover:text-[var(--primary)] transition-colors truncate max-w-full">
+              <h4 className="font-black text-base text-[var(--text)] group-hover:text-[var(--primary-ink)] transition-colors truncate max-w-full">
                 {member.full_name}
               </h4>
               <span className="text-xs text-[var(--text-muted)] mt-0.5 truncate max-w-full" dir="ltr">
@@ -77,7 +77,7 @@ export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: Ran
               </span>
 
               {/* Bonus score */}
-              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary)] font-black text-sm">
+              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary-ink)] font-black text-sm">
                 <span>{member.bonus_infinite === true ? '∞' : formatSigned(member.totalBonus)}</span>
                 <span className="text-xs font-semibold">{member.bonus_infinite === true ? t('بونص غير محدود', 'Unlimited bonus') : t('نقطة', 'points')}</span>
               </div>

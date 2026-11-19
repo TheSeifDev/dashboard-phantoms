@@ -77,7 +77,7 @@ export function WhatsAppQRCodeBox({
 
       {!isExpired && (
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-          <Clock size={15} className="text-[var(--primary)]" aria-hidden="true" />
+          <Clock size={15} className="text-[var(--primary-ink)]" aria-hidden="true" />
           <span>{t("الرمز صلاحيته هتخلص خلال:", "Code expires in:")} {number(secondsRemaining)} {t("ثانية", "seconds")}</span>
         </div>
       )}

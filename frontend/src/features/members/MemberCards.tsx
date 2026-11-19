@@ -106,7 +106,7 @@ export function MemberCards({
               <button
                 type="button"
                 onClick={() => onDelete(member)}
-                className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
+                className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger-text)] dark:hover:bg-[var(--danger-soft)]"
                 aria-label={`${t('امسح', 'Delete')} ${member.full_name}`}
                 title={t('مسح العضو', 'Delete member')}
               >

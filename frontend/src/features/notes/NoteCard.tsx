@@ -16,13 +16,13 @@ export function NoteCard({ note, onDelete }: { note: Note; onDelete: (id: number
             <span className="truncate">{note.target_name ? note.target_name : t('ملاحظة عامة للفريق', 'Team note')}</span>
           </span>
           {bonus !== null && bonus !== 0 && (
-            <span className={`inline-flex min-h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-black tabular-nums ${bonus > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200' : 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200'}`}>
+            <span className={`inline-flex min-h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-black tabular-nums ${bonus > 0 ? 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:border-[var(--success-border)] dark:bg-[var(--success-soft)] dark:text-[var(--success-text)]' : 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]'}`}>
               {bonus > 0 ? <Plus size={13} aria-hidden="true" /> : <Minus size={13} aria-hidden="true" />}
               {number(Math.abs(bonus))} {bonus > 0 ? t('بونص', 'bonus') : t('خصم', 'deduction')}
             </span>
           )}
         </div>
-        <button type="button" onClick={() => onDelete(note.id)} className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40" aria-label={t("امسح الملاحظة", "Delete note")} title={t("امسح الملاحظة", "Delete note")}>
+        <button type="button" onClick={() => onDelete(note.id)} className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger-text)] dark:hover:bg-[var(--danger-soft)]" aria-label={t("امسح الملاحظة", "Delete note")} title={t("امسح الملاحظة", "Delete note")}>
           <Trash2 size={17} aria-hidden="true" />
         </button>
       </header>

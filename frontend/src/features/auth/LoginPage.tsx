@@ -173,7 +173,7 @@ export default function LoginPage() {
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
       {info && (
         <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-3.5 text-xs font-semibold leading-5 text-[var(--text)]" role="status">
-          <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-[var(--primary)]" aria-hidden="true" />
+          <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" aria-hidden="true" />
           <span>{info}</span>
         </div>
       )}

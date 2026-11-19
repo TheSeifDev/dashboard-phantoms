@@ -76,7 +76,7 @@ export function SubmissionSuccessModal({
               <p className="text-xl font-black text-[var(--text)]">برافو يا {celebration.firstName}!</p>
               <p className="text-sm leading-7 text-[var(--text-2)]">{line}</p>
               {timing && (
-                <p className={`text-xs font-bold leading-6 ${timing.onTime ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>{timing.text}</p>
+                <p className={`text-xs font-bold leading-6 ${timing.onTime ? 'text-[var(--success-text)] dark:text-[var(--success-text)]' : 'text-amber-800 dark:text-amber-300'}`}>{timing.text}</p>
               )}
             </div>
           </div>

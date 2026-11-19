@@ -27,10 +27,10 @@ export function MemberTasks({ tasks, memberId, isLoading, isError, onRetry, onSt
   const done = tasks.filter((t) => statusOf(t) === 'approved');
 
   const summary = [
-    { label: 'محتاجة تحرك', value: urgent.length, tone: urgent.length ? 'text-red-700 dark:text-red-300' : 'text-[var(--text)]' },
+    { label: 'محتاجة تحرك', value: urgent.length, tone: urgent.length ? 'text-[var(--danger-text)] dark:text-[var(--danger-text)]' : 'text-[var(--text)]' },
     { label: 'حالية', value: ongoing.length, tone: 'text-[var(--link)]' },
     { label: 'مستنية المراجعة', value: review.length, tone: 'text-amber-700 dark:text-amber-300' },
-    { label: 'اتعتمدت', value: done.length, tone: 'text-emerald-700 dark:text-emerald-300' },
+    { label: 'اتعتمدت', value: done.length, tone: 'text-[var(--success-text)] dark:text-[var(--success-text)]' },
   ];
 
   const group = (title: string, hint: string, items: Task[]) => items.length ? (

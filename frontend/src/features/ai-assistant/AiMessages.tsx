@@ -61,7 +61,7 @@ export function AiMessages({
                     {JSON.stringify(action, null, 2)}
                   </pre>
                   {message.actionExecuted ? (
-                    <p className="flex items-center gap-2 text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                    <p className="flex items-center gap-2 text-sm font-bold text-[var(--success-text)] dark:text-[var(--success-text)]">
                       <CheckCircle2 size={17} /> {t("اتنفّذ الإجراء بنجاح", "Action executed successfully")}
                     </p>
                   ) : (

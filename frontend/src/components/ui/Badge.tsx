@@ -14,8 +14,8 @@ export const Badge: React.FC<BadgeProps> = ({
   size = 'md',
 }) => {
   const variantStyles = {
-    primary: 'bg-[var(--primary-soft)] text-[var(--primary)] border-[var(--primary)]/20',
-    success: 'bg-[var(--success-soft)] text-[var(--success)] border-[var(--success-border)]',
+    primary: 'bg-[var(--primary-soft)] text-[var(--primary-ink)] border-[var(--primary)]/20',
+    success: 'bg-[var(--success-soft)] text-[var(--success-text)] border-[var(--success-border)]',
     warning: 'bg-[var(--warning-soft)] text-[var(--warning)] border-[var(--warning-border)]',
     danger: 'bg-[var(--danger-soft)] text-[var(--danger)] border-[var(--danger-border)]',
     info: 'bg-[var(--info-soft)] text-[var(--info)] border-[var(--info-border)]',

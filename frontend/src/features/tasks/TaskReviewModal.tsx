@@ -124,11 +124,11 @@ export function TaskReviewModal({ item, members, onClose }: { item: { task: Task
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="rounded-xl border border-[var(--border)] p-3">
               <p className="text-xs font-bold text-[var(--text-muted)]">{t('الموعد النهائي', 'Deadline')}</p>
-              <p className={`mt-0.5 font-bold ${submittedLate || (deadline && isOverdue(deadline) && entry?.status !== 'under_review') ? 'text-red-700 dark:text-red-300' : 'text-[var(--text)]'}`}>
+              <p className={`mt-0.5 font-bold ${submittedLate || (deadline && isOverdue(deadline) && entry?.status !== 'under_review') ? 'text-[var(--danger-text)] dark:text-[var(--danger-text)]' : 'text-[var(--text)]'}`}>
                 {deadline ? formatLocalizedDeadline(deadline) : t('بدون موعد', 'No deadline')}
               </p>
               {deadline && submittedAt && entry?.status === 'under_review' && (
-                <p className={`mt-0.5 text-xs font-bold ${submittedLate ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{submittedLate ? t('اتسلّمت بعد الموعد', 'Submitted late') : t('اتسلّمت في الموعد', 'Submitted on time')}</p>
+                <p className={`mt-0.5 text-xs font-bold ${submittedLate ? 'text-[var(--danger-text)] dark:text-[var(--danger-text)]' : 'text-[var(--success-text)] dark:text-[var(--success-text)]'}`}>{submittedLate ? t('اتسلّمت بعد الموعد', 'Submitted late') : t('اتسلّمت في الموعد', 'Submitted on time')}</p>
               )}
             </div>
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
@@ -154,7 +154,7 @@ export function TaskReviewModal({ item, members, onClose }: { item: { task: Task
               {isApproved ? t('التسليم اتعتمد من غير رابط أو ملاحظة.', 'This submission was approved without a link or note.') : t('العضو لسه ما رفعش رابط أو ملاحظة. الاعتماد هيضيف له النقاط على طول.', 'The member has not submitted a link or note yet. Approval will award points immediately.')}
             </p>
           )}
-          {isApproved && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold leading-6 text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-100">{t('إلغاء الاعتماد هيرجع المهمة للعضو عشان يقدر يعيد إرسالها، وهيعكس النقاط والبونص اللي اتمنحوا بسبب الاعتماد.', 'Revoking approval returns the task to the member for resubmission and reverses the points and bonus awarded for approval.')}</p>}
+          {isApproved && <p className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold leading-6 text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]">{t('إلغاء الاعتماد هيرجع المهمة للعضو عشان يقدر يعيد إرسالها، وهيعكس النقاط والبونص اللي اتمنحوا بسبب الاعتماد.', 'Revoking approval returns the task to the member for resubmission and reverses the points and bonus awarded for approval.')}</p>}
           <label htmlFor="task-review-feedback" className="grid gap-1.5 font-bold">
             {isApproved ? <>{t('سبب إلغاء الاعتماد', 'Reason for revoking approval')} <span className="text-xs font-medium text-[var(--text-muted)]">{t('(مطلوب، وبيتسجل في سجل العضو)', '(required; recorded in the member history)')}</span></> : <>{t('توجيهات التعديل', 'Revision instructions')} <span className="text-xs font-medium text-[var(--text-muted)]">{t('(مطلوبة عند طلب تعديل)', '(required when requesting a revision)')}</span></>}
             <textarea id="task-review-feedback" value={feedback} onChange={(event) => setFeedback(event.target.value)} rows={3} minLength={isApproved ? 3 : undefined} maxLength={isApproved ? 1000 : 2000} placeholder={isApproved ? t('اكتب ليه بتلغي الاعتماد.', 'Explain why you are revoking approval.') : t('مثال: الصورة التانية محتاجة دقة أعلى، والنص محتاج مراجعة لغوية.', 'Example: The second image needs higher resolution, and the text needs proofreading.')} className="min-h-24 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 text-base font-normal leading-7 placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:outline-none focus:ring-4 focus:ring-[var(--primary-soft)]" />

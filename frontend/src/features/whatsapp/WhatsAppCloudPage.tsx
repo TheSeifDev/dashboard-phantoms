@@ -59,7 +59,7 @@ export default function WhatsAppCloudPage() {
     <Card className={`grid gap-4 border-s-4 ${status.data?.enabled ? 'border-s-emerald-500' : 'border-s-[var(--text-muted)]'}`}>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2 font-extrabold">
-          {status.isLoading ? t('بنراجع...', 'Checking...') : status.data?.enabled ? <CheckCircle2 className="text-emerald-600" /> : <AlertTriangle className="text-amber-600" />}
+          {status.isLoading ? t('بنراجع...', 'Checking...') : status.data?.enabled ? <CheckCircle2 className="text-[var(--success-text)]" /> : <AlertTriangle className="text-amber-600" />}
           <span>
             {status.isLoading ? '' : !status.data?.configured ? t('الخدمة مش مجهزة','Service is not configured') : status.data.enabled ? t('الخدمة مفعلة وجاهزة للبعت','Service is enabled and ready') : t('الخدمة واقفة دلوقتي','Service is currently stopped')}
           </span>
@@ -91,7 +91,7 @@ export default function WhatsAppCloudPage() {
         <div className="flex items-center justify-between">
           <h3 className="font-black">{t("اختار الأعضاء عشان تبعت لهم", "Select recipients")} ({number(memberIds.length)} {t("محدد", "selected")})</h3>
           {eligible.length > 0 && <div className="flex gap-2">
-            <button type="button" className="text-sm text-[var(--primary)] font-bold hover:underline" onClick={selectAll}>{t("تحديد الكل", "Select all")}</button>
+            <button type="button" className="text-sm text-[var(--primary-ink)] font-bold hover:underline" onClick={selectAll}>{t("تحديد الكل", "Select all")}</button>
             <button type="button" className="text-sm text-[var(--text-muted)] hover:underline" onClick={deselectAll}>{t("إلغاء التحديد", "Clear selection")}</button>
           </div>}
         </div>

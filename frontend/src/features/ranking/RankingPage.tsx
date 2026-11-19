@@ -60,7 +60,7 @@ export default function RankingPage() {
       {/* Header */}
       <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6 shadow-[var(--shadow-sm)]">
         <div className="flex items-start gap-3.5">
-          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)]">
+          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--primary-soft)] text-[var(--primary-ink)]">
             <Trophy size={24} />
           </div>
           <div>
@@ -122,7 +122,7 @@ export default function RankingPage() {
       <section aria-label={t("جدول الترتيب الكامل", "Full ranking table")}>
         <div className="mb-2 flex items-center justify-between">
           <h3 className="font-black text-sm text-[var(--text)] flex items-center gap-2">
-            <Users size={17} className="text-[var(--primary)]" />
+            <Users size={17} className="text-[var(--primary-ink)]" />
             الترتيب الكامل <span className="tabular-nums text-[var(--text-muted)]">({filteredMembers.length})</span>
           </h3>
         </div>

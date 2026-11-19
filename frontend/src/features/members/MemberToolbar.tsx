@@ -64,7 +64,7 @@ export function MemberToolbar({
           <button
             type="button"
             onClick={clear}
-            className="inline-flex h-[var(--touch)] items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-3 text-sm font-bold text-[var(--primary)] hover:bg-[var(--primary-soft)] transition-colors"
+            className="inline-flex h-[var(--touch)] items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-3 text-sm font-bold text-[var(--primary-ink)] hover:bg-[var(--primary-soft)] transition-colors"
           >
             <RotateCcw size={16} aria-hidden="true" />
             {t("امسح الفلاتر", "Clear filters")}

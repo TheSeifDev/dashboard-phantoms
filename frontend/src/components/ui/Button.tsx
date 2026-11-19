@@ -16,7 +16,7 @@ const variants: Record<Variant, string> = {
   primary: 'border-transparent bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]',
   secondary: 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]',
   ghost: 'border-transparent bg-transparent text-[var(--link)] hover:bg-[var(--primary-soft)]',
-  danger: 'border-transparent bg-red-700 text-white hover:bg-red-800',
+  danger: 'border-transparent bg-[var(--danger)] text-[var(--on-danger)] hover:bg-[var(--danger-hover)]',
 };
 
 export function Button({ variant = 'primary', icon, fullOnMobile = false, isLoading = false, loadingText, className = '', children, disabled, ...props }: ButtonProps) {

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 type ChipTone = 'success' | 'muted' | 'info' | 'warning' | 'danger';
 
 const tones: Record<ChipTone, string> = {
-  success: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success)]',
+  success: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success-text)]',
   muted: 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]',
   info: 'border-[var(--info-border)] bg-[var(--info-soft)] text-[var(--info-text)] dark:text-[var(--info)]',
   warning: 'border-[var(--warning-border)] bg-[var(--warning-soft)] text-[var(--warning-text)] dark:text-[var(--warning)]',

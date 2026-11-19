@@ -12,7 +12,7 @@ export const STATUS_META: Record<TaskStatus, { label: string; tone: string }> = 
   },
   in_progress: {
     label: 'تحت التنفيذ',
-    tone: 'border-cyan-200 bg-cyan-50 text-cyan-900 dark:border-cyan-900 dark:bg-cyan-950/40 dark:text-cyan-200',
+    tone: 'border-[var(--info-border)] bg-[var(--info-soft)] text-[var(--info-text)] dark:border-[var(--info-border)] dark:bg-[var(--info-soft)] dark:text-[var(--info-text)]',
   },
   under_review: {
     label: 'تحت المراجعة',
@@ -20,11 +20,11 @@ export const STATUS_META: Record<TaskStatus, { label: string; tone: string }> = 
   },
   revision_requested: {
     label: 'محتاجة تعديل',
-    tone: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200',
+    tone: 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]',
   },
   approved: {
     label: 'اتعتمدت',
-    tone: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200',
+    tone: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:border-[var(--success-border)] dark:bg-[var(--success-soft)] dark:text-[var(--success-text)]',
   },
 };
 
@@ -90,7 +90,7 @@ export function BonusChip({ points, earned = false, className = '' }: { points: 
   const { locale, t } = useLocale();
   if (points <= 0) return null;
   const tone = earned
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200'
+    ? 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:border-[var(--success-border)] dark:bg-[var(--success-soft)] dark:text-[var(--success-text)]'
     : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200';
   return (
     <span className={`inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-black tabular-nums ${tone} ${className}`}>
@@ -183,7 +183,7 @@ export function TaskProgress({ summary, compact = false }: { summary: TaskSummar
         aria-label={t(`نسبة الإنجاز ${percent}%`, `${percent}% complete`)}
       >
         <div
-          className={`h-full rounded-full transition-[width] duration-500 ${percent === 100 ? 'bg-emerald-600' : 'bg-[var(--primary)]'}`}
+          className={`h-full rounded-full transition-[width] duration-500 ${percent === 100 ? 'bg-[var(--success)]' : 'bg-[var(--primary)]'}`}
           style={{ width: `${percent}%` }}
         />
       </div>

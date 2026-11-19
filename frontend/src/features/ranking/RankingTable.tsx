@@ -14,7 +14,7 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
   if (members.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center text-[var(--text-muted)] bg-[var(--surface)] rounded-[var(--radius-lg)] border border-[var(--border)]">
-        <Trophy size={36} className="mb-3 opacity-30 text-[var(--primary)]" />
+        <Trophy size={36} className="mb-3 opacity-30 text-[var(--primary-ink)]" />
         <h4 className="font-black text-base text-[var(--text)] mb-1">{t("مفيش أعضاء في الترتيب", "No ranked members")}</h4>
         <p className="text-xs text-[var(--text-muted)]">{t("ملقيناش أعضاء مطابقين لفلترة دلوقتي.", "No members match the current filters.")}</p>
       </div>
@@ -74,11 +74,11 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                 {/* Member Info */}
                 <td data-label={t("العضو", "Member")}>
                   <span className="flex items-center gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] font-bold text-[var(--primary)] text-sm">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] font-bold text-[var(--primary-ink)] text-sm">
                       {member.full_name.trim().charAt(0)}
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate font-bold text-sm text-[var(--text)] group-hover:text-[var(--primary)] transition-colors">
+                      <span className="block truncate font-bold text-sm text-[var(--text)] group-hover:text-[var(--primary-ink)] transition-colors">
                         {member.full_name}
                       </span>
                       <span className="block truncate text-xs text-[var(--text-muted)]" dir="ltr">
@@ -93,9 +93,9 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black border ${
                       member.bonus_infinite === true
-                        ? 'border-[var(--primary)]/30 bg-[var(--primary-soft)] text-[var(--primary)]'
+                        ? 'border-[var(--primary)]/30 bg-[var(--primary-soft)] text-[var(--primary-ink)]'
                         : member.totalBonus > 0
-                        ? 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success)]'
+                        ? 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)] dark:text-[var(--success-text)]'
                         : member.totalBonus < 0
                         ? 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)] dark:text-[var(--danger)]'
                         : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]'
@@ -125,7 +125,7 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                         e.stopPropagation();
                         onSelectMember?.(member);
                       }}
-                      className="grid size-11 min-h-[44px] min-w-[44px] place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--surface)] transition-colors"
+                      className="grid size-11 min-h-[44px] min-w-[44px] place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--primary-ink)] hover:bg-[var(--surface)] transition-colors"
                     >
                       <User size={16} aria-hidden="true" />
                     </button>
@@ -137,7 +137,7 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus }: Ranking
                           e.stopPropagation();
                           onAdjustBonus(member);
                         }}
-                        className="grid size-11 min-h-[44px] min-w-[44px] place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors"
+                        className="grid size-11 min-h-[44px] min-w-[44px] place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary-ink)] hover:bg-[var(--primary)] hover:text-white transition-colors"
                       >
                         <Edit3 size={16} aria-hidden="true" />
                       </button>

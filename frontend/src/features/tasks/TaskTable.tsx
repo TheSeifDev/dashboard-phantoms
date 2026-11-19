@@ -38,16 +38,16 @@ export function TaskTable({ tasks, members, onReview, onDelete }: { tasks: Task[
                 </td>
                 <td data-label={t("الإجراءات", "Actions")}>
                   <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" className="grid size-11 place-items-center rounded-lg border border-[var(--border)] text-[var(--danger)] transition-colors hover:bg-red-50 dark:hover:bg-red-950/40" aria-label={t(`امسح مهمة ${task.title}`, `Delete task ${task.title}`)} onClick={() => onDelete(task)}>
+                    <button type="button" className="grid size-11 place-items-center rounded-lg border border-[var(--border)] text-[var(--danger)] transition-colors hover:bg-[var(--danger-soft)] dark:hover:bg-[var(--danger-soft)]" aria-label={t(`امسح مهمة ${task.title}`, `Delete task ${task.title}`)} onClick={() => onDelete(task)}>
                       <Trash2 size={17} aria-hidden="true" />
                     </button>
                     {summary.approved > 0 && <details className="relative">
-                      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-lg border border-red-200 px-2 text-xs font-bold text-red-800 hover:bg-red-50 dark:border-red-900 dark:text-red-200 dark:hover:bg-red-950/40"><RotateCcw size={14} aria-hidden="true" />{t("الاعتمادات", "Approvals")} ({number(summary.approved)})</summary>
+                      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-lg border border-[var(--danger-border)] px-2 text-xs font-bold text-[var(--danger-text)] hover:bg-[var(--danger-soft)] dark:border-[var(--danger-border)] dark:text-[var(--danger-text)] dark:hover:bg-[var(--danger-soft)]"><RotateCcw size={14} aria-hidden="true" />{t("الاعتمادات", "Approvals")} ({number(summary.approved)})</summary>
                       <ul className="absolute end-0 top-full z-10 mt-1 grid max-h-60 min-w-52 gap-1 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-[var(--shadow-md)]">
                         {summary.entries.filter(([, entry]) => entry.status === 'approved').map(([id, entry]) => {
                           const memberId = Number(id);
                           const name = members.find((member) => member.id === memberId)?.full_name ?? t(`عضو #${id}`, `Member #${id}`);
-                          return <li key={id}><button type="button" onClick={() => onReview({ task, memberId, entry })} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-start text-xs font-bold hover:bg-[var(--surface-2)]"><RotateCcw size={13} className="shrink-0 text-red-700" aria-hidden="true" /><span className="truncate">{t(`إلغاء اعتماد ${name}`, `Revoke approval for ${name}`)}</span></button></li>;
+                          return <li key={id}><button type="button" onClick={() => onReview({ task, memberId, entry })} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-start text-xs font-bold hover:bg-[var(--surface-2)]"><RotateCcw size={13} className="shrink-0 text-[var(--danger-text)]" aria-hidden="true" /><span className="truncate">{t(`إلغاء اعتماد ${name}`, `Revoke approval for ${name}`)}</span></button></li>;
                         })}
                       </ul>
                     </details>}

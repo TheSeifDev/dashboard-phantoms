@@ -101,7 +101,7 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case 'urgent':
-        return <AlertTriangle className="text-red-600 dark:text-red-400" size={18} aria-hidden="true" />;
+        return <AlertTriangle className="text-[var(--danger-text)] dark:text-[var(--danger-text)]" size={18} aria-hidden="true" />;
       case 'high':
         return <AlertTriangle className="text-amber-600 dark:text-amber-400" size={18} aria-hidden="true" />;
       case 'normal':
@@ -227,7 +227,7 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
                         علّم كمقروء
                       </Button>
                     ) : (
-                      <span className="flex min-h-11 items-center gap-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                      <span className="flex min-h-11 items-center gap-1.5 text-sm font-bold text-[var(--success-text)] dark:text-[var(--success-text)]">
                         <CheckCheck size={16} aria-hidden="true" />
                         اتقرا
                       </span>

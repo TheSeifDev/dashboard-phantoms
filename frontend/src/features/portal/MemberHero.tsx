@@ -68,7 +68,7 @@ export function MemberHero({
             onClick={subscribeToPush}
             className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-3 text-xs font-bold transition-colors ${
               isSubscribed
-                ? 'bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-400'
+                ? 'bg-[var(--success-soft)] text-[var(--success-text)] hover:bg-[var(--success-soft)] dark:text-[var(--success-text)]'
                 : 'bg-[var(--primary-soft)] text-[var(--link)] hover:bg-[var(--primary)] hover:text-white'
             }`}
           >

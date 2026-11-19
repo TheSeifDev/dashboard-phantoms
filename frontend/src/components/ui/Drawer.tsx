@@ -12,12 +12,14 @@ export function Drawer({
   title,
   children,
   label,
+  className = '',
 }: {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   label?: string;
+  className?: string;
 }) {
   const { t, dir } = useLocale();
   const panelRef = useRef<HTMLElement>(null);
@@ -58,7 +60,7 @@ export function Drawer({
         role="dialog"
         aria-modal="true"
         aria-label={label ?? title}
-        className="absolute inset-y-0 end-0 flex w-full max-w-md min-w-0 flex-col border-s border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-lg)]"
+        className={`absolute inset-y-0 end-0 flex w-full max-w-md min-w-0 flex-col border-s border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-lg)] ${className}`}
         style={{ animation: 'app-drawer-in 180ms ease' }}
       >
         <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-[var(--border)] px-4 py-3">

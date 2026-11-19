@@ -25,7 +25,7 @@ export function SubmissionModal({ task, url, note, isSubmitting, onUrlChange, on
         <label className="grid gap-2 text-sm font-bold">رابط التسليم
           <input type="url" dir="ltr" placeholder="https://drive.google.com/... أو https://github.com/..." value={url} onChange={(event) => onUrlChange(event.target.value)} aria-invalid={Boolean(urlError) || undefined} className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-start" />
         </label>
-        {urlError && <p role="alert" className="text-xs font-bold text-red-700 dark:text-red-300">{urlError}</p>}
+        {urlError && <p role="alert" className="text-xs font-bold text-[var(--danger-text)] dark:text-[var(--danger-text)]">{urlError}</p>}
         <label className="grid gap-2 text-sm font-bold">ملاحظات التسليم
           <textarea rows={4} placeholder="اكتب اللي أنجزته والتفاصيل اللي حابب تشاركها." value={note} onChange={(event) => onNoteChange(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 leading-6" />
         </label>

@@ -50,7 +50,7 @@ export default function WhatsAppTasksPage() {
           onClick={() => setActiveTab('qr')}
           className={`flex min-h-[44px] items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-bold transition-colors ${
             activeTab === 'qr'
-              ? 'border-[var(--primary)] text-[var(--primary)]'
+              ? 'border-[var(--primary)] text-[var(--primary-ink)]'
               : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'
           }`}
         >
@@ -66,7 +66,7 @@ export default function WhatsAppTasksPage() {
           onClick={() => setActiveTab('cloud')}
           className={`flex min-h-[44px] items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-bold transition-colors ${
             activeTab === 'cloud'
-              ? 'border-[var(--primary)] text-[var(--primary)]'
+              ? 'border-[var(--primary)] text-[var(--primary-ink)]'
               : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'
           }`}
         >
@@ -82,7 +82,7 @@ export default function WhatsAppTasksPage() {
           onClick={() => setActiveTab('diag')}
           className={`flex min-h-[44px] items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-bold transition-colors ${
             activeTab === 'diag'
-              ? 'border-[var(--primary)] text-[var(--primary)]'
+              ? 'border-[var(--primary)] text-[var(--primary-ink)]'
               : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text)]'
           }`}
         >

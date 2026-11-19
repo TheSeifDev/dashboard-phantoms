@@ -144,7 +144,7 @@ export function MemberRowMenu({
             type="button"
             role="menuitem"
             onClick={(e) => { e.stopPropagation(); setOpen(false); onDelete(member); }}
-            className={`${itemClass} text-[var(--danger)] hover:bg-red-50 dark:hover:bg-red-950/30`}
+            className={`${itemClass} text-[var(--danger)] hover:bg-[var(--danger-soft)] dark:hover:bg-[var(--danger-soft)]`}
           >
             <Trash2 size={16} aria-hidden="true" /> مسح
           </button>

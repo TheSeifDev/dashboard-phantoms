@@ -84,7 +84,7 @@ export function MemberJoinReviewQueue() {
         <Button variant="secondary" onClick={() => void reviewsQuery.refetch()} icon={<RefreshCw size={15} aria-hidden="true" />} disabled={reviewsQuery.isFetching} className="whitespace-nowrap">{t('تحديث الطلبات', 'Refresh requests')}</Button>
       </div>
 
-      {actionError && <p role="alert" className="m-0 rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">{actionError}</p>}
+      {actionError && <p role="alert" className="m-0 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]">{actionError}</p>}
       {reviewsQuery.isLoading && !reviewsQuery.data ? (
         <p className="m-0 rounded-xl bg-[var(--surface-2)] p-4 text-sm text-[var(--text-muted)]" role="status">{t('جارٍ تحميل طلبات الانضمام…', 'Loading join requests…')}</p>
       ) : reviewsQuery.isError && !reviewsQuery.data ? (
@@ -118,7 +118,7 @@ export function MemberJoinReviewQueue() {
           ))}
         </ul>
       ) : <p className="m-0 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm text-[var(--text-muted)]" data-testid="member-join-review-empty">{t('لا توجد تسجيلات مكتملة تنتظر المراجعة حاليًا.', 'No completed registrations are awaiting review.')}</p>}
-      {reviewsQuery.isFetchNextPageError && <p role="alert" className="m-0 rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">{t('تعذر تحميل الطلبات الأقدم؛ حاول مرة أخرى.', 'Unable to load older requests; try again.')}</p>}
+      {reviewsQuery.isFetchNextPageError && <p role="alert" className="m-0 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]">{t('تعذر تحميل الطلبات الأقدم؛ حاول مرة أخرى.', 'Unable to load older requests; try again.')}</p>}
       {reviewsQuery.hasNextPage && <Button variant="secondary" onClick={() => { void reviewsQuery.fetchNextPage(); }} disabled={reviewsQuery.isFetchingNextPage} className="justify-self-center whitespace-nowrap">{reviewsQuery.isFetchingNextPage ? t('جارٍ تحميل الطلبات الأقدم…', 'Loading older requests…') : t('عرض الطلبات الأقدم', 'Load older requests')}</Button>}
       <ConfirmDialog isOpen={Boolean(target)} onClose={() => { if (!approve.isPending) setTarget(null); }} onConfirm={() => { void confirmApproval(); }} title={t('تأكيد تفعيل العضوية', 'Confirm member activation')} itemName={target?.fullName} description={t('بعد الموافقة ستصبح العضوية نشطة وسيتمكن صاحب الحساب من تسجيل الدخول إلى بوابة الأعضاء. سيتم تسجيل قرار المراجعة.', 'After approval, the member will become active and can sign in to the member portal. The review decision will be recorded.')} confirmLabel={t('موافقة وتفعيل', 'Approve and activate')} isPending={approve.isPending} pendingLabel={t('جارٍ تفعيل العضوية…', 'Activating member…')} />
     </section>

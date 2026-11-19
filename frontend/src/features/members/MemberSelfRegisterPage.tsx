@@ -189,7 +189,7 @@ export default function MemberSelfRegisterPage() {
         footer={<Link className="auth-inline-link justify-center" to="/login">{t('العودة إلى تسجيل الدخول', 'Return to sign in')}</Link>}
       >
         <div data-testid="member-enrollment-success" className="grid justify-items-center gap-3 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-5 text-center" role="status" aria-live="polite">
-          <CheckCircle2 size={28} className="text-[var(--primary)]" aria-hidden="true" />
+          <CheckCircle2 size={28} className="text-[var(--primary-ink)]" aria-hidden="true" />
           <p className="m-0 text-sm font-bold leading-7 text-[var(--text)]">{completionMessage}</p>
         </div>
         <Link to="/login" className="auth-submit mt-4 px-4 py-3 text-center no-underline">{t('العودة إلى تسجيل الدخول', 'Return to sign in')}</Link>
