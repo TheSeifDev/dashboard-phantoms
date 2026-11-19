@@ -19,6 +19,13 @@
 
 **QA لهذا التعديل:** Sidebar mounted 8/8، palette 7/7، locale 4/4، member-projection/brand 22/22، وmounted join/reset/Admin callbacks 10/10. TypeScript/lint/build/secret audit ناجحة؛ Chromium على المكونات الفعلية أثبت 244→76px و10 حالات عربي/إنجليزي وثيم فاتح/داكن وموبايل، مع active row icy-blue، عدم اقتطاع labels، focus tooltips، وعدم وجود overflow؛ أُعيد فحص mobile drawer وfocus/Escape/scroll. لا API أو DB أو Auth fixtures.
 
+## تصحيح تناسق الألوان والـSidebar — التوجيه الأحدث
+- [x] استبدال الأسطح الزرقاء المشبعة كأساس بصندوق Graphite/Charcoal محايد متناسق مع الصورة؛ الحفاظ على crimson وemerald كلونَي accent وظيفيين وبجرعات قليلة، لا ملء أقسام كبيرة بكل لون. الاحتفاظ بـlight theme واضح ومتناغم.
+- [x] تنفيذ Sidebar المرجع الأخير: خلفية charcoal، Dashboard ظاهرًا كصف مستقل، active row بسطح charcoal أفتح من غير rail أزرق/أحمر، labels/icons رمادية هادئة، Operations مفتوح افتراضيًا وباقي أقسام navigation قابلة للطي بـchevrons، icon-only rail عند الطيّ، وزر خروج crimson هادئ أسفل. مجموعة المسار النشط تفتح تلقائيًا، ومؤشر keyboard focus يحقق 3:1 على الخلفية الداكنة. الحفاظ على routes والصلاحيات وRTL/mobile drawer.
+- [x] عرض التصحيح محليًا للمراجعة، وعدم تنفيذ commit/push إلا بعد موافقة جديدة؛ وصلت موافقة المستخدم بتاريخ 2026-11-20 بعد مراجعة الصور.
+
+**QA قبل الإصدار:** palette/contrast 8/8، sidebar navigation 10/10، locale/member projection 16/16، brand 10/10؛ TypeScript/build وlint وsecret audit ناجحة (0 credential artifacts). Browser smoke للـRTL/LTR والثيمين والrail/mobile drawer = 10/10، route manifest = 22 routes، وملفات test-results بقيت 8. لا اتصال API/DB/Auth fixtures. بعد مراجعة المعاينة، وافق المستخدم على commit/push إلى `main` بتاريخ 2026-11-20 مع قبول احتمال النشر الآلي.
+
 ## إصلاح تجربة الدخول وتأكيد طلب الانضمام
 - [x] صفحات دخول الإدارة والعضو تتكيف مع شاشات 320 و360 و390px بلا قص أو تمرير أفقي، مع بقاء حقول الدخول والأزرار قابلة للوصول.
 - [x] تنبيه ما قبل الإرسال يوضح صراحةً أن الطلب لم يُحفظ بعد؛ لا تظهر حالة نجاح إلا بعد استجابة الحفظ، مع شاشة تأكيد منفصلة بعد join/reset الناجح ورسالة خطأ عملية عند الفشل.

@@ -4,10 +4,11 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bot,
   CheckSquare,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
-  LayoutDashboard,
+  Home,
   LogOut,
   Megaphone,
   MessageCircle,
@@ -53,7 +54,7 @@ const GROUPS: SidebarGroup[] = [
       {
         to: '/admin/dashboard',
         label: 'الرئيسية',
-        icon: LayoutDashboard,
+        icon: Home,
         end: true,
         permission: 'dashboard',
       },
@@ -154,37 +155,59 @@ function useRailTooltip() {
 function SidebarLinks({
   onNavigate,
   railTips,
+  collapsed = false,
   isOwner,
   permissions,
 }: {
   onNavigate?: () => void;
   railTips?: boolean;
+  collapsed?: boolean;
   isOwner: boolean;
   permissions: Partial<AdminPermissions>;
 }) {
   const { t } = useLocale();
   const rail = useRailTooltip();
+  const id = useId();
+  const { pathname } = useLocation();
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(['العمليات']),
+  );
   const canSee = (item: SidebarLink) =>
     (!item.ownerOnly || isOwner) &&
     (!item.permission || isOwner || permissions[item.permission] === true);
+  const visibleGroups = GROUPS
+    .map((group) => ({ ...group, items: group.items.filter(canSee) }))
+    .filter((group) => group.items.length > 0);
+  const activeGroup = visibleGroups.find((group) =>
+    group.title !== 'نظرة عامة' && group.items.some((item) =>
+      pathname === item.to || (!item.end && pathname.startsWith(`${item.to}/`)),
+    ),
+  )?.title;
+
+  useEffect(() => {
+    if (!activeGroup) return;
+    setExpandedGroups((current) => current.has(activeGroup)
+      ? current
+      : new Set(current).add(activeGroup));
+  }, [activeGroup]);
+
+  const label = (value: string) => t(value, EN[value] ?? value);
   return (
     <>
-      {GROUPS.filter((group) => group.items.some(canSee)).map((group) => (
-        <div key={group.title}>
-          <p className="app-sidebar-group-title" aria-hidden="true">
-            {t(group.title, EN[group.title] ?? group.title)}
-          </p>
-          <ul className="app-sidebar-group">
-            {group.items.filter(canSee).map(({ to, label, icon: Icon, end }) => (
+      {visibleGroups.map((group, index) => {
+        const homeGroup = group.title === 'نظرة عامة';
+        const expanded = homeGroup || collapsed || expandedGroups.has(group.title);
+        const groupId = `${id}-section-${index}`;
+        const links = group.items.map(({ to, label: itemLabel, icon: Icon, end }) => (
               <li key={to}>
                 <NavLink
                   to={to}
                   end={end}
                   onClick={() => { rail.hide(); onNavigate?.(); }}
-                  title={t(label, EN[label] ?? label)}
-                  aria-label={t(label, EN[label] ?? label)}
-                  data-tip={railTips ? t(label, EN[label] ?? label) : undefined}
-                  {...(railTips ? rail.events(t(label, EN[label] ?? label)) : {})}
+                  title={label(itemLabel)}
+                  aria-label={label(itemLabel)}
+                  data-tip={railTips ? label(itemLabel) : undefined}
+                  {...(railTips ? rail.events(label(itemLabel)) : {})}
                   className={({ isActive }) =>
                     `app-sidebar-item${isActive ? ' is-active' : ''}${
                       railTips ? ' app-sidebar-tip' : ''
@@ -192,13 +215,35 @@ function SidebarLinks({
                   }
                 >
                   <Icon size={20} aria-hidden="true" />
-                  <span className="app-sidebar-item-label">{t(label, EN[label] ?? label)}</span>
+                  <span className="app-sidebar-item-label">{label(itemLabel)}</span>
                 </NavLink>
               </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+        ));
+        return (
+          <section className={`app-sidebar-section${homeGroup ? ' is-home' : ''}`} key={group.title}>
+            {!homeGroup && (
+              <button
+                type="button"
+                className="app-sidebar-section-toggle"
+                aria-expanded={expanded}
+                aria-controls={groupId}
+                onClick={() => setExpandedGroups((current) => {
+                  const next = new Set(current);
+                  if (next.has(group.title)) next.delete(group.title);
+                  else next.add(group.title);
+                  return next;
+                })}
+              >
+                <span className="app-sidebar-group-title">{label(group.title)}</span>
+                <ChevronDown className="app-sidebar-section-chevron" size={17} aria-hidden="true" />
+              </button>
+            )}
+            <ul className="app-sidebar-group" id={groupId} hidden={!expanded}>
+              {links}
+            </ul>
+          </section>
+        );
+      })}
       {rail.tooltip}
     </>
   );
@@ -261,7 +306,7 @@ export function AppSidebar({
     <>
       <aside className="app-sidebar" data-collapsed={collapsed} aria-label={t('الشريط الجانبي', 'Sidebar')}>
         <NavLink to="/admin" className="app-sidebar-brand" aria-label={t('PHANTOMS — الرئيسية', 'PHANTOMS — Home')}>
-          <PhantomsLogo size="md" themeMode="dark" className="app-sidebar-logo" />
+          <PhantomsLogo size="md" symbolOnly themeMode="dark" className="app-sidebar-logo" />
           <span className="sr-only"><span>PHANTOMS</span></span>
         </NavLink>
         <button
@@ -276,7 +321,7 @@ export function AppSidebar({
           <CollapseIcon size={18} aria-hidden="true" />
         </button>
         <nav id="desktop-sidebar-navigation" aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-sidebar-nav">
-          <SidebarLinks railTips isOwner={isOwner} permissions={permissions} />
+          <SidebarLinks railTips collapsed={collapsed} isOwner={isOwner} permissions={permissions} />
         </nav>
         <div className="app-sidebar-footer">
           <button

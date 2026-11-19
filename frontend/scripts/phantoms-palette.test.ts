@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const css = readFileSync(new URL('../src/styles/tokens.css', import.meta.url), 'utf8');
+const sidebarCss = readFileSync(new URL('../src/styles/sidebar.css', import.meta.url), 'utf8');
 const rootBlock = css.match(/:root\s*\{([^}]+)\}/)?.[1];
 const darkBlock = css.match(/\[data-theme="dark"\]\s*\{([^}]+)\}/)?.[1];
 assert.ok(rootBlock, 'light :root token block exists');
@@ -58,6 +59,11 @@ function hueDistance(first: number, second: number) {
   return Math.min(delta, 360 - delta);
 }
 
+function saturation(hex: string) {
+  const values = channels(hex);
+  return Math.max(...values) - Math.min(...values);
+}
+
 function assertFamily(theme: Record<string, string>, tokenNames: string[], reference: string, tolerance: number) {
   const referenceHue = hue(color(reference, theme));
   for (const token of tokenNames) {
@@ -67,35 +73,37 @@ function assertFamily(theme: Record<string, string>, tokenNames: string[], refer
   }
 }
 
-test('canonical identity roots and theme anchors use the required Crimson, Emerald, and Prussian Blue hexes', () => {
+test('canonical brand roots and charcoal theme anchors match the latest visual direction', () => {
   assert.equal(color('crimson'), '#dc143c');
   assert.equal(color('emerald'), '#10b981');
-  assert.equal(color('prussian-blue'), '#00072d');
-  assert.equal(color('bg', dark), '#00072d');
+  assert.equal(color('graphite-900'), '#171a1e');
+  assert.equal(color('prussian-blue'), '#171a1e', 'legacy Prussian token remains a neutral compatibility alias');
+  assert.equal(color('bg', dark), '#171a1e');
+  assert.equal(color('sidebar-bg'), '#171a1e');
   assert.equal(color('primary'), '#dc143c');
   assert.equal(color('success'), '#10b981');
 });
 
-test('semantic reds, greens, and blue accents stay in the requested color families in both themes', () => {
-  const crimson = ['primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'accent-pink', 'accent-pink-soft'];
+test('Crimson and Emerald retain their semantic families while auxiliary UI colors stay muted-neutral', () => {
+  const crimson = ['primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'accent-pink', 'accent-pink-soft', 'sidebar-focus-ring'];
   const emerald = ['success', 'success-hover', 'success-soft', 'success-border', 'success-text', 'heat-1', 'heat-2', 'heat-3', 'heat-4'];
-  const prussian = ['link', 'link-hover', 'accent', 'chart-blue', 'chart-ice', 'chart-cyan', 'chart-slate', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text', 'border-focus', 'focus-ring', 'sidebar-hover', 'sidebar-border'];
-  const prussianActive = ['sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border'];
+  const neutral = ['link', 'link-hover', 'accent', 'chart-blue', 'chart-ice', 'chart-cyan', 'chart-slate', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-muted'];
   for (const theme of [light, dark]) {
     assertFamily(theme, crimson, 'crimson', 18);
     assertFamily(theme, emerald, 'emerald', 16);
-    assertFamily(theme, prussian, 'prussian-blue', 9);
-    assertFamily(theme, prussianActive, 'prussian-blue', 12);
-    assertFamily(theme, ['sidebar-muted'], 'prussian-blue', 14);
+    for (const token of neutral) {
+      assert.ok(saturation(color(token, theme)) <= 0.22,
+        `--${token} should remain a low-saturation graphite/stone neutral`);
+    }
     assertFamily(theme, ['sidebar-logout-color'], 'crimson', 18);
   }
 });
 
-test('dark surfaces remain in the Prussian navy family and heatmap endpoints map to the background and Emerald', () => {
+test('dark surfaces stay in the low-saturation graphite family and heatmap endpoints map to background and Emerald', () => {
   const surfaces = ['bg', 'surface', 'surface-2', 'surface-hover', 'bg-elevated', 'surface-elevated', 'card', 'card-hover'];
   for (const token of surfaces) {
-    assert.ok(hueDistance(hue(color(token, dark)), hue(color('prussian-blue'))) <= 12,
-      `dark --${token} should remain a navy derived from Prussian Blue`);
+    assert.ok(saturation(color(token, dark)) <= 0.08,
+      `dark --${token} should remain a neutral charcoal surface`);
   }
   for (const theme of [light, dark]) {
     assert.equal(color('heat-0', theme), color('bg', theme), 'heatmap level zero is the theme background');
@@ -128,8 +136,8 @@ test('primary, success, and danger text use accessible foreground and soft-surfa
   }
 });
 
-test('shared permanently dark sidebar tokens meet AA for text, active state, and logout', () => {
-  const sidebarTokens = ['sidebar-bg', 'sidebar-text', 'sidebar-muted', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-logout-color'];
+test('shared permanently dark sidebar tokens meet AA for text, active state, focus ring, and logout', () => {
+  const sidebarTokens = ['sidebar-bg', 'sidebar-text', 'sidebar-muted', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-logout-color', 'sidebar-focus-ring'];
   for (const token of sidebarTokens) assert.ok(light[token], `shared --${token} is defined`);
   for (const token of sidebarTokens) assert.equal(dark[token], undefined, `--${token} remains shared across themes`);
   const background = color('sidebar-bg');
@@ -139,10 +147,21 @@ test('shared permanently dark sidebar tokens meet AA for text, active state, and
   }
   assert.ok(contrast(color('sidebar-active-ink'), color('sidebar-active-bg')) >= 4.5, 'active sidebar ink must contrast against the active fill');
   assert.ok(contrast(color('sidebar-muted'), color('sidebar-hover')) >= 4.5, 'muted sidebar text must remain readable on hover');
+  assert.ok(contrast(color('sidebar-focus-ring'), color('sidebar-bg')) >= 3, 'sidebar keyboard focus ring must meet 3:1 non-text contrast');
+  assert.ok(contrast(color('sidebar-focus-ring'), color('sidebar-active-bg')) >= 3, 'focus ring must remain visible around the active row');
 });
 
-test('legacy semantic tokens remain available and only the requested sidebar width changes', () => {
-  const retained = ['phantom-black', 'editorial-white', 'phantom-red', 'deep-red', 'accent-pink', 'concrete-grey', 'soft-grey', 'mist-grey', 'primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'on-primary', 'link', 'link-hover', 'accent', 'accent-pink-soft', 'chart-blue', 'chart-ice', 'chart-cyan', 'chart-slate', 'heat-0', 'heat-1', 'heat-2', 'heat-3', 'heat-4', 'success', 'success-hover', 'success-soft', 'success-border', 'success-text', 'warning', 'warning-hover', 'warning-soft', 'warning-border', 'warning-text', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text', 'bg', 'surface', 'surface-2', 'surface-hover', 'bg-elevated', 'surface-elevated', 'card', 'card-hover', 'text', 'text-2', 'text-secondary', 'text-muted', 'text-inverse', 'border', 'border-subtle', 'border-strong', 'border-focus', 'focus-ring'];
+test('sidebar active state uses a neutral fill and has no colored indicator rail', () => {
+  assert.equal(color('sidebar-bg'), '#171a1e');
+  assert.equal(color('sidebar-active-bg'), '#292e34');
+  assert.ok(saturation(color('sidebar-active-bg')) <= 0.08);
+  assert.doesNotMatch(sidebarCss, /\.app-sidebar-item\.is-active::before/);
+  assert.match(sidebarCss, /outline: 2px solid var\(--sidebar-focus-ring\)/);
+  assert.match(sidebarCss, /\.app-sidebar-section-toggle/);
+});
+
+test('legacy semantic tokens remain available and requested sidebar dimensions are preserved', () => {
+  const retained = ['graphite-950', 'graphite-900', 'graphite-850', 'graphite-800', 'graphite-700', 'phantom-black', 'editorial-white', 'phantom-red', 'deep-red', 'accent-pink', 'concrete-grey', 'soft-grey', 'mist-grey', 'primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'on-primary', 'link', 'link-hover', 'accent', 'accent-pink-soft', 'chart-blue', 'chart-ice', 'chart-cyan', 'chart-slate', 'heat-0', 'heat-1', 'heat-2', 'heat-3', 'heat-4', 'success', 'success-hover', 'success-soft', 'success-border', 'success-text', 'warning', 'warning-hover', 'warning-soft', 'warning-border', 'warning-text', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text', 'bg', 'surface', 'surface-2', 'surface-hover', 'bg-elevated', 'surface-elevated', 'card', 'card-hover', 'text', 'text-2', 'text-secondary', 'text-muted', 'text-inverse', 'border', 'border-subtle', 'border-strong', 'border-focus', 'focus-ring'];
   for (const token of retained) assert.ok(light[token], `legacy --${token} token remains available`);
   assert.equal(light['sidebar-w'], '244px');
   for (const [token, value] of Object.entries({ touch: '44px', 'header-h': '78px', 'bottom-nav-h': '64px', 'sidebar-rail-w': '76px', 'content-max': '1560px' })) {

@@ -130,6 +130,43 @@ try {
     });
   });
 
+  await test('dashboard stays visible as a standalone active row in the expanded sidebar', async () => {
+    await scenario({}, async () => {
+      const nav = document.querySelector('#desktop-sidebar-navigation');
+      const dashboard = nav.querySelector('a[href="/admin/dashboard"]');
+      assert.ok(dashboard);
+      assert.equal(dashboard.closest('ul').hidden, false);
+      assert.equal(dashboard.getAttribute('aria-current'), 'page');
+      const operations = [...nav.querySelectorAll('.app-sidebar-section-toggle')]
+        .find((button) => button.textContent.includes('العمليات'));
+      assert.equal(operations.getAttribute('aria-expanded'), 'true');
+    });
+  });
+
+  await test('navigation groups use accessible chevrons and reopen around the active route', async () => {
+    await scenario({}, async ({ click }) => {
+      const nav = document.querySelector('#desktop-sidebar-navigation');
+      const operations = [...nav.querySelectorAll('.app-sidebar-section-toggle')]
+        .find((button) => button.textContent.includes('العمليات'));
+      assert.ok(operations);
+      assert.equal(operations.getAttribute('aria-controls') !== null, true);
+      assert.equal(operations.getAttribute('aria-expanded'), 'true');
+      assert.ok(operations.querySelector('.lucide-chevron-down'));
+      const group = document.getElementById(operations.getAttribute('aria-controls'));
+      assert.equal(group.hidden, false);
+
+      await click(operations);
+      assert.equal(operations.getAttribute('aria-expanded'), 'false');
+      assert.equal(group.hidden, true);
+
+      await click(nav.querySelector('a[href="/admin/tasks"]'));
+      assert.equal(document.getElementById('location').textContent, '/admin/tasks');
+      assert.equal(operations.getAttribute('aria-expanded'), 'true');
+      assert.equal(group.hidden, false);
+      assert.equal(nav.querySelector('a[href="/admin/tasks"]').getAttribute('aria-current'), 'page');
+    });
+  });
+
   await test('locale changes labels, collapse direction and active navigation without resetting preference', async () => {
     await scenario({ preference: 'true' }, async ({ click }) => {
       assert.equal(document.querySelector('.app-sidebar-collapse').getAttribute('aria-label'), 'وسّع الشريط الجانبي');
@@ -148,7 +185,7 @@ try {
     });
   });
 
-  await test('navy mobile drawer retains focus loop, Escape and exact scroll restoration', async () => {
+  await test('charcoal mobile drawer retains focus loop, Escape and exact scroll restoration', async () => {
     await scenario({}, async ({ render, closeCalls }) => {
       const previous = document.getElementById('before'); previous.focus();
       document.body.style.overflow = 'clip';
