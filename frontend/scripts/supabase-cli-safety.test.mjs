@@ -29,14 +29,18 @@ function runCheck() {
   });
 }
 
-test('local inventory records all twenty forward migrations as production-applied', () => {
+test('local inventory records twenty applied and one pending Web Projects migration', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
-  assert.equal(pending, 0);
+  assert.equal(pending, 1);
   assert.equal(applied, 20);
+  const pendingEntry = entries.find((entry) => entry.production_status === 'not_applied');
+  assert.equal(pendingEntry?.version, '20261120223000');
+  assert.equal(pendingEntry?.name, 'web_projects_foundation');
+  assert.equal(pendingEntry?.remote_applied_timestamp, null);
   assert.ok(result.stdout.includes(`All ${24 + entries.length} canonical migrations are present (${pending} pending forward, ${applied} applied forward)`));
   const ownerReview = entries.find((entry) => entry.version === '20261119005000');
   assert.equal(ownerReview.production_status, 'applied');
