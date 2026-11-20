@@ -24,8 +24,8 @@ END $$;
 -- The exact new chain is checked separately; historical provenance remains 24.
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 44,
   'local migration history records all 44 migrations including internal team operations');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261120125000',
-  'local migration history ends at scoped internal team announcements');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261120075039',
+  'local migration history ends at the canonical production version of scoped internal team announcements');
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
            WHERE version <= '20261114164006'), 24,
   'historical migration cohort through 20261114164006 remains exactly 24 migrations');
