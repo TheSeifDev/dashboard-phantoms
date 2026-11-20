@@ -93,6 +93,16 @@ const SECTION_DEFS: Array<{ id: TeamWorkspaceSection; titleAr: string; titleEn: 
   { id: 'announcements', titleAr: 'الإعلانات', titleEn: 'Announcements', icon: <Bell size={17} aria-hidden="true" /> },
   { id: 'custom-fields', titleAr: 'الحقول المخصصة', titleEn: 'Custom fields', icon: <FileText size={17} aria-hidden="true" /> },
 ];
+const CAPABILITY_DEFS: Array<{ key: AdminPermission; ar: string; en: string }> = [
+  { key: 'dashboard', ar: 'لوحة الفريق', en: 'Team dashboard' },
+  { key: 'members', ar: 'الأعضاء والحقول', en: 'Members & fields' },
+  { key: 'tasks', ar: 'المهام', en: 'Tasks' },
+  { key: 'ranking', ar: 'الترتيب والتقييمات', en: 'Ranking & evaluations' },
+  { key: 'notes', ar: 'الملاحظات', en: 'Notes' },
+  { key: 'announcements', ar: 'الإعلانات', en: 'Announcements' },
+  { key: 'whatsapp', ar: 'واتساب', en: 'WhatsApp' },
+  { key: 'ai_assistant', ar: 'المساعد الذكي', en: 'AI assistant' },
+];
 const MEMBERSHIP_STATUSES: Record<TeamMembershipStatus, [string, string]> = {
   pending: ['بانتظار المراجعة', 'Pending review'],
   active: ['نشط في الفريق', 'Active in team'],
@@ -170,6 +180,7 @@ function TeamRosterSection({ userId, teamId }: { userId: string; teamId: string 
       ]);
     },
   });
+  const [memberFilter, setMemberFilter] = useState('');
   const confirmMembershipReview = async () => {
     if (!pending) return;
     try {
@@ -188,6 +199,10 @@ function TeamRosterSection({ userId, teamId }: { userId: string; teamId: string 
   if (roster.isError) return <ErrorState message={t('تعذر تحميل عضويات هذا الفريق.', 'Could not load this team’s memberships.')} onRetry={() => { void roster.refetch(); }} />;
   const members = roster.data ?? [];
   const activeCount = members.filter(memberIsActive).length;
+  const visibleMembers = members.filter((member) => {
+    const query = memberFilter.trim().toLocaleLowerCase();
+    return !query || `${member.full_name} ${membershipLabel(member.membership_status, t)}`.toLocaleLowerCase().includes(query);
+  });
   return (
     <div className="grid min-w-0 gap-4">
       <Card className="grid gap-4">
@@ -196,10 +211,13 @@ function TeamRosterSection({ userId, teamId }: { userId: string; teamId: string 
           <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-extrabold">{number(activeCount)} {t('أعضاء نشطون', 'active members')}</span>
         </div>
         <p className="text-sm leading-6 text-[var(--text-muted)]">{t('الإجراءات هنا تغيّر عضوية الفريق فقط. لا تعدّل الملف الأساسي أو حساب الدخول أو عضويات الفرق الأخرى.', 'Actions here change only this team membership. They do not edit the canonical profile, sign-in account, or other team memberships.')}</p>
+        {members.length > 0 && <label className="grid gap-1 text-xs font-bold">{t('البحث في أعضاء هذا الفريق', 'Search this team’s members')}<input type="search" value={memberFilter} onChange={(event) => setMemberFilter(event.target.value)} placeholder={t('الاسم أو حالة العضوية', 'Name or membership status')} className={inputClass('text-sm')} /></label>}
         {members.length === 0
           ? <EmptyState title={t('لا توجد عضويات مسندة لهذا الفريق', 'No memberships assigned to this team')} description={t('سيظهر هنا الأعضاء بعد إسنادهم للفريق من إدارة الفرق.', 'Members appear here after the Owner assigns them to this team.')} />
-          : <div className="grid gap-2">
-            {members.map((member) => (
+          : visibleMembers.length === 0
+            ? <p role="status" className="rounded-xl border border-dashed border-[var(--border)] p-4 text-sm leading-6 text-[var(--text-muted)]">{t('مافيش أعضاء مطابقين للبحث ده. جرّب اسمًا أو حالة أخرى.', 'No team members match this search. Try a different name or status.')}</p>
+            : <div className="grid gap-2">
+            {visibleMembers.map((member) => (
               <article key={member.member_id} className="flex min-w-0 flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="break-words text-sm font-extrabold">{member.full_name}</p>
@@ -297,6 +315,7 @@ function TeamTasksSection({ userId, teamId }: { userId: string; teamId: string }
   const [bonus, setBonus] = useState('0');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [taskFilter, setTaskFilter] = useState('');
   const create = useMutation({
     mutationFn: createWorkspaceTask,
     onSuccess: async () => {
@@ -373,6 +392,10 @@ function TeamTasksSection({ userId, teamId }: { userId: string; teamId: string }
     if (!assignedToMember(task, member.member_id) || !entry) return [];
     return entry.status === 'under_review' || entry.status === 'approved' ? [{ member, status: entry.status }] : [];
   });
+  const visibleTasks = (tasks.data ?? []).filter((task) => {
+    const query = taskFilter.trim().toLocaleLowerCase();
+    return !query || `${task.title} ${task.description ?? ''}`.toLocaleLowerCase().includes(query);
+  });
   if (tasks.isPending || roster.isPending) return <CardSkeletons count={2} />;
   if (tasks.isError) return <ErrorState message={t('تعذر تحميل مهام هذا الفريق.', 'Could not load this team’s tasks.')} onRetry={() => { void tasks.refetch(); }} />;
   if (roster.isError) return <ErrorState message={t('تعذر التحقق من أعضاء الفريق النشطين للمهام.', 'Could not verify active team members for tasks.')} onRetry={() => { void roster.refetch(); }} />;
@@ -381,9 +404,14 @@ function TeamTasksSection({ userId, teamId }: { userId: string; teamId: string }
       <div><h2 className="text-base font-black">{t('إنشاء مهمة للفريق', 'Create a team task')}</h2><p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">{t('تظهر قائمة الاستهداف أعضاء العضوية النشطة فقط. الاختيار يُحفظ لهذه المهمة دون تعديل سجلات مهام الفرق الأخرى.', 'Assignment choices include only active memberships. The selection is saved for this task without changing tasks in other teams.')}</p></div>
       <form onSubmit={(event) => void submit(event)} className="grid min-w-0 gap-3 sm:grid-cols-2">
         <label className="grid min-w-0 gap-1.5 text-sm font-bold sm:col-span-2">{t('عنوان المهمة', 'Task title')}<input className={inputClass()} value={title} onChange={(event) => setTitle(event.target.value)} required minLength={3} maxLength={200} /></label>
-        <label className="grid min-w-0 gap-1.5 text-sm font-bold sm:col-span-2">{t('التفاصيل (اختياري)', 'Details (optional)')}<textarea className={inputClass('min-h-24')} value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={3000} /></label>
-        <label className="grid min-w-0 gap-1.5 text-sm font-bold">{t('موعد نهائي (اختياري)', 'Deadline (optional)')}<input type="date" className={inputClass()} value={deadline} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setDeadline(event.target.value)} /></label>
-        <label className="grid min-w-0 gap-1.5 text-sm font-bold">{t('بونص الاعتماد (0–50)', 'Approval bonus (0–50)')}<input type="number" min={0} max={50} step={1} className={inputClass()} value={bonus} onChange={(event) => setBonus(event.target.value)} /></label>
+        <details className="rounded-xl border border-[var(--border)] p-3 sm:col-span-2">
+          <summary className="min-h-11 cursor-pointer rounded-lg py-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]">{t('تفاصيل إضافية اختيارية', 'Optional task details')}</summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="grid min-w-0 gap-1.5 text-sm font-bold sm:col-span-2">{t('التفاصيل (اختياري)', 'Details (optional)')}<textarea className={inputClass('min-h-24')} value={description} onChange={(event) => setDescription(event.target.value)} rows={3} maxLength={3000} /></label>
+            <label className="grid min-w-0 gap-1.5 text-sm font-bold">{t('موعد نهائي (اختياري)', 'Deadline (optional)')}<input type="date" className={inputClass()} value={deadline} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setDeadline(event.target.value)} /></label>
+            <label className="grid min-w-0 gap-1.5 text-sm font-bold">{t('بونص الاعتماد (0–50)', 'Approval bonus (0–50)')}<input type="number" min={0} max={50} step={1} className={inputClass()} value={bonus} onChange={(event) => setBonus(event.target.value)} /></label>
+          </div>
+        </details>
         {activeMembers.length === 0
           ? <p className="rounded-xl border border-[var(--border)] p-3 text-sm leading-6 text-[var(--text-muted)] sm:col-span-2">{t('لا يوجد أعضاء نشطون في هذا الفريق لاختيارهم.', 'There are no active team members to assign yet.')}</p>
           : <fieldset className="grid min-w-0 gap-2 rounded-xl border border-[var(--border)] p-3 sm:col-span-2">
@@ -396,10 +424,13 @@ function TeamTasksSection({ userId, teamId }: { userId: string; teamId: string }
         <div className="sm:col-span-2"><Button type="submit" icon={<Plus size={16} aria-hidden="true" />} isLoading={create.isPending} disabled={activeMembers.length === 0 || selectedIds.length === 0}>{t('إنشاء المهمة', 'Create task')}</Button></div>
       </form>
     </Card>
+    {(tasks.data ?? []).length > 0 && <label className="grid gap-1 text-xs font-bold">{t('البحث في مهام هذا الفريق', 'Search this team’s tasks')}<input type="search" value={taskFilter} onChange={(event) => setTaskFilter(event.target.value)} placeholder={t('عنوان المهمة أو تفاصيلها', 'Task title or details')} className={inputClass('text-sm')} /></label>}
     {tasks.data?.length === 0
       ? <EmptyState title={t('لا توجد مهام لهذا الفريق', 'No tasks for this team yet')} description={t('أنشئ أول مهمة من النموذج أعلاه.', 'Create the first task using the form above.')} />
-      : <div className="grid min-w-0 gap-3">
-        {(tasks.data ?? []).map((task) => {
+      : visibleTasks.length === 0
+        ? <p role="status" className="rounded-xl border border-dashed border-[var(--border)] p-4 text-sm leading-6 text-[var(--text-muted)]">{t('مافيش مهام مطابقة للبحث ده. جرّب عنوانًا أو تفاصيل أخرى.', 'No tasks match this search. Try a different title or details.')}</p>
+        : <div className="grid min-w-0 gap-3">
+        {visibleTasks.map((task) => {
           const assignedMembers = activeMembers.filter((member) => assignedToMember(task, member.member_id));
           const reviews = reviewEntries(task);
           return <Card key={task.id} className="grid min-w-0 gap-3">
@@ -694,11 +725,11 @@ export default function TeamWorkspacePage() {
   const roleName = currentTeam.role === null ? t('إدارة النظام العام', 'Global administration') : currentTeam.role === 'head' ? t('Head · رئيس الفريق', 'Head') : t('Monitor · المتابع', 'Monitor');
   return <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-4 px-3 pb-8 sm:px-5" dir={dir}>
     <Card className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-center gap-3"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary)]"><Layers3 size={20} aria-hidden="true" /></span><div className="min-w-0"><p className="truncate text-sm font-black">{currentTeam.name}</p><p className="mt-0.5 text-xs text-[var(--text-muted)]">{roleName}</p></div></div>
+      <div className="flex min-w-0 items-center gap-3"><span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary)]"><Layers3 size={20} aria-hidden="true" /></span><div className="min-w-0"><p className="text-xs font-black">{t('صلاحية ضمن الفريق المحدد', 'Scoped to selected team')}</p><p className="mt-0.5 text-xs text-[var(--text-muted)]">{roleName} · <bdi dir="ltr">{currentTeam.slug}</bdi></p></div></div>
       <div className="flex flex-wrap items-center gap-2">
         <label className="sr-only" htmlFor="team-workspace-picker">{t('اختار الفريق', 'Select team')}</label>
         <select id="team-workspace-picker" value={currentTeam.team_id} onChange={(event) => navigate(`/team/${event.target.value}`)} className="min-h-11 min-w-32 flex-1 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-bold sm:flex-none" aria-label={t('الفريق المعيّن', 'Assigned team')}>
-          {teamEntries.map((team) => <option key={team.team_id} value={team.team_id}>{team.name} · {team.role === null ? t('إدارة عامة', 'Global admin') : team.role === 'head' ? 'Head' : 'Monitor'}</option>)}
+          {teamEntries.map((team) => <option key={team.team_id} value={team.team_id}>{team.name} · {team.role === null ? t('إدارة عامة', 'Global admin') : team.role === 'head' ? t('رئيس الفريق', 'Head') : t('المتابع', 'Monitor')}</option>)}
         </select>
         <LanguageToggle />
         <Button type="button" variant="secondary" className="!min-w-11 !px-3" onClick={toggle} aria-label={theme === 'dark' ? t('استخدم المظهر الفاتح', 'Use light theme') : t('استخدم المظهر الداكن', 'Use dark theme')}>{theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}</Button>
@@ -706,10 +737,30 @@ export default function TeamWorkspacePage() {
       </div>
     </Card>
     <PageHeader icon={<ShieldCheck size={23} aria-hidden="true" />} title={currentTeam.name} description={t('مساحة منفصلة لهذا الفريق. كل قائمة وإجراء هنا مرتبطان بهذا الفريق فقط.', 'A separate workspace for this team. Every list and action here is scoped to this team only.')} />
-    <div role="tablist" aria-label={t('أقسام مساحة الفريق', 'Team workspace sections')} className="flex min-w-0 gap-2 overflow-x-auto pb-1">
-      {permittedSections.map((item) => <button key={item.id} type="button" role="tab" aria-selected={activeSection === item.id} onClick={() => setSection(item.id)} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-sm font-extrabold transition-colors ${activeSection === item.id ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]'}`}>{item.icon}{t(item.titleAr, item.titleEn)}</button>)}
+    <section aria-labelledby="team-capabilities-heading" className="grid min-w-0 gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      <div><h2 id="team-capabilities-heading" className="text-sm font-black">{t('صلاحيات الفريق المحدد', 'Permissions for the selected team')}</h2><p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{t('الحالة أدناه تخص هذا التعيين فقط. تبديل الفريق يغيّر الصلاحيات المعروضة ولا يدمجها.', 'These statuses describe this team assignment only. Switching teams changes the displayed grants; permissions are not combined.')}</p></div>
+      <div className="flex flex-wrap gap-2">
+        {CAPABILITY_DEFS.map((item) => {
+          const granted = currentTeam.permissions[item.key] === true;
+          return <span key={item.key} aria-label={`${t(item.ar, item.en)}: ${granted ? t('ممنوحة', 'Granted') : t('غير ممنوحة', 'Not granted')}`} className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${granted ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]' : 'border-[var(--border)] text-[var(--text-muted)]'}`}>
+            <span>{t(item.ar, item.en)}</span><span aria-hidden="true" className="opacity-75">{granted ? t('ممنوحة', 'Granted') : t('غير ممنوحة', 'Not granted')}</span>
+          </span>;
+        })}
+      </div>
+    </section>
+    <div role="tablist" aria-label={t('أقسام مساحة الفريق', 'Team workspace sections')} onKeyDown={(event) => {
+      if ((event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') || permittedSections.length === 0) return;
+      const currentIndex = permittedSections.findIndex((item) => item.id === activeSection);
+      if (currentIndex < 0) return;
+      const movesForward = event.key === (dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight');
+      const nextIndex = (currentIndex + (movesForward ? 1 : -1) + permittedSections.length) % permittedSections.length;
+      setSection(permittedSections[nextIndex].id);
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]?.focus();
+      event.preventDefault();
+    }} className="flex min-w-0 flex-wrap gap-2">
+      {permittedSections.map((item) => <button key={item.id} id={`team-workspace-tab-${item.id}`} type="button" role="tab" aria-selected={activeSection === item.id} aria-controls="team-workspace-panel" tabIndex={activeSection === item.id ? 0 : -1} onClick={() => setSection(item.id)} className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-extrabold transition-colors focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] ${activeSection === item.id ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]'}`}>{item.icon}{t(item.titleAr, item.titleEn)}</button>)}
     </div>
-    <section role="tabpanel" aria-label={t(SECTION_DEFS.find((item) => item.id === activeSection)?.titleAr ?? '', SECTION_DEFS.find((item) => item.id === activeSection)?.titleEn ?? '')} className="min-w-0">
+    <section id="team-workspace-panel" role="tabpanel" aria-labelledby={activeSection ? `team-workspace-tab-${activeSection}` : undefined} aria-label={t(SECTION_DEFS.find((item) => item.id === activeSection)?.titleAr ?? '', SECTION_DEFS.find((item) => item.id === activeSection)?.titleEn ?? '')} tabIndex={0} className="min-w-0">
       {activeSection ? <WorkspacePanel key={`${user.id}:${currentTeam.team_id}:${activeSection}`} section={activeSection} userId={user.id} teamId={currentTeam.team_id} /> : <EmptyState title={t('لا توجد أقسام مفعّلة لهذا الفريق', 'No sections are enabled for this team')} description={t('اختار فريقًا آخر أو اطلب من المالك تفعيل صلاحيات هذا الفريق.', 'Choose another team or ask the Owner to enable this team’s permissions.')} />}
     </section>
     {currentTeam.permissions.ai_assistant === true && <p className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-xs leading-5 text-[var(--text-muted)]">{t('المساعد الذكي للفريق غير مفعّل بعد في مساحة الفريق.', 'Team AI assistant is not enabled in the team workspace yet.')}</p>}

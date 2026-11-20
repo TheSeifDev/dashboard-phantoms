@@ -35,42 +35,61 @@ export function AdminHeader({ path, userName, isDark, drawerOpen = false, onTogg
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [compactSearchOpen, setCompactSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const ref = useRef<HTMLElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const canMembers = isOwner || permissions.members === true;
   const reviews = usePendingMemberJoinReviews(canMembers && notificationsOpen);
   const visiblePages = pages.filter((item) => (!item.ownerOnly || isOwner) && (!item.permission || isOwner || permissions[item.permission] === true));
   const results = visiblePages.filter((item) => `${item.ar} ${item.en}`.toLowerCase().includes(search.trim().toLowerCase()));
-  const current = pages.find((item) => item.path === path) ?? pages[0];
+  const current = pages.find((item) => item.path === path.replace(/\/+$/, '')) ?? pages[0];
   const reviewCount = reviews.data?.pages.flat().length;
+  const normalizedPath = path.replace(/\/+$/, '') || '/';
+  const isDashboard = normalizedPath === '/admin/dashboard' || normalizedPath === '/admin';
 
   useEffect(() => {
     const outside = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) { setSearchOpen(false); setNotificationsOpen(false); }
+      if (!ref.current?.contains(event.target as Node)) { setSearchOpen(false); setCompactSearchOpen(false); setNotificationsOpen(false); }
     };
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setSearchOpen(false); setNotificationsOpen(false); } };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setSearchOpen(false); setCompactSearchOpen(false); setNotificationsOpen(false); } };
     document.addEventListener('pointerdown', outside);
     document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
   }, []);
 
+  useEffect(() => {
+    if (compactSearchOpen) searchInputRef.current?.focus();
+  }, [compactSearchOpen]);
+
+  useEffect(() => {
+    setSearch('');
+    setSearchOpen(false);
+    setCompactSearchOpen(false);
+    setNotificationsOpen(false);
+  }, [path]);
+
   return (
-    <header ref={ref} className="workspace-header">
+    <header ref={ref} className={`workspace-header ${isDashboard ? 'workspace-header--dashboard' : 'workspace-header--operations'}`}>
       <div className="workspace-heading">
         <button type="button" onClick={onOpenMenu} aria-expanded={drawerOpen} className="header-icon lg:hidden" aria-label={t('افتح القائمة الرئيسية', 'Open main menu')} aria-haspopup="dialog"><Menu size={20} aria-hidden="true" /></button>
         <div className="min-w-0">
-          <nav aria-label={t('مسار الصفحة', 'Breadcrumb')} className="workspace-breadcrumb"><span>PHANTOMS</span><span aria-hidden="true">/</span><span>{t('مساحة العمل', 'Workspace')}</span></nav>
-          <h1 className="workspace-page-title">{t(current.ar, current.en)}</h1>
+          {isDashboard ? <>
+            <nav aria-label={t('مسار الصفحة', 'Breadcrumb')} className="workspace-breadcrumb"><span>PHANTOMS</span><span aria-hidden="true">/</span><span>{t('مساحة العمل', 'Workspace')}</span></nav>
+            <h1 className="workspace-page-title">{t(current.ar, current.en)}</h1>
+          </> : <nav aria-label={t('مسار الصفحة', 'Breadcrumb')} className="workspace-breadcrumb"><span>PHANTOMS</span><span aria-hidden="true">/</span><span>{t('مساحة العمل', 'Workspace')}</span><span aria-hidden="true">/</span><span aria-current="page">{t(current.ar, current.en)}</span></nav>}
         </div>
       </div>
       <div className="workspace-tools">
-        <form className="workspace-search" onSubmit={(event) => { event.preventDefault(); if (results[0]) { navigate(results[0].path); setSearchOpen(false); setSearch(''); } }}>
+        {!isDashboard && <button type="button" className="header-icon workspace-compact-search-toggle" onClick={() => { setCompactSearchOpen((value) => !value); setSearchOpen(true); }} aria-label={t('ابحث عن صفحة', 'Search pages')} aria-expanded={compactSearchOpen} aria-controls="workspace-search-form"><Search size={19} aria-hidden="true" /></button>}
+        <form id="workspace-search-form" className={`workspace-search${compactSearchOpen ? ' workspace-search--compact-open' : ''}`} onSubmit={(event) => { event.preventDefault(); if (results[0]) { navigate(results[0].path); setSearchOpen(false); setCompactSearchOpen(false); setSearch(''); } }}>
           <Search size={17} aria-hidden="true" />
-          <input type="search" value={search} onChange={(event) => { setSearch(event.target.value); setSearchOpen(true); }} onFocus={() => setSearchOpen(true)} aria-label={t('ابحث عن صفحة', 'Search pages')} placeholder={t('ابحث في مساحة العمل...', 'Search workspace…')} aria-expanded={searchOpen} aria-controls="workspace-search-results" />
+          <input ref={searchInputRef} type="search" value={search} onChange={(event) => { setSearch(event.target.value); setSearchOpen(true); }} onFocus={() => setSearchOpen(true)} aria-label={t('ابحث عن صفحة', 'Search pages')} placeholder={t('ابحث في مساحة العمل...', 'Search workspace…')} aria-expanded={searchOpen} aria-controls="workspace-search-results" />
           <span className="search-key" aria-hidden="true">↵</span>
+          {compactSearchOpen && <button type="button" className="header-icon workspace-search-close" onClick={() => { setCompactSearchOpen(false); setSearchOpen(false); setSearch(''); }} aria-label={t('إغلاق البحث', 'Close search')}><X size={18} aria-hidden="true" /></button>}
           {searchOpen && <div id="workspace-search-results" className="header-popover search-results">
             <p>{t('انتقل إلى', 'Navigate to')}</p>
-            {results.length ? results.map((item) => <Link key={item.path} to={item.path} onClick={() => { setSearchOpen(false); setSearch(''); }}>{t(item.ar, item.en)}</Link>) : <span>{t('مفيش صفحة مطابقة', 'No matching pages')}</span>}
+            {results.length ? results.map((item) => <Link key={item.path} to={item.path} onClick={() => { setSearchOpen(false); setCompactSearchOpen(false); setSearch(''); }}>{t(item.ar, item.en)}</Link>) : <span>{t('مفيش صفحة مطابقة', 'No matching pages')}</span>}
           </div>}
         </form>
         <LanguageToggle />
@@ -83,7 +102,7 @@ export function AdminHeader({ path, userName, isDark, drawerOpen = false, onTogg
             <Link to="/admin/members" onClick={() => setNotificationsOpen(false)}>{t('افتح طلبات المراجعة', 'Open review queue')}</Link>
           </section>}
         </div>}
-        <div className="header-account" title={userName}><span className="header-avatar" aria-hidden="true">{userName.trim().charAt(0).toUpperCase() || 'P'}</span><span className="header-account-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('المشرف', 'Administrator')}</small></span><ChevronDown size={13} aria-hidden="true" /></div>
+        <div className="header-account" title={userName}><span className="header-avatar" aria-hidden="true">{userName.trim().charAt(0).toUpperCase() || 'P'}</span><span className="header-account-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('المشرف', 'Administrator')}</small></span>{isDashboard && <ChevronDown size={13} aria-hidden="true" />}</div>
       </div>
     </header>
   );

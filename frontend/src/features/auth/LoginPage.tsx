@@ -54,6 +54,8 @@ export default function LoginPage() {
   const [remember, setRemember] = useState<boolean>(() => getMemberRemember());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [info, setInfo] = useState(() => {
     const state = location.state as { enrollmentComplete?: boolean; registrationPending?: boolean } | null;
     if (state?.registrationPending) return t('تم استلام بياناتك وكلمة مرورك. عضويتك الآن بانتظار مراجعة الإدارة وتفعيلها؛ لن تتمكن من الدخول قبل ذلك.', 'Your details and password were received. Your membership is awaiting admin review and activation; you cannot sign in before then.');
@@ -81,16 +83,18 @@ export default function LoginPage() {
     const attempt = (async () => {
       setError('');
       setInfo('');
+      setEmailError('');
+      setPasswordError('');
       if (cleanEmail === 'admin') {
         navigate('/admin/login');
         return;
       }
       if (!cleanEmail || !isValidEmail(cleanEmail)) {
-        if (liveRef.current) setError(t('اكتب بريدك الإلكتروني بصيغة صحيحة.', 'Enter a valid email address.'));
+        if (liveRef.current) setEmailError(t('اكتب بريدك الإلكتروني بصيغة صحيحة.', 'Enter a valid email address.'));
         return;
       }
       if (!submittedPassword) {
-        if (liveRef.current) setError(t('اكتب كلمة المرور.', 'Enter your password.'));
+        if (liveRef.current) setPasswordError(t('اكتب كلمة المرور.', 'Enter your password.'));
         return;
       }
 
@@ -177,13 +181,15 @@ export default function LoginPage() {
           <span>{info}</span>
         </div>
       )}
-      <form onSubmit={handleMemberLogin} method="post" className="auth-form" noValidate>
+      <form onSubmit={handleMemberLogin} method="post" className="auth-form" noValidate aria-busy={loading || undefined}>
         <label className="auth-field" htmlFor="member-email">{t('البريد الإلكتروني للعضو', 'Member email')}
-          <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="member-email" type="email" dir="ltr" autoComplete="email" required placeholder="name@phantoms.com" value={email} disabled={loading} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(error) || undefined} /></span>
+          <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="member-email" type="email" dir="ltr" autoCapitalize="none" spellCheck={false} autoComplete="email" required maxLength={254} placeholder="name@phantoms.com" value={email} disabled={loading} onChange={(event) => { setEmail(event.target.value); setEmailError(''); if (error) setError(''); }} aria-invalid={Boolean(emailError) || undefined} aria-describedby={emailError ? 'member-email-error' : undefined} /></span>
         </label>
+        {emailError && <p id="member-email-error" className="-mt-3 text-xs font-bold text-[var(--danger-text)]" role="alert">{emailError}</p>}
         <label className="auth-field" htmlFor="member-password">{t('كلمة المرور', 'Password')}
-          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="member-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="current-password" required value={password} disabled={loading} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(error) || undefined} /><button type="button" className="auth-password-toggle" disabled={loading} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></span>
+          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="member-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="current-password" required value={password} disabled={loading} onChange={(event) => { setPassword(event.target.value); setPasswordError(''); if (error) setError(''); }} aria-invalid={Boolean(passwordError) || undefined} aria-describedby={passwordError ? 'member-password-error' : undefined} /><button type="button" className="auth-password-toggle" disabled={loading} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')} aria-pressed={showPassword}>{showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button></span>
         </label>
+        {passwordError && <p id="member-password-error" className="-mt-3 text-xs font-bold text-[var(--danger-text)]" role="alert">{passwordError}</p>}
         <label className="auth-remember" htmlFor="member-remember">
           <input id="member-remember" type="checkbox" checked={remember} disabled={loading} onChange={(event) => setRemember(event.target.checked)} />
           <span className="auth-remember-box" aria-hidden="true" />
@@ -193,6 +199,7 @@ export default function LoginPage() {
           {loading ? t('بنتحقق بأمان...', 'Verifying securely...') : t('دخول بوابة الأعضاء', 'Sign in to the member portal')}
           {!loading && <ArrowLeft size={18} aria-hidden="true" />}
         </button>
+        {loading && <p className="-mt-3 text-center text-xs leading-5 text-[var(--text-muted)]" role="status" aria-live="polite">{t('جارٍ التحقق من بيانات الدخول والعضوية. سيستغرق ذلك لحظات.', 'Checking your sign-in details and membership. This may take a moment.')}</p>}
       </form>
     </AuthShell>
   );

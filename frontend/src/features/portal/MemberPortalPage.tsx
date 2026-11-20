@@ -23,10 +23,12 @@ import { taskBonus } from '../tasks/taskMeta';
 import { WhatsAppNotificationCenter } from './WhatsAppNotificationCenter';
 import { usePWA } from '../../hooks/usePWA';
 import type { NotificationTargetTab } from '../../lib/notifications';
+import { useLocale } from '../../i18n/useLocale';
 
 type PortalTab = NotificationTargetTab;
 
 export default function MemberPortalPage() {
+  const { t, dir, number } = useLocale();
   const member = useAuthStore((state) => state.currentMember);
   const logoutMember = useAuthStore((state) => state.logoutMember);
   const navigate = useNavigate();
@@ -75,9 +77,9 @@ export default function MemberPortalPage() {
       clearMemberState: logoutMember,
       navigateToLogin: () => navigate('/login'),
       onDeviceLogoutFailure: () =>
-        toast.error('حصلت مشكلة وإحنا بنسجّل خروج الجهاز، لكن تم تنظيف الجلسة المحلية.'),
+        toast.error(t('حصلت مشكلة وإحنا بنسجّل خروج الجهاز، لكن تم تنظيف الجلسة المحلية.', 'There was a problem signing this device out, but local session data was cleared.')),
       onLocalSignOutFailure: () =>
-        toast.error('حصلت مشكلة في إنهاء جلسة العضو، لكن تم تنظيف بيانات التطبيق.'),
+        toast.error(t('حصلت مشكلة في إنهاء جلسة العضو، لكن تم تنظيف بيانات التطبيق.', 'There was a problem ending the member session, but local app data was cleared.')),
     });
   };
 
@@ -92,9 +94,9 @@ export default function MemberPortalPage() {
         submissionUrl: current?.submission_url ?? '',
         currentTracking: task.tracking ?? {},
       });
-      toast.success('بدأت المهمة — بالتوفيق!');
+      toast.success(t('بدأت المهمة — بالتوفيق!', 'Task started — good luck!'));
     } catch (cause) {
-      toast.error(handleSupabaseError(cause).message || 'معرفناش نبدأ المهمة — مفيش حاجة اتغيرت.');
+      toast.error(handleSupabaseError(cause).message || t('معرفناش نبدأ المهمة — مفيش حاجة اتغيرت.', 'We could not start the task; nothing was changed.'));
     }
   };
 
@@ -126,7 +128,7 @@ export default function MemberPortalPage() {
         isResubmission: submitted.tracking?.[String(member.id)]?.status === 'revision_requested',
       });
     } catch (cause) {
-      toast.error(handleSupabaseError(cause).message || 'معرفناش نسلّم المهمة — جرّب تاني.');
+      toast.error(handleSupabaseError(cause).message || t('معرفناش نسلّم المهمة — جرّب تاني.', 'We could not submit the task. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -138,9 +140,9 @@ export default function MemberPortalPage() {
     try {
       await updateMemberReadiness(member.id, canGo);
       useAuthStore.getState().setMember({ ...member, can_go_alexandria: canGo });
-      toast.success(canGo ? 'جاهزية النزول الميداني اتفعّلت.' : 'جاهزية النزول الميداني اتوقفت.');
+      toast.success(canGo ? t('جاهزية النزول الميداني اتفعّلت.', 'Field availability enabled.') : t('جاهزية النزول الميداني اتوقفت.', 'Field availability disabled.'));
     } catch (cause) {
-      toast.error(handleSupabaseError(cause).message || 'معرفناش نحدّث حالة الجاهزية.');
+      toast.error(handleSupabaseError(cause).message || t('معرفناش نحدّث حالة الجاهزية.', 'We could not update your field availability.'));
     } finally {
       setIsTogglingReadiness(false);
     }
@@ -153,19 +155,19 @@ export default function MemberPortalPage() {
   };
 
   const tabs: Array<{ key: PortalTab; label: string; icon: typeof Layers; badge?: number }> = [
-    { key: 'ALL', label: 'كل الأقسام', icon: Layers },
-    { key: 'TASKS', label: 'المهام', icon: CheckSquare, badge: myTasks.length || undefined },
+    { key: 'ALL', label: t('كل الأقسام', 'Overview'), icon: Layers },
+    { key: 'TASKS', label: t('المهام', 'Tasks'), icon: CheckSquare, badge: myTasks.length || undefined },
     {
       key: 'EVALUATIONS',
-      label: 'التقييمات',
+      label: t('التقييمات', 'Evaluations'),
       icon: ClipboardCheck,
       badge: unreadEvaluationsCount || undefined,
     },
-    { key: 'ANNOUNCEMENTS', label: 'الإعلانات', icon: Bell },
+    { key: 'ANNOUNCEMENTS', label: t('الإعلانات', 'Announcements'), icon: Bell },
   ];
 
   return (
-    <div className="min-h-dvh bg-[var(--bg)] text-[var(--text)]" dir="rtl">
+    <div className="min-h-dvh bg-[var(--bg)] text-[var(--text)]" dir={dir}>
       <PortalHeader onLogout={logout} />
       <WhatsAppNotificationCenter
         memberId={member.id}
@@ -184,13 +186,13 @@ export default function MemberPortalPage() {
           totalBonus={bonusQuery.data ?? null}
           bonusInfinite={bonusInfiniteQuery.data === true}
           bonusLoading={bonusQuery.isLoading}
+          bonusError={bonusQuery.isError}
           bonusStateLoading={bonusInfiniteQuery.isLoading}
           bonusStateError={bonusInfiniteQuery.isError}
         />
 
-        {/* شريط التنقل السريع بين أقسام البوابة */}
         <nav
-          aria-label="أقسام بوابة العضو"
+          aria-label={t('أقسام بوابة العضو', 'Member portal sections')}
           className="grid grid-cols-2 gap-1.5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-sm)] sm:grid-cols-4"
         >
           {tabs.map(({ key, label, icon: Icon, badge }) => {
@@ -200,7 +202,8 @@ export default function MemberPortalPage() {
                 key={key}
                 type="button"
                 onClick={() => setActiveTab(key)}
-                className={`flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black transition-colors ${
+                aria-current={active ? 'page' : undefined}
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 ${
                   active
                     ? 'bg-[var(--primary)] text-white shadow-[var(--shadow-sm)]'
                     : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'
@@ -210,13 +213,14 @@ export default function MemberPortalPage() {
                 <span>{label}</span>
                 {typeof badge === 'number' && badge > 0 && (
                   <span
+                    aria-hidden="true"
                     className={`rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
                       active
                         ? 'bg-white/20 text-white'
                         : 'bg-[var(--primary-soft)] text-[var(--link)]'
                     }`}
                   >
-                    {badge}
+                    {number(badge)}
                   </span>
                 )}
               </button>
@@ -230,6 +234,7 @@ export default function MemberPortalPage() {
             memberId={memberId}
             isLoading={tasksQuery.isLoading}
             isError={tasksQuery.isError}
+            isUpdating={updateTask.isPending}
             onRetry={() => {
               void tasksQuery.refetch();
             }}

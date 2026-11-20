@@ -12,6 +12,7 @@ interface Props {
   task: Task;
   members: Member[];
   isConnected: boolean;
+  isDryRun: boolean;
   isPending: boolean;
   result?: WhatsAppSendResult;
   error?: string;
@@ -22,10 +23,9 @@ export function buildTaskMessage(task: Task, member: Member): string {
   const formatArabicDate = (value: string) => formatDeadline(value, { weekday: true, year: 'always' });
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
-  const deadlineText =
-    task.has_deadline && task.deadline_date
-      ? `\nالموعد النهائي لإنجاز المهمة: ${formatArabicDate(task.deadline_date)}`
-      : '';
+  const deadlineText = task.has_deadline && task.deadline_date
+    ? `\nالموعد النهائي لإنجاز المهمة: ${formatArabicDate(task.deadline_date)}`
+    : '';
   const bonus = taskBonus(task);
   const bonusText = bonus > 0 ? `\nبونص المهمة بعد الاعتماد: ${bonus} نقطة` : '';
 
@@ -40,15 +40,7 @@ export function buildTaskMessage(task: Task, member: Member): string {
   );
 }
 
-export function WhatsAppDispatch({
-  task,
-  members,
-  isConnected,
-  isPending,
-  result,
-  error,
-  onSend,
-}: Props) {
+export function WhatsAppDispatch({ task, members, isConnected, isDryRun, isPending, result, error, onSend }: Props) {
   const { t, dir, number } = useLocale();
   const [openModal, setOpenModal] = useState(false);
   const [consentConfirmed, setConsentConfirmed] = useState(false);
@@ -69,97 +61,88 @@ export function WhatsAppDispatch({
 
   return (
     <div className="grid gap-4 border-t border-[var(--border)] pt-4" dir={dir}>
-      {/* Per-recipient Message Preview */}
-      {activeMember && (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-6">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 font-extrabold text-[var(--text)]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-black text-[var(--text)]">{t('3. راجع الرسالة والتأكيد', '3. Review and confirm')}</h3>
+        <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-xs font-bold text-[var(--text-muted)]">{number(members.length)} {t('مستلم', 'recipients')}</span>
+      </div>
+
+      {activeMember ? (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-sm font-extrabold text-[var(--text)]">
               <Eye size={16} className="text-[var(--primary-ink)]" aria-hidden="true" />
-              <span>{t("معاينة رسالة المستلم:", "Recipient message preview:")}</span>
+              <span>{t('معاينة رسالة المستلم', 'Recipient message preview')}</span>
             </span>
 
             {members.length > 1 && (
-              <label className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                <span>{t("اختار العضو للمعاينة:", "Choose member to preview:")}</span>
+              <label className="flex min-h-11 items-center gap-2 text-xs text-[var(--text-muted)]">
+                <span>{t('المستلم:', 'Recipient:')}</span>
                 <select
                   value={previewMemberIndex}
-                  onChange={(e) => setPreviewMemberIndex(Number(e.target.value))}
-                  className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-xs font-bold text-[var(--text)]"
+                  onChange={(event) => setPreviewMemberIndex(Number(event.target.value))}
+                  className="min-h-10 max-w-[min(60vw,18rem)] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 text-xs font-bold text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
                 >
-                  {members.map((m, idx) => (
-                    <option key={m.id} value={idx}>
-                      {m.full_name}
-                    </option>
-                  ))}
+                  {members.map((member, index) => <option key={member.id} value={index}>{member.full_name}</option>)}
                 </select>
               </label>
             )}
           </div>
-
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 font-sans whitespace-pre-wrap text-xs leading-6 text-[var(--text)]">
-            {renderedPreview}
-          </div>
+          <div dir="auto" className="max-h-72 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 font-sans text-xs leading-6 text-[var(--text)] whitespace-pre-wrap">{renderedPreview}</div>
         </div>
+      ) : (
+        <p className="rounded-xl border border-dashed border-[var(--border)] p-3 text-sm text-[var(--text-muted)]">{t('اختر مستلمًا واحدًا على الأقل لمراجعة الرسالة.', 'Select at least one recipient to review the message.')}</p>
       )}
 
-      {/* Recipient Consent Checkbox */}
-      <label className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50/70 p-3 text-sm leading-6 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-300 bg-amber-50/70 p-3 text-sm leading-6 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
         <input
           type="checkbox"
-          className="mt-1 size-5 shrink-0 accent-[var(--primary)]"
+          className="mt-1 size-5 shrink-0 accent-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
           checked={consentConfirmed}
           onChange={(event) => setConsentConfirmed(event.target.checked)}
         />
-        <span>
-          {t("بأكد إن الأعضاء المحددين وافقوا قبل كده وبشكل واضح على استلام إشعارات المهام على واتساب، وإن المحتوى خاص بمهام متسندة لهم بس.", "I confirm the selected members explicitly consented to WhatsApp task notifications and that messages concern only their assigned tasks.")}
-        </span>
+        <span>{t('أؤكد أن المستلمين المحددين وافقوا بوضوح على استقبال إشعارات المهام عبر واتساب، وأن الرسالة تخص مهامًا مسندة إليهم فقط.', 'I confirm the selected recipients explicitly consented to WhatsApp task notifications and that messages concern only tasks assigned to them.')}</span>
       </label>
 
-      {/* Dispatch Action Button */}
       <Button
+        type="button"
         icon={<Send size={17} aria-hidden="true" />}
         disabled={members.length === 0 || !isConnected || !consentConfirmed || isPending}
+        isLoading={isPending}
+        loadingText={t('جارٍ تنفيذ الإرسال…', 'Sending…')}
         onClick={handleOpenModal}
         fullOnMobile
       >
-        {t('كمّل وراجع الإرسال', 'Continue and review send')} ({number(members.length)} {t('عضو', 'members')})
+        {isDryRun ? t('مراجعة إرسال تجريبي', 'Review test send') : t('مراجعة الإرسال عبر واتساب', 'Review WhatsApp send')} ({number(members.length)})
       </Button>
 
       {!isConnected && (
-        <p className="text-sm text-[var(--text-muted)]">
-          {t("اربط رقم واتساب الأول عن طريق رمز QR عشان تقدر تفعّل الإرسال التجريبي.", "Link a WhatsApp number with the QR code before enabling test sends.")}
-        </p>
+        <p className="rounded-lg bg-[var(--surface-2)] p-3 text-sm text-[var(--text-muted)]">{t('لا يمكن المتابعة قبل اتصال جلسة واتساب.', 'Connect the WhatsApp session before continuing.')}</p>
+      )}
+      {isConnected && members.length === 0 && (
+        <p className="rounded-lg bg-[var(--surface-2)] p-3 text-sm text-[var(--text-muted)]">{t('اختر مستلمًا واحدًا على الأقل للمتابعة.', 'Select at least one recipient to continue.')}</p>
       )}
 
       {error && (
-        <p role="alert" className="flex items-center gap-2 text-sm text-[var(--danger)]">
-          <AlertCircle size={17} aria-hidden="true" />
-          {error}
+        <p role="alert" className="flex items-start gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+          <AlertCircle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <span className="break-words">{error}</span>
         </p>
       )}
 
-      {/* Results Box */}
       {result && (
-        <div className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-6">
+        <div role="status" aria-live="polite" className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-6">
           <p className="mb-2 flex items-center gap-2 font-bold text-[var(--text)]">
             <CheckCircle2 size={18} className="text-[var(--success-text)]" aria-hidden="true" />
-            <span>{t("نتائج البعت التجريبي:", "Test send results:")}</span>
+            <span>{t('نتيجة الإرسال:', 'Send result:')}</span>
           </p>
           <ul className="list-inside list-disc">
-            <li>
-              {t("البعت التجريبي نجح لـ:", "Test send succeeded for:")} <b>{result.sent}</b>
-            </li>
-            <li>
-              {t("البعت فشل لـ:", "Test send failed for:")} <b>{result.failed}</b>
-            </li>
-            {result.errors && result.errors.length > 0 && (
-              <li className="text-[var(--danger)]">{t('الأخطاء:', 'Errors:')} {result.errors.join('، ')}</li>
-            )}
+            <li>{t('تم بنجاح:', 'Sent successfully:')} <b>{number(result.sent)}</b></li>
+            <li>{t('لم ينجح:', 'Failed:')} <b>{number(result.failed)}</b></li>
+            {result.errors && result.errors.length > 0 && <li className="break-words text-[var(--danger)]">{t('التفاصيل:', 'Details:')} {result.errors.join('، ')}</li>}
           </ul>
         </div>
       )}
 
-      {/* Confirmation Modal */}
       {activeMember && (
         <WhatsAppConfirmModal
           isOpen={openModal}
@@ -168,6 +151,7 @@ export function WhatsAppDispatch({
           recipientCount={members.length}
           previewMemberName={activeMember.full_name}
           messagePreview={renderedPreview}
+          isDryRun={isDryRun}
           isPending={isPending}
           onConfirm={handleConfirmSend}
         />

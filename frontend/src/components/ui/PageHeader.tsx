@@ -19,7 +19,7 @@ export function PageHeader({
           {icon}
         </div>
         <div className="min-w-0">
-          <h2 className="text-xl font-black text-[var(--text)] sm:text-2xl">{title}</h2>
+          <h1 className="m-0 text-xl font-black text-[var(--text)] sm:text-2xl">{title}</h1>
           {description && <p className="mt-1 max-w-xl text-sm leading-7 text-[var(--text-muted)]">{description}</p>}
         </div>
       </div>

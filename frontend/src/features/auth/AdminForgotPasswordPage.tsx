@@ -49,11 +49,13 @@ export default function AdminForgotPasswordPage() {
     >
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
       {info && <div className="flex items-start gap-2.5 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-3.5 text-xs font-semibold leading-5 text-[var(--text)]" role="status"><Mail size={17} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" aria-hidden="true" /><span>{info}</span></div>}
-      <form onSubmit={(event) => void requestRecovery(event)} method="post" className="auth-form" noValidate>
+      <form onSubmit={(event) => void requestRecovery(event)} method="post" className="auth-form" noValidate aria-busy={loading || undefined}>
         <label className="auth-field" htmlFor="admin-recovery-email">{t('البريد الإلكتروني', 'Email address')}
-          <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="admin-recovery-email" type="email" dir="ltr" autoComplete="email" required placeholder="admin@phantoms.com" value={email} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }} /></span>
+          <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="admin-recovery-email" type="email" dir="ltr" autoCapitalize="none" spellCheck={false} autoComplete="email" required maxLength={254} placeholder="admin@phantoms.com" value={email} disabled={loading} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); if (info) setInfo(''); }} aria-invalid={Boolean(email.trim() && !isValidEmail(email.trim().toLowerCase())) || undefined} aria-describedby={email.trim() && !isValidEmail(email.trim().toLowerCase()) ? 'admin-recovery-email-hint' : undefined} /></span>
         </label>
+        {email.trim() && !isValidEmail(email.trim().toLowerCase()) && <p id="admin-recovery-email-hint" className="-mt-3 text-xs font-bold text-amber-700 dark:text-amber-300" role="note">{t('استخدم بريداً إلكترونياً بصيغة صحيحة، مثل admin@phantoms.com.', 'Enter a valid email address, such as admin@phantoms.com.')}</p>}
         <button type="submit" className="auth-submit" disabled={loading} aria-busy={loading || undefined}>{loading ? t('بنرسل الرابط...', 'Sending link...') : t('إرسال رابط الاستعادة', 'Send recovery link')} {!loading && <ArrowLeft size={18} aria-hidden="true" />}</button>
+        {loading && <p className="-mt-3 text-center text-xs leading-5 text-[var(--text-muted)]" role="status" aria-live="polite">{t('جارٍ إرسال الطلب. لن نكشف ما إذا كان البريد مرتبطاً بحساب إدارة.', 'Sending your request. We will not reveal whether this email is linked to an administrator account.')}</p>}
       </form>
     </AuthShell>
   );

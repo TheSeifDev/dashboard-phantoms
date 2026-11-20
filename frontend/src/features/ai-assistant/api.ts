@@ -27,6 +27,7 @@ export interface AiMessage {
   timestamp: string;
   action?: AiAction | null;
   actionExecuted?: boolean;
+  status?: 'error';
 }
 
 export interface AskAiInput {

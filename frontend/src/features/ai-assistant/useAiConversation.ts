@@ -5,6 +5,7 @@ import { useCreateNote, useDeleteNote } from '../notes/api';
 import { useAddMember, useUpdateMember, useDeleteMember } from '../members/api';
 import { toast } from '../../store/toast';
 import type { Member, Task } from '../../types/db';
+import { useLocale } from '../../i18n/useLocale';
 
 export interface AiPendingConfirmation {
   messageId: string;
@@ -17,6 +18,7 @@ export interface AiPendingConfirmation {
 }
 
 export function useAiConversation(members: Member[], tasks: Task[]) {
+  const { locale, t } = useLocale();
   const ask = useAskPhantomsAi();
   const createTask = useCreateTask();
   const deleteTask = useDeleteTask();
@@ -25,11 +27,12 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
   const addMember = useAddMember();
   const updateMember = useUpdateMember();
   const deleteMember = useDeleteMember();
+  const timeNow = () => new Date().toLocaleTimeString(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
   const [messages, setMessages] = useState<AiMessage[]>([{
     id: 'welcome',
     sender: 'assistant',
     text: 'أهلاً بيك! أنا مساعد PHANTOMS الذكي. اسألني عن الفريق والمهام أو اطلب مني أعمل مهمة أو ملاحظة.',
-    timestamp: new Date().toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
+    timestamp: timeNow(),
   }]);
   const [pendingConfirmation, setPendingConfirmation] = useState<AiPendingConfirmation | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -58,7 +61,7 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
     if (!text || ask.isPending) return;
     const userMessage: AiMessage = {
       id: Date.now().toString(), sender: 'user', text,
-      timestamp: new Date().toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: timeNow(),
     };
     setMessages((current) => [...current, userMessage]);
 
@@ -74,15 +77,16 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
     try {
       const response = await ask.mutateAsync({ question: text, context: buildContext(), history });
       setMessages((current) => [...current, {
-        id: (Date.now() + 1).toString(), sender: 'assistant', text: response.answer || 'اتنفّذ طلبك.',
-        timestamp: new Date().toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
+        id: (Date.now() + 1).toString(), sender: 'assistant', text: response.answer || t('اتنفّذ طلبك.', 'Your request was completed.'),
+        timestamp: timeNow(),
         action: response.action || null, actionExecuted: false,
       }]);
-    } catch (cause) {
+    } catch {
       setMessages((current) => [...current, {
         id: (Date.now() + 1).toString(), sender: 'assistant',
-        text: `آسف، حصلت مشكلة وأنا بعالج طلبك: ${cause instanceof Error ? cause.message : 'معرفناش نوصل للمساعد الذكي.'}`,
-        timestamp: new Date().toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' }),
+        text: t('تعذّر إكمال طلبك. تحقّق من الاتصال وحاول مرة أخرى.', 'We could not complete your request. Check your connection and try again.'),
+        timestamp: timeNow(),
+        status: 'error',
       }]);
     }
   };
@@ -153,10 +157,10 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
             messageId,
             action,
             actionType: 'delete_member',
-            actionTypeName: 'حذف عضو نهائيًا',
+            actionTypeName: t('حذف عضو نهائيًا', 'Permanently delete member'),
             targetEntityName: member.full_name,
             targetId: member.id,
-            details: `البريد: ${member.email} | الجهاز: ${member.device || 'غير محدد'}`,
+            details: `${t('البريد', 'Email')}: ${member.email} | ${t('الجهاز', 'Device')}: ${member.device || t('غير محدد', 'Not specified')}`,
           });
           return;
         }
@@ -170,10 +174,10 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
             messageId,
             action,
             actionType: 'delete_task',
-            actionTypeName: 'حذف مهمة نهائيًا',
+            actionTypeName: t('حذف مهمة نهائيًا', 'Permanently delete task'),
             targetEntityName: task.title,
             targetId: task.id,
-            details: task.deadline_date ? `الموعد النهائي: ${task.deadline_date}` : 'بدون موعد نهائي',
+            details: task.deadline_date ? `${t('الموعد النهائي', 'Deadline')}: ${task.deadline_date}` : t('بدون موعد نهائي', 'No deadline'),
           });
           return;
         }
@@ -186,10 +190,10 @@ export function useAiConversation(members: Member[], tasks: Task[]) {
             messageId,
             action,
             actionType: 'delete_note',
-            actionTypeName: 'حذف ملاحظة نهائيًا',
-            targetEntityName: `ملاحظة رقم #${noteId}`,
+            actionTypeName: t('حذف ملاحظة نهائيًا', 'Permanently delete note'),
+            targetEntityName: `${t('ملاحظة رقم', 'Note number')} #${noteId}`,
             targetId: noteId,
-            details: stringValue(payload.text) ? `النص: "${payload.text}"` : undefined,
+            details: stringValue(payload.text) ? `${t('النص', 'Text')}: "${payload.text}"` : undefined,
           });
           return;
         }

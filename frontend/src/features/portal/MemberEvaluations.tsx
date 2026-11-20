@@ -13,12 +13,22 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { CardSkeletons } from '../../components/ui/Skeleton';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
+import { useLocale } from '../../i18n/useLocale';
+
+const GRADE_LABELS_ENGLISH = {
+  excellent: 'Excellent',
+  very_good: 'Very good',
+  good: 'Good',
+  needs_improvement: 'Needs improvement',
+  warning: 'Warning',
+} as const;
 
 interface Props {
   memberId: number;
 }
 
 export function MemberEvaluations({ memberId }: Props) {
+  const { t, dir, number, date } = useLocale();
   const evaluationsQuery = useMemberEvaluations(memberId);
   const markRead = useMarkEvaluationRead();
 
@@ -28,7 +38,7 @@ export function MemberEvaluations({ memberId }: Props) {
   const handleMarkRead = async (evaluationId: number, mode: 'native' | 'fallback') => {
     try {
       await markRead.mutateAsync({ evaluationId, memberId, mode });
-      toast.success('تم تأكيد اطلاعك على التقييم.');
+      toast.success(t('تم تأكيد اطلاعك على التقييم.', 'You confirmed that you have read this evaluation.'));
     } catch (cause) {
       toast.error(handleSupabaseError(cause).message);
     }
@@ -36,13 +46,13 @@ export function MemberEvaluations({ memberId }: Props) {
 
   const formatDate = (dateString: string) => {
     try {
-      return new Intl.DateTimeFormat('ar-EG-u-nu-latn', {
+      return date(dateString, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-      }).format(new Date(dateString));
+      });
     } catch {
       return dateString;
     }
@@ -50,7 +60,7 @@ export function MemberEvaluations({ memberId }: Props) {
 
   if (evaluationsQuery.isLoading) {
     return (
-      <div dir="rtl" aria-label="بنحمّل التقييمات">
+      <div dir={dir} role="status" aria-label={t('بنحمّل التقييمات', 'Loading evaluations')}>
         <CardSkeletons count={2} />
       </div>
     );
@@ -58,9 +68,9 @@ export function MemberEvaluations({ memberId }: Props) {
 
   if (evaluationsQuery.isError) {
     return (
-      <div dir="rtl">
+      <div dir={dir}>
         <ErrorState
-          message="معرفناش نحمّل تقييمات الأداء."
+          message={t('معرفناش نحمّل تقييمات الأداء.', 'We could not load your performance evaluations.')}
           onRetry={() => {
             void evaluationsQuery.refetch();
           }}
@@ -70,7 +80,7 @@ export function MemberEvaluations({ memberId }: Props) {
   }
 
   return (
-    <section className="grid gap-3" dir="rtl" aria-labelledby="member-evaluations-title">
+    <section className="grid gap-3" dir={dir} aria-labelledby="member-evaluations-title" aria-busy={markRead.isPending}>
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -78,26 +88,26 @@ export function MemberEvaluations({ memberId }: Props) {
             <ClipboardCheck size={20} aria-hidden="true" />
           </span>
           <h2 id="member-evaluations-title" className="text-lg font-black text-[var(--text)]">
-            تقييماتي وملاحظات الأداء
+            {t('تقييماتي وملاحظات الأداء', 'My evaluations and performance feedback')}
           </h2>
           {unreadCount > 0 && (
             <Badge variant="danger">
-              {unreadCount === 1 ? 'تقييم جديد' : `${unreadCount} تقييمات جديدة`}
+              {unreadCount === 1 ? t('تقييم جديد', 'New evaluation') : t(`${number(unreadCount)} تقييمات جديدة`, `${number(unreadCount)} new evaluations`)}
             </Badge>
           )}
         </div>
 
         {evaluations.length > 0 && (
           <p className="shrink-0 text-sm text-[var(--text-muted)]">
-            {evaluations.length === 1 ? 'تقييم واحد' : `${evaluations.length} تقييمات`}
+            {evaluations.length === 1 ? t('تقييم واحد', '1 evaluation') : t(`${number(evaluations.length)} تقييمات`, `${number(evaluations.length)} evaluations`)}
           </p>
         )}
       </div>
 
       {evaluations.length === 0 ? (
         <EmptyState
-          title="مفيش تقييمات مسجلة لحد دلوقتي"
-          description="هتظهر هنا تقييمات الأداء والملاحظات الموجهة ليك من الإدارة."
+          title={t('مفيش تقييمات مسجلة لحد دلوقتي', 'No evaluations yet')}
+          description={t('هتظهر هنا تقييمات الأداء والملاحظات الموجهة ليك من الإدارة.', 'Performance evaluations and feedback from the administration will appear here.')}
         />
       ) : (
         <div className="grid gap-3">
@@ -114,24 +124,25 @@ export function MemberEvaluations({ memberId }: Props) {
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                    <h3 className="font-black text-[var(--text)]">{ev.title}</h3>
+                    <h3 dir="auto" className="font-black text-[var(--text)]">{ev.title}</h3>
                     <Badge variant={getGradeBadgeVariant(ev.grade)}>
-                      التقدير: {EVALUATION_GRADE_LABELS[ev.grade]}
+                      {t('التقدير: ', 'Grade: ')}{t(EVALUATION_GRADE_LABELS[ev.grade], GRADE_LABELS_ENGLISH[ev.grade])}
                     </Badge>
                     {ev.points !== 0 && (
                       <Badge variant={ev.points > 0 ? 'success' : 'danger'}>
-                        {ev.points > 0 ? `+${ev.points} نقاط بونص` : `${ev.points} نقاط`}
+                        {ev.points > 0 ? `+${number(ev.points)} ${t('نقاط بونص', 'bonus points')}` : `${number(ev.points)} ${t('نقاط', 'points')}`}
                       </Badge>
                     )}
-                    {!isRead && <Badge variant="info">جديد</Badge>}
+                    {!isRead && <Badge variant="info">{t('جديد', 'New')}</Badge>}
                   </div>
 
-                  <time className="shrink-0 text-xs text-[var(--text-muted)]">
+                  <time dateTime={ev.created_at} className="shrink-0 text-xs text-[var(--text-muted)]">
                     {formatDate(ev.created_at)}
                   </time>
                 </div>
 
                 <p
+                  dir="auto"
                   className={`whitespace-pre-wrap text-sm leading-6 ${
                     !isRead ? 'font-semibold text-[var(--text)]' : 'text-[var(--text-2)]'
                   }`}
@@ -141,7 +152,7 @@ export function MemberEvaluations({ memberId }: Props) {
 
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-3">
                   <span className="text-xs font-bold text-[var(--text-muted)]">
-                    المقيّم: {ev.evaluator_name}
+                    {t('المقيّم: ', 'Evaluator: ')}<span dir="auto">{ev.evaluator_name}</span>
                   </span>
 
                   <div>
@@ -152,15 +163,16 @@ export function MemberEvaluations({ memberId }: Props) {
                           void handleMarkRead(ev.id, ev.mode);
                         }}
                         isLoading={markRead.isPending}
-                        loadingText="بنسجّل..."
+                        loadingText={t('بنسجّل...', 'Saving...')}
                         icon={<Check size={16} aria-hidden="true" />}
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                       >
-                        اطلعت على التقييم
+                        {t('اطلعت على التقييم', 'Mark as read')}
                       </Button>
                     ) : (
                       <span className="flex min-h-9 items-center gap-1.5 text-xs font-bold text-[var(--success-text)] dark:text-[var(--success-text)]">
                         <CheckCheck size={16} aria-hidden="true" />
-                        تم الاطلاع
+                        {t('تم الاطلاع', 'Read')}
                       </span>
                     )}
                   </div>

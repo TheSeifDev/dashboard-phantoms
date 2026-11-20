@@ -41,7 +41,7 @@ export function MemberCards({
                 <button
                   type="button"
                   onClick={() => onView(member)}
-                  className="min-h-0 truncate text-start text-base font-black leading-7 text-[var(--text)] hover:text-[var(--link)] focus-visible:text-[var(--link)]"
+                  className="min-h-0 truncate text-start text-base font-black leading-7 text-[var(--text)] hover:text-[var(--link)] focus-visible:text-[var(--link)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2"
                 >
                   {member.full_name}
                 </button>
@@ -52,6 +52,12 @@ export function MemberCards({
                 >
                   {specialization || t('التخصص مش محدد', 'Specialization not specified')}
                 </span>
+                {(member.email || member.phone) && (
+                  <span className="flex min-w-0 flex-wrap gap-x-2 text-xs leading-5 text-[var(--text-muted)]">
+                    {member.email && <span className="max-w-full truncate" dir="ltr" title={member.email}>{member.email}</span>}
+                    {member.phone && <span className="whitespace-nowrap" dir="ltr">{member.phone}</span>}
+                  </span>
+                )}
               </div>
               <WorkStatusChip status={member.work_status} />
             </div>
@@ -92,22 +98,22 @@ export function MemberCards({
               <button
                 type="button"
                 onClick={() => onView(member)}
-                className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--primary-soft)] px-3 text-sm font-bold text-[var(--link)] transition-colors hover:bg-[var(--primary)] hover:text-white"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--primary-soft)] px-3 text-sm font-bold text-[var(--link)] transition-colors hover:bg-[var(--primary)] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2"
               >
                 <Eye size={16} aria-hidden="true" /> {t('الملف', 'Profile')}
               </button>
               <button
                 type="button"
                 onClick={() => onEdit(member)}
-                className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] px-3 text-sm font-bold text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] px-3 text-sm font-bold text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2"
               >
                 <Pencil size={16} aria-hidden="true" /> {t('تعديل', 'Edit')}
               </button>
               <button
                 type="button"
                 onClick={() => onDelete(member)}
-                className="grid size-10 min-h-0 min-w-0 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger-text)] dark:hover:bg-[var(--danger-soft)]"
-                aria-label={`${t('امسح', 'Delete')} ${member.full_name}`}
+                className="grid size-11 min-h-0 min-w-0 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2 dark:hover:bg-[var(--danger-soft)]"
+                aria-label={`${t('حذف', 'Delete')} ${member.full_name}`}
                 title={t('مسح العضو', 'Delete member')}
               >
                 <Trash2 size={16} aria-hidden="true" />

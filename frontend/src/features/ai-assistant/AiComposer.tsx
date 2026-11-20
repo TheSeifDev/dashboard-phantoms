@@ -2,8 +2,8 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-
 import { useLocale } from '../../i18n/useLocale';
+
 const prompts = [
   { ar: 'قولّي جاهزية نزول الإسكندرية والميدان', en: 'Tell me who is ready for Alexandria and field work' },
   { ar: 'مين الأعضاء المتاحين ومعاهم لابتوب؟', en: 'Which available members have a laptop?' },
@@ -14,26 +14,57 @@ const prompts = [
 export function AiComposer({ isPending, onSend }: { isPending: boolean; onSend: (message: string) => void }) {
   const { locale, t } = useLocale();
   const [value, setValue] = useState('');
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!value.trim()) return;
+    if (!value.trim() || isPending) return;
     onSend(value);
     setValue('');
   };
 
   return (
-    <div className="grid gap-3">
-      <div className="flex flex-wrap gap-2" aria-label={t("أسئلة مقترحة", "Suggested prompts")}>
-        <span className="flex min-h-11 items-center text-xs font-black text-[var(--text-muted)]">{t("جرّب:", "Try:")}</span>
-        {prompts.map((prompt) => {
-          const text = locale === 'ar' ? prompt.ar : prompt.en;
-          return <button key={prompt.ar} type="button" onClick={() => onSend(text)} disabled={isPending} className="min-h-11 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-bold text-[var(--text-2)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] hover:text-[var(--link)] disabled:opacity-50">{text}</button>;
-        })}
+    <div className="grid gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+      <div className="grid gap-2" role="group" aria-label={t('أسئلة مقترحة', 'Suggested prompts')}>
+        <p className="text-xs font-black text-[var(--text-muted)]">{t('ابدأ بسؤال مقترح أو اكتب سؤالك:', 'Choose a suggested prompt or write your own:')}</p>
+        <div className="flex flex-wrap gap-2">
+          {prompts.map((prompt) => {
+            const text = locale === 'ar' ? prompt.ar : prompt.en;
+            return (
+              <button
+                key={prompt.ar}
+                type="button"
+                onClick={() => onSend(text)}
+                disabled={isPending}
+                className="min-h-11 max-w-full rounded-full border border-[var(--border)] bg-[var(--bg)] px-4 py-2 text-start text-sm font-bold leading-5 text-[var(--text-2)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] hover:text-[var(--link)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {text}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <form onSubmit={submit} className="flex gap-2">
-        <label className="min-w-0 flex-1"><span className="sr-only">{t("اكتب سؤالك للمساعد", "Write your question for the assistant")}</span><input value={value} onChange={(event) => setValue(event.target.value)} disabled={isPending} placeholder={t("اسأل عن الفريق أو اطلب مني أعمل مهمة...", "Ask about the team or request a task...")} className="min-h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 text-base" /></label>
-        <Button type="submit" disabled={!value.trim() || isPending} icon={<Send size={18} />} className="min-w-14 px-3"><span className="hidden sm:inline">{t("إرسال", "Send")}</span></Button>
+
+      <form onSubmit={submit} className="flex min-w-0 flex-col gap-2 sm:flex-row" aria-busy={isPending}>
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">{t('اكتب سؤالك للمساعد', 'Write your question for the assistant')}</span>
+          <input
+            type="text"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            disabled={isPending}
+            dir="auto"
+            autoComplete="off"
+            placeholder={t('اسأل عن الفريق أو اطلب إنشاء مهمة...', 'Ask about the team or request a task...')}
+            className="min-h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-4 text-base text-[var(--text)] placeholder:text-[var(--text-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+          />
+        </label>
+        <Button type="submit" disabled={!value.trim() || isPending} icon={<Send size={18} />} className="min-h-12 w-full px-4 sm:w-auto">
+          {t('إرسال', 'Send')}
+        </Button>
       </form>
+      <p className="text-xs leading-5 text-[var(--text-muted)]">
+        {t('راجع أي إجراء مقترح قبل تنفيذه.', 'Review any suggested action before executing it.')}
+      </p>
     </div>
   );
 }

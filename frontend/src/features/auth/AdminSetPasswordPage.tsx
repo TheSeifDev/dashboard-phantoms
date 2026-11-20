@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ArrowLeft, KeyRound, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Eye, EyeOff, KeyRound, ShieldCheck } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthShell } from '../../components/layout/AuthShell';
 import { PhantomLoader } from '../../components/motion/PhantomLoader';
@@ -121,6 +121,8 @@ export default function AdminSetPasswordPage() {
   const [callbackStateKey, setCallbackStateKey] = useState(callback.key);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -200,14 +202,17 @@ export default function AdminSetPasswordPage() {
   return (
     <AuthShell audience="admin" badge={t('دعوة إدارة PHANTOMS', 'PHANTOMS administrator invitation')} title={t('أنشئ كلمة المرور', 'Create a password')} description={`${t('اختار كلمة مرور لحساب الإدارة', 'Choose a password for administrator account')} ${user.email ?? ''}.`} footer={<Link to="/login" className="auth-inline-link"><span>{t('بوابة الأعضاء', 'Member portal')}</span><ArrowLeft size={16} /></Link>}>
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
-      <form onSubmit={(event) => void savePassword(event)} className="auth-form" noValidate>
+      <form onSubmit={(event) => void savePassword(event)} className="auth-form" noValidate aria-busy={saving || undefined}>
         <label className="auth-field" htmlFor="invite-password">{t('كلمة المرور الجديدة', 'New password')}
-          <span className="auth-input-wrap"><input id="invite-password" type="password" dir="ltr" autoComplete="new-password" minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} /></span>
+          <span className="auth-input-wrap"><input id="invite-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="new-password" minLength={8} required value={password} disabled={saving} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(password && password.length < 8) || undefined} aria-describedby="invite-password-hint" /><button type="button" className="auth-password-toggle" disabled={saving} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')} aria-pressed={showPassword}>{showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button></span>
         </label>
+        <p id="invite-password-hint" className="-mt-3 text-xs leading-5 text-[var(--text-muted)]">{t('استخدم 8 أحرف على الأقل. ستُحفَظ كلمة المرور بعد تأكيدها فقط.', 'Use at least 8 characters. Your password is saved only after you confirm it.')}</p>
         <label className="auth-field" htmlFor="invite-password-confirm">{t('تأكيد كلمة المرور', 'Confirm password')}
-          <span className="auth-input-wrap"><input id="invite-password-confirm" type="password" dir="ltr" autoComplete="new-password" minLength={8} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></span>
+          <span className="auth-input-wrap"><input id="invite-password-confirm" type={showConfirmPassword ? 'text' : 'password'} dir="ltr" autoComplete="new-password" minLength={8} required value={confirmPassword} disabled={saving} onChange={(event) => { setConfirmPassword(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(confirmPassword && confirmPassword !== password) || undefined} aria-describedby={confirmPassword && confirmPassword !== password ? 'invite-password-mismatch' : undefined} /><button type="button" className="auth-password-toggle" disabled={saving} onClick={() => setShowConfirmPassword((value) => !value)} aria-label={showConfirmPassword ? t('إخفاء تأكيد كلمة المرور', 'Hide password confirmation') : t('إظهار تأكيد كلمة المرور', 'Show password confirmation')} aria-pressed={showConfirmPassword}>{showConfirmPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button></span>
         </label>
+        {confirmPassword && confirmPassword !== password && <p id="invite-password-mismatch" className="-mt-3 text-xs font-bold text-amber-700 dark:text-amber-300" role="status" aria-live="polite">{t('كلمتا المرور غير متطابقتين بعد.', 'The passwords do not match yet.')}</p>}
         <Button type="submit" icon={<KeyRound size={17} />} isLoading={saving} loadingText={t('بنحفظ...', 'Saving...')} fullOnMobile>{t('حفظ وفتح لوحة الإدارة', 'Save and open administrator workspace')}</Button>
+        {saving && <p className="-mt-3 text-center text-xs leading-5 text-[var(--text-muted)]" role="status" aria-live="polite">{t('جارٍ حفظ كلمة المرور بأمان. لن تنتقل الصفحة إلا بعد تأكيد الحفظ.', 'Saving your password securely. You will continue only after the save is confirmed.')}</p>}
       </form>
     </AuthShell>
   );

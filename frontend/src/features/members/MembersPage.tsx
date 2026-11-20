@@ -72,6 +72,11 @@ export default function MembersPage() {
   const pendingDeleteMap = useMemberDeletionStore((state) => state.pendingMap);
 
   const customFields = customFieldsQuery.data ?? [];
+  const hasActiveFilters =
+    filters.search.trim() !== '' ||
+    filters.work_conditions !== 'ALL' ||
+    filters.device !== 'ALL' ||
+    filters.alexandria !== 'ALL';
 
   const workConditions = useMemo(
     () => [
@@ -239,7 +244,7 @@ export default function MembersPage() {
               variant="primary"
               className="whitespace-nowrap"
             >
-              إضافة عضو
+              {t('إضافة عضو', 'Add member')}
             </Button>
             <Button
               variant="secondary"
@@ -247,14 +252,14 @@ export default function MembersPage() {
               icon={<Link2 size={17} aria-hidden="true" />}
               className="whitespace-nowrap"
             >
-              رابط تسجيل عضو
+              {t('رابط تسجيل عضو', 'Registration link')}
             </Button>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-3">
           <span className="text-xs font-bold text-[var(--text-muted)]">
-            إدارة الحقول الإضافية وملفات البيانات
+            {t('إدارة الحقول الإضافية وملفات البيانات', 'Manage custom fields and member data')}
           </span>
           <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <Button
@@ -264,7 +269,7 @@ export default function MembersPage() {
               fullOnMobile
               className="col-span-2 whitespace-nowrap sm:col-span-1"
             >
-              الحقول المخصصة{customFields.length > 0 ? ` (${customFields.length})` : ''}
+              {t('الحقول المخصصة', 'Custom fields')}{customFields.length > 0 ? ` (${number(customFields.length)})` : ''}
             </Button>
             <MemberExcelActions members={query.data ?? []} customFields={customFields} />
           </div>
@@ -293,7 +298,7 @@ export default function MembersPage() {
         ) : query.isError ? (
           <div className="py-6">
             <ErrorState
-              message="معرفناش نحمّل سجلات الأعضاء."
+              message={t('معرفناش نحمّل سجلات الأعضاء.', 'Could not load member records.')}
               onRetry={() => {
                 void query.refetch();
               }}
@@ -314,14 +319,14 @@ export default function MembersPage() {
             {/* Pagination */}
             <nav
               className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-sm)] sm:px-6"
-              aria-label="التنقل بين الصفحات"
+              aria-label={t('التنقل بين الصفحات', 'Pagination')}
             >
               <div className="flex flex-wrap items-center gap-3">
                 <label
                   className="flex items-center gap-2 text-sm font-bold text-[var(--text-muted)]"
                   htmlFor="member-page-size"
                 >
-                  لكل صفحة
+                  {t('لكل صفحة', 'Per page')}
                   <select
                     id="member-page-size"
                     value={pageSize}
@@ -336,7 +341,7 @@ export default function MembersPage() {
                   </select>
                 </label>
                 <p className="text-sm font-bold tabular-nums text-[var(--text-muted)]" role="status">
-                  عرض {rangeStart}–{rangeEnd} من {visibleMembers.length}
+                  {t('عرض', 'Showing')} {number(rangeStart)}–{number(rangeEnd)} {t('من', 'of')} {number(visibleMembers.length)}
                 </p>
               </div>
               <span className="flex items-center gap-3">
@@ -344,29 +349,49 @@ export default function MembersPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={safePage === 0}
-                  className="inline-flex size-[var(--touch)] items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)] disabled:opacity-50"
-                  aria-label="الصفحة السابقة"
+                  className="inline-flex size-[var(--touch)] items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2 disabled:opacity-50"
+                  aria-label={t('الصفحة السابقة', 'Previous page')}
                 >
-                  <ChevronRight size={18} aria-hidden="true" />
+                  {dir === 'rtl' ? <ChevronRight size={18} aria-hidden="true" /> : <ChevronLeft size={18} aria-hidden="true" />}
                 </button>
                 <span className="text-sm font-bold tabular-nums text-[var(--text)]" aria-current="page">
-                  صفحة {safePage + 1} من {totalPages}
+                  {t('صفحة', 'Page')} {number(safePage + 1)} {t('من', 'of')} {number(totalPages)}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={safePage >= totalPages - 1}
-                  className="inline-flex size-[var(--touch)] items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)] disabled:opacity-50"
-                  aria-label="الصفحة التالية"
+                  className="inline-flex size-[var(--touch)] items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2 disabled:opacity-50"
+                  aria-label={t('الصفحة التالية', 'Next page')}
                 >
-                  <ChevronLeft size={18} aria-hidden="true" />
+                  {dir === 'rtl' ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
                 </button>
               </span>
             </nav>
           </>
+        ) : hasActiveFilters ? (
+          <div className="py-12">
+            <EmptyState
+              title={t('لا توجد نتائج مطابقة', 'No matching members')}
+              description={t('لم نعثر على أعضاء يطابقون البحث والفلاتر الحالية. امسح الفلاتر أو عدّلها لرؤية المزيد.', 'No members match the current search and filters. Clear or adjust them to see more results.')}
+            />
+          </div>
+        ) : query.data?.length === 0 ? (
+          <div className="grid justify-items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] bg-[var(--surface)] px-5 py-12 text-center">
+            <EmptyState
+              title={t('لا يوجد أعضاء بعد', 'No members yet')}
+              description={t('ابدأ بإضافة عضو يدويًا أو أنشئ رابط تسجيل ليقدّم العضو بياناته بنفسه.', 'Add a member manually or create a registration link so they can submit their own details.')}
+            />
+            <Button onClick={openNew} icon={<UserPlus size={17} aria-hidden="true" />}>
+              {t('إضافة أول عضو', 'Add the first member')}
+            </Button>
+          </div>
         ) : (
           <div className="py-12">
-            <EmptyState title="مفيش تطابق" description="ملقيناش عضو مطابق لمعايير التصفية." />
+            <EmptyState
+              title={t('لا يوجد أعضاء ظاهرون الآن', 'No members are visible right now')}
+              description={t('قد تكون بعض السجلات بانتظار اكتمال إجراء الحذف. حدّث القائمة بعد انتهاء الإجراء.', 'Some records may be pending deletion. Refresh the list after that action completes.')}
+            />
           </div>
         )}
       </div>
@@ -375,16 +400,16 @@ export default function MembersPage() {
         isOpen={Boolean(memberToDelete)}
         onClose={() => setMemberToDelete(null)}
         onConfirm={confirmDelete}
-        title="تأكيد مسح العضو"
+        title={t('تأكيد مسح العضو', 'Confirm member deletion')}
         itemName={memberToDelete?.full_name}
         description={
           memberToDelete
-            ? `هيتم مسح ${memberToDelete.full_name} نهائيًا. تقدر تلغي الحذف خلال 5 ثواني من إشعار التأكيد.`
+            ? t(`هيتم مسح ${memberToDelete.full_name} نهائيًا. تقدر تلغي الحذف خلال 5 ثواني من إشعار التأكيد.`, `${memberToDelete.full_name} will be permanently deleted. You can undo this for 5 seconds from the confirmation notification.`)
             : undefined
         }
-        confirmLabel="مسح نهائي"
+        confirmLabel={t('مسح نهائي', 'Delete permanently')}
         isPending={false}
-        pendingLabel="بنمسح..."
+        pendingLabel={t('بنمسح...', 'Deleting...')}
       />
 
       <MemberProfileModal
