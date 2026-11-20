@@ -602,7 +602,7 @@ test.describe('disposable local dashboard', () => {
         }
         await navigationDrawer.getByRole('link', { name: 'الأعضاء', exact: true }).click();
         await expect(page).toHaveURL(/\/admin\/members$/);
-        await expect(page.getByRole('heading', { name: 'دليل الأعضاء', exact: true })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'دليل الأعضاء وجاهزيتهم', exact: true })).toBeVisible();
         await page.getByRole('button', { name: longArabicName, exact: true }).click();
         const memberDialog = page.getByRole('dialog', { name: 'ملف العضو' });
         await expect(memberDialog).toBeVisible();
