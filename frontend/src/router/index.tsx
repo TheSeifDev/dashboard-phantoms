@@ -13,6 +13,7 @@ import type { AdminPermission } from '../types/db';
 import { clearAdminSetupIntent, inspectAdminCallback } from '../features/auth/auth-flow';
 import { MemberAccessGuard } from '../features/auth/MemberAccessGuard';
 import { useLocale } from '../i18n/useLocale';
+import { managerDestination } from '../features/teams/access';
 
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 const AdminLoginPage = lazy(() => import('../features/auth/AdminLoginPage'));
@@ -31,6 +32,8 @@ const AiAssistantPage = lazy(() => import('../features/ai-assistant/AiAssistantP
 const WhatsAppTasksPage = lazy(() => import('../features/whatsapp/WhatsAppTasksPage'));
 const AnnouncementsPage = lazy(() => import('../features/admin/announcements/AnnouncementsPage'));
 const AdminAccountsPage = lazy(() => import('../features/admin/access/AdminAccountsPage'));
+const TeamsManagementPage = lazy(() => import('../features/teams/TeamsManagementPage'));
+const TeamWorkspacePage = lazy(() => import('../features/teams/workspace/TeamWorkspacePage'));
 
 function PageFallback() {
   return <PhantomLoader className="page-fallback" />;
@@ -64,9 +67,26 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   if (access.isError) {
     return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir={dir}><ErrorState message={t('معرفناش نتحقق من صلاحيات الإدارة. مفيش صفحات هتفتح قبل نجاح التحقق.', 'Could not verify administrator access. No pages will open until verification succeeds.')} onRetry={() => { void access.refetch(); }} /><Button variant="secondary" onClick={() => void handleLogout()}>{t('تسجيل الخروج', 'Sign out')}</Button></div>;
   }
+  if (managerDestination(access.data) === '/team') return <Navigate to="/team" replace />;
   if (!access.data?.is_admin) {
     return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir={dir}><ErrorState message={t('الحساب ده مش مضاف كحساب إداري. تواصل مع مالك النظام لو محتاج صلاحية.', 'This account is not registered as an administrator. Contact the system owner if you need access.')} /><Button variant="secondary" onClick={() => void handleLogout()}>{t('تسجيل الخروج', 'Sign out')}</Button></div>;
   }
+  return <>{children}</>;
+}
+
+/** Team-only sessions never mount MainLayout or a global administrative page. */
+function ProtectedTeamRoute({ children }: { children: React.ReactNode }) {
+  const { t, dir } = useLocale();
+  const user = useAuthStore((state) => state.user);
+  const ready = useAuthStore((state) => state.ready);
+  const access = useAdminAccess(user?.id ?? null);
+  if (!ready) return <PhantomLoader message={t('بنتأكد من الجلسة...', 'Checking your session...')} />;
+  if (!user) return <Navigate to="/admin/login" replace />;
+  if (access.isPending) return <PhantomLoader message={t('بنتأكد من تعيين الفريق...', 'Checking team assignment...')} />;
+  if (access.isError) return <div className="mx-auto min-h-screen max-w-xl p-5" dir={dir}><ErrorState message={t('معرفناش نتحقق من تعيين الفريق؛ مفيش بيانات هتظهر.', 'Could not verify team assignment; no data will be displayed.')} onRetry={() => { void access.refetch(); }} /></div>;
+  const destination = managerDestination(access.data);
+  if (destination === '/admin') return <>{children}</>;
+  if (destination !== '/team') return <Navigate to="/admin/login" replace />;
   return <>{children}</>;
 }
 
@@ -214,8 +234,12 @@ export const router = createBrowserRouter([
       { path: 'ai-assistant', element: <AdminSection permission="ai_assistant"><Page><AiAssistantPage /></Page></AdminSection> },
       { path: 'whatsapp', element: <AdminSection permission="whatsapp"><Page><WhatsAppTasksPage /></Page></AdminSection> },
       { path: 'admins', element: <ProtectedOwnerRoute><Page><AdminAccountsPage /></Page></ProtectedOwnerRoute> },
+      { path: 'teams', element: <ProtectedOwnerRoute><Page><TeamsManagementPage /></Page></ProtectedOwnerRoute> },
     ],
   },
+
+  { path: '/team', element: <ProtectedTeamRoute><Page><TeamWorkspacePage /></Page></ProtectedTeamRoute> },
+  { path: '/team/:teamId', element: <ProtectedTeamRoute><Page><TeamWorkspacePage /></Page></ProtectedTeamRoute> },
 
   // Fallback
   { path: '*', element: <Navigate to="/login" replace /> },

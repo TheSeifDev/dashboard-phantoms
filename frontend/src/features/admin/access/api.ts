@@ -34,6 +34,8 @@ export function useAdminAccess(userId: string | null) {
     },
     staleTime: 10_000,
     refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
     retry: false,
   });
 }

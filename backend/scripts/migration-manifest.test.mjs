@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the reconciled forward migration preserves original provenance and canonical bytes outside initialization history', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 13);
+  assert.equal(forward.length, 20);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');
@@ -98,6 +98,27 @@ test('the reconciled forward migration preserves original provenance and canonic
   assert.equal(forward[12].production_status, 'applied');
   assert.equal(forward[12].remote_applied_timestamp, '20261119193932');
   assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, forward[12].canonical_repository_filename))).digest('hex'), forward[12].sha256);
+  const appliedTeams = [
+    ['20261120120000', '20261120074604', 'internal_teams_foundation'],
+    ['20261120121000', '20261120074634', 'internal_teams_owner_management'],
+    ['20261120122000', '20261120074653', 'internal_teams_update_details'],
+    ['20261120122500', '20261120074723', 'internal_team_access_hardening'],
+    ['20261120123000', '20261120074850', 'internal_team_tasks'],
+    ['20261120124000', '20261120074944', 'internal_team_records'],
+    ['20261120125000', '20261120075039', 'internal_team_announcements'],
+  ];
+  assert.equal(forward.slice(13).length, appliedTeams.length);
+  for (const [index, [originalVersion, remoteVersion, name]] of appliedTeams.entries()) {
+    const entry = forward[index + 13];
+    assert.equal(entry.version, remoteVersion);
+    assert.equal(entry.name, name);
+    assert.equal(entry.production_status, 'applied');
+    assert.equal(entry.remote_applied_timestamp, remoteVersion);
+    assert.equal(entry.original_source_version, originalVersion);
+    assert.equal(entry.original_source_filename, `backend/supabase/migrations/${originalVersion}_${name}.sql`);
+    assert.equal(entry.canonical_repository_filename, `backend/supabase/migrations/${remoteVersion}_${name}.sql`);
+    assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, entry.canonical_repository_filename))).digest('hex'), entry.sha256);
+  }
 });
 
 test('new manifest provenance is anchored to the historical 85a36fc manifest and canonical bytes', () => {

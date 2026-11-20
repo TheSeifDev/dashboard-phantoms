@@ -128,5 +128,75 @@
     "remote_applied_timestamp": "20261119193932",
     "original_source_version": "20261119183000",
     "original_source_filename": "backend/supabase/migrations/20261119183000_task_contribution_ledger.sql"
+  },
+  {
+    "version": "20261120074604",
+    "name": "internal_teams_foundation",
+    "canonical_repository_filename": "backend/supabase/migrations/20261120074604_internal_teams_foundation.sql",
+    "sha256": "0921565cfb01698fb5b318acad3e4d696c1628eede932a2e429953ee8a635dc3",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261120074604",
+    "original_source_version": "20261120120000",
+    "original_source_filename": "backend/supabase/migrations/20261120120000_internal_teams_foundation.sql"
+  },
+  {
+    "version": "20261120074634",
+    "name": "internal_teams_owner_management",
+    "canonical_repository_filename": "backend/supabase/migrations/20261120074634_internal_teams_owner_management.sql",
+    "sha256": "da775210b7800fe09d8c79e6008e2396d2ba80272460a28733f06cd21295867f",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261120074634",
+    "original_source_version": "20261120121000",
+    "original_source_filename": "backend/supabase/migrations/20261120121000_internal_teams_owner_management.sql"
+  },
+  {
+    "version": "20261120074653",
+    "name": "internal_teams_update_details",
+    "canonical_repository_filename": "backend/supabase/migrations/20261120074653_internal_teams_update_details.sql",
+    "sha256": "9cd0f17df29f672a109bba8385e9956d636c74b3af4716da4c0ec6eceaab46aa",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261120074653",
+    "original_source_version": "20261120122000",
+    "original_source_filename": "backend/supabase/migrations/20261120122000_internal_teams_update_details.sql"
+  },
+  {
+    "version": "20261120074723",
+    "name": "internal_team_access_hardening",
+    "canonical_repository_filename": "backend/supabase/migrations/20261120074723_internal_team_access_hardening.sql",
+    "sha256": "b82728e7b7bfe7ea1c8e5b6a5e91340220bc56371057fb23062701cf606c5add",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261120074723",
+    "original_source_version": "20261120122500",
+    "original_source_filename": "backend/supabase/migrations/20261120122500_internal_team_access_hardening.sql"
+  },
+  {
+    "version": "20261120074850",
+    "name": "internal_team_tasks",
+    "canonical_repository_filename": "backend/supabase/migrations/20261120074850_internal_team_tasks.sql",
+    "sha256": "af107213f4da6f8e209c34c15ec69b65bcca313d38a855cb3d56ae9ba2f4e69c",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261120074850",
+    "original_source_version": "20261120123000",
+    "original_source_filename": "backend/supabase/migrations/20261120123000_internal_team_tasks.sql"
+  },
+  {
+    "version": "20261120074944",
+    "name": "internal_team_records",
+    "canonical_repository_filename": "backend/supabase/migrations/20261120074944_internal_team_records.sql",
+    "sha256": "74a5c4973c6946a457429a81b8940318ea69c39a249916585b73d66698a0e167",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261120074944",
+    "original_source_version": "20261120124000",
+    "original_source_filename": "backend/supabase/migrations/20261120124000_internal_team_records.sql"
+  },
+  {
+    "version": "20261120075039",
+    "name": "internal_team_announcements",
+    "canonical_repository_filename": "backend/supabase/migrations/20261120075039_internal_team_announcements.sql",
+    "sha256": "962fc4db2270fd02085a35f75fc9bb4ef966dc14d39192513214b62380469b57",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261120075039",
+    "original_source_version": "20261120125000",
+    "original_source_filename": "backend/supabase/migrations/20261120125000_internal_team_announcements.sql"
   }
 ]

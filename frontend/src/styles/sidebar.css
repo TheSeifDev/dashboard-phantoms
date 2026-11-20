@@ -44,7 +44,7 @@
     place-items: center;
     border: 1px solid var(--sidebar-border);
     border-radius: 50%;
-    background: var(--graphite-800);
+    background: var(--sidebar-control-bg);
     color: var(--sidebar-text);
     cursor: pointer;
     box-shadow: var(--shadow-sm);
@@ -150,11 +150,13 @@
   .app-sidebar[data-collapsed="true"] .app-sidebar-item-label { display: none; }
   .app-sidebar[data-collapsed="true"] .app-sidebar-group { gap: 8px; }
   .app-sidebar[data-collapsed="true"] .app-sidebar-item {
-    display: grid;
+    display: flex;
     width: 54px;
     min-height: 54px;
     margin-inline: auto;
-    justify-items: center;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
     padding: 0;
     border-radius: 16px;
   }
@@ -173,7 +175,7 @@
     border: 1px solid var(--sidebar-border);
     border-radius: 9px;
     padding: 8px 12px;
-    background: var(--graphite-800);
+    background: var(--sidebar-control-bg);
     color: var(--sidebar-text);
     font-size: 12px;
     font-weight: 500;

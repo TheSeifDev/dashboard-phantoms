@@ -26,6 +26,30 @@
 
 **QA قبل الإصدار:** palette/contrast 8/8، sidebar navigation 10/10، locale/member projection 16/16، brand 10/10؛ TypeScript/build وlint وsecret audit ناجحة (0 credential artifacts). Browser smoke للـRTL/LTR والثيمين والrail/mobile drawer = 10/10، route manifest = 22 routes، وملفات test-results بقيت 8. لا اتصال API/DB/Auth fixtures. بعد مراجعة المعاينة، وافق المستخدم على commit/push إلى `main` بتاريخ 2026-11-20 مع قبول احتمال النشر الآلي.
 
+## إصلاح sidebar والثيمين — الطلب الجديد 2026-11-20
+- [x] طلب 2026-11-20: تمركز كل أيقونة وزر خروج في rail المطوي من غير قص أو انحراف RTL/LTR؛ الحفاظ على زر الطي و244→76px وتفضيل المستخدم المحفوظ وtooltips/Chevrons والصلاحيات.
+- [x] Sidebar والـDrawer وزر الطي وtooltip يتبعون Light/Dark فعلًا: أسطح فاتحة محايدة في Light وGraphite في Dark، active row حيادي بلا rail ملون، ونصوص/مؤشر focus متباينة.
+- [x] حفظ هذا الإصلاح محليًا للمعاينة؛ لا push أو تغييرات DB/Edge/Production دون موافقة إصدار جديدة.
+
+**QA محلي 2026-11-20:** انحراف rail قبل الإصلاح ±16px؛ بعده كل الأيقونات والخروج في المنتصف ضمن 0.5px. Palette 9/9، sidebar mounted 10/10، locale 4/4؛ TypeScript/build/lint/secret audit ناجحة. Browser QA = 28 حالة (16 desktop عبر 1024/1279/1280/1440px + 12 mobile عبر 320/360/390px، باللغتين والثيمين) و4 live theme-switch حالات. حفظ preference بعد reload/resize، focus loop/Escape/scroll restoration، بلا overflow أو اتصال API/DB. لم يتغير كود صلاحيات/مسارات/Sidebar state أو backend، وHEAD لا يزال `596c40d`.
+
+**الفرق الداخلية:** اعتمد المستخدم القواعد في 2026-11-20: Owner global، global admins الحاليون كما هم، Head/Monitor مقاعد team-scoped يختار Owner permissions لكل فريق، ومسؤول واحد يمكن تكليفه بأكثر من فريق، والعضو many-to-many عبر الفرق. البيانات القديمة بلا إسناد تلقائي وتظل للإدارة العامة حتى يصنفها Owner. التنفيذ المحلي بدأ؛ لا migration على الإنتاج ولا push. القرارات المحافظة الموثقة في `plan.md`: هوية أساسية واحدة مع بيانات تشغيل/تقييم/ملاحظات لكل فريق؛ نفس الشخص لا يشغل المقعدين في الفريق؛ reset كلمة المرور وإدارة Auth global-only.
+
+## الفرق الداخلية وصلاحيات النطاق — معتمدة للتنفيذ المحلي 2026-11-20
+- [x] إنشاء Teams مثل Software/Hardware/AI وإدارة تغيير اسم/تعطيل الفريق للـOwner؛ يبقى الـOwner cross-team والمشرفون العامون الحاليون global كما هم.
+- [x] تعيين Head واحد وMonitor واحد لكل فريق من الـOwner؛ يمكن للمسؤول أن يُعيّن لأكثر من فريق؛ لا يوضع team admin في `admin_accounts` ولا يحصل على global dashboard.
+- [x] يختار الـOwner لكل Head/Monitor صلاحيات الخصائص داخل كل فريق معين؛ قراءة وكتابة/إضافة ومراجعة وحذف العضوية والسجلات التشغيلية تُحرس عبر `auth.uid()` والتعيين الفعلي وصلاحية الفريق على الخادم وRLS/RPC؛ لا يُقبل `team_id` من العميل كبرهان تفويض. إزالة تكليف Team Admin لا تحذف Auth user ولا تخص تكليف فريق آخر.
+- [x] يدعم العضو عضوية many-to-many في فرق متعددة؛ أذونات member/task/note/evaluation/announcement/ledger لا تتسرب بين الفرق، وسجلات التشغيل لها team scope مفرد. بيانات member identity مشتركة، أما النقاط/الملاحظات/التقييمات/الحقول التشغيلية فلها نطاق فريق.
+- [ ] تظل كل البيانات القائمة بلا team scope حتى يصنفها الـOwner؛ لا توزيع تلقائي ولا إتاحة للفرق الجديدة قبل الإسناد. تُراجع/تعدل الحراس بكل الوظائف والـEdge، بما فيها الاستيراد والـpush/WhatsApp/AI/Owner join-review.
+- [x] إنشاء إدارة فرق للـOwner وواجهات/اختيار نطاق Head/Monitor، مع منع الوصول إلى إعدادات الإدارة العامة، وحفظ team scope في query keys والتأكد من بدائل loading/error/empty.
+- [x] تنفيذ migrations والواجهات والاختبارات محليًا، ثم تطبيق المهاجرات السبع على production بعد موافقة إصدار مستقلة. لم يُنشر Edge ولم يُنفذ commit/push بعد.
+
+**سجل المرحلة الأولى التاريخي 2026-11-20:** أضيفت migrations أساس الفرق/العضويات/multi-team وOwner RPCs وواجهة `/admin/teams`. في تلك اللقطة لم يكن هناك team-admin dashboard أو feature routes، واختبارات SQL لم تكن قد نُفذت؛ أُغلقت هذه القيود لاحقًا في المرحلة الثانية.
+
+**نتائج النواة المحلية قبل الإصدار:** Owner يفتح مساحة الفريق مع بقاء landing الإدارة العامة، وHead/Monitor يدخلان `/team` دون فتح `/admin`. المهام والمراجعات والنقاط وledger والملاحظات والتقييمات والحقول والإعلانات والمستلمين scoped، والنماذج/queries لكل مستخدم وفريق، مع إخفاء cache أثناء التحقق من الصلاحيات. PG17: 44 migrations و815 assertion ناجحة في 19 ملفًا نهائيًا مع ROLLBACK؛ 600 تاريخية و215 للفرق، دون إسقاط أي plan سابق. نجحت 95 contract/manifest/Sidebar/mounted test و18 access/palette/locale test و4 callback flows، وbuild وlint (0 warnings/errors) وsecret audit (0 credentials). أُوقفت البيئة وتأكد صفر fixtures وبقاء 8 JSON test-results. دعوات الفريق وPush/WhatsApp/AI خارج النواة.
+
+**حالة إصدار النواة بعد الموافقة (2026-11-20):** طُبقت المهاجرات السبع على Supabase Production وتأكدت versions من السجل؛ ملفات المستودع والـforward manifest والاختبارات تعكس timestamps الإنتاج مع بقاء original-source provenance والـhashes. `origin/main` عند `596c40d4dceaccc49c5d889c6fecefa9f37a8902`؛ commit/push معتمدان وقيد التحضير. لا نشر Edge ولا تغييرات يدوية على Vercel؛ دعوات الفريق الخارجية وPush/WhatsApp/AI ما زالت خارج الإصدار.
+
 ## إصلاح تجربة الدخول وتأكيد طلب الانضمام
 - [x] صفحات دخول الإدارة والعضو تتكيف مع شاشات 320 و360 و390px بلا قص أو تمرير أفقي، مع بقاء حقول الدخول والأزرار قابلة للوصول.
 - [x] تنبيه ما قبل الإرسال يوضح صراحةً أن الطلب لم يُحفظ بعد؛ لا تظهر حالة نجاح إلا بعد استجابة الحفظ، مع شاشة تأكيد منفصلة بعد join/reset الناجح ورسالة خطأ عملية عند الفشل.

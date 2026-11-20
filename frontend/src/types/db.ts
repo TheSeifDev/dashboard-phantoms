@@ -9,7 +9,7 @@ export type Member = {
   email: string;
   full_name: string;
   completion_rank: number | null;
-  /** ملاحظات الإدارة الخاصة بالعضو — ليست فرقاً، النظام كله فريق PHANTOMS واحد */
+  /** ملاحظات legacy عامة؛ بيانات النشاط الجديدة لها scope مستقل لكل فريق. */
   team_notes: string | null;
   residence: string | null;
   work_conditions: string | null;
@@ -33,6 +33,7 @@ export type MemberCustomFieldType = 'short_text' | 'long_text' | 'number' | 'dat
 
 export type MemberCustomField = {
   id: number;
+  team_id?: string | null;
   label: string;
   field_type: MemberCustomFieldType;
   options: string[];
@@ -71,6 +72,7 @@ export interface TaskTrackingEntry {
 export type Task = {
   id: number;
   created_at: string;
+  team_id?: string | null;
   title: string;
   description: string | null;
   has_deadline: boolean;
@@ -89,6 +91,7 @@ export type TaskUpdate = Partial<TaskInsert> & { id: Task['id'] };
 export type Note = {
   id: number;
   created_at: string;
+  team_id?: string | null;
   text: string;
   author: string | null;
   author_role: string | null;
@@ -114,6 +117,7 @@ export type AnnouncementTargetAudience = {
 export type Announcement = {
   id: number;
   created_at: string;
+  team_id?: string | null;
   title: string;
   content: string;
   target_audience: AnnouncementTargetAudience;
@@ -175,12 +179,89 @@ export type AdminPermission =
 
 export type AdminPermissions = Record<AdminPermission, boolean>;
 
+export type TeamAdminRole = 'head' | 'monitor';
+export type TeamMembershipStatus = 'pending' | 'active' | 'suspended' | 'removed';
+
+export interface TeamAccessEntry {
+  team_id: string;
+  slug: string;
+  name: string;
+  /** null means this is a picker item for an existing global Admin/Owner. */
+  role: TeamAdminRole | null;
+  permissions: Partial<AdminPermissions>;
+}
+
+export type TeamRow = {
+  id: string;
+  slug: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  created_by: string | null;
+  updated_at: string;
+};
+
+export type TeamMembership = {
+  team_id: string;
+  member_id: number;
+  status: TeamMembershipStatus;
+  created_at: string;
+  created_by: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  updated_at: string;
+};
+
+export type TeamAdminAssignment = {
+  id: string;
+  team_id: string;
+  user_id: string;
+  email: string;
+  role: TeamAdminRole;
+  permissions: AdminPermissions;
+  created_at: string;
+};
+
+export interface TeamOverview {
+  team_id: string;
+  slug: string;
+  name: string;
+  is_active: boolean;
+  member_count: number;
+  assignments: TeamAdminAssignment[];
+}
+
+export interface TeamAdminCandidate {
+  user_id: string;
+  email: string;
+  member_id: number | null;
+  member_name: string | null;
+  global_role: AdminRole | null;
+}
+
+export interface TeamMemberSummary {
+  member_id: number;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  work_status: string | null;
+  membership_status: TeamMembershipStatus;
+  created_at: string;
+}
+
+export interface TeamMemberCandidate extends Omit<TeamMemberSummary, 'membership_status' | 'created_at'> {
+  membership_status: TeamMembershipStatus | null;
+}
+
 export interface AdminAccess {
   is_admin: boolean;
   is_owner: boolean;
+  /** Team-scoped only; never changes is_admin or global permissions. */
+  is_team_admin: boolean;
   role: AdminRole | null;
   email: string | null;
   permissions: Partial<AdminPermissions>;
+  teams: TeamAccessEntry[];
 }
 
 export interface AdminAccount {
@@ -223,6 +304,7 @@ export type MemberEvaluationGrade = 'excellent' | 'very_good' | 'good' | 'needs_
 export type MemberEvaluation = {
   id: number;
   created_at: string;
+  team_id?: string | null;
   member_id: number;
   title: string;
   grade: MemberEvaluationGrade;
@@ -240,6 +322,12 @@ export type MemberEvaluationInsert = Omit<MemberEvaluation, 'id' | 'created_at'>
 export interface Database {
   public: {
     Tables: {
+      teams: { Row: TeamRow; Insert: Omit<TeamRow, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string }; Update: Partial<TeamRow>; Relationships: [] };
+      team_memberships: { Row: TeamMembership; Insert: Omit<TeamMembership, 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string }; Update: Partial<TeamMembership>; Relationships: [] };
+      team_admin_assignments: { Row: Omit<TeamAdminAssignment, 'email'> & { created_by: string | null }; Insert: Omit<TeamAdminAssignment, 'email' | 'created_at'> & { created_at?: string; created_by: string | null }; Update: Partial<Omit<TeamAdminAssignment, 'email'>>; Relationships: [] };
+      team_member_metrics: { Row: { team_id: string; member_id: number; completion_rank: number; bonus_infinite: boolean; bonus_points: number; updated_at: string; updated_by: string | null }; Insert: { team_id: string; member_id: number; completion_rank?: number; bonus_infinite?: boolean; bonus_points?: number; updated_at?: string; updated_by?: string | null }; Update: Partial<{ team_id: string; member_id: number; completion_rank: number; bonus_infinite: boolean; bonus_points: number; updated_at: string; updated_by: string | null }>; Relationships: [] };
+      team_member_custom_field_values: { Row: { team_id: string; member_id: number; field_id: number; value: unknown; updated_at: string; updated_by: string | null }; Insert: { team_id: string; member_id: number; field_id: number; value: unknown; updated_at?: string; updated_by?: string | null }; Update: Partial<{ team_id: string; member_id: number; field_id: number; value: unknown; updated_at: string; updated_by: string | null }>; Relationships: [] };
+      announcement_recipients: { Row: { announcement_id: number; team_id: string; member_id: number; created_at: string; viewed_at: string | null; read_at: string | null; dismissed_at: string | null }; Insert: { announcement_id: number; team_id: string; member_id: number; created_at?: string; viewed_at?: string | null; read_at?: string | null; dismissed_at?: string | null }; Update: Partial<{ announcement_id: number; team_id: string; member_id: number; created_at: string; viewed_at: string | null; read_at: string | null; dismissed_at: string | null }>; Relationships: [] };
       members: { Row: Member; Insert: MemberInsert; Update: Partial<MemberInsert>; Relationships: [] };
       member_custom_fields: { Row: MemberCustomField; Insert: MemberCustomFieldInsert; Update: Partial<MemberCustomFieldInsert>; Relationships: [] };
       member_evaluations: { Row: MemberEvaluation; Insert: MemberEvaluationInsert; Update: Partial<MemberEvaluationInsert>; Relationships: [] };
@@ -249,6 +337,42 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      team_list_roster: { Args: { p_team_id: string; p_feature: AdminPermission }; Returns: unknown };
+      team_list_tasks: { Args: { p_team_id: string }; Returns: unknown };
+      team_create_task: { Args: { p_team_id: string; p_title: string; p_description: string | null; p_assigned_to: unknown; p_has_deadline: boolean; p_deadline_date: string | null; p_bonus_points: number }; Returns: number };
+      team_delete_task: { Args: { p_team_id: string; p_task_id: number }; Returns: boolean };
+      team_review_task: { Args: { p_team_id: string; p_task_id: number; p_member_id: number; p_action: string; p_reason: string | null }; Returns: unknown };
+      get_team_task_contributions: { Args: { p_team_id: string; p_year: number; p_member_id?: number | null }; Returns: unknown };
+      team_list_notes: { Args: { p_team_id: string }; Returns: unknown };
+      team_create_note: { Args: { p_team_id: string; p_text: string; p_target_member_id?: number | null }; Returns: number };
+      team_delete_note: { Args: { p_team_id: string; p_note_id: number }; Returns: boolean };
+      team_list_evaluations: { Args: { p_team_id: string }; Returns: unknown };
+      team_create_evaluation: { Args: { p_team_id: string; p_member_id: number; p_title: string; p_grade: string; p_points: number; p_feedback: string }; Returns: number };
+      team_delete_evaluation: { Args: { p_team_id: string; p_evaluation_id: number }; Returns: boolean };
+      team_list_ranking: { Args: { p_team_id: string }; Returns: unknown };
+      team_list_custom_fields: { Args: { p_team_id: string }; Returns: unknown };
+      team_create_custom_field: { Args: { p_team_id: string; p_label: string; p_field_type: string; p_options: unknown }; Returns: number };
+      team_set_custom_field_value: { Args: { p_team_id: string; p_member_id: number; p_field_id: number; p_value: unknown }; Returns: boolean };
+      team_list_custom_field_values: { Args: { p_team_id: string; p_member_id: number }; Returns: unknown };
+      team_list_announcements: { Args: { p_team_id: string }; Returns: unknown };
+      team_create_announcement: { Args: { p_team_id: string; p_title: string; p_content: string; p_priority: string; p_member_ids?: unknown }; Returns: number };
+      team_set_announcement_active: { Args: { p_team_id: string; p_announcement_id: number; p_active: boolean }; Returns: boolean };
+      team_delete_announcement: { Args: { p_team_id: string; p_announcement_id: number }; Returns: boolean };
+      has_team_permission: { Args: { p_team_id: string; p_permission: AdminPermission }; Returns: boolean };
+      has_team_membership: { Args: { p_team_id: string; p_member_id: number }; Returns: boolean };
+      has_team_member_identity: { Args: { p_team_id: string; p_member_id: number }; Returns: boolean };
+      owner_list_team_admin_candidates: { Args: never; Returns: TeamAdminCandidate[] };
+      owner_list_teams: { Args: never; Returns: TeamOverview[] };
+      owner_create_team: { Args: { p_slug: string; p_name: string }; Returns: string };
+      owner_set_team_active: { Args: { p_team_id: string; p_is_active: boolean }; Returns: boolean };
+      owner_update_team_details: { Args: { p_team_id: string; p_slug: string; p_name: string }; Returns: boolean };
+      owner_assign_team_admin: { Args: { p_team_id: string; p_user_id: string; p_role: TeamAdminRole; p_permissions: AdminPermissions }; Returns: string };
+      owner_revoke_team_admin: { Args: { p_assignment_id: string }; Returns: boolean };
+      owner_set_team_admin_seat: { Args: { p_team_id: string; p_role: TeamAdminRole; p_user_id: string | null; p_permissions: AdminPermissions | null }; Returns: string | null };
+      owner_list_team_members: { Args: { p_team_id: string }; Returns: TeamMemberSummary[] };
+      owner_list_team_member_candidates: { Args: { p_team_id: string }; Returns: TeamMemberCandidate[] };
+      team_add_member: { Args: { p_team_id: string; p_member_id: number }; Returns: TeamMembershipStatus };
+      team_review_member: { Args: { p_team_id: string; p_member_id: number; p_decision: 'approve' | 'suspend' | 'remove' }; Returns: TeamMembershipStatus };
       has_admin_permission: { Args: { p_permission: string }; Returns: boolean };
       bind_member_device_session: { Args: { p_email: string; p_device_token: string }; Returns: boolean };
       set_member_bonus_infinite: { Args: { p_member_id: number; p_enabled: boolean; p_reason: string }; Returns: boolean };

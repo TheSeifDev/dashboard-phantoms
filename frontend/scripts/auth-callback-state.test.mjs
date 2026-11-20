@@ -67,6 +67,7 @@ async function writeHarnessFiles(harnessRoot) {
     'src/store',
     'src/lib/supabase',
     'src/features/admin/access',
+    'src/features/teams',
     'src/i18n',
     'src/components/motion',
   ];
@@ -78,6 +79,8 @@ async function writeHarnessFiles(harnessRoot) {
   ]);
   await writeFile(join(harnessRoot, 'src/features/auth/AdminSetPasswordPage.js'), compileCommonJs(componentSource, componentSourcePath));
   await writeFile(join(harnessRoot, 'src/features/auth/auth-flow.js'), compileCommonJs(authFlowSource, authFlowSourcePath));
+  const teamAccessPath = join(frontendRoot, 'src/features/teams/access.ts');
+  await writeFile(join(harnessRoot, 'src/features/teams/access.js'), compileCommonJs(await readFile(teamAccessPath, 'utf8'), teamAccessPath));
 
   const localeSourcePath = join(frontendRoot, 'src/i18n/useLocale.ts');
   await writeFile(join(harnessRoot, 'src/i18n/useLocale.js'), compileCommonJs(await readFile(localeSourcePath, 'utf8'), localeSourcePath));
@@ -107,7 +110,7 @@ exports.Button = function Button({ children, icon, isLoading, loadingText, fullO
 `);
   await writeFile(join(harnessRoot, 'src/features/admin/access/api.js'), `
 exports.useAdminAccess = function useAdminAccess() {
-  return { isPending: false, isError: false, data: { is_admin: true } };
+  return { isPending: false, isError: false, data: globalThis.__F007_ACCESS || { is_admin: true } };
 };
 `);
   await writeFile(join(harnessRoot, 'src/store/auth.js'), `
@@ -138,7 +141,7 @@ exports.supabase = {
     signOut() { return Promise.resolve({ error: null }); },
     updateUser() { return Promise.resolve({ error: null }); },
   },
-  rpc() { return Promise.resolve({ data: { is_admin: true }, error: null }); },
+  rpc() { return Promise.resolve({ data: globalThis.__F007_ACCESS || { is_admin: true }, error: null }); },
 };
 `);
 }
@@ -230,6 +233,7 @@ async function main() {
       window.sessionStorage.clear();
       store.__reset();
       globalThis.__F007_AUTH = null;
+      globalThis.__F007_ACCESS = null;
       navigate = undefined;
       currentPath = '';
     }
@@ -338,11 +342,39 @@ async function main() {
       await settle();
     });
 
-    console.log('F-007 mounted callback-state regression: 2 component flows passed');
+    resetPageState();
+    globalThis.__F007_ACCESS = {
+      is_admin: false, is_team_admin: true,
+      teams: [{ team_id: 'local-team', name: 'Software', slug: 'software', role: 'head', permissions: { members: true } }],
+    };
+    globalThis.__F007_AUTH = {
+      exchange() { return Promise.resolve(sessionFor('local-head')); },
+      setSession() { return Promise.reject(new Error('unexpected legacy path')); },
+    };
+    await mount(AdminSetPasswordPage, '/admin/set-password?code=local-team-recovery');
+    await act(async () => { await settle(); });
+    assert.equal(hasPasswordForm(), true, 'a verified team seat permits its own recovery setup without global Admin');
+    assert.equal(currentPath, '/admin/set-password?code=local-team-recovery');
+    await act(async () => { root.unmount(); await settle(); });
+
+    resetPageState();
+    globalThis.__F007_ACCESS = { is_admin: false, is_team_admin: true, teams: [] };
+    globalThis.__F007_AUTH = {
+      exchange() { return Promise.resolve(sessionFor('no-assignment')); },
+      setSession() { return Promise.reject(new Error('unexpected legacy path')); },
+    };
+    await mount(AdminSetPasswordPage, '/admin/set-password?code=unassigned-recovery');
+    await act(async () => { await settle(); });
+    assert.equal(hasPasswordForm(), false, 'a team flag without an active assignment cannot authorize recovery setup');
+    assert.equal(window.sessionStorage.getItem('phantoms_admin_setup_intent'), null);
+    await act(async () => { root.unmount(); await settle(); });
+
+    console.log('F-007 mounted callback-state regression: 4 component flows passed');
     console.log('  setup: valid -> invalid -> none -> delayed earlier completion -> valid; StrictMode single-flight asserted');
     console.log('  recovery: valid -> invalid -> none -> delayed earlier completion -> valid; StrictMode single-flight asserted');
   } finally {
     delete globalThis.__F007_AUTH;
+    delete globalThis.__F007_ACCESS;
     delete globalThis.IS_REACT_ACT_ENVIRONMENT;
     dom.window.close();
     await rm(harnessRoot, { recursive: true, force: true });

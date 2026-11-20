@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   Home,
+  Layers3,
   LogOut,
   Megaphone,
   MessageCircle,
@@ -30,7 +31,7 @@ const EN: Record<string, string> = {
   'نظرة عامة': 'Overview', 'العمليات': 'Operations', 'التواصل': 'Communication', 'الحساب': 'Account', 'إدارة النظام': 'Administration',
   'الرئيسية': 'Dashboard', 'المهام': 'Tasks', 'الأعضاء': 'Members', 'التقييمات': 'Evaluations', 'ترتيب الفريق': 'Leaderboard',
   'الملاحظات': 'Notes', 'الإعلانات': 'Announcements', 'إرسال المهام عبر واتساب': 'WhatsApp assignments', 'المساعد الذكي': 'AI assistant',
-  'بوابة الأعضاء': 'Member portal', 'إدارة المشرفين': 'Administrators',
+  'بوابة الأعضاء': 'Member portal', 'إدارة المشرفين': 'Administrators', 'الفرق الداخلية': 'Internal teams',
 };
 
 interface SidebarLink {
@@ -106,6 +107,12 @@ const GROUPS: SidebarGroup[] = [
         to: '/admin/admins',
         label: 'إدارة المشرفين',
         icon: ShieldCheck,
+        ownerOnly: true,
+      },
+      {
+        to: '/admin/teams',
+        label: 'الفرق الداخلية',
+        icon: Layers3,
         ownerOnly: true,
       },
   ],

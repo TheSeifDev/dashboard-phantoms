@@ -79,7 +79,8 @@ test('canonical brand roots and charcoal theme anchors match the latest visual d
   assert.equal(color('graphite-900'), '#171a1e');
   assert.equal(color('prussian-blue'), '#171a1e', 'legacy Prussian token remains a neutral compatibility alias');
   assert.equal(color('bg', dark), '#171a1e');
-  assert.equal(color('sidebar-bg'), '#171a1e');
+  assert.equal(color('sidebar-bg', light), '#ffffff');
+  assert.equal(color('sidebar-bg', dark), '#171a1e');
   assert.equal(color('primary'), '#dc143c');
   assert.equal(color('success'), '#10b981');
 });
@@ -136,28 +137,43 @@ test('primary, success, and danger text use accessible foreground and soft-surfa
   }
 });
 
-test('shared permanently dark sidebar tokens meet AA for text, active state, focus ring, and logout', () => {
-  const sidebarTokens = ['sidebar-bg', 'sidebar-text', 'sidebar-muted', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-logout-color', 'sidebar-focus-ring'];
-  for (const token of sidebarTokens) assert.ok(light[token], `shared --${token} is defined`);
-  for (const token of sidebarTokens) assert.equal(dark[token], undefined, `--${token} remains shared across themes`);
-  const background = color('sidebar-bg');
-  for (const foreground of ['sidebar-text', 'sidebar-muted', 'sidebar-logout-color']) {
-    const ratio = contrast(color(foreground), background);
-    assert.ok(ratio >= 4.5, `sidebar --${foreground} on --sidebar-bg must be >= 4.5:1 (got ${ratio.toFixed(2)}:1)`);
+test('light and dark sidebar tokens meet AA for every text, active, focus, and control pairing', () => {
+  const sidebarTokens = ['sidebar-bg', 'sidebar-text', 'sidebar-muted', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-control-bg', 'sidebar-logout-color', 'sidebar-focus-ring'];
+  for (const [label, theme] of [['light', light], ['dark', dark]] as const) {
+    for (const token of sidebarTokens) assert.ok(theme[token], `${label} --${token} is explicitly defined`);
+    for (const background of ['sidebar-bg', 'sidebar-hover', 'sidebar-control-bg']) {
+      for (const foreground of ['sidebar-text', 'sidebar-muted', 'sidebar-logout-color']) {
+        const ratio = contrast(color(foreground, theme), color(background, theme));
+        assert.ok(ratio >= 4.5, `${label} --${foreground} on --${background} must be >= 4.5:1 (got ${ratio.toFixed(2)}:1)`);
+      }
+    }
+    assert.ok(contrast(color('sidebar-active-ink', theme), color('sidebar-active-bg', theme)) >= 4.5, `${label} active sidebar ink must meet AA`);
+    for (const background of ['sidebar-bg', 'sidebar-active-bg', 'sidebar-control-bg', 'sidebar-hover']) {
+      assert.ok(contrast(color('sidebar-focus-ring', theme), color(background, theme)) >= 3, `${label} focus ring on --${background} must meet 3:1`);
+    }
   }
-  assert.ok(contrast(color('sidebar-active-ink'), color('sidebar-active-bg')) >= 4.5, 'active sidebar ink must contrast against the active fill');
-  assert.ok(contrast(color('sidebar-muted'), color('sidebar-hover')) >= 4.5, 'muted sidebar text must remain readable on hover');
-  assert.ok(contrast(color('sidebar-focus-ring'), color('sidebar-bg')) >= 3, 'sidebar keyboard focus ring must meet 3:1 non-text contrast');
-  assert.ok(contrast(color('sidebar-focus-ring'), color('sidebar-active-bg')) >= 3, 'focus ring must remain visible around the active row');
+  assert.notEqual(color('sidebar-bg', light), color('sidebar-bg', dark));
+  assert.notEqual(color('sidebar-control-bg', light), color('sidebar-control-bg', dark));
+  assert.doesNotMatch(sidebarCss, /var\(--graphite-800\)/, 'sidebar controls must follow the theme, not a hard-coded dark surface');
 });
 
 test('sidebar active state uses a neutral fill and has no colored indicator rail', () => {
-  assert.equal(color('sidebar-bg'), '#171a1e');
-  assert.equal(color('sidebar-active-bg'), '#292e34');
-  assert.ok(saturation(color('sidebar-active-bg')) <= 0.08);
+  assert.equal(color('sidebar-active-bg', dark), '#292e34');
+  assert.equal(color('sidebar-active-bg', light), '#eceef0');
+  for (const theme of [light, dark]) assert.ok(saturation(color('sidebar-active-bg', theme)) <= 0.08);
   assert.doesNotMatch(sidebarCss, /\.app-sidebar-item\.is-active::before/);
   assert.match(sidebarCss, /outline: 2px solid var\(--sidebar-focus-ring\)/);
   assert.match(sidebarCss, /\.app-sidebar-section-toggle/);
+});
+
+test('collapsed icon rows reset inherited start alignment and center icons in both directions', () => {
+  const rail = sidebarCss.match(/\.app-sidebar\[data-collapsed="true"\] \.app-sidebar-item\s*\{([^}]+)\}/)?.[1];
+  assert.ok(rail);
+  assert.match(rail, /display:\s*flex;/);
+  assert.match(rail, /justify-content:\s*center;/);
+  assert.match(rail, /align-items:\s*center;/);
+  assert.match(rail, /gap:\s*0;/);
+  assert.match(rail, /width:\s*54px;/);
 });
 
 test('legacy semantic tokens remain available and requested sidebar dimensions are preserved', () => {

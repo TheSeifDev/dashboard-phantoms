@@ -11,6 +11,7 @@ import { toAppError } from '../../lib/supabase/errors';
 import { isValidEmail } from '../../lib/validators';
 import { useAdminAccess } from '../admin/access/api';
 import { clearAdminSetupIntent } from './auth-flow';
+import { managerDestination } from '../teams/access';
 
 export default function AdminLoginPage() {
   const sessionUser = useAuthStore((state) => state.user);
@@ -36,9 +37,14 @@ export default function AdminLoginPage() {
     if (access.isPending) {
       return <PhantomLoader message={t('بنتأكد من صلاحيات الإدارة...', 'Checking administrator access...')} />;
     }
-    if (access.data?.is_admin) return <Navigate to="/admin/dashboard" replace />;
+    const destination = access.isError ? null : managerDestination(access.data);
+    if (destination) return <Navigate to={destination} replace />;
     const signOutAndRetry = async () => {
-      await supabase.auth.signOut();
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        setError(t('تسجيل الخروج فشل. الجلسة لسه موجودة؛ جرّب تاني.', 'Sign out failed. Your session remains; please retry.'));
+        return;
+      }
       clearSession();
       clearAdminSetupIntent();
     };
@@ -53,7 +59,7 @@ export default function AdminLoginPage() {
         <div className="grid gap-4" role="alert">
           <div className="auth-error">
             <ShieldAlert className="mt-0.5 shrink-0" size={20} aria-hidden="true" />
-            <p>{access.isError ? t('معرفناش نتحقق من صلاحية الحساب. سجّل الخروج وجرّب تاني.', 'We could not verify this account. Sign out and try again.') : t('الحساب ده مش مضاف كحساب إداري. اطلب من مالك النظام إضافته.', 'This account is not registered as an administrator. Ask the system owner to add it.')}</p>
+            <p>{error || (access.isError ? t('معرفناش نتحقق من صلاحية الحساب. سجّل الخروج وجرّب تاني.', 'We could not verify this account. Sign out and try again.') : t('الحساب ده مش مضاف كمسؤول عام أو مسؤول فريق نشط. اطلب من مالك النظام إضافته.', 'This account has no global or active team assignment. Ask the system owner to add it.'))}</p>
           </div>
           <Button variant="secondary" onClick={() => void signOutAndRetry()}>{t('تسجيل الخروج والمحاولة بحساب آخر', 'Sign out and try another account')}</Button>
         </div>
@@ -101,7 +107,8 @@ export default function AdminLoginPage() {
         }
       } else if (data.session) {
         const { data: accessData, error: accessError } = await supabase.rpc('get_admin_access');
-        if (accessError || !accessData?.is_admin) {
+        const destination = accessError ? null : managerDestination(accessData);
+        if (!destination) {
           await supabase.auth.signOut();
           clearAdminSetupIntent();
           setError(accessError
@@ -111,7 +118,7 @@ export default function AdminLoginPage() {
         }
         syncAdminSessionStorage(remember);
         setSession(data.session);
-        navigate('/admin/dashboard');
+        navigate(destination);
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('حصلت مشكلة وإحنا بنتصل بالخادم.', 'Something went wrong while connecting to the server.'));

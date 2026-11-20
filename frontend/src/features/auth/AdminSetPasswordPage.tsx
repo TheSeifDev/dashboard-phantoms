@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/auth';
 import { supabase } from '../../lib/supabase/client';
 import { useAdminAccess } from '../admin/access/api';
+import { managerDestination } from '../teams/access';
 import {
   clearAdminSetupIntent,
   createSingleFlight,
@@ -66,7 +67,7 @@ async function completeAdminCallbackOnce(callback: Extract<AdminCallbackInput, {
     assertCurrentCallback();
     const { data: access, error: accessError } = await supabase.rpc('get_admin_access');
     assertCurrentCallback();
-    if (accessError || !access?.is_admin) {
+    if (accessError || !managerDestination(access)) {
       await supabase.auth.signOut({ scope: 'local' });
       assertCurrentCallback();
       useAuthStore.getState().clear();
@@ -164,7 +165,7 @@ export default function AdminSetPasswordPage() {
     return <PhantomLoader message={t('بنتأكد من جلسة الإدارة...', 'Verifying administrator session...')} />;
   }
   if (!user) return <CallbackStatus message="لم نجد جلسة الإدارة الخاصة بهذا الرابط. اطلب رابطاً جديداً وحاول مرة أخرى." />;
-  if (access.isError || !access.data?.is_admin) {
+  if (access.isError || !managerDestination(access.data)) {
     return (
       <AuthShell audience="admin" badge={t('رابط دعوة الإدارة', 'Administrator invitation link')} title={t('الرابط غير صالح', 'Invalid link')} description={t('لا توجد جلسة دعوة إدارية صالحة على الجهاز ده. اطلب من مالك النظام إرسال دعوة جديدة.', 'There is no valid administrator invitation session on this device. Ask the system owner to send a new invitation.')} footer={<Link to="/admin/login" className="auth-inline-link"><span>{t('دخول الإدارة', 'Administrator sign-in')}</span><ArrowLeft size={16} /></Link>}>
         <div className="auth-error" role="alert"><ShieldCheck size={20} aria-hidden="true" /><p>{t('صلاحية الإدارة لم تُثبت لهذا الرابط، لذلك لم نفتح لوحة التحكم.', 'Administrator access was not verified for this link, so the dashboard was not opened.')}</p></div>
@@ -188,7 +189,7 @@ export default function AdminSetPasswordPage() {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
       clearAdminSetupIntent();
-      navigate('/admin/dashboard', { replace: true });
+      navigate(managerDestination(access.data) ?? '/admin/login', { replace: true });
     } catch {
       setError(t('معرفناش نحفظ كلمة المرور. جرّب تاني.', 'Could not save the password. Please try again.'));
     } finally {

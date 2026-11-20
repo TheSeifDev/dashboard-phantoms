@@ -167,6 +167,15 @@ try {
     });
   });
 
+  await test('internal team management is visible to Owner only in desktop and mobile menus', async () => {
+    await scenario({}, async ({ render }) => {
+      assert.ok(document.querySelector('#desktop-sidebar-navigation a[href="/admin/teams"]'));
+      await render({ isOwner: false, permissions: { members: true }, drawerOpen: true });
+      assert.equal(document.querySelector('#desktop-sidebar-navigation a[href="/admin/teams"]'), null);
+      assert.equal(document.querySelector('[role="dialog"] nav a[href="/admin/teams"]'), null);
+    });
+  });
+
   await test('locale changes labels, collapse direction and active navigation without resetting preference', async () => {
     await scenario({ preference: 'true' }, async ({ click }) => {
       assert.equal(document.querySelector('.app-sidebar-collapse').getAttribute('aria-label'), 'وسّع الشريط الجانبي');

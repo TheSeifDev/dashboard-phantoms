@@ -27,8 +27,10 @@ SELECT tables_are('public', ARRAY[
   'member_device_sessions', 'member_evaluations', 'member_infinite_bonus_events',
   'member_password_audit', 'member_password_invitations', 'member_password_rate_limits',
   'member_auth_bindings', 'member_registration_invites', 'members', 'notes', 'tasks',
-  'task_contribution_events', 'task_contribution_ledger_config', 'whatsapp_settings'
-], 'public schema contains exactly the 18 final application tables');
+  'task_contribution_events', 'task_contribution_ledger_config', 'whatsapp_settings',
+  'teams', 'team_memberships', 'team_admin_assignments', 'team_access_audit',
+  'team_member_metrics', 'team_member_custom_field_values', 'announcement_recipients'
+], 'public schema contains exactly the application tables including internal teams');
 SELECT hasnt_table('public', 'member_info_fields', '0019 member_info_fields was removed by 0020');
 SELECT hasnt_table('public', 'member_info_submissions', '0019 member_info_submissions was removed by 0020');
 SELECT hasnt_table('public', 'admin_permissions', 'no separate admin_permissions table exists');

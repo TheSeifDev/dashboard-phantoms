@@ -17,6 +17,7 @@ const pages: Array<{path: string; ar: string; en: string; permission?: AdminPerm
   { path: '/admin/ai-assistant', ar: 'مساعد PHANTOMS الذكي', en: 'AI assistant', permission: 'ai_assistant' },
   { path: '/admin/whatsapp', ar: 'إرسال المهام عبر واتساب', en: 'WhatsApp assignments', permission: 'whatsapp' },
   { path: '/admin/admins', ar: 'إدارة المشرفين', en: 'Administrators', ownerOnly: true },
+  { path: '/admin/teams', ar: 'إدارة الفرق الداخلية', en: 'Internal teams', ownerOnly: true },
 ];
 interface AdminHeaderProps {
   path: string;
