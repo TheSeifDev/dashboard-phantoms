@@ -27,8 +27,8 @@ export function PhantomNetwork() {
   useGSAP(() => {
     const media = gsap.matchMedia();
     media.add('(prefers-reduced-motion: no-preference)', () => {
-      const paths = gsap.utils.toArray<SVGPathElement>('.phantom-network__line', scope.current);
-      paths.forEach((path) => {
+      const paths = gsap.utils.toArray('.phantom-network__line', scope.current) as SVGPathElement[];
+      paths.forEach((path: SVGPathElement) => {
         const length = path.getTotalLength();
         gsap.set(path, { strokeDasharray: length, strokeDashoffset: length, opacity: 0.7 });
       });

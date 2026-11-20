@@ -5,14 +5,14 @@ import {
   Bot,
   CheckSquare,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ClipboardCheck,
   Home,
   Layers3,
   LogOut,
   Megaphone,
   MessageCircle,
+  PanelLeft,
+  PanelRight,
   ShieldCheck,
   StickyNote,
   Trophy,
@@ -289,9 +289,7 @@ export function AppSidebar({
     setCollapsed(next);
     try { window.localStorage.setItem(SIDEBAR_PREFERENCE, String(next)); } catch { /* UI preference only. */ }
   };
-  const CollapseIcon = collapsed
-    ? (dir === 'rtl' ? ChevronLeft : ChevronRight)
-    : (dir === 'rtl' ? ChevronRight : ChevronLeft);
+  const CollapseIcon = dir === 'rtl' ? PanelRight : PanelLeft;
 
   const logout = async () => {
     if (signingOut) return;
@@ -312,21 +310,23 @@ export function AppSidebar({
   return (
     <>
       <aside className="app-sidebar" data-collapsed={collapsed} aria-label={t('الشريط الجانبي', 'Sidebar')}>
-        <NavLink to="/admin" className="app-sidebar-brand" aria-label={t('PHANTOMS — الرئيسية', 'PHANTOMS — Home')}>
-          <PhantomsLogo size="md" symbolOnly themeMode="dark" className="app-sidebar-logo" />
-          <span className="sr-only"><span>PHANTOMS</span></span>
-        </NavLink>
-        <button
-          type="button"
-          className="app-sidebar-collapse"
-          onClick={toggleCollapsed}
-          aria-expanded={!collapsed}
-          aria-controls="desktop-sidebar-navigation"
-          aria-label={collapsed ? t('وسّع الشريط الجانبي', 'Expand sidebar') : t('اطوِ الشريط الجانبي', 'Collapse sidebar')}
-          title={collapsed ? t('وسّع الشريط الجانبي', 'Expand sidebar') : t('اطوِ الشريط الجانبي', 'Collapse sidebar')}
-        >
-          <CollapseIcon size={18} aria-hidden="true" />
-        </button>
+        <div className="app-sidebar-header">
+          <NavLink to="/admin" className="app-sidebar-brand" aria-label={t('PHANTOMS — الرئيسية', 'PHANTOMS — Home')}>
+            <PhantomsLogo size="md" symbolOnly themeMode="dark" className="app-sidebar-logo" />
+            <span className="sr-only"><span>PHANTOMS</span></span>
+          </NavLink>
+          <button
+            type="button"
+            className="app-sidebar-collapse"
+            onClick={toggleCollapsed}
+            aria-expanded={!collapsed}
+            aria-controls="desktop-sidebar-navigation"
+            aria-label={collapsed ? t('وسّع الشريط الجانبي', 'Expand sidebar') : t('اطوِ الشريط الجانبي', 'Collapse sidebar')}
+            title={collapsed ? t('وسّع الشريط الجانبي', 'Expand sidebar') : t('اطوِ الشريط الجانبي', 'Collapse sidebar')}
+          >
+            <CollapseIcon size={20} aria-hidden="true" />
+          </button>
+        </div>
         <nav id="desktop-sidebar-navigation" aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-sidebar-nav">
           <SidebarLinks railTips collapsed={collapsed} isOwner={isOwner} permissions={permissions} />
         </nav>

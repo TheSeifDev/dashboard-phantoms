@@ -179,11 +179,11 @@ try {
   await test('locale changes labels, collapse direction and active navigation without resetting preference', async () => {
     await scenario({ preference: 'true' }, async ({ click }) => {
       assert.equal(document.querySelector('.app-sidebar-collapse').getAttribute('aria-label'), 'وسّع الشريط الجانبي');
-      assert.ok(document.querySelector('.app-sidebar-collapse .lucide-chevron-left'));
+      assert.ok(document.querySelector('.app-sidebar-collapse .lucide-panel-right'));
       await act(async () => useLocaleStore.getState().setLocale('en'));
       assert.equal(document.documentElement.dir, 'ltr');
       assert.equal(document.querySelector('.app-sidebar-collapse').getAttribute('aria-label'), 'Expand sidebar');
-      assert.ok(document.querySelector('.app-sidebar-collapse .lucide-chevron-right'));
+      assert.ok(document.querySelector('.app-sidebar-collapse .lucide-panel-left'));
       const tasks = document.querySelector('#desktop-sidebar-navigation a[href="/admin/tasks"]');
       assert.equal(tasks.getAttribute('aria-label'), 'Tasks');
       await click(tasks);
