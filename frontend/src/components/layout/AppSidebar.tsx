@@ -67,6 +67,12 @@ const GROUPS: SidebarGroup[] = [
       { to: '/admin/tasks', label: 'المهام', icon: CheckSquare, permission: 'tasks' },
       { to: '/admin/members', label: 'الأعضاء', icon: Users, permission: 'members' },
       {
+        to: '/admin/teams',
+        label: 'الفرق الداخلية',
+        icon: Layers3,
+        ownerOnly: true,
+      },
+      {
         to: '/admin/evaluations',
         label: 'التقييمات',
         icon: ClipboardCheck,
@@ -109,13 +115,7 @@ const GROUPS: SidebarGroup[] = [
         icon: ShieldCheck,
         ownerOnly: true,
       },
-      {
-        to: '/admin/teams',
-        label: 'الفرق الداخلية',
-        icon: Layers3,
-        ownerOnly: true,
-      },
-  ],
+    ],
   },
 ];
 
@@ -206,25 +206,24 @@ function SidebarLinks({
         const expanded = homeGroup || collapsed || expandedGroups.has(group.title);
         const groupId = `${id}-section-${index}`;
         const links = group.items.map(({ to, label: itemLabel, icon: Icon, end }) => (
-              <li key={to}>
-                <NavLink
-                  to={to}
-                  end={end}
-                  onClick={() => { rail.hide(); onNavigate?.(); }}
-                  title={label(itemLabel)}
-                  aria-label={label(itemLabel)}
-                  data-tip={railTips ? label(itemLabel) : undefined}
-                  {...(railTips ? rail.events(label(itemLabel)) : {})}
-                  className={({ isActive }) =>
-                    `app-sidebar-item${isActive ? ' is-active' : ''}${
-                      railTips ? ' app-sidebar-tip' : ''
-                    }`
-                  }
-                >
-                  <Icon size={20} aria-hidden="true" />
-                  <span className="app-sidebar-item-label">{label(itemLabel)}</span>
-                </NavLink>
-              </li>
+          <li key={to}>
+            <NavLink
+              to={to}
+              end={end}
+              onClick={() => { rail.hide(); onNavigate?.(); }}
+              title={label(itemLabel)}
+              aria-label={label(itemLabel)}
+              data-tip={railTips ? label(itemLabel) : undefined}
+              {...(railTips ? rail.events(label(itemLabel)) : {})}
+              className={({ isActive }) =>
+                `app-sidebar-item${isActive ? ' is-active' : ''}${railTips ? ' app-sidebar-tip' : ''
+                }`
+              }
+            >
+              <Icon size={20} aria-hidden="true" />
+              <span className="app-sidebar-item-label">{label(itemLabel)}</span>
+            </NavLink>
+          </li>
         ));
         return (
           <section className={`app-sidebar-section${homeGroup ? ' is-home' : ''}`} key={group.title}>

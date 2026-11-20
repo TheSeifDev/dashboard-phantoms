@@ -6,7 +6,7 @@ import { LanguageToggle } from '../../i18n/LanguageToggle';
 import { usePendingMemberJoinReviews } from '../../features/members/memberInviteApi';
 import type { AdminPermission, AdminPermissions } from '../../types/db';
 
-const pages: Array<{path: string; ar: string; en: string; permission?: AdminPermission; ownerOnly?: boolean}> = [
+const pages: Array<{ path: string; ar: string; en: string; permission?: AdminPermission; ownerOnly?: boolean }> = [
   { path: '/admin/dashboard', ar: 'لوحة التحكم', en: 'Dashboard', permission: 'dashboard' },
   { path: '/admin/members', ar: 'دليل الأعضاء', en: 'Team members', permission: 'members' },
   { path: '/admin/tasks', ar: 'المهام والتكليفات', en: 'Tasks & assignments', permission: 'tasks' },
