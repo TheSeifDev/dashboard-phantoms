@@ -59,7 +59,7 @@ const PROJECT_REF_FILE = path.join(BACKEND, 'supabase', '.temp', 'project-ref');
 const SAFE_DOMAIN = 'phantoms-test.example';
 const PASSWORD = 'Disposable-Auth-Local-2026!';
 const DISPOSABLE_INVITATION_NOTE = 'local disposable password migration fixture';
-const ADMIN_PERMISSIONS = { dashboard: true, members: true, tasks: true, ranking: true, notes: true, announcements: true, whatsapp: true, ai_assistant: true };
+const ADMIN_PERMISSIONS = { dashboard: true, members: true, tasks: true, ranking: true, notes: true, announcements: true, whatsapp: true, ai_assistant: true, web_projects: false };
 const FORBIDDEN_ENV_NAMES = [
   'SUPABASE_ACCESS_TOKEN', 'DATABASE_URL', 'SUPABASE_DB_URL', 'SUPABASE_DB_PASSWORD',
   'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SERVICE_KEY', 'SUPABASE_SECRET_KEY',

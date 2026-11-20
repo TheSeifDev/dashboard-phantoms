@@ -33,7 +33,7 @@ import { useAuthStore } from '../../../store/auth';
 import { toast } from '../../../store/toast';
 import { useThemeStore } from '../../../store/theme';
 import type {
-  AdminPermission,
+  TeamPermission,
   AnnouncementPriority,
   MemberCustomFieldType,
   MemberEvaluationGrade,
@@ -77,7 +77,7 @@ import {
 } from './api';
 import { workspaceTeamEntries } from '../access';
 
-const FEATURE_FOR_SECTION: Record<TeamWorkspaceSection, AdminPermission> = {
+const FEATURE_FOR_SECTION: Record<TeamWorkspaceSection, TeamPermission> = {
   tasks: 'tasks',
   members: 'members',
   notes: 'notes',
@@ -93,7 +93,7 @@ const SECTION_DEFS: Array<{ id: TeamWorkspaceSection; titleAr: string; titleEn: 
   { id: 'announcements', titleAr: 'الإعلانات', titleEn: 'Announcements', icon: <Bell size={17} aria-hidden="true" /> },
   { id: 'custom-fields', titleAr: 'الحقول المخصصة', titleEn: 'Custom fields', icon: <FileText size={17} aria-hidden="true" /> },
 ];
-const CAPABILITY_DEFS: Array<{ key: AdminPermission; ar: string; en: string }> = [
+const CAPABILITY_DEFS: Array<{ key: TeamPermission; ar: string; en: string }> = [
   { key: 'dashboard', ar: 'لوحة الفريق', en: 'Team dashboard' },
   { key: 'members', ar: 'الأعضاء والحقول', en: 'Members & fields' },
   { key: 'tasks', ar: 'المهام', en: 'Tasks' },

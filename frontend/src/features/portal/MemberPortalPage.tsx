@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Bell, CheckSquare, ClipboardCheck, Layers } from 'lucide-react';
 import { getDeviceToken, useAuthStore } from '../../store/auth';
 import { memberSupabase } from '../../lib/supabase/member-client';
@@ -193,7 +193,7 @@ export default function MemberPortalPage() {
 
         <nav
           aria-label={t('أقسام بوابة العضو', 'Member portal sections')}
-          className="grid grid-cols-2 gap-1.5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-sm)] sm:grid-cols-4"
+          className="grid grid-cols-2 gap-1.5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-sm)] sm:grid-cols-5"
         >
           {tabs.map(({ key, label, icon: Icon, badge }) => {
             const active = activeTab === key;
@@ -226,6 +226,13 @@ export default function MemberPortalPage() {
               </button>
             );
           })}
+          <Link
+            to="/portal/projects"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+          >
+            <Layers size={16} aria-hidden="true" />
+            <span>{t('مشروعات الويب', 'Web Projects')}</span>
+          </Link>
         </nav>
 
         {(activeTab === 'ALL' || activeTab === 'TASKS') && (

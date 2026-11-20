@@ -18,6 +18,14 @@ const pages: Array<{ path: string; ar: string; en: string; permission?: AdminPer
   { path: '/admin/whatsapp', ar: 'إرسال المهام عبر واتساب', en: 'WhatsApp assignments', permission: 'whatsapp' },
   { path: '/admin/admins', ar: 'إدارة المشرفين', en: 'Administrators', ownerOnly: true },
   { path: '/admin/teams', ar: 'إدارة الفرق الداخلية', en: 'Internal teams', ownerOnly: true },
+  { path: '/admin/web-projects', ar: 'مشروعات الويب', en: 'Web Projects', permission: 'web_projects' },
+  { path: '/admin/web-projects/ideas', ar: 'أفكار المنتجات', en: 'Project ideas', permission: 'web_projects' },
+  { path: '/admin/web-projects/projects', ar: 'دليل المشروعات', en: 'Project directory', permission: 'web_projects' },
+  { path: '/admin/web-projects/timeline', ar: 'المخطط الزمني', en: 'Project timeline', permission: 'web_projects' },
+  { path: '/admin/web-projects/agile', ar: 'لوحات أجايل', en: 'Agile boards', permission: 'web_projects' },
+  { path: '/admin/web-projects/tasks', ar: 'مهام المشروعات', en: 'Project tasks', permission: 'web_projects' },
+  { path: '/admin/web-projects/reports', ar: 'تقارير المشروعات', en: 'Project reports', permission: 'web_projects' },
+  { path: '/admin/web-projects/resources', ar: 'موارد المشروعات', en: 'Project resources', permission: 'web_projects' },
 ];
 interface AdminHeaderProps {
   path: string;
@@ -43,9 +51,11 @@ export function AdminHeader({ path, userName, isDark, drawerOpen = false, onTogg
   const reviews = usePendingMemberJoinReviews(canMembers && notificationsOpen);
   const visiblePages = pages.filter((item) => (!item.ownerOnly || isOwner) && (!item.permission || isOwner || permissions[item.permission] === true));
   const results = visiblePages.filter((item) => `${item.ar} ${item.en}`.toLowerCase().includes(search.trim().toLowerCase()));
-  const current = pages.find((item) => item.path === path.replace(/\/+$/, '')) ?? pages[0];
-  const reviewCount = reviews.data?.pages.flat().length;
   const normalizedPath = path.replace(/\/+$/, '') || '/';
+  const current = pages
+    .filter((item) => normalizedPath === item.path || normalizedPath.startsWith(`${item.path}/`))
+    .sort((left, right) => right.path.length - left.path.length)[0] ?? pages[0];
+  const reviewCount = reviews.data?.pages.flat().length;
   const isDashboard = normalizedPath === '/admin/dashboard' || normalizedPath === '/admin';
 
   useEffect(() => {

@@ -41,8 +41,8 @@ SELECT lives_ok(
   'an admin row with exactly the eight boolean keys is accepted');
 DELETE FROM public.admin_accounts WHERE user_id = phantoms_test.uid('second_owner');
 SELECT is((SELECT permissions FROM public.admin_accounts WHERE user_id = phantoms_test.uid('full_admin')),
-  phantoms_test.perms('dashboard','members','tasks','ranking','notes','announcements','whatsapp','ai_assistant'),
-  'column default grants all eight keys');
+  phantoms_test.perms('dashboard','members','tasks','ranking','notes','announcements','whatsapp','ai_assistant') || '{"web_projects":false}'::jsonb,
+  'global admin fixture grants established keys and denies Web Projects by default');
 
 -- Direct table access is closed --------------------------------------------
 SELECT phantoms_test.login_as('owner');

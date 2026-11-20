@@ -1,4 +1,4 @@
-import type { AdminPermission, AdminPermissions } from '../../../types/db';
+import type { AdminPermission, AdminPermissions, TeamPermission } from '../../../types/db';
 
 export const ADMIN_PERMISSION_OPTIONS: ReadonlyArray<{
   key: AdminPermission;
@@ -13,7 +13,16 @@ export const ADMIN_PERMISSION_OPTIONS: ReadonlyArray<{
   { key: 'announcements', label: 'الإعلانات', description: 'إدارة الإعلانات وإرسال التنبيهات.' },
   { key: 'whatsapp', label: 'واتساب', description: 'إرسال المهام ومتابعة اتصال واتساب.' },
   { key: 'ai_assistant', label: 'المساعد الذكي', description: 'استخدام خدمات المساعد الذكي.' },
+  { key: 'web_projects', label: 'مشروعات الويب', description: 'إدارة برنامج Web Projects ومشروعاته.' },
 ];
+
+export const TEAM_PERMISSION_OPTIONS: ReadonlyArray<{
+  key: TeamPermission;
+  label: string;
+  description: string;
+}> = ADMIN_PERMISSION_OPTIONS.filter(
+  (option): option is (typeof ADMIN_PERMISSION_OPTIONS)[number] & { key: TeamPermission } => option.key !== 'web_projects',
+);
 
 export const FULL_ADMIN_PERMISSIONS: AdminPermissions = {
   dashboard: true,
@@ -24,6 +33,7 @@ export const FULL_ADMIN_PERMISSIONS: AdminPermissions = {
   announcements: true,
   whatsapp: true,
   ai_assistant: true,
+  web_projects: true,
 };
 
 export function normalizeAdminPermissions(value: unknown): AdminPermissions {
@@ -44,5 +54,6 @@ export function firstAllowedAdminPath(permissions: Partial<AdminPermissions> | n
     announcements: '/admin/announcements',
     whatsapp: '/admin/whatsapp',
     ai_assistant: '/admin/ai-assistant',
+    web_projects: '/admin/web-projects',
   } satisfies Record<AdminPermission, string>)[option.key] : null;
 }

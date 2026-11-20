@@ -32,6 +32,9 @@ const EN: Record<string, string> = {
   'الرئيسية': 'Dashboard', 'المهام': 'Tasks', 'الأعضاء': 'Members', 'التقييمات': 'Evaluations', 'ترتيب الفريق': 'Leaderboard',
   'الملاحظات': 'Notes', 'الإعلانات': 'Announcements', 'إرسال المهام عبر واتساب': 'WhatsApp assignments', 'المساعد الذكي': 'AI assistant',
   'بوابة الأعضاء': 'Member portal', 'إدارة المشرفين': 'Administrators', 'الفرق الداخلية': 'Internal teams',
+  'مشروعات الويب': 'Web Projects', 'ملخص المشروعات': 'Overview', 'الأفكار': 'Ideas', 'المشروعات': 'Projects',
+  'المخطط الزمني': 'Timeline', 'لوحات أجايل': 'Agile boards', 'مهام المشروعات': 'Project tasks',
+  'تقارير المشروعات': 'Reports', 'الموارد': 'Resources',
 };
 
 interface SidebarLink {
@@ -80,6 +83,19 @@ const GROUPS: SidebarGroup[] = [
       },
       { to: '/admin/ranking', label: 'ترتيب الفريق', icon: Trophy, permission: 'ranking' },
       { to: '/admin/notes', label: 'الملاحظات', icon: StickyNote, permission: 'notes' },
+    ],
+  },
+  {
+    title: 'مشروعات الويب',
+    items: [
+      { to: '/admin/web-projects', label: 'ملخص المشروعات', icon: Layers3, end: true, permission: 'web_projects' },
+      { to: '/admin/web-projects/ideas', label: 'الأفكار', icon: StickyNote, permission: 'web_projects' },
+      { to: '/admin/web-projects/projects', label: 'المشروعات', icon: Layers3, permission: 'web_projects' },
+      { to: '/admin/web-projects/timeline', label: 'المخطط الزمني', icon: ClipboardCheck, permission: 'web_projects' },
+      { to: '/admin/web-projects/agile', label: 'لوحات أجايل', icon: CheckSquare, permission: 'web_projects' },
+      { to: '/admin/web-projects/tasks', label: 'مهام المشروعات', icon: CheckSquare, permission: 'web_projects' },
+      { to: '/admin/web-projects/reports', label: 'تقارير المشروعات', icon: ClipboardCheck, permission: 'web_projects' },
+      { to: '/admin/web-projects/resources', label: 'الموارد', icon: StickyNote, permission: 'web_projects' },
     ],
   },
   {

@@ -29,8 +29,15 @@ SELECT tables_are('public', ARRAY[
   'member_auth_bindings', 'member_registration_invites', 'members', 'notes', 'tasks',
   'task_contribution_events', 'task_contribution_ledger_config', 'whatsapp_settings',
   'teams', 'team_memberships', 'team_admin_assignments', 'team_access_audit',
-  'team_member_metrics', 'team_member_custom_field_values', 'announcement_recipients'
-], 'public schema contains exactly the application tables including internal teams');
+  'team_member_metrics', 'team_member_custom_field_values', 'announcement_recipients',
+  'web_idea_contributors', 'web_idea_reviews', 'web_ideas', 'web_program_admin_audit',
+  'web_project_activity_logs', 'web_project_agreement_acceptances', 'web_project_agreements',
+  'web_project_consents', 'web_project_deliverables', 'web_project_integrations',
+  'web_project_member_reports', 'web_project_members', 'web_project_milestone_dependencies',
+  'web_project_milestones', 'web_project_resource_refs', 'web_project_sprints',
+  'web_project_task_assignees', 'web_project_task_attachments', 'web_project_task_checklist_items',
+  'web_project_task_comments', 'web_project_tasks', 'web_project_updates', 'web_projects', 'web_resources'
+], 'public schema contains exactly the application tables including internal teams and Web Projects');
 SELECT hasnt_table('public', 'member_info_fields', '0019 member_info_fields was removed by 0020');
 SELECT hasnt_table('public', 'member_info_submissions', '0019 member_info_submissions was removed by 0020');
 SELECT hasnt_table('public', 'admin_permissions', 'no separate admin_permissions table exists');

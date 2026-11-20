@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase/client';
 import { toAppError } from '../../lib/supabase/errors';
 import { useAuthStore } from '../../store/auth';
 import type {
-  AdminPermissions,
+  TeamPermissions,
   TeamAdminCandidate,
   TeamAdminRole,
   TeamMemberCandidate,
@@ -110,7 +110,7 @@ export function useSetTeamActive() {
 export function useSetTeamAdminSeat() {
   const invalidate = useInvalidateTeams();
   return useMutation({
-    mutationFn: (input: { teamId: string; role: TeamAdminRole; userId: string | null; permissions: AdminPermissions | null }) =>
+    mutationFn: (input: { teamId: string; role: TeamAdminRole; userId: string | null; permissions: TeamPermissions | null }) =>
       unwrapRpc<string | null>(supabase.rpc('owner_set_team_admin_seat', {
         p_team_id: input.teamId,
         p_role: input.role,

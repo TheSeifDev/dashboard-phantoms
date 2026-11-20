@@ -351,7 +351,7 @@ async function seedFixtures(status, evidenceMode) {
   createdUserIds.push(outsiderResult.data.user.id);
   const ownerId = ownerResult.data.user.id;
 
-  const permissions = { dashboard: true, members: true, tasks: true, ranking: true, notes: true, announcements: true, whatsapp: true, ai_assistant: true };
+  const permissions = { dashboard: true, members: true, tasks: true, ranking: true, notes: true, announcements: true, whatsapp: true, ai_assistant: true, web_projects: true };
   const adminInsert = await service.from('admin_accounts').upsert({ user_id: ownerId, role: 'owner', permissions }, { onConflict: 'user_id' });
   if (adminInsert.error) fail('could not provision the disposable owner access row.');
 

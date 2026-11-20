@@ -100,6 +100,11 @@ jobs:
           node --test scripts/member-password-component.test.mjs
           node --test scripts/auth-callback-state.test.mjs
           node --test scripts/sidebar-navigation.test.mjs
+          node --test scripts/web-projects-navigation.test.mjs
+          node --test scripts/web-projects-api.test.mjs
+          ../frontend/node_modules/.bin/tsx --test \
+            scripts/web-projects-access.test.ts \
+            scripts/web-projects-domain.test.ts
           ../frontend/node_modules/.bin/tsx --test \
             ../backend/supabase/functions/member-password-enrollment/controller.test.ts \
             ../backend/supabase/functions/member-password-enrollment/pureorigins.test.ts \

@@ -132,11 +132,14 @@ LANGUAGE sql
 AS $$
   INSERT INTO public.admin_accounts (user_id, role, permissions)
   VALUES (phantoms_test.uid(p_user), p_role,
-          COALESCE(p_permissions,
-            '{"dashboard":true,"members":true,"tasks":true,"ranking":true,"notes":true,"announcements":true,"whatsapp":true,"ai_assistant":true}'::jsonb));
+          CASE WHEN p_permissions IS NULL THEN
+            '{"dashboard":true,"members":true,"tasks":true,"ranking":true,"notes":true,"announcements":true,"whatsapp":true,"ai_assistant":true,"web_projects":false}'::jsonb
+          WHEN p_permissions ? 'web_projects' THEN p_permissions
+          ELSE p_permissions || '{"web_projects":false}'::jsonb END);
 $$;
 
--- Build an 8-key permissions object with only the listed keys enabled.
+-- Build the established eight-key Team/global-section permissions object.
+-- Deliberately do not add web_projects here: Team-seat JSON must remain scoped.
 CREATE FUNCTION phantoms_test.perms(VARIADIC p_enabled TEXT[])
 RETURNS JSONB LANGUAGE sql IMMUTABLE
 AS $$

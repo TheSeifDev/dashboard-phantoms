@@ -15,7 +15,7 @@ const EXECUTE_MODE = process.argv.includes('--execute');
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const FULL_PERMISSIONS = {
   dashboard: true, members: true, tasks: true, ranking: true,
-  notes: true, announcements: true, whatsapp: true, ai_assistant: true,
+  notes: true, announcements: true, whatsapp: true, ai_assistant: true, web_projects: true,
 };
 
 function fail(message) { console.error(`ERROR: ${message}`); process.exit(1); }
@@ -54,7 +54,7 @@ if (owners[0]?.user_id === OWNER_UUID) {
 }
 
 const payload = { user_id: OWNER_UUID, role: 'owner', created_by: null, permissions: FULL_PERMISSIONS };
-console.log('Preconditions passed. Target record contains the final eight permission keys.');
+console.log('Preconditions passed. Target Owner record contains all nine global permission keys.');
 if (!EXECUTE_MODE) {
   console.log('PREVIEW COMPLETE — rerun with --execute only after reviewing the target project and migration state.');
   process.exit(0);

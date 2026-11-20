@@ -175,10 +175,12 @@ export type AdminPermission =
   | 'notes'
   | 'announcements'
   | 'whatsapp'
-  | 'ai_assistant';
+  | 'ai_assistant'
+  | 'web_projects';
 
 export type AdminPermissions = Record<AdminPermission, boolean>;
-
+export type TeamPermission = Exclude<AdminPermission, 'web_projects'>;
+export type TeamPermissions = Record<TeamPermission, boolean>;
 export type TeamAdminRole = 'head' | 'monitor';
 export type TeamMembershipStatus = 'pending' | 'active' | 'suspended' | 'removed';
 
@@ -188,7 +190,7 @@ export interface TeamAccessEntry {
   name: string;
   /** null means this is a picker item for an existing global Admin/Owner. */
   role: TeamAdminRole | null;
-  permissions: Partial<AdminPermissions>;
+  permissions: Partial<TeamPermissions>;
 }
 
 export type TeamRow = {
@@ -218,7 +220,7 @@ export type TeamAdminAssignment = {
   user_id: string;
   email: string;
   role: TeamAdminRole;
-  permissions: AdminPermissions;
+  permissions: TeamPermissions;
   created_at: string;
 };
 
@@ -337,7 +339,7 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      team_list_roster: { Args: { p_team_id: string; p_feature: AdminPermission }; Returns: unknown };
+      team_list_roster: { Args: { p_team_id: string; p_feature: TeamPermission }; Returns: unknown };
       team_list_tasks: { Args: { p_team_id: string }; Returns: unknown };
       team_create_task: { Args: { p_team_id: string; p_title: string; p_description: string | null; p_assigned_to: unknown; p_has_deadline: boolean; p_deadline_date: string | null; p_bonus_points: number }; Returns: number };
       team_delete_task: { Args: { p_team_id: string; p_task_id: number }; Returns: boolean };
@@ -358,7 +360,7 @@ export interface Database {
       team_create_announcement: { Args: { p_team_id: string; p_title: string; p_content: string; p_priority: string; p_member_ids?: unknown }; Returns: number };
       team_set_announcement_active: { Args: { p_team_id: string; p_announcement_id: number; p_active: boolean }; Returns: boolean };
       team_delete_announcement: { Args: { p_team_id: string; p_announcement_id: number }; Returns: boolean };
-      has_team_permission: { Args: { p_team_id: string; p_permission: AdminPermission }; Returns: boolean };
+      has_team_permission: { Args: { p_team_id: string; p_permission: TeamPermission }; Returns: boolean };
       has_team_membership: { Args: { p_team_id: string; p_member_id: number }; Returns: boolean };
       has_team_member_identity: { Args: { p_team_id: string; p_member_id: number }; Returns: boolean };
       owner_list_team_admin_candidates: { Args: never; Returns: TeamAdminCandidate[] };
@@ -366,9 +368,9 @@ export interface Database {
       owner_create_team: { Args: { p_slug: string; p_name: string }; Returns: string };
       owner_set_team_active: { Args: { p_team_id: string; p_is_active: boolean }; Returns: boolean };
       owner_update_team_details: { Args: { p_team_id: string; p_slug: string; p_name: string }; Returns: boolean };
-      owner_assign_team_admin: { Args: { p_team_id: string; p_user_id: string; p_role: TeamAdminRole; p_permissions: AdminPermissions }; Returns: string };
+      owner_assign_team_admin: { Args: { p_team_id: string; p_user_id: string; p_role: TeamAdminRole; p_permissions: TeamPermissions }; Returns: string };
       owner_revoke_team_admin: { Args: { p_assignment_id: string }; Returns: boolean };
-      owner_set_team_admin_seat: { Args: { p_team_id: string; p_role: TeamAdminRole; p_user_id: string | null; p_permissions: AdminPermissions | null }; Returns: string | null };
+      owner_set_team_admin_seat: { Args: { p_team_id: string; p_role: TeamAdminRole; p_user_id: string | null; p_permissions: TeamPermissions | null }; Returns: string | null };
       owner_list_team_members: { Args: { p_team_id: string }; Returns: TeamMemberSummary[] };
       owner_list_team_member_candidates: { Args: { p_team_id: string }; Returns: TeamMemberCandidate[] };
       team_add_member: { Args: { p_team_id: string; p_member_id: number }; Returns: TeamMembershipStatus };

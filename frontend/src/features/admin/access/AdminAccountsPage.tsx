@@ -32,6 +32,7 @@ const permissionEnglish: Record<AdminPermission, { label: string; description: s
   announcements: { label: 'Announcements', description: 'Manage announcements and send notifications.' },
   whatsapp: { label: 'WhatsApp', description: 'Send tasks and monitor the WhatsApp connection.' },
   ai_assistant: { label: 'AI assistant', description: 'Use the AI assistant services.' },
+  web_projects: { label: 'Web Projects', description: 'Administer the Web Projects program and its projects.' },
 };
 
 export default function AdminAccountsPage() {
@@ -56,8 +57,8 @@ export default function AdminAccountsPage() {
       const result = await addAccount.mutateAsync(cleanEmail);
       setEmail('');
       toast.success(result.invited
-        ? t('اتضاف المشرف بصلاحيات كاملة وبعتنا له دعوة على البريد.', 'Administrator added with full access; an email invitation was sent.')
-        : t('اتضاف المشرف بصلاحيات كاملة. تقدر تعدل أقسامه من القائمة.', 'Administrator added with full access. You can customize sections from the list.'));
+        ? t('اتضاف المشرف بصلاحيات التشغيل وبعتنا له دعوة. مشروعات الويب تحتاج تفعيلًا صريحًا.', 'Administrator added with operational access and an email invitation. Web Projects requires an explicit grant.')
+        : t('اتضاف المشرف بصلاحيات التشغيل. يمكنك تفعيل مشروعات الويب وتعديل الأقسام من القائمة.', 'Administrator added with operational access. You can explicitly grant Web Projects and customize sections from the list.'));
     } catch (cause) {
       toast.error(toAppError(cause, t('معرفناش نضيف المشرف.', 'Could not add the administrator.')).message);
     }

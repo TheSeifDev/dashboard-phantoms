@@ -21,6 +21,8 @@ const AdminSetPasswordPage = lazy(() => import('../features/auth/AdminSetPasswor
 const AdminRecoveryCallbackPage = lazy(() => import('../features/auth/AdminSetPasswordPage').then((module) => ({ default: module.AdminRecoveryCallbackPage })));
 const AdminForgotPasswordPage = lazy(() => import('../features/auth/AdminForgotPasswordPage'));
 const MemberPortalPage = lazy(() => import('../features/portal/MemberPortalPage'));
+const MemberWebProjectsPage = lazy(() => import('../features/web-projects/MemberWebProjectsPage'));
+const ProjectWorkspacePage = lazy(() => import('../features/web-projects/ProjectWorkspacePage'));
 const MemberSelfRegisterPage = lazy(() => import('../features/members/MemberSelfRegisterPage'));
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
 const MembersPage = lazy(() => import('../features/members/MembersPage'));
@@ -34,6 +36,7 @@ const AnnouncementsPage = lazy(() => import('../features/admin/announcements/Ann
 const AdminAccountsPage = lazy(() => import('../features/admin/access/AdminAccountsPage'));
 const TeamsManagementPage = lazy(() => import('../features/teams/TeamsManagementPage'));
 const TeamWorkspacePage = lazy(() => import('../features/teams/workspace/TeamWorkspacePage'));
+const WebProjectsPage = lazy(() => import('../features/web-projects/WebProjectsPage'));
 
 function PageFallback() {
   return <PhantomLoader className="page-fallback" />;
@@ -197,6 +200,14 @@ export const router = createBrowserRouter([
       </ProtectedMemberRoute>
     ),
   },
+  {
+    path: '/portal/projects',
+    element: <ProtectedMemberRoute><Page><MemberWebProjectsPage /></Page></ProtectedMemberRoute>,
+  },
+  {
+    path: '/portal/projects/:projectId',
+    element: <ProtectedMemberRoute><Page><ProjectWorkspacePage /></Page></ProtectedMemberRoute>,
+  },
 
   // Admin Portal Routes
   {
@@ -235,6 +246,15 @@ export const router = createBrowserRouter([
       { path: 'whatsapp', element: <AdminSection permission="whatsapp"><Page><WhatsAppTasksPage /></Page></AdminSection> },
       { path: 'admins', element: <ProtectedOwnerRoute><Page><AdminAccountsPage /></Page></ProtectedOwnerRoute> },
       { path: 'teams', element: <ProtectedOwnerRoute><Page><TeamsManagementPage /></Page></ProtectedOwnerRoute> },
+      { path: 'web-projects', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
+      { path: 'web-projects/ideas', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
+      { path: 'web-projects/projects', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
+      { path: 'web-projects/projects/:projectId', element: <AdminSection permission="web_projects"><Page><ProjectWorkspacePage /></Page></AdminSection> },
+      { path: 'web-projects/timeline', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
+      { path: 'web-projects/agile', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
+      { path: 'web-projects/tasks', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
+      { path: 'web-projects/reports', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
+      { path: 'web-projects/resources', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
     ],
   },
 

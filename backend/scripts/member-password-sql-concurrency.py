@@ -161,7 +161,7 @@ def run():
           INSERT INTO auth.users(id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
           VALUES ('{actor}', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '{emails[0]}', 'synthetic-owner-hash', now(), '{{\"providers\":[\"email\"]}}', '{{}}', now(), now()),
                  ('{reset_user}', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '{emails[2]}', 'synthetic-reset-old-hash', now(), '{{\"providers\":[\"email\"]}}', '{{}}', now(), now());
-          INSERT INTO public.admin_accounts(user_id, role, permissions) VALUES ('{actor}', 'owner', '{{\"dashboard\":true,\"members\":true,\"tasks\":true,\"ranking\":true,\"notes\":true,\"announcements\":true,\"whatsapp\":true,\"ai_assistant\":true}}');
+          INSERT INTO public.admin_accounts(user_id, role, permissions) VALUES ('{actor}', 'owner', '{{\"dashboard\":true,\"members\":true,\"tasks\":true,\"ranking\":true,\"notes\":true,\"announcements\":true,\"whatsapp\":true,\"ai_assistant\":true,\"web_projects\":false}}');
           INSERT INTO public.members(email, full_name, completion_rank) VALUES ('{emails[1]}', 'Disposable concurrency new', 0), ('{emails[2]}', 'Disposable concurrency reset', 0);
           INSERT INTO public.member_auth_bindings(member_id, auth_user_id, normalized_email, password_ready)
           SELECT id, '{reset_user}', email, true FROM public.members WHERE email = '{emails[2]}';

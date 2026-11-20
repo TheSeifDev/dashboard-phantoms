@@ -37,6 +37,7 @@ class Migration0022DatabaseSimulator {
         announcements: true,
         whatsapp: true,
         ai_assistant: true,
+        web_projects: true,
       },
     });
 
@@ -54,6 +55,7 @@ class Migration0022DatabaseSimulator {
         announcements: false,
         whatsapp: false,
         ai_assistant: false,
+        web_projects: false,
       },
     });
 

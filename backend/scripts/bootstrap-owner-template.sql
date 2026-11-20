@@ -27,7 +27,8 @@ DECLARE
     "notes": true,
     "announcements": true,
     "whatsapp": true,
-    "ai_assistant": true
+    "ai_assistant": true,
+    "web_projects": true
   }'::jsonb;
 BEGIN
   -- 1. Validation of input placeholder

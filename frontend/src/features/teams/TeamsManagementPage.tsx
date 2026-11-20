@@ -12,8 +12,8 @@ import { useAuthStore } from '../../store/auth';
 import { toast } from '../../store/toast';
 import { toAppError } from '../../lib/supabase/errors';
 import { useLocale } from '../../i18n/useLocale';
-import type { AdminPermission, AdminPermissions, TeamAdminCandidate, TeamAdminRole, TeamOverview } from '../../types/db';
-import { ADMIN_PERMISSION_OPTIONS, FULL_ADMIN_PERMISSIONS } from '../admin/access/permissions';
+import type { TeamPermission, TeamPermissions, TeamAdminCandidate, TeamAdminRole, TeamOverview } from '../../types/db';
+import { TEAM_PERMISSION_OPTIONS } from '../admin/access/permissions';
 import { useAdminAccess } from '../admin/access/api';
 import {
   useAddTeamMember,
@@ -31,11 +31,11 @@ import './teams-management.css';
 
 const ROLES: TeamAdminRole[] = ['head', 'monitor'];
 const EMPTY_PERMISSIONS = Object.fromEntries(
-  Object.keys(FULL_ADMIN_PERMISSIONS).map((key) => [key, false]),
-) as AdminPermissions;
+  TEAM_PERMISSION_OPTIONS.map(({ key }) => [key, false]),
+) as TeamPermissions;
 type TeamStatusFilter = 'all' | 'active' | 'disabled';
 
-const PERMISSION_COPY: Record<AdminPermission, { ar: string; en: string; descriptionAr: string; descriptionEn: string }> = {
+const PERMISSION_COPY: Record<TeamPermission, { ar: string; en: string; descriptionAr: string; descriptionEn: string }> = {
   dashboard: { ar: 'لوحة الفريق', en: 'Team dashboard', descriptionAr: 'عرض ملخص هذا الفريق فقط.', descriptionEn: 'View this team’s dashboard only.' },
   members: { ar: 'الأعضاء', en: 'Members', descriptionAr: 'إدارة عضويات وبيانات هذا الفريق.', descriptionEn: 'Manage this team’s memberships and member data.' },
   tasks: { ar: 'المهام', en: 'Tasks', descriptionAr: 'إدارة ومراجعة مهام هذا الفريق.', descriptionEn: 'Manage and review this team’s tasks.' },
@@ -70,7 +70,7 @@ function TeamAdminSeat({ team, role, candidates, isOwner }: {
   const existing = team.assignments.find((assignment) => assignment.role === role);
   const eligible = candidates.filter((candidate) => candidate.global_role === null);
   const [userId, setUserId] = useState(existing?.user_id ?? '');
-  const [permissions, setPermissions] = useState<AdminPermissions>(existing?.permissions ?? EMPTY_PERMISSIONS);
+  const [permissions, setPermissions] = useState<TeamPermissions>(existing?.permissions ?? EMPTY_PERMISSIONS);
   const setSeat = useSetTeamAdminSeat();
 
   useEffect(() => {
@@ -78,7 +78,7 @@ function TeamAdminSeat({ team, role, candidates, isOwner }: {
     setPermissions(existing?.permissions ?? EMPTY_PERMISSIONS);
   }, [existing?.id, existing?.user_id, existing?.permissions]);
 
-  const setPermission = (key: AdminPermission) => {
+  const setPermission = (key: TeamPermission) => {
     setPermissions((current) => ({ ...current, [key]: !current[key] }));
   };
 
@@ -118,7 +118,7 @@ function TeamAdminSeat({ team, role, candidates, isOwner }: {
       <p className="teams-help">{t('التعيين يضيف مساحة الفريق فقط ولا ينشئ حساب Admin عامًا. الشخص ممكن يتعيّن في فرق مختلفة، لكن مش في المقعدين داخل نفس الفريق.', 'This grants team-only access and never creates a global Admin. A person may be assigned to other teams, but cannot hold both seats in this team.')}</p>
       <fieldset disabled={!isOwner || !team.is_active || setSeat.isPending} className="teams-permissions">
         <legend>{t('الصلاحيات داخل الفريق', 'Permissions inside this team')}</legend>
-        {ADMIN_PERMISSION_OPTIONS.map(({ key }) => (
+        {TEAM_PERMISSION_OPTIONS.map(({ key }) => (
           <label key={key} className={`teams-permission ${permissions[key] ? 'teams-permission--selected' : ''}`}>
             <input type="checkbox" checked={permissions[key]} onChange={() => setPermission(key)} />
             <span><strong>{t(PERMISSION_COPY[key].ar, PERMISSION_COPY[key].en)}</strong><small>{t(PERMISSION_COPY[key].descriptionAr, PERMISSION_COPY[key].descriptionEn)}</small></span>
