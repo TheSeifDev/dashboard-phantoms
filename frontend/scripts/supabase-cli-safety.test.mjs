@@ -29,14 +29,14 @@ function runCheck() {
   });
 }
 
-test('local inventory records all thirteen forward migrations as production-applied', () => {
+test('local inventory records all twenty forward migrations as production-applied', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
-  assert.equal(applied, 13);
+  assert.equal(applied, 20);
   assert.ok(result.stdout.includes(`All ${24 + entries.length} canonical migrations are present (${pending} pending forward, ${applied} applied forward)`));
   const ownerReview = entries.find((entry) => entry.version === '20261119005000');
   assert.equal(ownerReview.production_status, 'applied');
@@ -44,6 +44,24 @@ test('local inventory records all thirteen forward migrations as production-appl
   const contribution = entries.find((entry) => entry.version === '20261119183000');
   assert.equal(contribution.production_status, 'applied');
   assert.equal(contribution.remote_applied_timestamp, '20261119193932');
+  const teamMigrations = [
+    ['20261120120000', '20261120074604', 'internal_teams_foundation'],
+    ['20261120121000', '20261120074634', 'internal_teams_owner_management'],
+    ['20261120122000', '20261120074653', 'internal_teams_update_details'],
+    ['20261120122500', '20261120074723', 'internal_team_access_hardening'],
+    ['20261120123000', '20261120074850', 'internal_team_tasks'],
+    ['20261120124000', '20261120074944', 'internal_team_records'],
+    ['20261120125000', '20261120075039', 'internal_team_announcements'],
+  ];
+  for (const [originalVersion, remoteVersion, name] of teamMigrations) {
+    const entry = entries.find((item) => item.name === name);
+    assert.ok(entry, `${name} must be registered`);
+    assert.equal(entry.version, remoteVersion);
+    assert.equal(entry.production_status, 'applied');
+    assert.equal(entry.remote_applied_timestamp, remoteVersion);
+    assert.equal(entry.original_source_version, originalVersion);
+    assert.equal(entry.original_source_filename, `backend/supabase/migrations/${originalVersion}_${name}.sql`);
+  }
 });
 
 test('remote commands are not printed when target is omitted', () => {
