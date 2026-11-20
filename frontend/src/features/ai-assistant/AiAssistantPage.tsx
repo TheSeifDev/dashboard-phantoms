@@ -6,8 +6,8 @@ import { AiMessages } from './AiMessages';
 import { useAiConversation } from './useAiConversation';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
-
 import { useLocale } from '../../i18n/useLocale';
+
 export default function AiAssistantPage() {
   const { t, dir } = useLocale();
   const membersQuery = useMembers();
@@ -19,18 +19,20 @@ export default function AiAssistantPage() {
   return (
     <section id="page-ai-assistant" className="flex min-h-[calc(100dvh-8rem)] flex-col gap-4" dir={dir}>
       <header className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-6">
-        <div className="flex items-center gap-3">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--primary)] text-white ">
+        <div className="flex min-w-0 items-start gap-3 sm:items-center">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--primary)] text-white sm:size-12" aria-hidden="true">
             <Bot size={24} />
           </span>
-          <div>
-            <h1 className="text-[var(--fs-xl)] font-black">{t("مساعد PHANTOMS الذكي (PHANTOMS Assistant)", "PHANTOMS AI Assistant")}</h1>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">{t("اسأل عن الفريق والمهام أو اطلب مني أعمل مهمة وملاحظة.", "Ask about the team and tasks, or ask me to create a task or note.")}</p>
+          <div className="min-w-0">
+            <h1 className="text-[var(--fs-xl)] font-black leading-tight">{t('مساعد PHANTOMS الذكي', 'PHANTOMS AI Assistant')}</h1>
+            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+              {t('اسأل عن الفريق والمهام، أو اطلب إنشاء مهمة أو ملاحظة.', 'Ask about the team and tasks, or request a task or note.')}
+            </p>
           </div>
         </div>
         {contextError && (
-          <p className="mt-4 text-sm text-[var(--danger)]" role="status">
-            {t("معرفناش نحمّل بعض بيانات الفريق؛ ممكن إجابات المساعد تكون ناقصة.", "Some team data could not be loaded; assistant responses may be incomplete.")}
+          <p className="mt-4 rounded-lg border border-[var(--danger)]/25 bg-[var(--danger-soft)] p-3 text-sm leading-6 text-[var(--danger)]" role="status">
+            {t('تعذّر تحميل بعض بيانات الفريق؛ قد تكون الإجابات غير مكتملة.', 'Some team data could not be loaded, so responses may be incomplete.')}
           </p>
         )}
       </header>
@@ -47,44 +49,43 @@ export default function AiAssistantPage() {
         <Modal
           isOpen={Boolean(pending)}
           onClose={conversation.cancelAction}
-          title={t("تأكيد تنفيذ إجراء تخريبي", "Confirm destructive action")}
-          subtitle={t("طلب المساعد الذكي تنفيذ حذف مباشر في قاعدة البيانات", "The assistant requested a direct database deletion")}
+          title={t('تأكيد إجراء الحذف', 'Confirm deletion')}
+          subtitle={t('راجع تفاصيل الإجراء قبل المتابعة.', 'Review the action details before continuing.')}
           icon={<AlertTriangle className="text-[var(--danger)]" size={22} />}
           footer={
-            <div className="flex w-full justify-end gap-2">
-              <Button variant="secondary" onClick={conversation.cancelAction}>
-                إلغاء الإجراء
+            <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="secondary" onClick={conversation.cancelAction} className="w-full sm:w-auto">
+                {t('إلغاء', 'Cancel')}
               </Button>
-              <Button variant="danger" onClick={conversation.confirmAction}>
-                تأكيد الحذف النهائي
+              <Button variant="danger" onClick={conversation.confirmAction} className="w-full sm:w-auto">
+                {t('تأكيد الحذف النهائي', 'Confirm permanent deletion')}
               </Button>
             </div>
           }
         >
           <div className="space-y-4">
             <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger-soft)] p-3 text-sm leading-6 text-[var(--danger)]">
-              <strong>{t("تحذير أمني:", "Security warning:")}</strong> {t("أنت على وشك تنفيذ حذف نهائي بناءً على اقتراح المساعد الذكي. لا يمكن التراجع عن هذه العملية بعد تأكيدها.", "You are about to permanently delete data based on the assistant’s suggestion. This action cannot be undone.")}
+              <strong>{t('تحذير أمني:', 'Security warning:')}</strong>{' '}
+              {t('أنت على وشك تنفيذ حذف نهائي بناءً على اقتراح المساعد. لا يمكن التراجع عن هذا الإجراء بعد تأكيده.', 'You are about to permanently delete data based on the assistant’s suggestion. This cannot be undone after confirmation.')}
             </div>
 
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm">
-              <div className="grid grid-cols-[110px_1fr] gap-2">
-                <span className="font-bold text-[var(--text-muted)]">{t("نوع الإجراء:", "Action type:")}</span>
-                <span className="font-bold text-[var(--danger)]">{pending.actionTypeName}</span>
+            <dl className="grid grid-cols-1 gap-x-3 gap-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-sm sm:grid-cols-[minmax(0,110px)_minmax(0,1fr)]">
+              <dt className="font-bold text-[var(--text-muted)]">{t('نوع الإجراء', 'Action type')}</dt>
+              <dd className="break-words font-bold text-[var(--danger)]" dir="auto">{pending.actionTypeName}</dd>
 
-                <span className="font-bold text-[var(--text-muted)]">{t("الهدف المحدد:", "Target:")}</span>
-                <span className="font-bold text-[var(--text)]">{pending.targetEntityName}</span>
+              <dt className="font-bold text-[var(--text-muted)]">{t('الهدف المحدد', 'Target')}</dt>
+              <dd className="break-words font-bold text-[var(--text)]" dir="auto">{pending.targetEntityName}</dd>
 
-                <span className="font-bold text-[var(--text-muted)]">{t("معرّف السجل:", "Record ID:")}</span>
-                <span className="font-mono text-xs">{String(pending.targetId)}</span>
+              <dt className="font-bold text-[var(--text-muted)]">{t('معرّف السجل', 'Record ID')}</dt>
+              <dd className="break-all font-mono text-xs" dir="ltr">{String(pending.targetId)}</dd>
 
-                {pending.details && (
-                  <>
-                    <span className="font-bold text-[var(--text-muted)]">{t("بيانات إضافية:", "Additional details:")}</span>
-                    <span className="text-[var(--text-muted)]">{pending.details}</span>
-                  </>
-                )}
-              </div>
-            </div>
+              {pending.details && (
+                <>
+                  <dt className="font-bold text-[var(--text-muted)]">{t('بيانات إضافية', 'Additional details')}</dt>
+                  <dd className="break-words text-[var(--text-muted)]" dir="auto">{pending.details}</dd>
+                </>
+              )}
+            </dl>
           </div>
         </Modal>
       )}

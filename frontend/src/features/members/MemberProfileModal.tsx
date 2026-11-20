@@ -41,7 +41,7 @@ export function MemberProfileModal({
   onAdjustBonus,
   onDelete,
 }: MemberProfileModalProps) {
-  const { t, number } = useLocale();
+  const { t, number, dir } = useLocale();
   const { data: queriedFields } = useMemberCustomFields();
   const activeCustomFields = customFields ?? queriedFields ?? [];
   const bonus = useMemo(() => {
@@ -95,7 +95,7 @@ export function MemberProfileModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t("ملف العضو", "Member profile")} maxWidth="3xl">
-      <div className="grid gap-5 text-start" dir="rtl">
+      <div className="grid gap-5 text-start" dir={dir}>
         {/* Header Summary */}
         <div className="flex flex-col gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ export function MemberProfileModal({
                   onClick={() => onAdjustBonus(member)}
                   className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-bold text-[var(--primary-ink)] hover:bg-[var(--primary-soft)]"
                 >
-                  تعديل
+                  {t('تعديل', 'Edit')}
                 </button>
               )}
             </div>
@@ -188,7 +188,7 @@ export function MemberProfileModal({
         {member.bio && (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5">
             <span className="block text-xs font-bold text-[var(--text-muted)]">{t("نبذة / التخصص", "Bio / specialty")}</span>
-            <p className="mt-1 text-sm leading-relaxed text-[var(--text)]">{member.bio}</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--text)]">{member.bio}</p>
           </div>
         )}
 
@@ -196,7 +196,7 @@ export function MemberProfileModal({
         {member.team_notes && (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--primary-soft)] p-3.5">
             <span className="block text-xs font-bold text-[var(--primary-ink)]">{t("ملاحظات الإدارة على العضو", "Admin notes about member")}</span>
-            <p className="mt-1 text-sm leading-relaxed text-[var(--text)]">{member.team_notes}</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--text)]">{member.team_notes}</p>
           </div>
         )}
 
@@ -204,7 +204,7 @@ export function MemberProfileModal({
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5">
           <span className="mb-2 flex items-center gap-2 text-xs font-bold text-[var(--text-muted)]">
             <FileText size={14} />
-            سجل ملاحظات العضو ({memberNotes.length})
+            {t('سجل ملاحظات العضو', 'Member notes')} ({number(memberNotes.length)})
           </span>
           {memberNotes.length > 0 ? (
             <div className="max-h-36 divide-y divide-[var(--border)] overflow-y-auto">
@@ -214,7 +214,7 @@ export function MemberProfileModal({
                     <span>{n.author || t('الإدارة', 'Admin')}</span>
                     <span className="text-[10px] text-[var(--text-muted)]">{n.date || ''}</span>
                   </div>
-                  <p className="mt-0.5 text-[var(--text)]">{n.text}</p>
+                  <p className="mt-0.5 whitespace-pre-wrap break-words text-[var(--text)]">{n.text}</p>
                 </div>
               ))}
             </div>
@@ -227,7 +227,7 @@ export function MemberProfileModal({
         <div className="flex flex-col-reverse gap-2 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onClose} fullOnMobile className="min-h-11">
-              إغلاق
+              {t('إغلاق', 'Close')}
             </Button>
             {onEdit && (
               <Button
@@ -235,11 +235,11 @@ export function MemberProfileModal({
                   onClose();
                   onEdit(member);
                 }}
-                icon={<Edit2 size={16} />}
+                icon={<Edit2 size={16} aria-hidden="true" />}
                 fullOnMobile
                 className="min-h-11"
               >
-                تعديل البيانات
+                {t('تعديل البيانات', 'Edit details')}
               </Button>
             )}
           </div>
@@ -250,11 +250,11 @@ export function MemberProfileModal({
                 onClose();
                 onDelete(member);
               }}
-              icon={<Trash2 size={16} />}
+              icon={<Trash2 size={16} aria-hidden="true" />}
               fullOnMobile
               className="min-h-11 border-[var(--danger-border)] text-[var(--danger)] hover:border-[var(--danger-border)] hover:bg-[var(--danger-soft)] dark:border-[var(--danger-border)] dark:hover:bg-[var(--danger-soft)]"
             >
-              مسح العضو
+              {t('مسح العضو', 'Delete member')}
             </Button>
           )}
         </div>

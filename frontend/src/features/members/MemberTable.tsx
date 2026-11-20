@@ -33,10 +33,17 @@ export function MemberTable({
             <tr 
               key={member.id} 
               onClick={() => onView(member)} 
-              className="group h-[72px] cursor-pointer transition-colors hover:bg-[var(--primary-soft)] focus-visible:bg-[var(--primary-soft)] focus-visible:outline-none" 
+              className="group h-[72px] cursor-pointer transition-colors hover:bg-[var(--primary-soft)] focus-visible:bg-[var(--primary-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-[-2px]"
               tabIndex={0}
-              onKeyDown={(event) => { if (event.key === 'Enter') onView(member); }}
+              onKeyDown={(event) => {
+                if (event.target !== event.currentTarget) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onView(member);
+                }
+              }}
               aria-label={t(`شوف تفاصيل ${member.full_name}`, `View details for ${member.full_name}`)}
+              aria-keyshortcuts="Enter Space"
             >
               <td className="px-4 py-2">
                 <div className="flex items-center gap-3 overflow-hidden">

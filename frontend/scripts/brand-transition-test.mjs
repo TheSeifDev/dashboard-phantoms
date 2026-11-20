@@ -71,10 +71,10 @@ test('PHANTOMS Brand Transition Verification Suite', async (t) => {
     assert.match(header, /path: '\/admin\/ai-assistant', ar: 'مساعد PHANTOMS الذكي', en: 'AI assistant'/);
 
     const aiPage = read('src/features/ai-assistant/AiAssistantPage.tsx');
-    assert.match(aiPage, /مساعد PHANTOMS الذكي \(PHANTOMS Assistant\)/);
+    assert.match(aiPage, /t\('مساعد PHANTOMS الذكي', 'PHANTOMS AI Assistant'\)/);
 
     const aiMessages = read('src/features/ai-assistant/AiMessages.tsx');
-    assert.match(aiMessages, /مساعد PHANTOMS بيحلّل بيانات الفريق\.\.\./);
+    assert.match(aiMessages, /t\('جارٍ إعداد الرد\.\.\.', 'Preparing a response\.\.\.'\)/);
 
     const conversation = read('src/features/ai-assistant/useAiConversation.ts');
     assert.match(conversation, /أنا مساعد PHANTOMS الذكي/);

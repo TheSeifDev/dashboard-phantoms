@@ -76,12 +76,12 @@ export function MemberJoinReviewQueue() {
           <div className="min-w-0">
             <h2 id="member-join-review-title" className="m-0 text-base font-black text-[var(--text)]">
               {t('طلبات انضمام جديدة بانتظار المراجعة', 'New member requests awaiting review')}
-              <span className="ms-2 inline-flex min-w-6 justify-center rounded-full bg-[var(--info-soft)] px-2 py-0.5 text-xs tabular-nums text-[var(--info)]" data-testid="member-join-review-count">{reviews.length}</span>
+              <span className="ms-2 inline-flex min-w-6 justify-center rounded-full bg-[var(--info-soft)] px-2 py-0.5 text-xs tabular-nums text-[var(--info)]" data-testid="member-join-review-count" role="status" aria-live="polite" aria-label={t(`${reviews.length} طلبات بانتظار المراجعة`, `${reviews.length} requests awaiting review`)}>{reviews.length}</span>
             </h2>
             <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">{t('لا يظهر الطلب إلا بعد حفظ العضو بياناته وكلمة مروره بنجاح. القائمة تتحدّث تلقائيًا كل 15 ثانية أثناء فتح الصفحة.', 'Requests appear only after the member successfully saves their profile and password. This queue refreshes every 15 seconds while the page is open.')}</p>
           </div>
         </div>
-        <Button variant="secondary" onClick={() => void reviewsQuery.refetch()} icon={<RefreshCw size={15} aria-hidden="true" />} disabled={reviewsQuery.isFetching} className="whitespace-nowrap">{t('تحديث الطلبات', 'Refresh requests')}</Button>
+        <Button variant="secondary" onClick={() => void reviewsQuery.refetch()} icon={<RefreshCw size={15} aria-hidden="true" />} disabled={reviewsQuery.isFetching} className="whitespace-nowrap">{reviewsQuery.isFetching ? t('جارٍ التحديث…', 'Refreshing…') : t('تحديث الطلبات', 'Refresh requests')}</Button>
       </div>
 
       {actionError && <p role="alert" className="m-0 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]">{actionError}</p>}
@@ -90,8 +90,10 @@ export function MemberJoinReviewQueue() {
       ) : reviewsQuery.isError && !reviewsQuery.data ? (
         <ErrorState message={t('معرفناش نحمّل طلبات الانضمام للمراجعة.', 'Could not load join requests for review.')} onRetry={() => { void reviewsQuery.refetch(); }} />
       ) : reviews.length ? (
-        <ul className="grid gap-3" aria-label={t('طلبات الانضمام الجديدة', 'New join requests')}>
-          {reviews.map((review) => (
+        <>
+          {reviewsQuery.isError && reviewsQuery.data && <p role="alert" className="m-0 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm font-bold text-[var(--text)]">{t('تعذر تحديث الطابور؛ ما زالت الطلبات المحمّلة ظاهرة. حاول التحديث مرة أخرى.', 'Could not refresh the queue. Previously loaded requests are still shown; try refreshing again.')}</p>}
+          <ul className="grid gap-3" aria-label={t('طلبات الانضمام الجديدة', 'New join requests')}>
+            {reviews.map((review) => (
             <li key={review.invitationId} data-testid="member-join-review-item" className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
@@ -115,9 +117,10 @@ export function MemberJoinReviewQueue() {
                 <Button variant="primary" icon={<Check size={16} aria-hidden="true" />} disabled={approve.isPending || !review.emailIdentityMatches} onClick={() => { setActionError(''); setTarget(review); }} className="whitespace-nowrap">{t('قبول وتفعيل العضوية', 'Approve and activate membership')}</Button>
               </div>
             </li>
-          ))}
-        </ul>
-      ) : <p className="m-0 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm text-[var(--text-muted)]" data-testid="member-join-review-empty">{t('لا توجد تسجيلات مكتملة تنتظر المراجعة حاليًا.', 'No completed registrations are awaiting review.')}</p>}
+            ))}
+          </ul>
+        </>
+      ) : <p className="m-0 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm text-[var(--text-muted)]" data-testid="member-join-review-empty" role="status">{t('لا توجد تسجيلات مكتملة تنتظر المراجعة حاليًا. سيظهر الطلب هنا بعد إكمال التسجيل بنجاح.', 'No completed registrations are awaiting review. A request will appear here after registration is completed successfully.')}</p>}
       {reviewsQuery.isFetchNextPageError && <p role="alert" className="m-0 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]">{t('تعذر تحميل الطلبات الأقدم؛ حاول مرة أخرى.', 'Unable to load older requests; try again.')}</p>}
       {reviewsQuery.hasNextPage && <Button variant="secondary" onClick={() => { void reviewsQuery.fetchNextPage(); }} disabled={reviewsQuery.isFetchingNextPage} className="justify-self-center whitespace-nowrap">{reviewsQuery.isFetchingNextPage ? t('جارٍ تحميل الطلبات الأقدم…', 'Loading older requests…') : t('عرض الطلبات الأقدم', 'Load older requests')}</Button>}
       <ConfirmDialog isOpen={Boolean(target)} onClose={() => { if (!approve.isPending) setTarget(null); }} onConfirm={() => { void confirmApproval(); }} title={t('تأكيد تفعيل العضوية', 'Confirm member activation')} itemName={target?.fullName} description={t('بعد الموافقة ستصبح العضوية نشطة وسيتمكن صاحب الحساب من تسجيل الدخول إلى بوابة الأعضاء. سيتم تسجيل قرار المراجعة.', 'After approval, the member will become active and can sign in to the member portal. The review decision will be recorded.')} confirmLabel={t('موافقة وتفعيل', 'Approve and activate')} isPending={approve.isPending} pendingLabel={t('جارٍ تفعيل العضوية…', 'Activating member…')} />

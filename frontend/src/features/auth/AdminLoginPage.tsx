@@ -136,24 +136,26 @@ export default function AdminLoginPage() {
       footer={<Link to="/login" className="auth-inline-link"><span>{t('بوابة الأعضاء', 'Member portal')}</span><ArrowLeft size={16} /></Link>}
     >
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
-      <form onSubmit={handleLogin} method="post" className="auth-form" noValidate>
+      <form onSubmit={handleLogin} method="post" className="auth-form" noValidate aria-busy={loading || undefined}>
         <label className="auth-field" htmlFor="admin-email">{t('البريد الإلكتروني', 'Email address')}
-          <span className="auth-input-wrap"><input id="admin-email" type="email" dir="ltr" autoComplete="username" required placeholder="admin@phantoms.com" value={email} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(error) || undefined} /></span>
+          <span className="auth-input-wrap"><input id="admin-email" type="email" dir="ltr" autoCapitalize="none" spellCheck={false} autoComplete="username" required maxLength={254} placeholder="admin@phantoms.com" value={email} disabled={loading} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(email.trim() && !isValidEmail(email.trim().toLowerCase())) || undefined} aria-describedby={email.trim() && !isValidEmail(email.trim().toLowerCase()) ? 'admin-email-hint' : undefined} /></span>
         </label>
-        {email.trim() && !isValidEmail(email.trim().toLowerCase()) && <p className="text-xs font-bold text-amber-700 dark:text-amber-300" role="note">{t('اتأكد من الصيغة: لازم يبقى فيه @ ونطاق صحيح.', 'Check the format: include @ and a valid domain.')}</p>}
+        {email.trim() && !isValidEmail(email.trim().toLowerCase()) && <p id="admin-email-hint" className="-mt-3 text-xs font-bold text-amber-700 dark:text-amber-300" role="note">{t('اتأكد من الصيغة: لازم يبقى فيه @ ونطاق صحيح.', 'Check the format: include @ and a valid domain.')}</p>}
         <label className="auth-field" htmlFor="admin-password">{t('كلمة المرور', 'Password')}
           <span className="auth-input-wrap">
-            <input id="admin-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="current-password" required minLength={6} placeholder="••••••••" value={password} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} />
-            <button type="button" className="auth-password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('خبّي كلمة المرور', 'Hide password') : t('ورّي كلمة المرور', 'Show password')} aria-pressed={showPassword}>
+            <input id="admin-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="current-password" required minLength={6} placeholder="••••••••" value={password} disabled={loading} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} aria-invalid={Boolean(password && password.length < 6) || undefined} aria-describedby={password && password.length < 6 ? 'admin-password-hint' : undefined} />
+            <button type="button" className="auth-password-toggle" disabled={loading} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')} aria-pressed={showPassword}>
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </span>
         </label>
+        {password && password.length < 6 && <p id="admin-password-hint" className="-mt-3 text-xs font-bold text-amber-700 dark:text-amber-300" role="note">{t('تتطلب كلمة مرور الإدارة 6 أحرف على الأقل.', 'Administrator passwords must contain at least 6 characters.')}</p>}
         <label className="auth-remember" htmlFor="admin-remember">
           <input
             id="admin-remember"
             type="checkbox"
             checked={remember}
+            disabled={loading}
             onChange={(event) => {
               const next = event.target.checked;
               setRemember(next);
@@ -170,6 +172,7 @@ export default function AdminLoginPage() {
         <Link to="/admin/forgot-password" className="text-center text-xs font-bold text-[var(--link)] hover:text-[var(--text)] transition-colors py-1">
           {t('نسيت كلمة المرور؟', 'Forgot your password?')}
         </Link>
+        {loading && <p className="-mt-3 text-center text-xs leading-5 text-[var(--text-muted)]" role="status" aria-live="polite">{t('بنتحقق من بيانات الدخول وصلاحيات الإدارة قبل فتح مساحة العمل.', 'Verifying your credentials and administrator access before opening the workspace.')}</p>}
       </form>
     </AuthShell>
   );

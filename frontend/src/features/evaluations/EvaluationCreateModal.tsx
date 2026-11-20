@@ -12,8 +12,8 @@ import { Button } from '../../components/ui/Button';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
 import { sendPushNotification } from '../../lib/api/push';
-
 import { useLocale } from '../../i18n/useLocale';
+
 interface Props {
   isOpen: boolean;
   members: Member[];
@@ -27,6 +27,12 @@ const TITLE_PRESETS = [
   'تقييم الالتزام والاجتماعات',
   'تقييم التعاون والمبادرة',
 ] as const;
+const TITLE_PRESET_ENGLISH = [
+  'Weekly performance review',
+  'Task delivery quality review',
+  'Commitment and meetings review',
+  'Collaboration and initiative review',
+] as const;
 
 const GRADES_ORDER: EvaluationGrade[] = [
   'excellent',
@@ -35,9 +41,17 @@ const GRADES_ORDER: EvaluationGrade[] = [
   'needs_improvement',
   'warning',
 ];
+const GRADE_LABELS_ENGLISH: Record<EvaluationGrade, string> = {
+  excellent: 'Excellent',
+  very_good: 'Very good',
+  good: 'Good',
+  needs_improvement: 'Needs improvement',
+  warning: 'Notice',
+};
 
 const POSITIVE_POINTS = [1, 2, 3, 5, 10] as const;
 const NEGATIVE_POINTS = [-1, -2, -3, -5] as const;
+const focusStyle = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]';
 
 export function EvaluationCreateModal({
   isOpen,
@@ -45,7 +59,7 @@ export function EvaluationCreateModal({
   preselectedMemberId,
   onClose,
 }: Props) {
-  const { t, dir } = useLocale();
+  const { t, number, dir } = useLocale();
   const createEvaluations = useCreateEvaluations();
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -76,24 +90,24 @@ export function EvaluationCreateModal({
   }, [isOpen, preselectedMemberId, members]);
 
   const filteredMembers = useMemo(() => {
-    const q = memberSearch.trim().toLowerCase();
-    if (!q) return members;
+    const query = memberSearch.trim().toLowerCase();
+    if (!query) return members;
     return members.filter(
-      (m) =>
-        m.full_name.toLowerCase().includes(q) ||
-        m.email.toLowerCase().includes(q),
+      (member) =>
+        member.full_name.toLowerCase().includes(query) ||
+        member.email.toLowerCase().includes(query),
     );
   }, [members, memberSearch]);
 
   const toggleMember = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    setSelectedIds((previous) =>
+      previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id],
     );
   };
 
   const selectAllFiltered = () => {
-    const ids = filteredMembers.map((m) => m.id);
-    setSelectedIds((prev) => [...new Set([...prev, ...ids])]);
+    const ids = filteredMembers.map((member) => member.id);
+    setSelectedIds((previous) => [...new Set([...previous, ...ids])]);
   };
 
   const clearSelection = () => {
@@ -105,24 +119,22 @@ export function EvaluationCreateModal({
     setError('');
 
     if (selectedIds.length === 0) {
-      setError('اختر عضواً واحداً على الأقل لإرسال التقييم له.');
+      setError(t('اختر عضواً واحداً على الأقل لإرسال التقييم له.', 'Select at least one member to receive this evaluation.'));
       return;
     }
 
     if (!title.trim()) {
-      setError('اكتب عنوان التقييم.');
+      setError(t('اكتب عنوان التقييم.', 'Enter an evaluation title.'));
       return;
     }
 
     if (!feedback.trim()) {
-      setError('اكتب تفاصيل التقييم والرسالة التي ستظهر للعضو في بوابته.');
+      setError(t('اكتب تفاصيل التقييم والرسالة التي ستظهر للعضو في بوابته.', 'Enter the evaluation details and message that will appear in the member portal.'));
       return;
     }
 
     const memberNamesMap: Record<number, string> = {};
-    for (const m of members) {
-      memberNamesMap[m.id] = m.full_name;
-    }
+    for (const member of members) memberNamesMap[member.id] = member.full_name;
 
     try {
       const count = await createEvaluations.mutateAsync({
@@ -145,8 +157,8 @@ export function EvaluationCreateModal({
       }
       toast.success(
         count === 1
-          ? 'تم إرسال التقييم للعضو بنجاح وهيظهر له فور دخوله.'
-          : `تم إرسال التقييم لـ ${count} أعضاء بنجاح.`,
+          ? t('تم إرسال التقييم للعضو بنجاح وهيظهر له فور دخوله.', 'Evaluation sent successfully and will appear when the member signs in.')
+          : t(`تم إرسال التقييم لـ ${number(count)} أعضاء بنجاح.`, `Evaluation sent successfully to ${number(count)} members.`),
       );
       onClose();
     } catch (cause) {
@@ -155,233 +167,191 @@ export function EvaluationCreateModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t("إضافة تقييم جديد للأعضاء", "Add a new member evaluation")} maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('إضافة تقييم جديد للأعضاء', 'Add a member evaluation')} maxWidth="lg">
       <form onSubmit={handleSubmit} className="grid gap-4 text-start" dir={dir} noValidate>
         {error && (
-          <p
-            className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)]"
-            role="alert"
-          >
+          <p className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)]" role="alert" aria-live="assertive">
             {error}
           </p>
         )}
 
-        {/* 1) اختيار الأعضاء */}
-        <div className="grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
+        <fieldset className="grid min-w-0 gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
+          <legend className="sr-only">{t('١. الأعضاء المستهدفون بالتقييم', '1. Members to evaluate')}</legend>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-sm font-black text-[var(--text)]">
+            <h3 id="eval-members-heading" className="flex items-center gap-1.5 text-sm font-black text-[var(--text)]">
               <Users size={16} className="text-[var(--link)]" aria-hidden="true" />
-              الأعضاء المستهدفون بالتقييم ({selectedIds.length})
-            </span>
-            <div className="flex items-center gap-2 text-xs font-bold">
-              <button
-                type="button"
-                onClick={selectAllFiltered}
-                className="text-[var(--link)] hover:underline"
-              >
-                تحديد الكل
+              {t('الأعضاء المستهدفون بالتقييم', 'Members to evaluate')} <span aria-label={t(`${selectedIds.length} أعضاء محددون`, `${selectedIds.length} selected`)}>({number(selectedIds.length)})</span>
+            </h3>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+              <button type="button" onClick={selectAllFiltered} className={`min-h-11 rounded-lg px-2 text-[var(--link)] hover:underline ${focusStyle}`}>
+                {t('تحديد الظاهر', 'Select shown')}
               </button>
-              <span className="text-[var(--text-muted)]">|</span>
-              <button
-                type="button"
-                onClick={clearSelection}
-                className="text-[var(--text-muted)] hover:text-[var(--text)]"
-              >
-                إلغاء التحديد
+              <span className="text-[var(--text-muted)]" aria-hidden="true">|</span>
+              <button type="button" onClick={clearSelection} className={`min-h-11 rounded-lg px-2 text-[var(--text-muted)] hover:text-[var(--text)] ${focusStyle}`}>
+                {t('إلغاء التحديد', 'Clear selection')}
               </button>
             </div>
           </div>
 
           <div className="relative">
-            <Search
-              size={15}
-              className="pointer-events-none absolute inset-y-0 start-3 my-auto text-[var(--text-muted)]"
-              aria-hidden="true"
-            />
+            <Search size={15} className="pointer-events-none absolute inset-y-0 start-3 my-auto text-[var(--text-muted)]" aria-hidden="true" />
             <input
               type="search"
-              placeholder={t("ابحث عن عضو بالاسم...", "Search members by name...")}
+              aria-label={t('ابحث عن عضو بالاسم أو البريد الإلكتروني', 'Search members by name or email')}
+              placeholder={t('ابحث عن عضو بالاسم أو البريد...', 'Search members by name or email…')}
               value={memberSearch}
-              onChange={(e) => setMemberSearch(e.target.value)}
-              className="min-h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] pe-3 ps-9 text-xs text-[var(--text)]"
+              onChange={(event) => setMemberSearch(event.target.value)}
+              className="min-h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] pe-3 ps-9 text-sm text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
             />
           </div>
 
-          <div className="grid max-h-40 grid-cols-1 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-2">
-            {filteredMembers.map((m) => {
-              const checked = selectedIds.includes(m.id);
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => toggleMember(m.id)}
-                  className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-start text-xs font-bold transition-colors ${
-                    checked
+          {filteredMembers.length > 0 ? (
+            <div className="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto pe-1 sm:grid-cols-2" role="group" aria-labelledby="eval-members-heading">
+              {filteredMembers.map((member) => {
+                const checked = selectedIds.includes(member.id);
+                return (
+                  <button
+                    key={member.id}
+                    type="button"
+                    onClick={() => toggleMember(member.id)}
+                    aria-pressed={checked}
+                    className={`flex min-h-11 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-start text-sm font-bold transition-colors ${focusStyle} ${checked
                       ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--text)]'
                       : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:bg-[var(--bg)]'
-                  }`}
-                >
-                  <span className="truncate">{m.full_name}</span>
-                  {checked && <Check size={14} className="shrink-0 text-[var(--link)]" aria-hidden="true" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                    }`}
+                  >
+                    <span className="truncate">{member.full_name}</span>
+                    {checked && <Check size={16} className="shrink-0 text-[var(--link)]" aria-label={t('محدد', 'Selected')} />}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-[var(--border)] p-3 text-center text-sm text-[var(--text-muted)]" role="status">
+              {members.length === 0
+                ? t('لا يوجد أعضاء متاحون للاختيار حالياً.', 'No members are currently available to select.')
+                : t('لم نعثر على أعضاء يطابقون البحث.', 'No members match this search.')}
+            </p>
+          )}
+        </fieldset>
 
-        {/* 2) عنوان التقييم */}
-        <div className="grid gap-1.5">
-          <label className="text-sm font-bold text-[var(--text)]" htmlFor="eval-title-input">
-            عنوان التقييم *
+        <section className="grid gap-1.5" aria-labelledby="eval-title-label">
+          <label id="eval-title-label" className="text-sm font-bold text-[var(--text)]" htmlFor="eval-title-input">
+            {t('٢. عنوان التقييم', '2. Evaluation title')} <span aria-hidden="true">*</span>
           </label>
           <input
             id="eval-title-input"
             type="text"
             required
-            placeholder={t("مثال: تقييم الأداء الأسبوعي", "Example: Weekly performance review")}
+            aria-required="true"
+            placeholder={t('مثال: تقييم الأداء الأسبوعي', 'Example: Weekly performance review')}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm text-[var(--text)]"
+            onChange={(event) => setTitle(event.target.value)}
+            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
           />
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            {TITLE_PRESETS.map((preset) => (
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5" aria-label={t('عناوين مقترحة', 'Suggested titles')}>
+            {TITLE_PRESETS.map((preset, index) => (
               <button
                 key={preset}
                 type="button"
                 onClick={() => setTitle(preset)}
-                className={`rounded-lg border px-2.5 py-1 text-xs font-bold transition-colors ${
-                  title === preset
-                    ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--link)]'
-                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)]'
+                aria-pressed={title === preset}
+                className={`min-h-11 rounded-lg border px-3 py-1 text-xs font-bold transition-colors ${focusStyle} ${title === preset
+                  ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--link)]'
+                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)]'
                 }`}
               >
-                {preset}
+                {t(preset, TITLE_PRESET_ENGLISH[index])}
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* 3) التقدير العام */}
-        <div className="grid gap-1.5">
-          <span className="text-sm font-bold text-[var(--text)]">{t("التقدير العام *", "Overall grade *")}</span>
+        <fieldset className="grid min-w-0 gap-2" aria-labelledby="eval-grade-label">
+          <legend id="eval-grade-label" className="text-sm font-bold text-[var(--text)]">{t('٣. التقدير العام', '3. Overall grade')} <span aria-hidden="true">*</span></legend>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {GRADES_ORDER.map((g) => {
-              const active = grade === g;
+            {GRADES_ORDER.map((gradeOption) => {
+              const active = grade === gradeOption;
               return (
                 <button
-                  key={g}
+                  key={gradeOption}
                   type="button"
-                  onClick={() => setGrade(g)}
-                  className={`min-h-10 rounded-xl border px-2.5 text-xs font-black transition-colors ${
-                    active
-                      ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
-                      : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--primary)]'
+                  onClick={() => setGrade(gradeOption)}
+                  aria-pressed={active}
+                  className={`min-h-11 rounded-xl border px-2.5 text-sm font-black transition-colors ${focusStyle} ${active
+                    ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--primary)]'
                   }`}
                 >
-                  {EVALUATION_GRADE_LABELS[g]}
+                  {t(EVALUATION_GRADE_LABELS[gradeOption], GRADE_LABELS_ENGLISH[gradeOption])}
                 </button>
               );
             })}
           </div>
-        </div>
+        </fieldset>
 
-        {/* 4) نقاط البونص المصاحبة */}
-        <div className="grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
-          <span className="text-sm font-bold text-[var(--text)]">
-            نقاط البونص المصاحبة للتقييم (تُضاف تلقائياً لرصيد العضو وترتيب الفريق)
-          </span>
+        <fieldset className="grid min-w-0 gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5" aria-labelledby="eval-points-label">
+          <legend id="eval-points-label" className="text-sm font-bold text-[var(--text)]">{t('٤. نقاط البونص المصاحبة للتقييم', '4. Bonus points for this evaluation')}</legend>
+          <p className="text-xs leading-5 text-[var(--text-muted)]">{t('تُضاف أو تُخصم تلقائياً من رصيد العضو وترتيب الفريق.', 'Points are automatically added to or deducted from the member’s balance and team ranking.')}</p>
           <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setPoints(0)}
-              className={`min-h-9 rounded-lg px-3 text-xs font-black transition-colors ${
-                points === 0
-                  ? 'bg-[var(--primary)] text-white'
-                  : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'
-              }`}
-            >
-              0 (بدون تغيير نقاط)
+            <button type="button" onClick={() => setPoints(0)} aria-pressed={points === 0} className={`min-h-11 rounded-lg px-3 text-xs font-black transition-colors ${focusStyle} ${points === 0 ? 'bg-[var(--primary)] text-white' : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'}`}>
+              {t('٠ (بدون تغيير)', '0 (no change)')}
             </button>
-            <span className="ms-1 flex items-center gap-0.5 text-xs font-bold text-[var(--success-text)]">
-              <Plus size={12} aria-hidden="true" /> مكافأة:
-            </span>
-            {POSITIVE_POINTS.map((val) => (
-              <button
-                key={`pos-${val}`}
-                type="button"
-                onClick={() => setPoints(val)}
-                className={`min-h-9 min-w-9 rounded-lg px-2.5 text-xs font-black transition-colors ${
-                  points === val
-                    ? 'bg-[var(--success)] text-[var(--on-success)]'
-                    : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'
-                }`}
-              >
-                +{val}
+            <span className="ms-1 flex min-h-11 items-center gap-0.5 text-xs font-bold text-[var(--success-text)]"><Plus size={12} aria-hidden="true" />{t('مكافأة:', 'Bonus:')}</span>
+            {POSITIVE_POINTS.map((value) => (
+              <button key={`pos-${value}`} type="button" onClick={() => setPoints(value)} aria-pressed={points === value} aria-label={t(`مكافأة ${value} نقطة`, `${value} bonus points`)} className={`min-h-11 min-w-11 rounded-lg px-2.5 text-xs font-black transition-colors ${focusStyle} ${points === value ? 'bg-[var(--success)] text-[var(--on-success)]' : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'}`}>
+                +{number(value)}
               </button>
             ))}
-            <span className="ms-1 flex items-center gap-0.5 text-xs font-bold text-[var(--danger-text)]">
-              <Minus size={12} aria-hidden="true" /> خصم:
-            </span>
-            {NEGATIVE_POINTS.map((val) => (
-              <button
-                key={`neg-${val}`}
-                type="button"
-                onClick={() => setPoints(val)}
-                className={`min-h-9 min-w-9 rounded-lg px-2.5 text-xs font-black transition-colors ${
-                  points === val
-                    ? 'bg-[var(--danger)] text-[var(--on-danger)]'
-                    : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'
-                }`}
-              >
-                {val}
+            <span className="ms-1 flex min-h-11 items-center gap-0.5 text-xs font-bold text-[var(--danger-text)]"><Minus size={12} aria-hidden="true" />{t('خصم:', 'Deduction:')}</span>
+            {NEGATIVE_POINTS.map((value) => (
+              <button key={`neg-${value}`} type="button" onClick={() => setPoints(value)} aria-pressed={points === value} aria-label={t(`خصم ${Math.abs(value)} نقاط`, `${Math.abs(value)} point deduction`)} className={`min-h-11 min-w-11 rounded-lg px-2.5 text-xs font-black transition-colors ${focusStyle} ${points === value ? 'bg-[var(--danger)] text-[var(--on-danger)]' : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'}`}>
+                {number(value)}
               </button>
             ))}
           </div>
-          <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-muted)]">
-            <Award size={14} className="text-[var(--link)]" aria-hidden="true" />
+          <p className="flex items-start gap-1.5 text-xs leading-5 font-semibold text-[var(--text-muted)]" role="status" aria-live="polite">
+            <Award size={14} className="mt-0.5 shrink-0 text-[var(--link)]" aria-hidden="true" />
             {points === 0
-              ? 'سيظهر التقييم للعضو كتقييم توجيهي ومعنوي بدون تعديل نقاط البونص.'
+              ? t('سيظهر التقييم كتوجيه دون تغيير نقاط البونص.', 'The evaluation will appear as feedback without changing bonus points.')
               : points > 0
-              ? `سيحصل العضو على مكافأة +${points} نقطة بونص فور حفظ التقييم.`
-              : `سيتم خصم ${Math.abs(points)} نقطة من رصيد البونص مع توثيق السبب.`}
+                ? t(`سيحصل العضو على مكافأة ${number(points)} نقطة بونص عند حفظ التقييم.`, `The member will receive ${number(points)} bonus points when the evaluation is saved.`)
+                : t(`سيتم خصم ${number(Math.abs(points))} نقطة مع توثيق السبب.`, `${number(Math.abs(points))} bonus points will be deducted with the reason recorded.`)}
           </p>
-        </div>
+        </fieldset>
 
-        {/* 5) نص التقييم التفصيلي */}
-        <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]">
-          رسالة وتفاصيل التقييم (تظهر للعضو مباشرة عند دخوله البوابة) *
+        <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]" htmlFor="eval-feedback-input">
+          {t('٥. رسالة وتفاصيل التقييم', '5. Evaluation message and details')} <span aria-hidden="true">*</span>
+          <span className="text-xs font-normal leading-5 text-[var(--text-muted)]">{t('تظهر للعضو مباشرة عند دخوله البوابة.', 'Shown to the member when they sign in to the portal.')}</span>
           <textarea
+            id="eval-feedback-input"
             required
+            aria-required="true"
             rows={4}
-            placeholder="اكتب نقاط القوة والتميز لدى العضو، وأي ملاحظات أو توجيهات للفترة الجاية..."
+            placeholder={t('اكتب نقاط القوة وأي ملاحظات أو توجيهات للفترة القادمة…', 'Describe strengths and any feedback or guidance for the next period…')}
             value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 text-sm leading-6 text-[var(--text)]"
+            onChange={(event) => setFeedback(event.target.value)}
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 text-sm leading-6 text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
           />
         </label>
 
-        {/* 6) اسم المقيم */}
-        <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]">
-          اسم المسؤول / المقيّم
+        <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]" htmlFor="eval-evaluator-input">
+          {t('٦. اسم المسؤول / المقيّم', '6. Evaluator name')}
           <input
+            id="eval-evaluator-input"
             type="text"
             value={evaluatorName}
-            onChange={(e) => setEvaluatorName(e.target.value)}
-            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm text-[var(--text)]"
+            onChange={(event) => setEvaluatorName(event.target.value)}
+            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
           />
         </label>
 
         <div className="flex flex-col-reverse gap-2 border-t border-[var(--border)] pt-4 sm:flex-row sm:justify-end">
           <Button type="button" variant="secondary" onClick={onClose} fullOnMobile>
-            إلغاء
+            {t('إلغاء', 'Cancel')}
           </Button>
-          <Button
-            type="submit"
-            isLoading={createEvaluations.isPending}
-            loadingText="بنحفظ ونبعت التقييم..."
-            fullOnMobile
-          >
-            إرسال وحفظ التقييم
+          <Button type="submit" isLoading={createEvaluations.isPending} loadingText={t('جارٍ حفظ وإرسال التقييم…', 'Saving and sending evaluation…')} fullOnMobile>
+            {t('إرسال وحفظ التقييم', 'Save and send evaluation')}
           </Button>
         </div>
       </form>

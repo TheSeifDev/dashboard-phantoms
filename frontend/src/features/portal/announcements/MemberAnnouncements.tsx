@@ -9,13 +9,14 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { CardSkeletons } from '../../../components/ui/Skeleton';
 import { toast } from '../../../store/toast';
-import { AR, arCount } from '../../../lib/arabic';
+import { useLocale } from '../../../i18n/useLocale';
 
 interface MemberAnnouncementsProps {
   memberId: number;
 }
 
 export default function MemberAnnouncements({ memberId }: MemberAnnouncementsProps) {
+  const { t, dir, number, date } = useLocale();
   const [announcements, setAnnouncements] = useState<MemberAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
         void AnnouncementsAPI.markAnnouncementViewed(ann.id, memberId).catch(() => {});
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'حصلت مشكلة وإحنا بنحمّل الإعلانات');
+      setError(err instanceof Error ? err.message : t('حصلت مشكلة وإحنا بنحمّل الإعلانات', 'Something went wrong while loading announcements.'));
     } finally {
       setLoading(false);
     }
@@ -61,10 +62,10 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
               : ann
           )
         );
-        toast.success('الإعلان اتعلّم كمقروء.');
+        toast.success(t('الإعلان اتعلّم كمقروء.', 'Announcement marked as read.'));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'معرفناش نعلّم الإعلان كمقروء.');
+      toast.error(err instanceof Error ? err.message : t('معرفناش نعلّم الإعلان كمقروء.', 'We could not mark the announcement as read.'));
     } finally {
       setActionsLoading(prev => {
         const newSet = new Set(prev);
@@ -85,10 +86,10 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
         setAnnouncements(prev =>
           prev.filter(ann => ann.id !== announcementId)
         );
-      toast.success('الإعلان اتخفى.');
+      toast.success(t('الإعلان اتخفى.', 'Announcement hidden.'));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'معرفناش نخفي الإعلان.');
+      toast.error(err instanceof Error ? err.message : t('معرفناش نخفي الإعلان.', 'We could not hide the announcement.'));
     } finally {
       setActionsLoading(prev => {
         const newSet = new Set(prev);
@@ -121,20 +122,24 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
   };
 
   const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat('ar-EG-u-nu-latn', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(dateString));
+    try {
+      return date(dateString, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   const unreadCount = announcements.filter(ann => !ann.is_read).length;
 
   if (loading) {
     return (
-      <div dir="rtl" aria-label="بنحمّل الإعلانات">
+      <div dir={dir} role="status" aria-label={t('بنحمّل الإعلانات', 'Loading announcements')}>
         <CardSkeletons count={2} />
       </div>
     );
@@ -142,37 +147,37 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
 
   if (error) {
     return (
-      <div dir="rtl">
+      <div dir={dir} role="alert">
         <ErrorState message={error} onRetry={() => { void loadAnnouncements(); }} />
       </div>
     );
   }
 
   return (
-    <section className="grid gap-3" dir="rtl" aria-labelledby="member-announcements-title">
+    <section className="grid gap-3" dir={dir} aria-labelledby="member-announcements-title">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--link)]">
             <Bell size={20} aria-hidden="true" />
           </span>
-          <h2 id="member-announcements-title" className="text-lg font-black text-[var(--text)]">الإعلانات</h2>
+          <h2 id="member-announcements-title" className="text-lg font-black text-[var(--text)]">{t('الإعلانات', 'Announcements')}</h2>
           {unreadCount > 0 && (
             <Badge variant="danger">
-              {unreadCount === 1 ? 'جديد' : `${unreadCount} جديدة`}
+              {unreadCount === 1 ? t('جديد', 'New') : t(`${number(unreadCount)} جديدة`, `${number(unreadCount)} new`)}
             </Badge>
           )}
         </div>
 
         {announcements.length > 0 && (
           <p className="shrink-0 text-sm text-[var(--text-muted)]">
-            {arCount(announcements.length, AR.announcement)}
+            {t(`${number(announcements.length)} إعلان`, `${number(announcements.length)} announcements`)}
           </p>
         )}
       </div>
 
       {announcements.length === 0 ? (
-        <EmptyState title="مفيش إعلانات" description="هتظهر هنا الإعلانات الجديدة من الإدارة." />
+        <EmptyState title={t('مفيش إعلانات', 'No announcements')} description={t('هتظهر هنا الإعلانات الجديدة من الإدارة.', 'New announcements from the administration will appear here.')} />
       ) : (
         <div className="grid gap-3">
           {announcements.map((announcement) => (
@@ -188,26 +193,26 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     {getPriorityIcon(announcement.priority)}
-                    <h3 className="font-black text-[var(--text)]">
+                    <h3 dir="auto" className="font-black text-[var(--text)]">
                       {announcement.title}
                     </h3>
                     <Badge variant={getPriorityVariant(announcement.priority)}>
-                      {AnnouncementsAPI.getPriorityLabel(announcement.priority)}
+                      {t(AnnouncementsAPI.getPriorityLabel(announcement.priority), announcement.priority === 'urgent' ? 'Urgent' : announcement.priority === 'high' ? 'High' : announcement.priority === 'normal' ? 'Normal' : announcement.priority === 'low' ? 'Low' : announcement.priority)}
                     </Badge>
                     {!announcement.is_read && (
                       <Badge variant="info">
-                        جديد
+                        {t('جديد', 'New')}
                       </Badge>
                     )}
                   </div>
 
-                  <time className="shrink-0 text-xs text-[var(--text-muted)]">
+                  <time dateTime={announcement.created_at} className="shrink-0 text-xs text-[var(--text-muted)]">
                     {formatDate(announcement.created_at)}
                   </time>
                 </div>
 
                 {/* Content */}
-                <p className={`text-sm leading-6 ${
+                <p dir="auto" className={`whitespace-pre-line text-sm leading-6 ${
                   !announcement.is_read ? 'font-semibold text-[var(--text)]' : 'text-[var(--text-2)]'
                 }`}>
                   {announcement.content}
@@ -221,15 +226,16 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
                         variant="secondary"
                         onClick={() => handleMarkAsRead(announcement.id)}
                         isLoading={actionsLoading.has(announcement.id)}
-                        loadingText="بنحمّل..."
+                        loadingText={t('جارٍ الحفظ…', 'Saving…')}
                         icon={<Check size={16} aria-hidden="true" />}
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                       >
-                        علّم كمقروء
+                        {t('علّم كمقروء', 'Mark as read')}
                       </Button>
                     ) : (
                       <span className="flex min-h-11 items-center gap-1.5 text-sm font-bold text-[var(--success-text)] dark:text-[var(--success-text)]">
                         <CheckCheck size={16} aria-hidden="true" />
-                        اتقرا
+                        {t('اتقرا', 'Read')}
                       </span>
                     )}
                   </div>
@@ -238,11 +244,12 @@ export default function MemberAnnouncements({ memberId }: MemberAnnouncementsPro
                     variant="ghost"
                     onClick={() => handleDismiss(announcement.id)}
                     isLoading={actionsLoading.has(announcement.id)}
-                    loadingText="بنخفي..."
+                    loadingText={t('جارٍ الإخفاء…', 'Hiding…')}
                     icon={<EyeOff size={16} aria-hidden="true" />}
-                    aria-label={`خبّي إعلان ${announcement.title}`}
+                    aria-label={t(`خبّي إعلان ${announcement.title}`, `Hide announcement ${announcement.title}`)}
+                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
                   >
-                    خبّي
+                    {t('خبّي', 'Hide')}
                   </Button>
                 </div>
             </Card>

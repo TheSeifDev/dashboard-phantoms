@@ -15,14 +15,28 @@ import { Modal } from '../../../components/ui/Modal';
 import { useAdminAccess, useAdminAccounts, useAddAdminAccount, useRemoveAdminAccount, useUpdateAdminPermissions } from './api';
 import type { AdminAccount, AdminPermission, AdminPermissions } from '../../../types/db';
 import { ADMIN_PERMISSION_OPTIONS, FULL_ADMIN_PERMISSIONS, normalizeAdminPermissions } from './permissions';
-
 import { useLocale } from '../../../i18n/useLocale';
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium' }).format(new Date(value));
+
+function formatDate(value: string, locale: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date);
 }
+
+const permissionEnglish: Record<AdminPermission, { label: string; description: string }> = {
+  dashboard: { label: 'Dashboard', description: 'View the administration dashboard summary.' },
+  members: { label: 'Members', description: 'View, add, and edit member records.' },
+  tasks: { label: 'Tasks', description: 'Manage tasks and review submissions.' },
+  ranking: { label: 'Team ranking', description: 'View member rankings and points.' },
+  notes: { label: 'Notes', description: 'View, add, and edit member notes.' },
+  announcements: { label: 'Announcements', description: 'Manage announcements and send notifications.' },
+  whatsapp: { label: 'WhatsApp', description: 'Send tasks and monitor the WhatsApp connection.' },
+  ai_assistant: { label: 'AI assistant', description: 'Use the AI assistant services.' },
+};
 
 export default function AdminAccountsPage() {
   const { t, number, dir } = useLocale();
+  const dateLocale = dir === 'rtl' ? 'ar-EG' : 'en-GB';
   const user = useAuthStore((state) => state.user);
   const access = useAdminAccess(user?.id ?? null);
   const accounts = useAdminAccounts();
@@ -42,10 +56,10 @@ export default function AdminAccountsPage() {
       const result = await addAccount.mutateAsync(cleanEmail);
       setEmail('');
       toast.success(result.invited
-        ? 'اتضاف المشرف بصلاحيات كاملة وبعتنا له دعوة على البريد.'
-        : 'اتضاف المشرف بصلاحيات كاملة. تقدر تعدل أقسامه من القائمة.');
+        ? t('اتضاف المشرف بصلاحيات كاملة وبعتنا له دعوة على البريد.', 'Administrator added with full access; an email invitation was sent.')
+        : t('اتضاف المشرف بصلاحيات كاملة. تقدر تعدل أقسامه من القائمة.', 'Administrator added with full access. You can customize sections from the list.'));
     } catch (cause) {
-      toast.error(toAppError(cause, 'معرفناش نضيف المشرف.').message);
+      toast.error(toAppError(cause, t('معرفناش نضيف المشرف.', 'Could not add the administrator.')).message);
     }
   };
 
@@ -53,10 +67,10 @@ export default function AdminAccountsPage() {
     if (!pendingRemoval) return;
     try {
       await removeAccount.mutateAsync(pendingRemoval.user_id);
-      toast.success('اتحذف حساب الدخول وكلمة المرور، واتشال من الإدارة.');
+      toast.success(t('اتحذف حساب الدخول وكلمة المرور، واتشال من الإدارة.', 'The sign-in account was deleted and administrator access was removed.'));
       setPendingRemoval(null);
     } catch (cause) {
-      toast.error(toAppError(cause, 'معرفناش نحذف المشرف.').message);
+      toast.error(toAppError(cause, t('معرفناش نحذف المشرف.', 'Could not delete the administrator.')).message);
     }
   };
 
@@ -79,35 +93,56 @@ export default function AdminAccountsPage() {
     if (!editingAccount) return;
     try {
       await updatePermissions.mutateAsync({ userId: editingAccount.user_id, permissions: permissionDraft });
-      toast.success('اتحفظت صلاحيات المشرف.');
+      toast.success(t('اتحفظت صلاحيات المشرف.', 'Administrator permissions saved.'));
       setEditingAccount(null);
     } catch (cause) {
-      toast.error(toAppError(cause, 'معرفناش نحفظ الصلاحيات.').message);
+      toast.error(toAppError(cause, t('معرفناش نحفظ الصلاحيات.', 'Could not save permissions.')).message);
     }
   };
 
   if (access.isPending || (access.isFetching && !access.data)) {
-    return <CardSkeletons count={2} />;
+    return (
+      <div dir={dir} aria-busy="true" aria-live="polite">
+        <span className="sr-only">{t('جارٍ التحقق من الصلاحيات…', 'Checking permissions…')}</span>
+        <CardSkeletons count={2} />
+      </div>
+    );
   }
   if (access.isError) {
-    return <ErrorState message={t("معرفناش نتحقق من صلاحياتك. أعد المحاولة قبل إدارة الحسابات.", "Could not verify your permissions. Retry before managing accounts.")} onRetry={() => { void access.refetch(); }} />;
+    return (
+      <div dir={dir}>
+        <ErrorState
+          message={t('معرفناش نتحقق من صلاحياتك. أعد المحاولة قبل إدارة الحسابات.', 'Could not verify your permissions. Retry before managing accounts.')}
+          onRetry={() => { void access.refetch(); }}
+        />
+      </div>
+    );
   }
   if (!access.data?.is_owner) {
-    return <EmptyState title={t("إدارة الحسابات للمالك فقط", "Account management is restricted to the owner")} description={t("حسابك يقدر يدير بيانات النظام، لكن إضافة المشرفين أو حذفهم محصورة بمالك النظام.", "Your account can manage system data, but only the system owner can add or remove administrators.")} />;
+    return (
+      <div dir={dir}>
+        <EmptyState
+          title={t('إدارة الحسابات للمالك فقط', 'Account management is restricted to the owner')}
+          description={t('حسابك يقدر يدير بيانات النظام، لكن إضافة المشرفين أو حذفهم محصورة بمالك النظام.', 'Your account can manage system data, but only the system owner can add or remove administrators.')}
+        />
+      </div>
+    );
   }
+
+  const enabledDraftCount = ADMIN_PERMISSION_OPTIONS.filter(({ key }) => permissionDraft[key]).length;
 
   return (
     <div className="grid gap-4" dir={dir}>
       <PageHeader
         icon={<ShieldCheck size={24} />}
-        title={t("إدارة المشرفين", "Manage administrators")}
-        description={t("مالك النظام يملك كامل الصلاحيات. تقدر تحدد الأقسام المتاحة لكل مشرف وتحذف حساب دخوله بالكامل.", "The system owner has full permissions. You can select each administrator’s sections and remove their sign-in account.")}
+        title={t('إدارة المشرفين', 'Manage administrators')}
+        description={t('مالك النظام يملك كامل الصلاحيات. حدد الأقسام المتاحة لكل مشرف أو احذف حساب دخوله بالكامل.', 'The system owner keeps full access. Choose which sections each administrator can access, or remove their sign-in account.')}
       />
 
       <Card>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-          <form id="admin-account-email-form" onSubmit={(event) => void addAdmin(event)} className="grid gap-3">
-            <label htmlFor="admin-account-email" className="text-sm font-extrabold">{t("إضافة مشرف بالبريد الإلكتروني", "Add administrator by email")}</label>
+          <form id="admin-account-email-form" onSubmit={(event) => void addAdmin(event)} className="grid min-w-0 gap-3" aria-busy={addAccount.isPending}>
+            <label htmlFor="admin-account-email" className="text-sm font-extrabold">{t('إضافة مشرف بالبريد الإلكتروني', 'Add administrator by email')}</label>
             <input
               id="admin-account-email"
               type="email"
@@ -117,115 +152,190 @@ export default function AdminAccountsPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="admin@example.com"
+              aria-describedby="admin-account-email-help"
               className="min-h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-4 text-start text-base placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:outline-none focus:ring-4 focus:ring-[var(--primary-soft)] sm:text-sm"
             />
-            <p className="text-xs leading-6 text-[var(--text-muted)]">{t("لو الحساب موجود هتتضاف له الصلاحية فوراً، ولو جديد هنبعتله دعوة بالبريد. الحساب الجديد يبدأ بكل الأقسام، وتقدر تخصصها بعد كده.", "Existing accounts receive access immediately; new accounts receive an email invitation with all sections enabled, which you can customize later.")}</p>
+            <p id="admin-account-email-help" className="text-xs leading-6 text-[var(--text-muted)]">
+              {t('لو الحساب موجود هيتضاف له الوصول فوراً، ولو جديد هنبعت له دعوة بالبريد. المشرف الجديد يبدأ بكل الأقسام، وتقدر تخصص الوصول بعد كده. صلاحيات المالك تظل كاملة.', 'Existing accounts receive access immediately; new accounts receive an email invitation. New administrators start with every section enabled, which you can customize later. The owner always keeps full access.')}
+            </p>
           </form>
           <Button
             type="submit"
             form="admin-account-email-form"
             icon={<ShieldPlus size={18} />}
             isLoading={addAccount.isPending}
-            loadingText={t("بنضيف...", "Adding...")}
+            loadingText={t('بنضيف...', 'Adding...')}
             fullOnMobile
           >
-            إضافة مشرف
+            {t('إضافة مشرف', 'Add administrator')}
           </Button>
         </div>
       </Card>
 
       <Card>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="flex items-center gap-2 text-lg font-black"><Users size={20} className="text-[var(--link)]" aria-hidden="true" />{t("حسابات الإدارة", "Administrator accounts")}</h3>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">{number(accounts.data?.length ?? 0)} {t("حسابات — الصلاحيات تُراجع من الخادم باستمرار.", "accounts — permissions are continuously checked by the server.")}</p>
+        <section aria-labelledby="admin-accounts-title" aria-busy={accounts.isFetching}>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h2 id="admin-accounts-title" className="flex items-center gap-2 text-lg font-black">
+                <Users size={20} className="shrink-0 text-[var(--link)]" aria-hidden="true" />
+                {t('حسابات الإدارة', 'Administrator accounts')}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+                {number(accounts.data?.length ?? 0)} {t('حسابات — خيارات الأقسام تحدد وصول المشرف، وتُراجع الصلاحيات من الخادم.', 'accounts — section choices define administrator access and are verified by the server.')}
+              </p>
+            </div>
+            <Badge variant="success"><KeyRound size={13} aria-hidden="true" />{t('صلاحيات مضبوطة', 'Access is verified')}</Badge>
           </div>
-          <Badge variant="success"><KeyRound size={13} aria-hidden="true" />{t("صلاحيات مضبوطة", "Permissions verified")}</Badge>
-        </div>
 
-        {accounts.isPending && <CardSkeletons count={2} />}
-        {accounts.isError && <ErrorState message={t("معرفناش نحمّل حسابات الإدارة.", "Could not load administrator accounts.")} onRetry={() => { void accounts.refetch(); }} />}
-        {accounts.data?.length === 0 && <EmptyState title={t("مفيش حسابات إدارة", "No administrator accounts")} description={t("حساب المالك يظهر هنا تلقائياً بعد تسجيل الدخول.", "The owner account appears here automatically after sign-in.")} />}
-        {accounts.data && accounts.data.length > 0 && (
-          <div className="grid gap-3">
-            {accounts.data.map((account) => {
-              const isOwner = account.role === 'owner';
-              const enabledCount = ADMIN_PERMISSION_OPTIONS.filter(({ key }) => account.permissions?.[key] === true).length;
-              return (
-                <article key={account.user_id} className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${isOwner ? 'bg-amber-500/10 text-amber-500' : 'bg-[var(--primary-soft)] text-[var(--link)]'}`} aria-hidden="true">
-                      {isOwner ? <ShieldCheck size={21} /> : <UserCog size={21} />}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="break-all font-bold" dir="ltr">{account.email}</p>
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">{isOwner ? 'المالك الأساسي · لا يمكن حذفه أو تخفيض صلاحياته' : `له ${enabledCount} من ${ADMIN_PERMISSION_OPTIONS.length} أقسام · أُضيف ${formatDate(account.created_at)}`}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 sm:justify-end">
-                    <Badge variant={isOwner ? 'warning' : 'primary'}>{isOwner ? 'مالك النظام' : enabledCount === ADMIN_PERMISSION_OPTIONS.length ? 'مشرف كامل' : `صلاحيات مخصصة · ${enabledCount}`}</Badge>
-                    {!isOwner && (
-                      <div className="flex items-center gap-2">
-                        <Button type="button" variant="secondary" icon={<Pencil size={16} />} onClick={() => openPermissions(account)} aria-label={`تعديل صلاحيات ${account.email}`}>
-                          تعديل الصلاحيات
-                        </Button>
-                        <Button type="button" variant="danger" icon={<Trash2 size={16} />} onClick={() => setPendingRemoval(account)} aria-label={`حذف حساب ${account.email}`}>
-                          حذف الحساب
-                        </Button>
+          {accounts.isPending && (
+            <div role="status" aria-live="polite" className="grid gap-2">
+              <span className="sr-only">{t('جارٍ تحميل حسابات الإدارة…', 'Loading administrator accounts…')}</span>
+              <CardSkeletons count={2} />
+            </div>
+          )}
+          {accounts.isError && (
+            <div className="grid gap-2" role="alert">
+              <ErrorState
+                message={t('معرفناش نحمّل حسابات الإدارة.', 'Could not load administrator accounts.')}
+                onRetry={() => { void accounts.refetch(); }}
+              />
+              {accounts.data && (
+                <p className="text-center text-xs leading-5 text-[var(--text-muted)]">
+                  {t('قد تكون القائمة المعروضة غير محدثة؛ أعد المحاولة للتحقق من أحدث البيانات.', 'The displayed list may be out of date. Retry to check for the latest data.')}
+                </p>
+              )}
+            </div>
+          )}
+          {accounts.isFetching && !accounts.isPending && !accounts.isError && (
+            <p role="status" aria-live="polite" className="mb-3 text-xs text-[var(--text-muted)]">
+              {t('جارٍ تحديث القائمة…', 'Refreshing the list…')}
+            </p>
+          )}
+          {accounts.data?.length === 0 && !accounts.isError && (
+            <EmptyState
+              title={t('مفيش حسابات إدارة', 'No administrator accounts')}
+              description={t('حساب المالك يظهر هنا تلقائياً بعد تسجيل الدخول.', 'The owner account appears here automatically after sign-in.')}
+            />
+          )}
+          {accounts.data && accounts.data.length > 0 && (
+            <ul className="grid gap-3" aria-label={t('قائمة حسابات الإدارة', 'Administrator account list')}>
+              {accounts.data.map((account) => {
+                const isOwner = account.role === 'owner';
+                const enabledCount = ADMIN_PERMISSION_OPTIONS.filter(({ key }) => account.permissions?.[key] === true).length;
+                return (
+                  <li key={account.user_id}>
+                    <article className="grid gap-4 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${isOwner ? 'bg-amber-500/10 text-amber-500' : 'bg-[var(--primary-soft)] text-[var(--link)]'}`} aria-hidden="true">
+                          {isOwner ? <ShieldCheck size={21} /> : <UserCog size={21} />}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="break-all text-start font-bold" dir="ltr">{account.email}</p>
+                          <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                            {isOwner
+                              ? t('المالك الأساسي · لا يمكن حذف الحساب أو تقليل صلاحياته.', 'Primary owner · This account cannot be deleted or have its access reduced.')
+                              : t(`له ${number(enabledCount)} من ${number(ADMIN_PERMISSION_OPTIONS.length)} أقسام · أُضيف ${formatDate(account.created_at, dateLocale)}`, `Access to ${number(enabledCount)} of ${number(ADMIN_PERMISSION_OPTIONS.length)} sections · Added ${formatDate(account.created_at, dateLocale)}`)}
+                          </p>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
+                      <div className="grid gap-3 sm:justify-items-end">
+                        <Badge variant={isOwner ? 'warning' : 'primary'}>
+                          {isOwner
+                              ? t('مالك النظام', 'System owner')
+                              : enabledCount === ADMIN_PERMISSION_OPTIONS.length
+                                ? t('مشرف كامل', 'Full administrator')
+                                : t(`صلاحيات مخصصة · ${number(enabledCount)}`, `Custom access · ${number(enabledCount)}`)}
+                        </Badge>
+                        {!isOwner && (
+                          <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:flex-wrap sm:justify-end">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              icon={<Pencil size={16} />}
+                              onClick={() => openPermissions(account)}
+                              aria-label={t(`تعديل صلاحيات ${account.email}`, `Edit permissions for ${account.email}`)}
+                              fullOnMobile
+                            >
+                              {t('تعديل الوصول', 'Edit access')}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              icon={<Trash2 size={16} />}
+                              onClick={() => setPendingRemoval(account)}
+                              aria-label={t(`حذف حساب ${account.email}`, `Delete account for ${account.email}`)}
+                              fullOnMobile
+                            >
+                              {t('حذف الحساب', 'Delete account')}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </Card>
 
       <ConfirmDialog
         isOpen={pendingRemoval !== null}
         onClose={() => setPendingRemoval(null)}
         onConfirm={() => void removeAdmin()}
-        title="حذف حساب المشرف نهائياً؟"
+        title={t('حذف حساب المشرف نهائياً؟', 'Permanently delete this administrator account?')}
         itemName={pendingRemoval?.email}
-        description="هيتحذف حساب الدخول من Supabase Auth بما فيه بيانات كلمة المرور ووسائل الدخول، وهتتشال صلاحياته فوراً. مش هيقدر يسجل دخول تاني. الحذف نهائي."
-        confirmLabel="حذف الحساب نهائياً"
+        description={t('هيتحذف حساب الدخول من Supabase Auth بما فيه بيانات كلمة المرور ووسائل الدخول، وهتتشال صلاحياته فوراً. مش هيقدر يسجل دخول تاني. الحذف نهائي.', 'This permanently deletes the sign-in account from Supabase Auth, including password and sign-in methods, and immediately removes its access. The person will no longer be able to sign in.')}
+        confirmLabel={t('حذف الحساب نهائياً', 'Delete account permanently')}
         isPending={removeAccount.isPending}
-        pendingLabel="بنحذف الحساب..."
+        pendingLabel={t('بنحذف الحساب...', 'Deleting account...')}
       />
 
       <Modal
         isOpen={editingAccount !== null}
         onClose={closePermissions}
-        title={t("تعديل صلاحيات المشرف", "Edit administrator permissions")}
+        title={t('تعديل صلاحيات المشرف', 'Edit administrator access')}
         subtitle={editingAccount?.email}
         icon={<ShieldCheck size={20} />}
         maxWidth="xl"
         footer={(
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="secondary" onClick={closePermissions} disabled={updatePermissions.isPending} fullOnMobile>{t("إلغاء", "Cancel")}</Button>
-            <Button type="submit" form="admin-permissions-form" icon={<Save size={17} />} isLoading={updatePermissions.isPending} loadingText={t("بنحفظ...", "Saving...")} fullOnMobile>{t("حفظ الصلاحيات", "Save permissions")}</Button>
+            <Button type="button" variant="secondary" onClick={closePermissions} disabled={updatePermissions.isPending} fullOnMobile>{t('إلغاء', 'Cancel')}</Button>
+            <Button type="submit" form="admin-permissions-form" icon={<Save size={17} />} isLoading={updatePermissions.isPending} loadingText={t('بنحفظ...', 'Saving...')} fullOnMobile>{t('حفظ الصلاحيات', 'Save access')}</Button>
           </div>
         )}
       >
-        <form id="admin-permissions-form" onSubmit={(event) => void savePermissions(event)} className="grid gap-3">
-          <p className="text-sm leading-6 text-[var(--text-muted)]">{t("اختار الأقسام اللي يقدر المشرف يفتحها ويديرها. التغيير بيتطبق على الصفحة وعمليات قاعدة البيانات والخدمات المرتبطة.", "Select the sections this administrator can access. Changes apply to pages, database operations, and related services.")}</p>
-          <div className="grid gap-2 sm:grid-cols-2">
+        <form id="admin-permissions-form" onSubmit={(event) => void savePermissions(event)} className="grid gap-4">
+          <div className="rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-4">
+            <p id="admin-permissions-scope" className="text-sm font-bold leading-6">
+              {t('حدد الأقسام التي يُسمح لهذا المشرف بالوصول إليها. تظل صلاحيات مالك النظام كاملة؛ أما المشرف فيُتاح له فقط ما تحدده هنا.', 'Choose the sections this administrator is allowed to access. The system owner retains full access; administrators can access only the sections selected here.')}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+              {t('يشمل النطاق صفحات القسم والإجراءات المرتبطة به. تُراجع الصلاحيات من الخادم عند تنفيذ العمليات.', 'This scope covers each section’s pages and related actions. Permissions are checked by the server when operations run.')}
+            </p>
+          </div>
+          <fieldset aria-describedby="admin-permissions-scope" className="grid min-w-0 gap-2 sm:grid-cols-2">
+            <legend className="sr-only">{t('الأقسام المسموح بها', 'Sections this administrator can access')}</legend>
             {ADMIN_PERMISSION_OPTIONS.map(({ key, label, description }) => (
-              <label key={key} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${permissionDraft[key] ? 'border-[var(--primary)] bg-[var(--primary-soft)]' : 'border-[var(--border)] bg-[var(--bg)]'}`}>
+              <label key={key} className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors focus-within:ring-4 focus-within:ring-[var(--primary-soft)] ${permissionDraft[key] ? 'border-[var(--primary)] bg-[var(--primary-soft)]' : 'border-[var(--border)] bg-[var(--bg)]'}`}>
                 <input
                   type="checkbox"
                   checked={permissionDraft[key]}
                   onChange={() => togglePermission(key)}
-                  className="mt-1 size-4 shrink-0 accent-[var(--primary)]"
+                  aria-describedby={`admin-permission-${key}-description`}
+                  className="mt-1 size-5 shrink-0 accent-[var(--primary)]"
                 />
-                <span className="grid gap-1">
-                  <span className="text-sm font-extrabold">{label}</span>
-                  <span className="text-xs leading-5 text-[var(--text-muted)]">{description}</span>
+                <span className="grid min-w-0 gap-1">
+                  <span className="text-sm font-extrabold">{t(label, permissionEnglish[key].label)}</span>
+                  <span id={`admin-permission-${key}-description`} className="text-xs leading-5 text-[var(--text-muted)]">{t(description, permissionEnglish[key].description)}</span>
                 </span>
               </label>
             ))}
-          </div>
+          </fieldset>
+          <p className="text-xs text-[var(--text-muted)]" aria-live="polite">
+            {t(`محدد ${enabledDraftCount} من ${ADMIN_PERMISSION_OPTIONS.length} أقسام.`, `${number(enabledDraftCount)} of ${number(ADMIN_PERMISSION_OPTIONS.length)} sections selected.`)}
+          </p>
         </form>
       </Modal>
     </div>

@@ -152,8 +152,13 @@ function TeamMemberRoster({ team }: { team: TeamOverview }) {
   const addMember = useAddTeamMember();
   const reviewMember = useReviewTeamMember();
   const [selected, setSelected] = useState('');
+  const [memberFilter, setMemberFilter] = useState('');
   const existingIds = useMemo(() => new Set(members.data?.filter((member) => member.membership_status === 'active').map((member) => member.member_id) ?? []), [members.data]);
   const available = (candidates.data ?? []).filter((member) => !existingIds.has(member.member_id) && member.membership_status !== 'pending' && member.work_status === 'active');
+  const visibleMembers = (members.data ?? []).filter((member) => {
+    const query = memberFilter.trim().toLocaleLowerCase();
+    return !query || `${member.full_name} ${member.email} ${membershipStatusLabel(member.membership_status, t)}`.toLocaleLowerCase().includes(query);
+  });
 
   const add = async () => {
     if (!selected) return;
@@ -178,7 +183,7 @@ function TeamMemberRoster({ team }: { team: TeamOverview }) {
   return (
     <div className="grid gap-3 border-t border-[var(--border)] pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-black">{t('عضوية الأعضاء في الفريق', 'Team member memberships')}</h3>
+        <div><h3 className="font-black">{t('عضوية الأعضاء في الفريق', 'Team member memberships')}</h3><p className="mt-1 text-xs text-[var(--text-muted)]">{number(members.data?.length ?? 0)} {t('عضوية في هذا الفريق', 'memberships in this team')}</p></div>
         <Badge variant="neutral">{number(members.data?.filter((member) => member.membership_status === 'active').length ?? 0)} {t('أعضاء نشطون', 'active members')}</Badge>
       </div>
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -194,11 +199,18 @@ function TeamMemberRoster({ team }: { team: TeamOverview }) {
         </Button>
       </div>
       <p className="text-xs leading-5 text-[var(--text-muted)]">{t('العضوية مرتبطة بهذا الفريق فقط. يمكن للشخص نفسه الانضمام لفرق أخرى من غير إنشاء حساب أو ملف مكرر.', 'Membership is limited to this team. The same person can join other teams without another account or profile.')}</p>
+      {candidates.isPending && <p role="status" className="text-xs text-[var(--text-muted)]">{t('جارٍ تحميل الأعضاء المتاحين للإضافة…', 'Loading members available to add…')}</p>}
+      {candidates.isError && <ErrorState message={t('تعذر تحميل قائمة الأعضاء المتاحين.', 'Could not load the members available to add.')} onRetry={() => { void candidates.refetch(); }} />}
+      {candidates.data && available.length === 0 && <p className="rounded-lg border border-dashed border-[var(--border)] p-3 text-xs leading-5 text-[var(--text-muted)]">{t('لا يوجد عضو نشط مؤهل للإضافة حاليًا. الإضافة لا تنقل العضو من فريق آخر.', 'No eligible active member is available to add right now. Adding someone never moves them out of another team.')}</p>}
       {members.isPending && <CardSkeletons count={1} />}
       {members.isError && <ErrorState message={t('تعذر تحميل أعضاء الفريق.', 'Could not load team memberships.')} onRetry={() => { void members.refetch(); }} />}
       {members.data?.length === 0 && <EmptyState title={t('لسه مفيش أعضاء مسندين للفريق', 'No members are assigned to this team yet')} description={t('إضافة عضو هنا لا تنقله من فريق آخر.', 'Adding a member here does not remove them from another team.')} />}
-      {members.data && members.data.length > 0 && <div className="grid gap-2">
-        {members.data.map((member) => (
+      {members.data && members.data.length > 0 && <>
+        <label className="grid gap-1 text-xs font-bold">{t('البحث في أعضاء هذا الفريق', 'Search this team’s members')}<input type="search" value={memberFilter} onChange={(event) => setMemberFilter(event.target.value)} placeholder={t('الاسم أو البريد أو الحالة', 'Name, email, or status')} className="min-h-11 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm" /></label>
+        {visibleMembers.length === 0
+          ? <p role="status" className="rounded-xl border border-dashed border-[var(--border)] p-4 text-sm leading-6 text-[var(--text-muted)]">{t('مافيش أعضاء مطابقين للبحث ده. جرّب اسمًا أو بريدًا أو حالة أخرى.', 'No team members match this search. Try a different name, email, or status.')}</p>
+          : <div className="grid gap-2">
+        {visibleMembers.map((member) => (
           <article key={member.member_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
             <div className="min-w-0"><p className="truncate text-sm font-extrabold">{member.full_name}</p><p className="break-all text-xs text-[var(--text-muted)]" dir="ltr">{member.email}</p></div>
             <div className="flex flex-wrap items-center gap-2">
@@ -211,6 +223,7 @@ function TeamMemberRoster({ team }: { team: TeamOverview }) {
           </article>
         ))}
       </div>}
+      </>}
     </div>
   );
 }
@@ -273,8 +286,17 @@ function TeamCard({ team, candidates, isOwner }: { team: TeamOverview; candidate
           <Button type="button" variant="ghost" icon={<X size={16} />} onClick={() => setEditing(false)} disabled={updateDetails.isPending}>{t('إلغاء', 'Cancel')}</Button>
         </div>
       </form>}
-      <div className="grid gap-4 xl:grid-cols-2">
-        {ROLES.map((role) => <TeamAdminSeat key={role} team={team} role={role} candidates={candidates} isOwner={isOwner} />)}
+      <div className="grid gap-3 xl:grid-cols-2">
+        {ROLES.map((role) => {
+          const assignment = team.assignments.find((item) => item.role === role);
+          return <details key={role} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+            <summary className="flex min-h-11 cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]">
+              <span><span className="block font-black">{roleLabel(role, t)}</span><span className="mt-1 block text-xs text-[var(--text-muted)]" dir={assignment ? 'ltr' : undefined}>{assignment?.email ?? t('راجع التعيين والصلاحيات', 'Review assignment and permissions')}</span></span>
+              <Badge variant={assignment ? 'success' : 'neutral'}>{assignment ? t('مُعيّن', 'Assigned') : t('المقعد متاح', 'Seat available')}</Badge>
+            </summary>
+            <div className="pt-3"><TeamAdminSeat team={team} role={role} candidates={candidates} isOwner={isOwner} /></div>
+          </details>;
+        })}
       </div>
       {team.is_active && <TeamMemberRoster team={team} />}
       <ConfirmDialog isOpen={pendingDisable} onClose={() => setPendingDisable(false)} onConfirm={() => void setActive(false)} title={t('إيقاف الفريق؟', 'Disable this team?')} description={t('سيتوقف وصول Heads/Monitors لهذا الفريق فقط. عضوية Auth والفرق الأخرى لا تتأثر، ويمكن إعادة التفعيل.', 'Team access for its Heads/Monitors will stop. Auth accounts and other teams are unaffected, and this can be reversed.')} confirmLabel={t('إيقاف الفريق', 'Disable team')} isPending={toggle.isPending} pendingLabel={t('بيتم الإيقاف...', 'Disabling…')} />
@@ -292,6 +314,13 @@ export default function TeamsManagementPage() {
   const createTeam = useCreateTeam();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [teamFilter, setTeamFilter] = useState('');
+  const visibleTeams = (teams.data ?? []).filter((team) => {
+    const query = teamFilter.trim().toLocaleLowerCase();
+    const assignments = team.assignments.map((assignment) => assignment.email).join(' ');
+    const status = team.is_active ? t('نشط', 'Active') : t('متوقف', 'Disabled');
+    return !query || `${team.name} ${team.slug} ${assignments} ${status}`.toLocaleLowerCase().includes(query);
+  });
 
   const create = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -320,11 +349,13 @@ export default function TeamsManagementPage() {
         </form>
         <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">{t('Software وHardware وAI أمثلة جاهزة وفارغة. السجلات القديمة تفضل غير معيّنة لحد ما تسندها صراحة.', 'Software, Hardware, and AI are empty starter teams. Legacy records remain unassigned until explicitly classified.')}</p>
       </Card>
+      {teams.data && teams.data.length > 0 && <label className="grid gap-1.5 text-sm font-bold">{t('البحث عن فريق', 'Find a team')}<input type="search" value={teamFilter} onChange={(event) => setTeamFilter(event.target.value)} placeholder={t('اسم الفريق أو المعرّف أو بريد المسؤول', 'Team name, slug, or manager email')} className="min-h-11 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm" /></label>}
       {teams.isPending && <CardSkeletons count={3} />}
       {teams.isError && <ErrorState message={t('تعذر تحميل الفرق وتعييناتها.', 'Could not load teams and assignments.')} onRetry={() => { void teams.refetch(); }} />}
       {candidates.isError && <ErrorState message={t('تعذر تحميل حسابات التعيين.', 'Could not load assignment candidates.')} onRetry={() => { void candidates.refetch(); }} />}
       {teams.data?.length === 0 && <EmptyState title={t('مفيش فرق لسه', 'No teams yet')} description={t('أنشئ أول فريق من النموذج أعلى الصفحة.', 'Create the first team using the form above.')} />}
-      {teams.data?.map((team) => <TeamCard key={team.team_id} team={team} candidates={candidates.data ?? []} isOwner={access.data?.is_owner === true} />)}
+      {teams.data && teams.data.length > 0 && visibleTeams.length === 0 && <p role="status" className="rounded-xl border border-dashed border-[var(--border)] p-4 text-sm leading-6 text-[var(--text-muted)]">{t('مافيش فرق مطابقة للبحث. جرّب اسمًا أو معرّفًا أو بريدًا آخر.', 'No teams match this search. Try a different name, slug, or email.')}</p>}
+      {visibleTeams.map((team) => <TeamCard key={team.team_id} team={team} candidates={candidates.data ?? []} isOwner={access.data?.is_owner === true} />)}
       <div className="flex items-start gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-xs leading-5 text-[var(--text-muted)]"><ShieldCheck size={16} className="mt-0.5 shrink-0" aria-hidden="true" /><p>{t('Head/Monitor مش بيتضافوا لـadmin_accounts؛ سحب تعيين فريق ما بيحذفش حساب الدخول ولا عضوياته الأخرى. الصلاحيات لا تفتح أي بيانات قبل اكتمال حماية المسار المقابل في الخادم.', 'Heads/Monitors are not added to admin_accounts. Revoking one team assignment does not delete sign-in or other memberships. A permission will not expose data until that server path is fully scoped.')}</p></div>
     </div>
   );

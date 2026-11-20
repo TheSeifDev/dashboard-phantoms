@@ -17,6 +17,8 @@ export default function MainLayout() {
   const adminAccess = useAdminAccess(user?.id ?? null);
   const { theme, toggle } = useThemeStore();
   const { pathname } = useLocation();
+  const normalizedPath = pathname.replace(/\/+$/, '') || '/';
+  const isDashboard = normalizedPath === '/admin/dashboard' || normalizedPath === '/admin';
   const content = useRef<HTMLElement>(null);
   useGSAP(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !content.current) return;
@@ -28,11 +30,12 @@ export default function MainLayout() {
     || t('المسؤول الإداري', 'Administrator');
 
   return (
-    <div className="app-workspace flex min-h-[100dvh] bg-[var(--bg)] text-[var(--text)]" dir={dir}>
+    <div className={isDashboard ? 'app-workspace flex min-h-[100dvh] bg-[var(--bg)] text-[var(--text)]' : 'app-workspace app-workspace--operations flex min-h-[100dvh] bg-[var(--bg)] text-[var(--text)]'} dir={dir}>
+      {!isDashboard && <a className="skip-link" href="#workspace-content">{t('انتقل إلى المحتوى الرئيسي', 'Skip to main content')}</a>}
       <AppSidebar userName={userName} isOwner={adminAccess.data?.is_owner === true} permissions={adminAccess.data?.permissions ?? {}} drawerOpen={drawerOpen} onCloseDrawer={closeDrawer} />
       <div className="flex min-w-0 flex-1 flex-col min-h-[100dvh]">
         <AdminHeader path={pathname} userName={userName} isDark={theme === 'dark'} drawerOpen={drawerOpen} onToggleTheme={toggle} onOpenMenu={openDrawer} isOwner={adminAccess.data?.is_owner === true} permissions={adminAccess.data?.permissions ?? {}} />
-        <main ref={content} id="workspace-content" className="workspace-content mx-auto w-full max-w-[var(--content-max)] flex-1 px-4 py-5 md:px-7 md:py-7">
+        <main ref={content} id="workspace-content" tabIndex={isDashboard ? undefined : -1} className={isDashboard ? 'workspace-content mx-auto w-full max-w-[var(--content-max)] flex-1 px-4 py-5 md:px-7 md:py-7' : 'workspace-content workspace-content--operations mx-auto w-full max-w-[var(--content-max)] flex-1 px-4 py-5 md:px-7 md:py-7'}>
           <Outlet />
         </main>
       </div>

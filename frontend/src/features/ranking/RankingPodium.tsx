@@ -15,100 +15,92 @@ interface RankingPodiumProps {
 }
 
 export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: RankingPodiumProps) {
-  const { t } = useLocale();
-  if (topMembers.length === 0) return null;
-
-  // Podium order: Silver (#2), Gold (#1), Bronze (#3) for aesthetic balance
+  const { t, number } = useLocale();
+  // Keep the established visual podium order and the source ranking untouched.
   const first = topMembers[0];
   const second = topMembers[1];
   const third = topMembers[2];
 
   const podiumSlots = [
-    { member: second, rank: 2, label: t('المركز الثاني', 'Second place'), colorBg: 'bg-slate-500', colorText: 'text-slate-600 dark:text-slate-300', borderColor: 'border-slate-300 dark:border-slate-700', icon: Medal, height: 'sm:min-h-[220px]' },
-    { member: first, rank: 1, label: t('المركز الأول', 'First place'), colorBg: 'bg-amber-500', colorText: 'text-amber-600 dark:text-amber-400', borderColor: 'border-amber-400 dark:border-amber-600', icon: Trophy, height: 'sm:min-h-[250px]' },
-    { member: third, rank: 3, label: t('المركز الثالث', 'Third place'), colorBg: 'bg-amber-700', colorText: 'text-amber-800 dark:text-amber-600', borderColor: 'border-amber-600 dark:border-amber-800', icon: Award, height: 'sm:min-h-[200px]' },
+    { member: second, rank: 2, label: t('المركز الثاني', 'Second place'), colorBg: 'bg-slate-500', borderColor: 'border-slate-300 dark:border-slate-700', icon: Medal, height: 'sm:min-h-[220px]' },
+    { member: first, rank: 1, label: t('المركز الأول', 'First place'), colorBg: 'bg-amber-500', borderColor: 'border-amber-400 dark:border-amber-600', icon: Trophy, height: 'sm:min-h-[250px]' },
+    { member: third, rank: 3, label: t('المركز الثالث', 'Third place'), colorBg: 'bg-amber-700', borderColor: 'border-amber-600 dark:border-amber-800', icon: Award, height: 'sm:min-h-[200px]' },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+    <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-3 sm:items-end sm:gap-4">
       {podiumSlots.map(({ member, rank, label, colorBg, borderColor, icon: Icon, height }) => {
         if (!member) {
           return (
-            <div
+            <article
               key={`empty-${rank}`}
-              className={`flex flex-col items-center justify-center p-5 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] ${height}`}
+              aria-label={t(`${label}: لا يوجد عضو بعد`, `${label}: no member yet`)}
+              className={`flex flex-col items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-5 text-center text-[var(--text-muted)] ${height}`}
             >
-              <div className="size-10 rounded-full border border-[var(--border)] grid place-items-center mb-2 opacity-50">
-                <Icon size={18} />
+              <div className="mb-2 grid size-10 place-items-center rounded-full border border-[var(--border)] opacity-60">
+                <Icon size={18} aria-hidden="true" />
               </div>
               <span className="text-xs font-bold">{label}</span>
-              <span className="text-[11px] text-[var(--text-muted)] mt-1">{t("لسه فاضي", "Vacant")}</span>
-            </div>
+              <span className="mt-1 text-[11px]">{t('بانتظار ظهور متصدر', 'Waiting for a leader')}</span>
+            </article>
           );
         }
 
         return (
-          <div
+          <article
             key={member.id}
-            onClick={() => onSelectMember?.(member)}
-            className={`group relative flex flex-col justify-between p-5 rounded-[var(--radius-lg)] border ${borderColor} bg-[var(--surface)] shadow-[var(--shadow-sm)] hover:shadow-md transition-shadow cursor-pointer ${height}`}
+            aria-label={t(`${label}: ${member.full_name}`, `${label}: ${member.full_name}`)}
+            className={`group relative flex flex-col justify-between rounded-[var(--radius-lg)] border ${borderColor} bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-md sm:p-5 ${height}`}
           >
-            {/* Top Rank Badge */}
-            <div className="flex items-center justify-between">
-              <span className={`inline-flex items-center justify-center size-9 rounded-xl ${colorBg} text-white font-black text-sm shadow-sm`}>
-                {rank}
+            <div className="flex items-center justify-between gap-2">
+              <span className={`inline-flex size-9 shrink-0 items-center justify-center rounded-xl ${colorBg} text-sm font-black text-white shadow-sm`}>
+                {number(rank)}
               </span>
-              <span className="text-xs font-bold text-[var(--text-muted)] flex items-center gap-1">
-                <Icon size={14} />
+              <span className="flex items-center gap-1 text-xs font-bold text-[var(--text-muted)]">
+                <Icon size={14} aria-hidden="true" />
                 {label}
               </span>
             </div>
 
-            {/* Member Details */}
-            <div className="my-4 flex flex-col items-center text-center">
-              <div className="size-14 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] grid place-items-center text-lg font-black text-[var(--primary-ink)] mb-2.5">
-                {member.full_name ? member.full_name.charAt(0) : <User size={22} />}
+            <div className="my-4 flex min-w-0 flex-col items-center text-center">
+              <div className="mb-2.5 grid size-14 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-lg font-black text-[var(--primary-ink)]" aria-hidden="true">
+                {member.full_name ? member.full_name.trim().charAt(0) : <User size={22} />}
               </div>
-              <h4 className="font-black text-base text-[var(--text)] group-hover:text-[var(--primary-ink)] transition-colors truncate max-w-full">
-                {member.full_name}
-              </h4>
-              <span className="text-xs text-[var(--text-muted)] mt-0.5 truncate max-w-full" dir="ltr">
-                {member.email}
-              </span>
+              <button
+                type="button"
+                onClick={() => onSelectMember?.(member)}
+                aria-label={t(`اعرض الملف الشخصي لـ ${member.full_name}`, `View ${member.full_name}’s profile`)}
+                className="max-w-full rounded text-base font-black text-[var(--text)] transition-colors hover:text-[var(--primary-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--link)]"
+              >
+                <span className="block max-w-full truncate">{member.full_name}</span>
+              </button>
+              <span className="mt-0.5 max-w-full truncate text-xs text-[var(--text-muted)]" dir="ltr">{member.email}</span>
 
-              {/* Bonus score */}
-              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[var(--primary-soft)] border border-[var(--primary)]/20 text-[var(--primary-ink)] font-black text-sm">
-                <span>{member.bonus_infinite === true ? '∞' : formatSigned(member.totalBonus)}</span>
+              <div className="mt-3 inline-flex max-w-full items-center gap-1.5 rounded-xl border border-[var(--primary)]/20 bg-[var(--primary-soft)] px-3 py-1.5 text-sm font-black text-[var(--primary-ink)]">
+                <span className="tabular-nums">{member.bonus_infinite === true ? '∞' : formatSigned(member.totalBonus)}</span>
                 <span className="text-xs font-semibold">{member.bonus_infinite === true ? t('بونص غير محدود', 'Unlimited bonus') : t('نقطة', 'points')}</span>
               </div>
             </div>
 
-            {/* Bottom Actions */}
-            <div className="flex items-center gap-2 pt-2 border-t border-[var(--border)]">
+            <div className="flex items-center gap-2 border-t border-[var(--border)] pt-3">
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectMember?.(member);
-                }}
-                className="flex-1 min-h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-xs font-bold text-[var(--text)] hover:bg-[var(--surface)] transition-colors"
+                onClick={() => onSelectMember?.(member)}
+                className="min-h-11 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 text-xs font-bold text-[var(--text)] transition-colors hover:bg-[var(--surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--link)]"
               >
-                الملف الشخصي
+                {t('الملف الشخصي', 'View profile')}
               </button>
               {onAdjustBonus && (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAdjustBonus(member);
-                  }}
-                  className="px-3 min-h-11 rounded-lg bg-[var(--primary)] text-xs font-bold text-white hover:bg-[var(--primary-hover)] transition-colors"
+                  onClick={() => onAdjustBonus(member)}
+                  className="min-h-11 rounded-lg bg-[var(--primary)] px-3 text-xs font-bold text-white transition-colors hover:bg-[var(--primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--link)]"
                 >
-                  تقييم
+                  {t('تقييم', 'Evaluate')}
                 </button>
               )}
             </div>
-          </div>
+          </article>
         );
       })}
     </div>

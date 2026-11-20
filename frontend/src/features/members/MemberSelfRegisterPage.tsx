@@ -65,10 +65,17 @@ export default function MemberSelfRegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState<'email' | 'name' | 'phone' | 'password' | 'confirm' | 'invitation' | null>(null);
   const [completion, setCompletion] = useState<'pending_review' | 'password_updated' | 'enrollment_ready' | null>(null);
   const capturedRef = useRef(false);
   const liveRef = useRef(true);
   const submitLatchRef = useRef<Promise<void> | null>(null);
+  const passwordBytes = new TextEncoder().encode(password).byteLength;
+  const passwordRuleStates = [
+    password.length >= 12 && passwordBytes <= 72,
+    /[A-Za-z]/.test(password),
+    /[0-9]/.test(password),
+  ];
 
   useEffect(() => {
     liveRef.current = true;
@@ -98,6 +105,7 @@ export default function MemberSelfRegisterPage() {
 
   const updateProfile = (key: keyof MemberSelfServiceProfile, value: string) => {
     setProfile((current) => ({ ...current, [key]: value }));
+    setFieldError(null);
     if (error) setError('');
   };
 
@@ -111,28 +119,35 @@ export default function MemberSelfRegisterPage() {
     const submittedProfile = { ...profile };
     const attempt = (async () => {
       setError('');
+      setFieldError(null);
       if (!cleanEmail || !isValidEmail(cleanEmail)) {
+        setFieldError('email');
         setError(t('اكتب بريدك الإلكتروني بصيغة صحيحة.', 'Enter a valid email address.'));
         return;
       }
       if (isLegacyMemberInviteToken(submittedToken)) {
+        setFieldError('invitation');
         setError(t('هذا رابط دعوة قديم وغير مدعوم. اطلب رابطاً جديداً من مسؤول الفريق.', 'This is an old, unsupported invitation link. Ask the team administrator for a new one.'));
         return;
       }
       if (!isMemberInviteToken(submittedToken)) {
+        setFieldError('invitation');
         setError(isPasswordReset ? t('افتح رابط إعادة التعيين المخصص لك أو اطلب رابطاً جديداً من الإدارة.', 'Open your personal password reset link or request a new one from the administrators.') : t('افتح رابط الدعوة المخصص لك أو اطلب رابطاً جديداً من الإدارة.', 'Open your personal invitation link or request a new one from the administrators.'));
         return;
       }
       if (!isPasswordReset && !submittedProfile.fullName.trim()) {
+        setFieldError('name');
         setError(t('اكتب اسمك الكامل.', 'Enter your full name.'));
         return;
       }
       if (!isPasswordReset && submittedProfile.phone.trim() && !/^\+?[0-9 ()-]{7,32}$/.test(submittedProfile.phone.trim())) {
+        setFieldError('phone');
         setError(t('اكتب رقم هاتف صحيحاً أو اترك الحقل فارغاً.', 'Enter a valid phone number or leave the field blank.'));
         return;
       }
       const passwordResult = validateMemberPassword(submittedPassword, submittedConfirmPassword);
       if (!passwordResult.ok) {
+        setFieldError(submittedPassword === submittedConfirmPassword ? 'password' : 'confirm');
         setError(submittedPassword === submittedConfirmPassword
           ? memberUiError('WEAK_PASSWORD', t)
           : memberUiError('PASSWORD_MISMATCH', t));
@@ -183,9 +198,9 @@ export default function MemberSelfRegisterPage() {
     return (
       <AuthShell
         audience="member"
-        badge={t('تم الحفظ بنجاح', 'Saved successfully')}
+        badge={completion === 'pending_review' ? t('الطلب قيد المراجعة', 'Request under review') : t('تم الحفظ بنجاح', 'Saved successfully')}
         title={completionTitle}
-        description={completion === 'pending_review' ? t('حالة الطلب: بانتظار مراجعة الإدارة.', 'Request status: awaiting administrator review.') : t('بيانات الدخول جاهزة للاستخدام.', 'Your sign-in details are ready.')}
+        description={completion === 'pending_review' ? t('حالة الطلب: بانتظار مراجعة الإدارة.', 'Request status: awaiting administrator review.') : completion === 'password_updated' ? t('تم تأكيد حفظ كلمة المرور الجديدة.', 'Your new password save was confirmed.') : t('تم تأكيد إعداد كلمة المرور.', 'Password setup was confirmed.')}
         footer={<Link className="auth-inline-link justify-center" to="/login">{t('العودة إلى تسجيل الدخول', 'Return to sign in')}</Link>}
       >
         <div data-testid="member-enrollment-success" className="grid justify-items-center gap-3 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-5 text-center" role="status" aria-live="polite">
@@ -210,55 +225,58 @@ export default function MemberSelfRegisterPage() {
         </div>
       )}
     >
-      {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
-      <form onSubmit={handleSubmit} className="auth-form" noValidate>
+      {error && <div id="join-form-error" className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
+      <form onSubmit={handleSubmit} className="auth-form" noValidate aria-busy={submitting || undefined}>
         <label className="auth-field" htmlFor="join-email">{t('بريدك الإلكتروني للتسجيل', 'Email address for registration')}
-          <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="join-email" type="email" dir="ltr" autoComplete="email" required maxLength={254} placeholder="name@example.com" value={email} onChange={(event) => { setEmail(event.target.value); if (error) setError(''); }} /></span>
+          <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="join-email" type="email" dir="ltr" autoCapitalize="none" spellCheck={false} autoComplete="email" required maxLength={254} placeholder="name@example.com" value={email} disabled={submitting} onChange={(event) => { setEmail(event.target.value); setFieldError(null); if (error) setError(''); }} aria-invalid={fieldError === 'email' || undefined} aria-describedby={fieldError === 'email' ? 'join-form-error' : undefined} /></span>
         </label>
         {!isPasswordReset && <section className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5" aria-labelledby="join-profile-heading">
           <div><h2 id="join-profile-heading" className="flex items-center gap-2 text-sm font-black text-[var(--text)]"><UserRound size={16} aria-hidden="true" /> {t('بياناتك الشخصية', 'Your personal details')}</h2><p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{t('املأ معلوماتك بنفسك؛ الإدارة تراجع العضوية الجديدة قبل تفعيلها.', 'Enter your own details. Administrators review new memberships before activation.')}</p></div>
           <label className="auth-field" htmlFor="join-full-name">{t('الاسم الكامل *', 'Full name *')}
-            <input id="join-full-name" type="text" autoComplete="name" required maxLength={160} value={profile.fullName} onChange={(event) => updateProfile('fullName', event.target.value)} />
+            <input id="join-full-name" type="text" dir="auto" autoComplete="name" required maxLength={160} value={profile.fullName} disabled={submitting} onChange={(event) => updateProfile('fullName', event.target.value)} aria-invalid={fieldError === 'name' || undefined} aria-describedby={fieldError === 'name' ? 'join-form-error' : undefined} />
           </label>
           <label className="auth-field" htmlFor="join-phone">{t('رقم الهاتف (اختياري)', 'Phone number (optional)')}
-            <input id="join-phone" type="tel" dir="ltr" autoComplete="tel" maxLength={32} placeholder="+20 ..." value={profile.phone} onChange={(event) => updateProfile('phone', event.target.value)} />
+            <input id="join-phone" type="tel" dir="ltr" autoComplete="tel" maxLength={32} placeholder="+20 ..." value={profile.phone} disabled={submitting} onChange={(event) => updateProfile('phone', event.target.value)} aria-invalid={fieldError === 'phone' || undefined} aria-describedby={fieldError === 'phone' ? 'join-form-error' : 'join-phone-hint'} />
           </label>
+          <p id="join-phone-hint" className="-mt-3 text-xs leading-5 text-[var(--text-muted)]">{t('أدخل 7 إلى 32 رقماً، ويمكن إضافة + أو مسافات أو أقواس أو شرطات.', 'Use 7–32 digits; a leading +, spaces, parentheses, and hyphens are also accepted.')}</p>
           <label className="auth-field" htmlFor="join-residence">{t('محل الإقامة (اختياري)', 'Residence (optional)')}
-            <input id="join-residence" type="text" autoComplete="address-level2" maxLength={160} value={profile.residence} onChange={(event) => updateProfile('residence', event.target.value)} />
+            <input id="join-residence" type="text" dir="auto" autoComplete="address-level2" maxLength={160} value={profile.residence} disabled={submitting} onChange={(event) => updateProfile('residence', event.target.value)} />
           </label>
           <label className="auth-field" htmlFor="join-work-conditions">{t('ظروف العمل (اختياري)', 'Work conditions (optional)')}
-            <input id="join-work-conditions" type="text" maxLength={2000} value={profile.workConditions} onChange={(event) => updateProfile('workConditions', event.target.value)} />
+            <textarea id="join-work-conditions" dir="auto" maxLength={2000} rows={3} value={profile.workConditions} disabled={submitting} onChange={(event) => updateProfile('workConditions', event.target.value)} />
           </label>
           <label className="auth-field" htmlFor="join-bio">{t('نبذة أو الدور (اختياري)', 'Bio or role (optional)')}
-            <input id="join-bio" type="text" maxLength={4000} value={profile.bio} onChange={(event) => updateProfile('bio', event.target.value)} />
+            <textarea id="join-bio" dir="auto" maxLength={4000} rows={3} value={profile.bio} disabled={submitting} onChange={(event) => updateProfile('bio', event.target.value)} />
           </label>
           <label className="auth-field" htmlFor="join-device">{t('الجهاز المتوفر (اختياري)', 'Available device (optional)')}
-            <select id="join-device" value={profile.device} onChange={(event) => updateProfile('device', event.target.value)}>
+            <select id="join-device" value={profile.device} disabled={submitting} onChange={(event) => updateProfile('device', event.target.value)}>
               <option value="">{t('— غير محدد —', '— Not specified —')}</option>
               {DEVICE_OPTIONS.map((device) => <option key={device} value={device}>{t(device, ({ 'لابتوب': 'Laptop', 'كمبيوتر مكتبي (PC)': 'Desktop computer (PC)', 'بدون جهاز': 'No device', 'هاتف محمول': 'Mobile phone', 'لابتوب، هاتف محمول': 'Laptop, mobile phone', 'لابتوب، جهاز لوحي، هاتف محمول': 'Laptop, tablet, mobile phone' } as Record<string, string>)[device] ?? device)}</option>)}
             </select>
           </label>
           <label className="auth-field" htmlFor="join-gender">{t('الجنس (اختياري)', 'Gender (optional)')}
-            <select id="join-gender" value={profile.gender} onChange={(event) => updateProfile('gender', event.target.value)}>
+            <select id="join-gender" value={profile.gender} disabled={submitting} onChange={(event) => updateProfile('gender', event.target.value)}>
               <option value="">{t('— غير محدد —', '— Not specified —')}</option><option value="ذكر">{t('ذكر', 'Male')}</option><option value="أنثى">{t('أنثى', 'Female')}</option>
             </select>
           </label>
         </section>}
 
         <label className="auth-field" htmlFor="join-password">{t('كلمة المرور الجديدة', 'New password')}
-          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="join-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="new-password" required value={password} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} /><button type="button" className="auth-password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></span>
+          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="join-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="new-password" required value={password} disabled={submitting} onChange={(event) => { setPassword(event.target.value); setFieldError(null); if (error) setError(''); }} aria-invalid={fieldError === 'password' || undefined} aria-describedby={fieldError === 'password' ? 'join-form-error' : 'join-password-requirements'} /><button type="button" className="auth-password-toggle" disabled={submitting} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')} aria-pressed={showPassword}>{showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button></span>
         </label>
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-xs leading-6 text-[var(--text-muted)]">
-          <p className="flex items-center gap-1.5 font-black text-[var(--text)]"><ShieldAlert size={15} aria-hidden="true" /> {t('متطلبات كلمة المرور', 'Password requirements')}</p>
-          <ul className="mt-1 list-inside list-disc">{memberPasswordRequirements().map((item, index) => <li key={item}>{index === 0 ? t(item, 'At least 12 characters and no more than 72 UTF-8 bytes') : index === 1 ? t(item, 'At least one English letter') : t(item, 'At least one number')}</li>)}</ul>
+          <p id="join-password-requirements" className="flex items-center gap-1.5 font-black text-[var(--text)]"><ShieldAlert size={15} aria-hidden="true" /> {t('متطلبات كلمة المرور', 'Password requirements')}</p>
+          <ul className="mt-1 grid gap-1.5" aria-label={t('قائمة متطلبات كلمة المرور', 'Password requirements checklist')}>{memberPasswordRequirements().map((item, index) => <li key={item} className={`flex items-start gap-2 ${passwordRuleStates[index] ? 'font-bold text-[var(--success-text)]' : ''}`}><CheckCircle2 size={15} className={`mt-1 shrink-0 ${passwordRuleStates[index] ? 'opacity-100' : 'opacity-30'}`} aria-hidden="true" /><span>{index === 0 ? t(item, 'At least 12 characters and no more than 72 UTF-8 bytes') : index === 1 ? t(item, 'At least one English letter') : t(item, 'At least one number')}</span></li>)}</ul>
         </div>
         <label className="auth-field" htmlFor="join-confirm-password">{t('تأكيد كلمة المرور', 'Confirm password')}
-          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="join-confirm-password" type={showConfirmPassword ? 'text' : 'password'} dir="ltr" autoComplete="new-password" required value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); if (error) setError(''); }} /><button type="button" className="auth-password-toggle" onClick={() => setShowConfirmPassword((value) => !value)} aria-label={showConfirmPassword ? 'إخفاء تأكيد كلمة المرور' : 'إظهار تأكيد كلمة المرور'}>{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></span>
+          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="join-confirm-password" type={showConfirmPassword ? 'text' : 'password'} dir="ltr" autoComplete="new-password" required value={confirmPassword} disabled={submitting} onChange={(event) => { setConfirmPassword(event.target.value); setFieldError(null); if (error) setError(''); }} aria-invalid={Boolean(confirmPassword && confirmPassword !== password) || undefined} aria-describedby={confirmPassword && confirmPassword !== password ? 'join-password-mismatch' : undefined} /><button type="button" className="auth-password-toggle" disabled={submitting} onClick={() => setShowConfirmPassword((value) => !value)} aria-label={showConfirmPassword ? t('إخفاء تأكيد كلمة المرور', 'Hide password confirmation') : t('إظهار تأكيد كلمة المرور', 'Show password confirmation')} aria-pressed={showConfirmPassword}>{showConfirmPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button></span>
         </label>
+        {confirmPassword && confirmPassword !== password && <p id="join-password-mismatch" className="-mt-3 text-xs font-bold text-amber-700 dark:text-amber-300" role="status" aria-live="polite">{t('كلمتا المرور غير متطابقتين بعد.', 'The passwords do not match yet.')}</p>}
         <button type="submit" className="auth-submit" disabled={submitting} aria-busy={submitting || undefined}>
           {submitting ? t('بنحفظ بياناتك بأمان...', 'Saving your details securely...') : isPasswordReset ? t('تحديث كلمة المرور', 'Update password') : t('حفظ البيانات وكلمة المرور', 'Save details and password')}
           {!submitting && <ArrowLeft size={18} aria-hidden="true" />}
         </button>
+        {submitting && <p className="-mt-3 text-center text-xs leading-5 text-[var(--text-muted)]" role="status" aria-live="polite">{isPasswordReset ? t('جارٍ التحقق من الرابط وتحديث كلمة المرور. لا تغلق الصفحة حتى تنتهي العملية.', 'Verifying the link and updating your password. Keep this page open until the operation finishes.') : t('جارٍ التحقق من الدعوة وحفظ البيانات. لن تظهر رسالة النجاح إلا بعد تأكيد الخادم.', 'Verifying the invitation and saving your details. Success appears only after the server confirms the operation.')}</p>}
       </form>
       <div data-testid="join-submit-notice" className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-xs leading-6 text-[var(--text-2)]" role="note">
         <Info size={16} className="mt-0.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
