@@ -22,7 +22,7 @@ const appliedTeamMigrations = [
   ['20261120124000', '20261120074944', 'internal_team_records'],
   ['20261120125000', '20261120075039', 'internal_team_announcements'],
 ];
-const pendingWebProjects = ['20261120223000', 'web_projects_foundation'];
+const appliedWebProjects = ['20261120223000', 'web_projects_foundation'];
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'phantoms-forward-inventory-'));
@@ -62,7 +62,7 @@ function withFixture(body) {
   try { body(f); } finally { f.cleanup(); }
 }
 
-test('repository retains 24 initialized files, exact applied forwards, and one pending Web Projects migration', () => {
+test('repository retains 24 initialized files and exact applied forwards including Web Projects', () => {
   const result = validateMigrationManifest({ rootDir: root });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, 24);
@@ -123,14 +123,14 @@ test('repository retains 24 initialized files, exact applied forwards, and one p
     assert.equal(entry.original_source_version, originalVersion);
     assert.equal(entry.sha256, createHash('sha256').update(readFileSync(join(root, entry.canonical_repository_filename))).digest('hex'));
   }
-  const pending = entries.at(-1);
-  assert.equal(pending.version, pendingWebProjects[0]);
-  assert.equal(pending.name, pendingWebProjects[1]);
-  assert.equal(pending.production_status, 'not_applied');
-  assert.equal(pending.remote_applied_timestamp, null);
-  assert.equal(pending.original_source_version, pending.version);
-  assert.equal(pending.original_source_filename, pending.canonical_repository_filename);
-  assert.equal(pending.sha256, createHash('sha256').update(readFileSync(join(root, pending.canonical_repository_filename))).digest('hex'));
+  const webProjects = entries.at(-1);
+  assert.equal(webProjects.version, appliedWebProjects[0]);
+  assert.equal(webProjects.name, appliedWebProjects[1]);
+  assert.equal(webProjects.production_status, 'applied');
+  assert.equal(webProjects.remote_applied_timestamp, '20261120223727');
+  assert.equal(webProjects.original_source_version, webProjects.version);
+  assert.equal(webProjects.original_source_filename, webProjects.canonical_repository_filename);
+  assert.equal(webProjects.sha256, createHash('sha256').update(readFileSync(join(root, webProjects.canonical_repository_filename))).digest('hex'));
 });
 
 test('a valid separate forward registration does not change initialization provenance', () => {

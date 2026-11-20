@@ -9,9 +9,6 @@ BEGIN;
 ALTER TABLE public.admin_accounts
   ALTER COLUMN permissions SET DEFAULT
     '{"dashboard":true,"members":true,"tasks":true,"ranking":true,"notes":true,"announcements":true,"whatsapp":true,"ai_assistant":true,"web_projects":false}'::jsonb;
-UPDATE public.admin_accounts
-SET permissions = permissions || '{"web_projects":false}'::jsonb
-WHERE NOT (permissions ? 'web_projects');
 ALTER TABLE public.admin_accounts
   DROP CONSTRAINT IF EXISTS admin_accounts_permissions_valid;
 ALTER TABLE public.admin_accounts
@@ -30,6 +27,11 @@ ALTER TABLE public.admin_accounts
       'dashboard','members','tasks','ranking','notes','announcements','whatsapp','ai_assistant','web_projects'
     ]::text[] = '{}'::jsonb
   );
+-- Replace the legacy eight-key constraint before backfilling existing accounts.
+-- The new constraint accepts the missing key during this transactional upgrade.
+UPDATE public.admin_accounts
+SET permissions = permissions || '{"web_projects":false}'::jsonb
+WHERE NOT (permissions ? 'web_projects');
 
 CREATE OR REPLACE FUNCTION public.has_admin_permission(p_permission TEXT)
 RETURNS BOOLEAN

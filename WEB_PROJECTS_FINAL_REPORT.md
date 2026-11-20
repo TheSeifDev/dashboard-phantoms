@@ -1,12 +1,12 @@
 # PHANTOMS Web Projects — implementation and validation report
 
-**Updated:** 2026-11-20 (UTC)
+**Updated:** 2026-11-20 22:42 UTC
 **Repository:** `/home/ubuntu/phantoms-ui-refresh`
-**Latest feature/test commit on `main`:** `88fdf5b23187e0d8268db6008724100b455e1fa3` (`test: recognize pending Web Projects migration`), following implementation commit `1daa29ce06893b94b096b041b2f3227f0500d2c7`.
+**Previously verified GitHub runtime CI SHA:** `88fdf5b23187e0d8268db6008724100b455e1fa3` (`test: recognize pending Web Projects migration`), following implementation commit `1daa29ce06893b94b096b041b2f3227f0500d2c7`. The migration-ordering correction and applied-state tests accompany this report update; no new GitHub CI result is claimed here.
 
 ## Delivery status
 
-The independent Web Projects module and its follow-up CI expectation correction are pushed to `origin/main`. The shared migration `20261120223000_web_projects_foundation.sql` remains pending and unapplied. GitHub's Production workflow `.github/workflows/deploy.yml` is `disabled_manually`, so no GitHub Production deployment ran for these commits. Vercel was not accessed; whether an independent Vercel Git integration deployed is unverified.
+The independent Web Projects module is pushed to `origin/main`. After explicit user authorization, the shared migration `20261120223000_web_projects_foundation.sql` was corrected and applied successfully to PHANTOMS. Supabase history records `web_projects_foundation` as remote version `20261120223727`; the manifest now records 21 applied forwards and zero pending. GitHub's Production workflow `.github/workflows/deploy.yml` was freshly verified as `disabled_manually`; it was not re-enabled. Vercel was not accessed; whether an independent Vercel Git integration deployed is unverified.
 
 ## Executive summary
 
@@ -32,24 +32,25 @@ Project-specific roles, consent, ownership, licensing, attribution, PHANTOMS bra
 | New Web Projects pgTAP suite | 113/113 assertions |
 | Initial manifest/provenance and static SQL checks | 35/35 tests passed |
 | Follow-up manifest/provenance/deployment-safety tests | 32/32 passed |
-| Follow-up Supabase CLI safety suite | 5/5 passed; asserts exactly 20 applied and 1 pending migration |
+| Current migration/manifest/CLI/API regression checks | 43/43 passed before and after shared apply; asserts exactly 21 applied and zero pending |
+| Populated-database migration regression | Original error reproduced; 4/4 rollback checks and 10/10 corrected-upgrade checks passed |
 | GitHub Database Runtime Validation, corrected SHA | Passed all steps; run [44824844076](https://github.com/TheSeifDev/dashboard-phantoms/actions/runs/44824844076) |
 | GitHub Android build, corrected SHA | Passed, including release APK publish step; run [44824844178](https://github.com/TheSeifDev/dashboard-phantoms/actions/runs/44824844178) |
 | GitHub runtime steps | Loopback/PG17 health; full pgTAP; inventory pagination; Auth fixture/process lifecycle; real disposable dashboard; real Auth; member-password HTTP; SQL concurrency; sanitized evidence; exact cleanup; checksum revalidation — all passed |
 | Earlier frontend regression/static/build checks | 21 navigation/API/Auth and 7 permission/domain tests; TypeScript, UX guard, lint, production build, and secret audit passed |
 | Dedicated screenshot-based responsive Arabic/English/light/dark QA | Not evidenced; no screenshots are claimed |
 
-The first implementation SHA's Database Runtime Validation run failed because `frontend/scripts/supabase-cli-safety.test.mjs` still expected zero pending migrations. The intended manifest state is one pending Web Projects migration and 20 applied forwards. The test was corrected to assert that exact pending migration (version/name and null remote timestamp); focused local checks passed, and both GitHub workflows then passed on the corrected SHA. The initial Android workflow also passed. The run links above provide the GitHub evidence.
+The first implementation SHA's Database Runtime Validation run failed because `frontend/scripts/supabase-cli-safety.test.mjs` still expected zero pending migrations. At that time the intended state was one pending Web Projects migration and 20 applied forwards. That earlier CI expectation fix passed both workflows on the SHA linked above. The subsequent shared apply exposed a populated-row upgrade defect: the backfill ran before the legacy eight-key constraint was replaced. This update moves only the backfill after the replacement constraint, retaining the transaction and all existing permission checks. The full local PG17 run was repeated with three synthetic existing admin accounts and passed 928/928 pgTAP assertions plus the 14 upgrade/rollback checks. The current local migration-state tests now require the real recorded apply timestamp; previous CI runs do not validate this newer correction.
 
 ## Security, ownership, and validation boundary
 
 The local SQL run used a fresh local-only PG17 runtime on Docker `network=none`, with no host-published ports. Every pgTAP fixture transaction rolled back. The runtime was stopped by its owner-aware cleanup runner; evidence records the assigned data directory removed. A separate local Auth/Chromium attempt was blocked before services started because sandbox Docker lacked the legacy iptables `raw` table. Network protections were not weakened, and exact temporary-resource cleanup succeeded. GitHub's separate disposable runtime did pass its dashboard/Auth/HTTP workflow, but that does not provide the requested bilingual responsive/theme screenshot set.
 
-The pending migration SHA-256 is `c01a551caba77a91827a9566e5d9e1c9b4e1482dd99d636f4efc48c0ede75c64`. No hosted Supabase project was linked or contacted, and no shared database was modified. No direct Vercel access occurred.
+The applied migration SHA-256 is `24f5514572a632dc8b85ebedf2cadec3f5539165af792e05efb8d1bc356db160` (136,294 bytes). This was the only migration applied to PHANTOMS. Read-only checks confirmed all 24 Web tables have RLS enabled, core RPCs exist, the permission constraint is validated, and all three existing admins have `web_projects:false`. The legacy admin identity/role/timestamp/permission fingerprint is identical before and after; counts of members, Auth users, Teams, Team memberships/admin assignments, and legacy tasks are unchanged. No direct Vercel access occurred.
 
 ## Remaining operational items
 
-1. Apply the pending migration to a shared environment only after separate explicit authorization. The feature's shared schema is not deployed.
+1. Refresh and validate the actual shared-environment Web Projects UI. The schema is now installed; live screenshot-based acceptance has not been captured. Do not reapply the migration.
 2. The GitHub Production workflow is manually disabled. Re-enabling it affects future matching `main` pushes and a follow-up push would be needed to trigger it; no change was made. A Production rollout should be coordinated with the shared migration.
 3. Run the requested screenshot-based responsive QA for desktop/mobile, Arabic/English, and light/dark in a suitable runtime. The local sandbox's Docker restriction prevented that evidence capture.
 4. Configure a storage provider/bucket before claiming real file uploads. Current behavior supports safe external links and storage-object metadata, not an active upload pipeline.

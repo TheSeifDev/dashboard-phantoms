@@ -33,3 +33,16 @@ test('shared-resource edits never change scope and URLs are checked before use',
   assert.match(resources, /const external = safeHref/);
   assert.match(resources, /File uploads require a configured private bucket/);
 });
+
+test('Web Projects upgrade validates the replacement constraint before backfilling existing admin rows', () => {
+  const migration = readFileSync(fileURLToPath(new URL('../../backend/supabase/migrations/20261120223000_web_projects_foundation.sql', import.meta.url)), 'utf8');
+  const drop = migration.indexOf('DROP CONSTRAINT IF EXISTS admin_accounts_permissions_valid');
+  const add = migration.indexOf('ADD CONSTRAINT admin_accounts_permissions_valid CHECK (');
+  const update = migration.indexOf('UPDATE public.admin_accounts');
+  const end = migration.indexOf("    ]::text[] = '{}'::jsonb\n  );", add);
+  assert.ok(drop >= 0 && add > drop && end > add && update > end);
+  assert.match(migration.slice(add, update), /COALESCE\(jsonb_typeof\(permissions -> 'web_projects'\) = 'boolean', TRUE\)/);
+  assert.match(migration.slice(update), /SET permissions = permissions \|\| '\{"web_projects":false\}'::jsonb\nWHERE NOT \(permissions \? 'web_projects'\);/);
+  assert.match(migration, /^BEGIN;/m);
+  assert.match(migration.trimEnd(), /COMMIT;$/);
+});

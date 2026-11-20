@@ -119,16 +119,16 @@ test('the reconciled forward migration preserves original provenance and canonic
     assert.equal(entry.canonical_repository_filename, `backend/supabase/migrations/${remoteVersion}_${name}.sql`);
     assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, entry.canonical_repository_filename))).digest('hex'), entry.sha256);
   }
-  const pending = forward.at(-1);
-  assert.equal(pending.version, '20261120223000');
-  assert.equal(pending.name, 'web_projects_foundation');
-  assert.equal(pending.production_status, 'not_applied');
-  assert.equal(pending.remote_applied_timestamp, null);
-  assert.equal(pending.original_source_version, pending.version);
-  assert.equal(pending.original_source_filename, pending.canonical_repository_filename);
-  assert.equal(pending.canonical_repository_filename,
+  const webProjects = forward.at(-1);
+  assert.equal(webProjects.version, '20261120223000');
+  assert.equal(webProjects.name, 'web_projects_foundation');
+  assert.equal(webProjects.production_status, 'applied');
+  assert.equal(webProjects.remote_applied_timestamp, '20261120223727');
+  assert.equal(webProjects.original_source_version, webProjects.version);
+  assert.equal(webProjects.original_source_filename, webProjects.canonical_repository_filename);
+  assert.equal(webProjects.canonical_repository_filename,
     'backend/supabase/migrations/20261120223000_web_projects_foundation.sql');
-  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, pending.canonical_repository_filename))).digest('hex'), pending.sha256);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, webProjects.canonical_repository_filename))).digest('hex'), webProjects.sha256);
 });
 
 test('new manifest provenance is anchored to the historical 85a36fc manifest and canonical bytes', () => {

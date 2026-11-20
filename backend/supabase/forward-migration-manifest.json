@@ -203,9 +203,9 @@
     "version": "20261120223000",
     "name": "web_projects_foundation",
     "canonical_repository_filename": "backend/supabase/migrations/20261120223000_web_projects_foundation.sql",
-    "sha256": "c01a551caba77a91827a9566e5d9e1c9b4e1482dd99d636f4efc48c0ede75c64",
-    "production_status": "not_applied",
-    "remote_applied_timestamp": null,
+    "sha256": "24f5514572a632dc8b85ebedf2cadec3f5539165af792e05efb8d1bc356db160",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261120223727",
     "original_source_version": "20261120223000",
     "original_source_filename": "backend/supabase/migrations/20261120223000_web_projects_foundation.sql"
   }
