@@ -61,7 +61,7 @@ export function Drawer({
         aria-modal="true"
         aria-label={label ?? title}
         className={`ui-drawer absolute inset-y-0 end-0 flex w-full max-w-md min-w-0 flex-col overflow-hidden border-s text-[var(--text)] ${className}`}
-        style={{ animation: 'app-drawer-in 380ms cubic-bezier(0.2, 0.9, 0.25, 1.1)', ['--drawer-from' as string]: dir === 'rtl' ? '-36px' : '36px' }}
+        style={{ ['--drawer-from' as string]: dir === 'rtl' ? '-36px' : '36px' }}
       >
         <header className="ui-drawer-header flex min-h-16 shrink-0 items-center justify-between gap-4 border-b px-4 py-3">
           <h2 className="min-w-0 flex-1 break-words text-base font-black leading-snug text-[var(--text)]" title={title}>
