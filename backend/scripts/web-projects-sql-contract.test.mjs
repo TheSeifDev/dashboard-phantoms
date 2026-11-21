@@ -10,7 +10,7 @@ const migrationPath = 'backend/supabase/migrations/20261120223000_web_projects_f
 const migration = readFileSync(resolve(root, migrationPath), 'utf8');
 const helper = readFileSync(resolve(root, 'backend/supabase/tests/database/_helpers.psql'), 'utf8');
 const manifest = JSON.parse(readFileSync(resolve(root, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
-const pending = manifest.at(-1);
+const webProjects = manifest.find((entry) => entry.version === '20261120223000');
 
 function tableDefinition(name) {
   const match = migration.match(new RegExp(`CREATE TABLE public\\.${name} \\(([\\s\\S]*?)\\n\\);`));
@@ -64,17 +64,19 @@ test('progress is derived in invoker-security views, not stored as a completion 
   assert.doesNotMatch(tableDefinition('web_project_sprints'), /progress_percent|completion_percentage/);
 });
 
-test('only the pending Web Projects migration is appended; historical provenance stays applied', () => {
-  assert.equal(manifest.length, 21);
-  assert.equal(manifest.slice(0, -1).length, 20);
-  assert.ok(manifest.slice(0, -1).every((entry) => entry.production_status === 'applied'));
-  assert.equal(pending.version, '20261120223000');
-  assert.equal(pending.name, 'web_projects_foundation');
-  assert.equal(pending.production_status, 'not_applied');
-  assert.equal(pending.remote_applied_timestamp, null);
-  assert.equal(pending.original_source_version, pending.version);
-  assert.equal(pending.original_source_filename, pending.canonical_repository_filename);
-  assert.equal(createHash('sha256').update(readFileSync(resolve(root, pending.canonical_repository_filename))).digest('hex'), pending.sha256);
+test('registered Web Projects migration keeps historical applied provenance', () => {
+  assert.equal(manifest.length, 23);
+  assert.equal(manifest.slice(0, 20).length, 20);
+  assert.ok(manifest.every((entry) => entry.production_status === 'applied'));
+  assert.ok(webProjects);
+  assert.equal(manifest[20], webProjects);
+  assert.equal(webProjects.version, '20261120223000');
+  assert.equal(webProjects.name, 'web_projects_foundation');
+  assert.equal(webProjects.production_status, 'applied');
+  assert.equal(webProjects.remote_applied_timestamp, '20261120223727');
+  assert.equal(webProjects.original_source_version, webProjects.version);
+  assert.equal(webProjects.original_source_filename, webProjects.canonical_repository_filename);
+  assert.equal(createHash('sha256').update(readFileSync(resolve(root, webProjects.canonical_repository_filename))).digest('hex'), webProjects.sha256);
 });
 
 test('legacy Internal Teams permissions remain eight-key; only admin fixture grant appends the false feature bit', () => {
