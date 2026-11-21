@@ -343,7 +343,7 @@ test.describe('disposable local Auth', () => {
         await expect(page.locator('#admin-email')).toBeVisible();
         await expect(page.locator('.auth-story')).toBeVisible();
         await assertAuthPageFits(page, 1440);
-        await expect(page.locator('.phantom-network__line').last()).toHaveCSS('stroke-dashoffset', '0px');
+        await expect(page.locator('.auth-hive-trace').last()).toHaveCSS('stroke-dashoffset', '0px');
         if (designShotDir) await page.screenshot({ path: path.join(designShotDir, 'admin-login-ar-light.png'), animations: 'disabled' });
         await page.locator('.language-toggle').click();
         await expect(page.locator('html')).toHaveAttribute('lang', 'en');
@@ -352,7 +352,7 @@ test.describe('disposable local Auth', () => {
         await page.reload({ waitUntil: 'domcontentloaded' });
         await expect(page.locator('html')).toHaveAttribute('lang', 'en');
         await expect(page.locator('#admin-email')).toBeVisible();
-        await expect(page.locator('.phantom-network__line').last()).toHaveCSS('stroke-dashoffset', '0px');
+        await expect(page.locator('.auth-hive-trace').last()).toHaveCSS('stroke-dashoffset', '0px');
         if (designShotDir) await page.screenshot({ path: path.join(designShotDir, 'admin-login-en-light.png'), animations: 'disabled' });
         await page.locator('.auth-theme-toggle').click();
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');

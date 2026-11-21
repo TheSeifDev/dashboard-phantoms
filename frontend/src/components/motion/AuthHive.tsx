@@ -30,10 +30,24 @@ const HEX = Array.from({ length: 6 }, (_, index) => {
   return `${(R * 0.9 * Math.cos(angle)).toFixed(2)},${(R * 0.9 * Math.sin(angle)).toFixed(2)}`;
 }).join(' ');
 
+const axial = (q: number, r: number) => ({ x: W * (q + r / 2), y: 1.5 * R * r });
+
+// Three "merge traces" (task approvals, GitHub pushes, team heat) run from the hive's
+// outer corners, 120° apart, through each ring's cell centre into the PHANTOMS core.
+const TRACES = [
+  { id: 'tasks', tone: 1, dq: 1, dr: -1 },
+  { id: 'github', tone: 2, dq: -1, dr: 0 },
+  { id: 'heat', tone: 4, dq: 0, dr: 1 },
+].map((trace, index) => {
+  const nodes = Array.from({ length: RADIUS }, (_, step) => axial(trace.dq * (RADIUS - step), trace.dr * (RADIUS - step)));
+  return { ...trace, delay: 0.7 + index * 0.22, nodes, d: `M ${nodes.map((n) => `${n.x.toFixed(2)} ${n.y.toFixed(2)}`).join(' L ')} L 0 0` };
+});
+
 /**
  * Sign-in hero visual: the team honeycomb. Cells light up as "contributions" land
- * (task approvals + GitHub pushes), heat ripples out from the PHANTOMS core and three
- * glass event chips float around it. Pure SVG + GSAP; respects reduced motion.
+ * (task approvals + GitHub pushes), merge traces draw into the PHANTOMS core with
+ * travelling pulses, heat ripples outward and three glass event chips float around it.
+ * Pure SVG + GSAP (traces draw with CSS so they settle even without JS motion); respects reduced motion.
  */
 export function AuthHive() {
   const root = useRef<HTMLDivElement>(null);
@@ -70,6 +84,18 @@ export function AuthHive() {
       gsap.to('.auth-hive-orbit', { rotate: 360, duration: 40, ease: 'none', repeat: -1, transformOrigin: '50% 50%' });
       gsap.utils.toArray<HTMLElement>('.auth-hive-chip', element).forEach((chip, index) => {
         gsap.to(chip, { y: index % 2 ? 9 : -9, x: index === 1 ? -6 : 4, duration: 3.2 + index * 0.6, ease: 'sine.inOut', repeat: -1, yoyo: true, delay: 1.2 + index * 0.3 });
+      });
+      // Merge pulses: a contribution travels each trace into the core, which "absorbs" it with a pop.
+      const core = element.querySelector('.auth-hive-core');
+      gsap.utils.toArray<SVGCircleElement>('.auth-hive-pulse', element).forEach((pulse, index) => {
+        const start = TRACES[index]?.nodes[0];
+        if (!start) return;
+        const travel = gsap.timeline({ repeat: -1, repeatDelay: 2.4 + index * 0.5, delay: 2.2 + index * 0.9 });
+        travel
+          .fromTo(pulse, { attr: { cx: start.x, cy: start.y }, opacity: 0, scale: 0.6, transformOrigin: '50% 50%' }, { opacity: 1, scale: 1, duration: 0.25, ease: 'power1.out' })
+          .to(pulse, { attr: { cx: 0, cy: 0 }, duration: 1.5, ease: 'power2.in' }, 0)
+          .to(pulse, { opacity: 0, duration: 0.2 }, '>-0.12');
+        if (core) travel.to(core, { scale: 1.07, duration: 0.16, ease: 'power2.out', yoyo: true, repeat: 1 }, '<');
       });
 
       // Pointer parallax on fine pointers: the hive and chips drift at different depths.
@@ -119,6 +145,19 @@ export function AuthHive() {
               {cell.ring > 0 && <polygon className="auth-hive-lit" points={HEX} fill={`url(#authHive${cell.tier})`} data-ring={cell.ring} />}
             </g>
           ))}
+          <g className="auth-hive-traces">
+            {TRACES.map((trace) => (
+              <g key={trace.id} className="auth-hive-branch" data-trace={trace.id} style={{ ['--trace-tone' as string]: `var(--crew-${trace.tone})`, ['--trace-delay' as string]: `${trace.delay}s` }}>
+                <path className="auth-hive-trace" d={trace.d} pathLength={1} />
+                {trace.nodes.map((node, step) => (
+                  <circle key={step} className="auth-hive-node" cx={node.x.toFixed(2)} cy={node.y.toFixed(2)} r={step === 0 ? 5 : 3.5} style={{ animationDelay: `${trace.delay + step * 0.22}s` }} />
+                ))}
+              </g>
+            ))}
+            {TRACES.map((trace) => (
+              <circle key={trace.id} className="auth-hive-pulse" r="4.5" cx={trace.nodes[0].x.toFixed(2)} cy={trace.nodes[0].y.toFixed(2)} style={{ ['--trace-tone' as string]: `var(--crew-${trace.tone})` }} />
+            ))}
+          </g>
         </svg>
         <div className="auth-hive-core"><PhantomsSymbol size="lg" /></div>
       </div>
