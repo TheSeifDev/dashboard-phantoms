@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the forward manifest preserves provenance and records the applied Owner erasure migration', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 27);
+  assert.equal(forward.length, 29);
   const appUsage = forward[24];
   assert.equal(appUsage.version, '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
@@ -84,6 +84,24 @@ test('the forward manifest preserves provenance and records the applied Owner er
   assert.equal(erasureLockFix.original_source_version, erasureLockFix.version);
   assert.equal(erasureLockFix.original_source_filename, erasureLockFix.canonical_repository_filename);
   assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, erasureLockFix.canonical_repository_filename))).digest('hex'), erasureLockFix.sha256);
+  const realtimeMetadataFix = forward[27];
+  assert.equal(realtimeMetadataFix.version, '20261121142000');
+  assert.equal(realtimeMetadataFix.name, 'owner_member_erasure_realtime_metadata_lock_fix');
+  assert.equal(realtimeMetadataFix.production_status, 'applied');
+  assert.equal(realtimeMetadataFix.remote_applied_timestamp, '20261121142446');
+  assert.equal(realtimeMetadataFix.canonical_repository_filename, 'backend/supabase/migrations/20261121142000_owner_member_erasure_realtime_metadata_lock_fix.sql');
+  assert.equal(realtimeMetadataFix.original_source_version, realtimeMetadataFix.version);
+  assert.equal(realtimeMetadataFix.original_source_filename, realtimeMetadataFix.canonical_repository_filename);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, realtimeMetadataFix.canonical_repository_filename))).digest('hex'), realtimeMetadataFix.sha256);
+  const lockAliasFix = forward[28];
+  assert.equal(lockAliasFix.version, '20261121142709');
+  assert.equal(lockAliasFix.name, 'owner_member_erasure_lock_record_reference_fix');
+  assert.equal(lockAliasFix.production_status, 'applied');
+  assert.equal(lockAliasFix.remote_applied_timestamp, '20261121142709');
+  assert.equal(lockAliasFix.canonical_repository_filename, 'backend/supabase/migrations/20261121142709_owner_member_erasure_lock_record_reference_fix.sql');
+  assert.equal(lockAliasFix.original_source_version, lockAliasFix.version);
+  assert.equal(lockAliasFix.original_source_filename, lockAliasFix.canonical_repository_filename);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, lockAliasFix.canonical_repository_filename))).digest('hex'), lockAliasFix.sha256);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');

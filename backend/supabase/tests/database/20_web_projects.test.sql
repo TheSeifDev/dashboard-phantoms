@@ -426,14 +426,14 @@ SELECT is((SELECT phantoms_brand_permission OR public_showcase_permission FROM p
            WHERE id=phantoms_test.var('wp-p1')::uuid),false,
           'amendment resets brand and showcase permissions to off');
 RESET ROLE;
-SELECT throws_like($$UPDATE public.web_project_agreements SET license_name='tampered'
+SELECT throws_ok($$UPDATE public.web_project_agreements SET license_name='tampered'
   WHERE project_id=phantoms_test.var('wp-p1')::uuid AND version=1$$, '55000',
-  '%APPEND_ONLY_MUTATION_FORBIDDEN%','agreement snapshots are immutable');
-SELECT throws_like($$UPDATE public.web_project_activity_logs SET details='{}'::jsonb
+  'APPEND_ONLY_MUTATION_FORBIDDEN','agreement snapshots are immutable');
+SELECT throws_ok($$UPDATE public.web_project_activity_logs SET details='{}'::jsonb
   WHERE project_id=phantoms_test.var('wp-p1')::uuid$$, '55000',
-  '%APPEND_ONLY_MUTATION_FORBIDDEN%','project activity audit rows are append-only');
-SELECT throws_like($$UPDATE public.web_program_admin_audit SET details='{}'::jsonb$$, '55000',
-  '%APPEND_ONLY_MUTATION_FORBIDDEN%','program-administrator audit rows are append-only');
+  'APPEND_ONLY_MUTATION_FORBIDDEN','project activity audit rows are append-only');
+SELECT throws_ok($$UPDATE public.web_program_admin_audit SET details='{}'::jsonb$$, '55000',
+  'APPEND_ONLY_MUTATION_FORBIDDEN','program-administrator audit rows are append-only');
 SELECT ok(NOT has_table_privilege('anon','public.web_projects','SELECT')
           AND NOT has_table_privilege('service_role','public.web_projects','SELECT')
           AND has_table_privilege('authenticated','public.web_projects','SELECT'),

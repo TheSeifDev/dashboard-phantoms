@@ -3,7 +3,7 @@
 -- Catalog-only assertions avoid reading or mutating any real application rows.
 BEGIN;
 \ir _helpers.psql
-SELECT plan(19);
+SELECT plan(20);
 
 SELECT ok(EXISTS (
   SELECT 1
@@ -187,6 +187,17 @@ SELECT ok(EXISTS (
       AND t.tgname='member_infinite_bonus_events_immutable' AND NOT t.tgisinternal
       AND (t.tgtype & 1)=0 AND (t.tgtype & 8)=8 AND (t.tgtype & 16)=16 AND (t.tgtype & 32)=32
   ), 'bonus statement guard is private, pinned, and covers UPDATE/DELETE/TRUNCATE');
+
+SELECT ok(EXISTS (
+  SELECT 1 FROM pg_catalog.pg_proc AS p JOIN pg_catalog.pg_namespace AS n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.proname='owner_member_erasure_execute_database'
+    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%LOCK TABLE public.members,public.member_auth_bindings%'
+    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%public.web_project_integrations,public.web_idea_reviews,storage.objects%'
+    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%AND NOT (ns.nspname=''_realtime'' AND rel.relname IN (''extensions'',''feature_flags''))%'
+    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%rel.relkind IN (''r'',''p'')%'
+    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%r.nspname,r.relname%'
+    AND pg_catalog.pg_get_functiondef(p.oid) NOT ILIKE '%r.nspname,rel.relname%'
+), 'erasure executor keeps application/Storage locks and excludes only the named Realtime metadata tables');
 
 SELECT ok(NOT EXISTS (
   SELECT 1 FROM pg_catalog.pg_proc AS p JOIN pg_catalog.pg_namespace AS n ON n.oid=p.pronamespace

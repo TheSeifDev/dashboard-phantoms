@@ -268,5 +268,25 @@
     "remote_applied_timestamp": "20261121140809",
     "original_source_version": "20261121135000",
     "original_source_filename": "backend/supabase/migrations/20261121135000_owner_member_erasure_pg17_lock_scope_fix.sql"
+  },
+  {
+    "version": "20261121142000",
+    "name": "owner_member_erasure_realtime_metadata_lock_fix",
+    "canonical_repository_filename": "backend/supabase/migrations/20261121142000_owner_member_erasure_realtime_metadata_lock_fix.sql",
+    "sha256": "0116cb13f03a390a7bb384248c48f39f0c16a7e62c4f92a16a4fe1495471627b",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261121142446",
+    "original_source_version": "20261121142000",
+    "original_source_filename": "backend/supabase/migrations/20261121142000_owner_member_erasure_realtime_metadata_lock_fix.sql"
+  },
+  {
+    "version": "20261121142709",
+    "name": "owner_member_erasure_lock_record_reference_fix",
+    "canonical_repository_filename": "backend/supabase/migrations/20261121142709_owner_member_erasure_lock_record_reference_fix.sql",
+    "sha256": "99b90ea5d243a37e0f2dd4937271761dcd665bc34b3fd58ea945c0ecfc560aa5",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261121142709",
+    "original_source_version": "20261121142709",
+    "original_source_filename": "backend/supabase/migrations/20261121142709_owner_member_erasure_lock_record_reference_fix.sql"
   }
 ]

@@ -27,6 +27,8 @@ const appliedMemberFiles = ['20261121002000_member_profile_settings.sql', '20261
 const appliedOwnerErasureFiles = [
   '20261121110000_owner_member_erasure.sql',
   '20261121135000_owner_member_erasure_pg17_lock_scope_fix.sql',
+  '20261121142000_owner_member_erasure_realtime_metadata_lock_fix.sql',
+  '20261121142709_owner_member_erasure_lock_record_reference_fix.sql',
 ];
 
 function fixture() {
@@ -103,6 +105,20 @@ test('repository retains 24 initialized files and registers the applied Owner er
   assert.equal(erasureLockFix.original_source_version, erasureLockFix.version);
   assert.equal(erasureLockFix.original_source_filename, erasureLockFix.canonical_repository_filename);
   assert.equal(erasureLockFix.sha256, createHash('sha256').update(readFileSync(join(root, erasureLockFix.canonical_repository_filename))).digest('hex'));
+  const realtimeMetadataFix = entries.find(({ version }) => version === '20261121142000');
+  assert.ok(realtimeMetadataFix, 'missing Realtime metadata lock-scope migration registration');
+  assert.equal(realtimeMetadataFix.name, 'owner_member_erasure_realtime_metadata_lock_fix');
+  assert.equal(realtimeMetadataFix.production_status, 'applied');
+  assert.equal(realtimeMetadataFix.remote_applied_timestamp, '20261121142446');
+  assert.equal(realtimeMetadataFix.canonical_repository_filename, 'backend/supabase/migrations/20261121142000_owner_member_erasure_realtime_metadata_lock_fix.sql');
+  assert.equal(realtimeMetadataFix.sha256, createHash('sha256').update(readFileSync(join(root, realtimeMetadataFix.canonical_repository_filename))).digest('hex'));
+  const lockAliasFix = entries.find(({ version }) => version === '20261121142709');
+  assert.ok(lockAliasFix, 'missing Owner erasure lock-record reference correction registration');
+  assert.equal(lockAliasFix.name, 'owner_member_erasure_lock_record_reference_fix');
+  assert.equal(lockAliasFix.production_status, 'applied');
+  assert.equal(lockAliasFix.remote_applied_timestamp, '20261121142709');
+  assert.equal(lockAliasFix.canonical_repository_filename, 'backend/supabase/migrations/20261121142709_owner_member_erasure_lock_record_reference_fix.sql');
+  assert.equal(lockAliasFix.sha256, createHash('sha256').update(readFileSync(join(root, lockAliasFix.canonical_repository_filename))).digest('hex'));
   assert.equal(entries[0].version, forwardVersion);
   assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
   assert.equal(entries[0].production_status, 'applied');

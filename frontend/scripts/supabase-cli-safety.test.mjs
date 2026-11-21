@@ -30,14 +30,14 @@ function runCheck() {
   });
 }
 
-test('local inventory retains twenty-seven applied forwards including exact app-use and Owner-erasure timestamps', () => {
+test('local inventory retains twenty-nine applied forwards including exact app-use and Owner-erasure timestamps', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
-  assert.equal(applied, 27);
+  assert.equal(applied, 29);
   const appUsage = entries.find((entry) => entry.version === '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
   assert.equal(appUsage.production_status, 'applied');
@@ -56,6 +56,18 @@ test('local inventory retains twenty-seven applied forwards including exact app-
   assert.equal(erasureLockFix?.remote_applied_timestamp, '20261121140809');
   assert.equal(erasureLockFix?.canonical_repository_filename, 'backend/supabase/migrations/20261121135000_owner_member_erasure_pg17_lock_scope_fix.sql');
   assert.equal(createHash('sha256').update(readFileSync(resolve(repoRoot, erasureLockFix.canonical_repository_filename))).digest('hex'), erasureLockFix.sha256);
+  const realtimeMetadataFix = entries.find((entry) => entry.version === '20261121142000');
+  assert.equal(realtimeMetadataFix?.name, 'owner_member_erasure_realtime_metadata_lock_fix');
+  assert.equal(realtimeMetadataFix?.production_status, 'applied');
+  assert.equal(realtimeMetadataFix?.remote_applied_timestamp, '20261121142446');
+  assert.equal(realtimeMetadataFix?.canonical_repository_filename, 'backend/supabase/migrations/20261121142000_owner_member_erasure_realtime_metadata_lock_fix.sql');
+  assert.equal(createHash('sha256').update(readFileSync(resolve(repoRoot, realtimeMetadataFix.canonical_repository_filename))).digest('hex'), realtimeMetadataFix.sha256);
+  const lockAliasFix = entries.find((entry) => entry.version === '20261121142709');
+  assert.equal(lockAliasFix?.name, 'owner_member_erasure_lock_record_reference_fix');
+  assert.equal(lockAliasFix?.production_status, 'applied');
+  assert.equal(lockAliasFix?.remote_applied_timestamp, '20261121142709');
+  assert.equal(lockAliasFix?.canonical_repository_filename, 'backend/supabase/migrations/20261121142709_owner_member_erasure_lock_record_reference_fix.sql');
+  assert.equal(createHash('sha256').update(readFileSync(resolve(repoRoot, lockAliasFix.canonical_repository_filename))).digest('hex'), lockAliasFix.sha256);
   const posture = readFileSync(resolve(repoRoot, 'backend/supabase/tests/database/01_schema_and_posture.test.sql'), 'utf8');
   const tableAllowlist = posture.match(/SELECT tables_are\('public', ARRAY\[([\s\S]*?)\]/)?.[1];
   assert.ok(tableAllowlist?.includes("'member_app_usage'"), 'new app-use table must be in the exact pgTAP schema allowlist');
