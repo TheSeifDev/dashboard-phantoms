@@ -453,3 +453,6 @@ verify_jwt = true
 # This handler verifies bearer identity and Admin permission itself; the gateway must let browser OPTIONS preflight reach it.
 [functions.member-password-enrollment]
 verify_jwt = false
+
+[functions.owner-member-erasure]
+verify_jwt = true

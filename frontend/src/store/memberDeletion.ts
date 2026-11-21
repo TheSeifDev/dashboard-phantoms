@@ -52,8 +52,8 @@ function failureCopy(code: MemberDeletionErrorCode): DeletionCopy {
       };
     case 'member_delete_dependency_invitations':
       return {
-        arabic: 'مينفعش نحذف العضو لأن له سجل دعوات محفوظ. احتفظ بسجل الدعوات واستخدم إجراءً معتمدًا بدل الحذف.',
-        english: 'The member cannot be deleted because saved invitation history still references the member. Preserve that history and use an approved lifecycle action instead.',
+        arabic: 'الخادم رفض حذف سجل العضو لأن دعوة محفوظة ما زالت مرتبطة به. لم يُحذف سجل العضو؛ احتفظ بالدعوة ولا تحذفها يدويًا أو تغيّر قيد قاعدة البيانات. راجع إجراء المالك الآمن عند الحاجة.',
+        english: 'The server rejected deletion of the member record because a saved invitation still references it. The member record was not deleted; preserve the invitation and do not delete it manually or change a database constraint. Review the safe owner action if needed.',
       };
     case 'member_delete_dependency_team':
       return {

@@ -24,6 +24,7 @@ const mocks = {
   'components/ui/Button.tsx': { Button: ({ variant: _variant, icon: _icon, children, ...props }) => el('button', props, children) },
   'features/members/customFieldsApi.ts': { formatCustomFieldValue: (_, v) => String(v ?? ''), getMemberCustomFieldValue: (m, f) => m.custom_fields?.[f.id] },
   'features/members/MemberCells.tsx': { DeviceChips: () => null, ReadinessChip: () => null, WorkStatusChip: () => null },
+  'features/members/OwnerMemberErasure.tsx': { OwnerMemberErasure: ({ isOwner }) => isOwner ? el('button', { 'data-testid': 'owner-erasure-preview' }, 'Owner erasure preview') : null },
 };
 const actual = new Set(['features/members/profile-fields.ts', 'features/members/member-profile-display.ts', 'features/members/MemberAcademicDetails.tsx', 'features/members/MemberCards.tsx', 'features/members/MemberProfileFields.tsx', 'features/members/MemberExperiencePreviewPage.tsx', 'features/app-usage/MemberAppUsageDetails.tsx']);
 const modules = new Map();
@@ -81,6 +82,19 @@ test('real card shows canonical specialization, academics, completion and safe l
   for (const value of ['AI', '003001', 'G-1', '003001@batechu.com', 'Required information complete']) assert.ok(text().includes(value), value);
   assert.ok(!text().includes('LEGACY BIO'));
   assert.equal(document.querySelector('a').rel, 'noopener noreferrer');
+});
+test('permanent owner action is collapsed by default and never shown without confirmed owner access', async () => {
+  await mount(el(MemberCards, { members: [member], isOwner: false, onView: () => {}, onEdit: () => {}, onDelete: () => {} }));
+  assert.equal(document.querySelector('details'), null);
+  assert.equal(document.querySelector('[data-testid="owner-erasure-preview"]'), null);
+
+  await unmount();
+  await mount(el(MemberCards, { members: [member], isOwner: true, onView: () => {}, onEdit: () => {}, onDelete: () => {} }));
+  const details = document.querySelector('details');
+  assert.ok(details);
+  assert.equal(details.open, false);
+  assert.ok(details.querySelector('summary')?.textContent?.includes('Advanced owner action'));
+  assert.ok(details.querySelector('[data-testid="owner-erasure-preview"]'));
 });
 test('incomplete Arabic card explicitly asks for information rather than guessing specialization', async () => {
   await mount(el(MemberCards, { members: [{ ...member, academic_number: null, specialization: null }], onView: () => {}, onEdit: () => {}, onDelete: () => {} }), 'ar');

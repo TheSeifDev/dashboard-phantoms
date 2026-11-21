@@ -3,7 +3,8 @@ import { formatCustomFieldValue, getMemberCustomFieldValue } from './customField
 import { DeviceChips, ReadinessChip, WorkStatusChip } from './MemberCells';
 import { memberSpecializationLabel } from './member-profile-display';
 import { MemberAcademicDetails, MemberInformationStatus } from './MemberAcademicDetails';
-import { Eye, MapPin, Pencil, Trash2 } from 'lucide-react';
+import { OwnerMemberErasure } from './OwnerMemberErasure';
+import { ChevronDown, Eye, MapPin, Pencil, ShieldAlert, Trash2 } from 'lucide-react';
 import { useLocale } from '../../i18n/useLocale';
 import { MemberAppUsageDetails, type AppUsageDisplay } from '../app-usage/MemberAppUsageDetails';
 
@@ -11,6 +12,8 @@ export function MemberCards({
   members,
   customFields = [],
   appUsage,
+  isOwner = false,
+  currentOwnerUserId = null,
   onView,
   onEdit,
   onDelete,
@@ -18,6 +21,8 @@ export function MemberCards({
   members: Member[];
   customFields?: MemberCustomField[];
   appUsage?: Record<number, AppUsageDisplay>;
+  isOwner?: boolean;
+  currentOwnerUserId?: string | null;
   onView: (member: Member) => void;
   onEdit: (member: Member) => void;
   onDelete: (member: Member) => void;
@@ -32,6 +37,7 @@ export function MemberCards({
         return (
           <li
             key={member.id}
+            id={`member-card-${member.id}`}
             className="group flex min-w-0 flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow] hover:border-[color-mix(in_srgb,var(--primary)_40%,var(--border))] hover:shadow-[var(--shadow-md)] sm:p-5"
           >
             <div className="flex items-start gap-3">
@@ -124,12 +130,31 @@ export function MemberCards({
                 type="button"
                 onClick={() => onDelete(member)}
                 className="grid size-11 min-h-0 min-w-0 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2 dark:hover:bg-[var(--danger-soft)]"
-                aria-label={`${t('حذف', 'Delete')} ${member.full_name}`}
-                title={t('مسح العضو', 'Delete member')}
+                aria-label={`${t('حذف سجل العضو فقط', 'Delete profile record only')} ${member.full_name}`}
+                title={t('حذف سجل العضو فقط', 'Delete profile record only')}
               >
                 <Trash2 size={16} aria-hidden="true" />
               </button>
             </div>
+            {isOwner && (
+              <details id={`member-owner-actions-${member.id}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)]">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-3 text-sm font-bold text-[var(--text-2)] hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+                  <span className="inline-flex min-w-0 items-center gap-2">
+                    <ShieldAlert size={16} aria-hidden="true" className="shrink-0 text-[var(--text-muted)]" />
+                    <span className="truncate">{t('إجراء المالك المتقدم', 'Advanced owner action')}</span>
+                  </span>
+                  <ChevronDown size={16} aria-hidden="true" className="shrink-0 text-[var(--text-muted)]" />
+                </summary>
+                <div className="grid gap-2 border-t border-[var(--border)] p-3">
+                  <p className="text-xs leading-5 text-[var(--text-muted)]">{t('محو نهائي اختياري للهوية وحساب الدخول والبيانات الشخصية؛ يبدأ بمعاينة من الخادم ويتطلب تأكيدًا صريحًا.', 'Optional permanent erasure of identity, sign-in account, and personal data; starts with a server preview and requires explicit confirmation.')}</p>
+                  <OwnerMemberErasure
+                    member={member}
+                    currentOwnerUserId={currentOwnerUserId}
+                    isOwner={isOwner}
+                  />
+                </div>
+              </details>
+            )}
           </li>
         );
       })}

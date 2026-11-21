@@ -229,6 +229,38 @@ test('server rejection restores visibility and gives an actionable typed reason'
   assert.equal(rawProviderMessage.includes(errorToast?.message ?? ''), false);
 });
 
+test('invitation FK rejection preserves the record and explains the safe next step without provider details', async () => {
+  resetState();
+  useMemberDeletionStore.getState().scheduleDelete(member, async () => {
+    throw new MemberDeletionError('member_delete_dependency_invitations');
+  }, 5000);
+
+  await clock.advance(5000);
+  assert.equal(useMemberDeletionStore.getState().isPendingDelete(member.id), false);
+  const errorToast = latestToast('error');
+  assert.match(errorToast?.message ?? '', /دعوة محفوظة ما زالت مرتبطة/);
+  assert.match(errorToast?.message ?? '', /لم يُحذف سجل العضو/);
+  assert.match(errorToast?.message ?? '', /لا تحذفها يدويًا/);
+  assert.doesNotMatch(errorToast?.message ?? '', /member_password_invitations|23503|private@example\.test/);
+  assert.equal(latestToast('success'), undefined);
+});
+
+test('invitation FK rejection preserves the record and explains the safe next step without provider details', async () => {
+  resetState();
+  useMemberDeletionStore.getState().scheduleDelete(member, async () => {
+    throw new MemberDeletionError('member_delete_dependency_invitations');
+  }, 5000);
+
+  await clock.advance(5000);
+  assert.equal(useMemberDeletionStore.getState().isPendingDelete(member.id), false);
+  const errorToast = latestToast('error');
+  assert.match(errorToast?.message ?? '', /دعوة محفوظة ما زالت مرتبطة/);
+  assert.match(errorToast?.message ?? '', /لم يُحذف سجل العضو/);
+  assert.match(errorToast?.message ?? '', /لا تحذفها يدويًا/);
+  assert.doesNotMatch(errorToast?.message ?? '', /member_password_invitations|23503|private@example\.test/);
+  assert.equal(latestToast('success'), undefined);
+});
+
 test('in-flight request cannot be undone or duplicated; success waits for its response', async () => {
   resetState();
   let finish, calls = 0;
@@ -255,4 +287,24 @@ test('uncertain transport failure never claims the server did not delete the row
   assert.match(latestToast('error')?.message ?? '', /تعذّر تأكيد نتيجة الحذف/);
   assert.doesNotMatch(latestToast('error')?.message ?? '', /ما اتحذفش|private transport detail/);
   assert.equal(latestToast('success'), undefined);
+});
+
+test('legacy member deletion is labeled as profile-row-only, not full account erasure', () => {
+  const membersPage = readFileSync(path.join(frontend, 'src/features/members/MembersPage.tsx'), 'utf8');
+  const memberCards = readFileSync(path.join(frontend, 'src/features/members/MemberCards.tsx'), 'utf8');
+  const toolbar = readFileSync(path.join(frontend, 'src/features/members/MemberToolbar.tsx'), 'utf8');
+  const profileModal = readFileSync(path.join(frontend, 'src/features/members/MemberProfileModal.tsx'), 'utf8');
+  assert.ok(membersPage.includes("title={t('تأكيد حذف سجل العضو'"));
+  assert.ok(membersPage.includes("confirmLabel={t('حذف سجل العضو فقط'"));
+  assert.ok(membersPage.includes('هذا لا يحذف حساب تسجيل الدخول ولا يلغي Admin.'));
+  assert.ok(membersPage.includes('الحذف العادي موقوف لحفظ سجل الدعوات'));
+  assert.ok(membersPage.includes('افتح معاينة المالك الآمنة'));
+  assert.ok(membersPage.includes("member-owner-actions-${memberId}"));
+  assert.ok(membersPage.includes('memberMetrics.incomplete'));
+  assert.ok(toolbar.includes('academic number, group, or specialization'));
+  assert.ok(toolbar.includes('value.information'));
+  assert.ok(memberCards.includes("title={t('حذف سجل العضو فقط'"));
+  assert.ok(memberCards.includes('id={`member-owner-actions-${member.id}`}'));
+  assert.ok(profileModal.includes("t('حذف سجل العضو فقط', 'Delete profile record only')"));
+  assert.doesNotMatch(membersPage, /member_password_invitations|23503|private@example\.test/);
 });

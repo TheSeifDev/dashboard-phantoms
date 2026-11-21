@@ -24,6 +24,7 @@ const appliedTeamMigrations = [
 ];
 const appliedWebProjects = ['20261120223000', 'web_projects_foundation'];
 const appliedMemberFiles = ['20261121002000_member_profile_settings.sql', '20261121003000_member_password_self_recovery.sql'];
+const appliedOwnerErasureFiles = ['20261121110000_owner_member_erasure.sql'];
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'phantoms-forward-inventory-'));
@@ -63,14 +64,14 @@ function withFixture(body) {
   try { body(f); } finally { f.cleanup(); }
 }
 
-test('repository retains 24 initialized files and exact applied forwards including Web Projects and member settings/recovery', () => {
+test('repository retains 24 initialized files and registers the applied Owner erasure migration', () => {
   const result = validateMigrationManifest({ rootDir: root });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, 24);
-  assert.equal(result.forwardEntryCount, 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length + 2);
-  assert.equal(result.migrationFiles.length, 24 + 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length + 2);
+  assert.equal(result.forwardEntryCount, 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length + 2 + appliedOwnerErasureFiles.length);
+  assert.equal(result.migrationFiles.length, 24 + 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length + 2 + appliedOwnerErasureFiles.length);
   const teamFiles = appliedTeamMigrations.map(([, remoteVersion, name]) => `${remoteVersion}_${name}.sql`);
-  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql', '20261118200500_member_password_optional_join_email.sql', '20261119005000_member_password_owner_join_review.sql', '20261119183000_task_contribution_ledger.sql', ...teamFiles, '20261120223000_web_projects_foundation.sql', ...appliedMemberFiles, '20261121074500_owner_admin_demotion.sql', '20261121090000_member_app_usage.sql']);
+  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql', '20261118200500_member_password_optional_join_email.sql', '20261119005000_member_password_owner_join_review.sql', '20261119183000_task_contribution_ledger.sql', ...teamFiles, '20261120223000_web_projects_foundation.sql', ...appliedMemberFiles, '20261121074500_owner_admin_demotion.sql', '20261121090000_member_app_usage.sql', ...appliedOwnerErasureFiles]);
   const entries = JSON.parse(readFileSync(join(root, FORWARD_MANIFEST_PATH), 'utf8'));
   const appliedMemberTimestamps = new Map([['20261121002000', '20261121003655'], ['20261121003000', '20261121003716']]);
   for (const version of appliedMemberTimestamps.keys()) {
@@ -81,6 +82,15 @@ test('repository retains 24 initialized files and exact applied forwards includi
     assert.equal(entry.original_source_version, entry.version);
     assert.equal(entry.original_source_filename, entry.canonical_repository_filename);
   }
+  const ownerErasure = entries.find(({ version }) => version === '20261121110000');
+  assert.ok(ownerErasure, 'missing Owner erasure migration registration');
+  assert.equal(ownerErasure.name, 'owner_member_erasure');
+  assert.equal(ownerErasure.production_status, 'applied');
+  assert.equal(ownerErasure.remote_applied_timestamp, '20261121133819');
+  assert.equal(ownerErasure.canonical_repository_filename, 'backend/supabase/migrations/20261121110000_owner_member_erasure.sql');
+  assert.equal(ownerErasure.original_source_version, ownerErasure.version);
+  assert.equal(ownerErasure.original_source_filename, ownerErasure.canonical_repository_filename);
+  assert.equal(ownerErasure.sha256, createHash('sha256').update(readFileSync(join(root, ownerErasure.canonical_repository_filename))).digest('hex'));
   assert.equal(entries[0].version, forwardVersion);
   assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
   assert.equal(entries[0].production_status, 'applied');

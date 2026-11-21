@@ -268,7 +268,7 @@ export function MemberProfileModal({
               fullOnMobile
               className="min-h-11 border-[var(--danger-border)] text-[var(--danger)] hover:border-[var(--danger-border)] hover:bg-[var(--danger-soft)] dark:border-[var(--danger-border)] dark:hover:bg-[var(--danger-soft)]"
             >
-              {t('مسح العضو', 'Delete member')}
+              {t('حذف سجل العضو فقط', 'Delete profile record only')}
             </Button>
           )}
         </div>
