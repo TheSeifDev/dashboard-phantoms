@@ -125,7 +125,7 @@ RESET ROLE;
 SELECT phantoms_test.clear_auth();
 
 -- audit log immutability (even as table owner) ----------------------------------
-SELECT throws_like($$DELETE FROM public.member_infinite_bonus_events$$, '%',
+SELECT throws_like($$DELETE FROM public.member_infinite_bonus_events$$, '55000', '%BONUS_AUDIT_IMMUTABLE%',
   'bonus audit log rows cannot be deleted');
 
 SELECT * FROM finish();

@@ -3,7 +3,7 @@
 -- Catalog-only assertions avoid reading or mutating any real application rows.
 BEGIN;
 \ir _helpers.psql
-SELECT plan(18);
+SELECT plan(19);
 
 SELECT ok(EXISTS (
   SELECT 1
@@ -172,6 +172,21 @@ SELECT ok((
   WHERE n.nspname='public' AND p.proname LIKE 'owner_member_erasure_%'
     AND p.proname<>'owner_member_erasure_json_has_identity'
 ), 'all privileged erasure RPCs use SECURITY DEFINER with an empty search_path');
+
+SELECT ok(EXISTS (
+  SELECT 1 FROM pg_catalog.pg_proc AS p JOIN pg_catalog.pg_namespace AS n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.proname='member_bonus_audit_statement_guard'
+    AND p.prosecdef AND p.proconfig @> ARRAY['search_path=""']
+    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%owner_member_erasure_operations%'
+    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%public.is_owner()%'
+    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%BONUS_AUDIT_IMMUTABLE%'
+) AND NOT has_function_privilege('authenticated','public.member_bonus_audit_statement_guard()','EXECUTE')
+  AND EXISTS (
+    SELECT 1 FROM pg_catalog.pg_trigger AS t
+    WHERE t.tgrelid='public.member_infinite_bonus_events'::regclass
+      AND t.tgname='member_infinite_bonus_events_immutable' AND NOT t.tgisinternal
+      AND (t.tgtype & 1)=0 AND (t.tgtype & 8)=8 AND (t.tgtype & 16)=16 AND (t.tgtype & 32)=32
+  ), 'bonus statement guard is private, pinned, and covers UPDATE/DELETE/TRUNCATE');
 
 SELECT ok(NOT EXISTS (
   SELECT 1 FROM pg_catalog.pg_proc AS p JOIN pg_catalog.pg_namespace AS n ON n.oid=p.pronamespace

@@ -315,17 +315,17 @@ SELECT phantoms_test.clear_auth();
 -- The append-only trigger is a second layer behind revoked table privileges.
 SELECT throws_like(
   $$UPDATE public.task_contribution_events SET occurred_at = occurred_at
-    WHERE task_id = phantoms_test.var('ledger_main_task')::BIGINT$$,
-  '%TASK_CONTRIBUTION_LEDGER_APPEND_ONLY%', 'even privileged row updates cannot rewrite ledger history'
+    WHERE task_id = phantoms_test.var('ledger_main_task')::BIGINT$$, '55000',
+  '%APPEND_ONLY_MUTATION_FORBIDDEN%', 'even privileged row updates cannot rewrite ledger history'
 );
 SELECT throws_like(
   $$DELETE FROM public.task_contribution_events
-    WHERE task_id = phantoms_test.var('ledger_main_task')::BIGINT$$,
-  '%TASK_CONTRIBUTION_LEDGER_APPEND_ONLY%', 'even privileged row deletes cannot erase ledger history'
+    WHERE task_id = phantoms_test.var('ledger_main_task')::BIGINT$$, '55000',
+  '%APPEND_ONLY_MUTATION_FORBIDDEN%', 'even privileged row deletes cannot erase ledger history'
 );
 SELECT throws_like(
   $$TRUNCATE public.task_contribution_events$$,
-  '%TASK_CONTRIBUTION_LEDGER_APPEND_ONLY%', 'even privileged truncate cannot erase ledger history'
+  '55000', '%APPEND_ONLY_TRUNCATE_FORBIDDEN%', 'even privileged truncate cannot erase ledger history'
 );
 SELECT is((SELECT count(*)::INT FROM public.task_contribution_events
            WHERE task_id = phantoms_test.var('ledger_main_task')::BIGINT),

@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the forward manifest preserves provenance and records the applied Owner erasure migration', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 26);
+  assert.equal(forward.length, 27);
   const appUsage = forward[24];
   assert.equal(appUsage.version, '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
@@ -75,6 +75,15 @@ test('the forward manifest preserves provenance and records the applied Owner er
   assert.equal(ownerErasure.original_source_version, ownerErasure.version);
   assert.equal(ownerErasure.original_source_filename, ownerErasure.canonical_repository_filename);
   assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, ownerErasure.canonical_repository_filename))).digest('hex'), ownerErasure.sha256);
+  const erasureLockFix = forward[26];
+  assert.equal(erasureLockFix.version, '20261121135000');
+  assert.equal(erasureLockFix.name, 'owner_member_erasure_pg17_lock_scope_fix');
+  assert.equal(erasureLockFix.production_status, 'applied');
+  assert.equal(erasureLockFix.remote_applied_timestamp, '20261121140809');
+  assert.equal(erasureLockFix.canonical_repository_filename, 'backend/supabase/migrations/20261121135000_owner_member_erasure_pg17_lock_scope_fix.sql');
+  assert.equal(erasureLockFix.original_source_version, erasureLockFix.version);
+  assert.equal(erasureLockFix.original_source_filename, erasureLockFix.canonical_repository_filename);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, erasureLockFix.canonical_repository_filename))).digest('hex'), erasureLockFix.sha256);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');
