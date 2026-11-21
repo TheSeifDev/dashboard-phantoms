@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ChevronLeft, ChevronRight, CircleMinus, Link2, Settings2, UserCheck, UserPlus, Users, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, CircleMinus, Eye, Link2, Settings2, UserCheck, UserPlus, Users, X } from 'lucide-react';
 import type { Member, MemberInsert } from '../../types/db';
 import { useMembers, useAddMember, useUpdateMember, useDeleteMember } from './api';
 import { useMemberCustomFields } from './customFieldsApi';
@@ -11,7 +11,7 @@ import { CardSkeletons } from '../../components/ui/Skeleton';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { MemberToolbar } from './MemberToolbar';
-import type { MemberFiltersValue } from './MemberToolbar';
+import { EMPTY_MEMBER_FILTERS, type MemberFiltersValue } from './MemberToolbar';
 import { MemberCards } from './MemberCards';
 import { MemberProfileModal } from './MemberProfileModal';
 import { MemberEditor } from './MemberEditor';
@@ -31,6 +31,7 @@ import { useAuthStore } from '../../store/auth';
 import { useAdminAccess } from '../admin/access/api';
 import { useOwnerAppUsage } from '../app-usage/api';
 import type { AppUsageDisplay } from '../app-usage/MemberAppUsageDetails';
+import './member-directory.css';
 const emptyMember: MemberInsert = {
   email: '',
   full_name: '',
@@ -50,14 +51,6 @@ const emptyMember: MemberInsert = {
 
 const PAGE_SIZES = [12, 24, 48] as const;
 const DELETE_UNDO_MS = 5000;
-const EMPTY_MEMBER_FILTERS: MemberFiltersValue = {
-  search: '',
-  work_conditions: 'ALL',
-  device: 'ALL',
-  alexandria: 'ALL',
-  activity: 'ALL',
-  information: 'ALL',
-};
 
 function memberDeletionIssueCopy(code: MemberDeletionErrorCode, t: (arabic: string, english: string) => string) {
   switch (code) {
@@ -164,8 +157,8 @@ export default function MembersPage() {
   }, [query.data]);
 
   const visibleMembers = useMemo(
-    () =>
-      (query.data ?? []).filter((member) => {
+    () => {
+      const filtered = (query.data ?? []).filter((member) => {
         if (pendingDeleteMap[member.id]) return false;
         const term = filters.search.trim().toLowerCase();
         const matchesText = !term || memberSearchText(member).includes(term);
@@ -181,7 +174,22 @@ export default function MembersPage() {
         const matchesInformation = filters.information === 'ALL' ||
           (filters.information === 'COMPLETE' ? informationComplete : !informationComplete);
         return matchesText && matchesWorkConditions && matchesDevice && matchesAlexandria && matchesActivity && matchesInformation;
-      }),
+      });
+      const byName = (left: Member, right: Member) => left.full_name.localeCompare(right.full_name, 'ar');
+      switch (filters.sort) {
+        case 'newest':
+          return [...filtered].sort((left, right) => (right.created_at ?? '').localeCompare(left.created_at ?? ''));
+        case 'oldest':
+          return [...filtered].sort((left, right) => (left.created_at ?? '').localeCompare(right.created_at ?? ''));
+        case 'incomplete':
+          return [...filtered].sort((left, right) => {
+            const gap = Number(hasRequiredMemberInformation(left)) - Number(hasRequiredMemberInformation(right));
+            return gap !== 0 ? gap : byName(left, right);
+          });
+        default:
+          return [...filtered].sort(byName);
+      }
+    },
     [filters, query.data, pendingDeleteMap],
   );
 
@@ -324,175 +332,163 @@ export default function MembersPage() {
   };
 
   return (
-    <section className="flex min-w-0 w-full flex-col gap-4" id="page-members" dir={dir}>
-      {/* Brand Header */}
-      <div className="grid gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex min-w-0 items-center gap-3.5">
-            <span
-              className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--primary-soft)] text-[var(--link)]"
-              aria-hidden="true"
-            >
-              <Users size={24} />
-            </span>
-            <div className="min-w-0">
-              <h1 className="m-0 text-[var(--fs-xl)] font-black text-[var(--text)]">{t("دليل الأعضاء وجاهزيتهم", "Members and readiness")}</h1>
-              <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                {t("حالة الشغل والأجهزة والاستعداد للنزول الميداني —", "Work status, devices, and field readiness —")}{' '}
-                <span className="font-bold tabular-nums text-[var(--link)]">{query.data === undefined || query.isError ? '—' : number(query.data.length)}</span> {t("عضو مسجّل.", "registered members.")}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center">
-            <Button
-              onClick={openNew}
-              icon={<UserPlus size={18} aria-hidden="true" />}
-              variant="primary"
-              className="whitespace-nowrap"
-            >
-              {t('إضافة عضو', 'Add member')}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => setInviteModalOpen(true)}
-              icon={<Link2 size={17} aria-hidden="true" />}
-              className="whitespace-nowrap"
-            >
-              {t('رابط تسجيل عضو', 'Registration link')}
-            </Button>
-          </div>
+    <section className="member-dir" id="page-members" dir={dir}>
+      <header className="member-dir-hero glass-card">
+        <div className="member-dir-hero-copy">
+          <p className="member-dir-eyebrow">
+            <span className="live-dot" aria-hidden="true" />
+            PHANTOMS · {t('دليل الأعضاء', 'MEMBER DIRECTORY')}
+          </p>
+          <h1 className="member-dir-title">{t('دليل الأعضاء وجاهزيتهم', 'Members and readiness')}</h1>
+          <p className="member-dir-subtitle">
+            {t(
+              'حالة الشغل، الأجهزة، الاستعداد للنزول الميداني واكتمال البيانات — كل عضو في بطاقة واحدة واضحة، مع فلاتر سريعة توصل للي محتاجه في ثانية.',
+              'Work status, devices, field readiness and profile completeness — every member in one clear card, with quick filters that get you there in seconds.',
+            )}
+          </p>
+          <ul className="member-dir-chips" aria-label={t('ملخص سريع', 'Quick summary')}>
+            <li data-tone="blue">
+              {t(`${number(memberMetrics.total)} عضو مسجّل`, `${number(memberMetrics.total)} registered`)}
+            </li>
+            <li data-tone="green">
+              {t(`${number(memberMetrics.active)} نشط`, `${number(memberMetrics.active)} active`)}
+            </li>
+            <li data-tone="amber">
+              {t(`${number(memberMetrics.incomplete)} يحتاج بيانات`, `${number(memberMetrics.incomplete)} need info`)}
+            </li>
+          </ul>
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--surface-2)] p-3">
-          <p className="min-w-0 flex-1 text-xs leading-6 text-[var(--text-muted)]">{t('بيانات الدراسة والتواصل ظاهرة في كل بطاقة والملف. العضو يستكمل المعلومات المطلوبة من إعداداته؛ يمكنك تجربة الحقول بأمان دون الدخول بحسابه.', 'Academic and contact information appears in every card and profile. Members complete required information in their Settings; you can safely try the fields without signing in as them.')}</p>
-          <Link to="/admin/members/experience" className="inline-flex min-h-11 items-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--link)]">{t('معاينة وتجربة واجهة العضو', 'Preview member experience')}</Link>
+        <div className="member-dir-actions">
+          <Button onClick={openNew} icon={<UserPlus size={17} aria-hidden="true" />} variant="primary" className="whitespace-nowrap">
+            {t('إضافة عضو', 'Add member')}
+          </Button>
+          <Button variant="secondary" onClick={() => setInviteModalOpen(true)} icon={<Link2 size={16} aria-hidden="true" />} className="whitespace-nowrap">
+            {t('رابط تسجيل عضو', 'Registration link')}
+          </Button>
+          <Button variant="secondary" onClick={() => setCustomFieldsModalOpen(true)} icon={<Settings2 size={16} aria-hidden="true" />} className="whitespace-nowrap">
+            {t('الحقول المخصصة', 'Custom fields')}{customFields.length > 0 ? ` (${number(customFields.length)})` : ''}
+          </Button>
+          <MemberExcelActions members={query.data ?? []} customFields={customFields} />
+          <Link to="/admin/members/experience" className="member-dir-button">
+            <Eye size={16} aria-hidden="true" />
+            {t('معاينة واجهة العضو', 'Preview member experience')}
+          </Link>
         </div>
+      </header>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-3">
-          <span className="text-xs font-bold text-[var(--text-muted)]">
-            {t('إدارة الحقول الإضافية وملفات البيانات', 'Manage custom fields and member data')}
-          </span>
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
-            <Button
-              variant="secondary"
-              onClick={() => setCustomFieldsModalOpen(true)}
-              icon={<Settings2 size={16} aria-hidden="true" />}
-              fullOnMobile
-              className="col-span-2 whitespace-nowrap sm:col-span-1"
-            >
-              {t('الحقول المخصصة', 'Custom fields')}{customFields.length > 0 ? ` (${number(customFields.length)})` : ''}
-            </Button>
-            <MemberExcelActions members={query.data ?? []} customFields={customFields} />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label={t('ملخص دليل الأعضاء', 'Member directory summary')}>
+      <div className="member-dir-stats" aria-label={t('ملخص دليل الأعضاء', 'Member directory summary')}>
         {[
           {
+            key: 'all',
             label: t('كل الأعضاء', 'All members'),
             value: memberMetrics.total,
             Icon: Users,
+            tone: 'blue',
             selected: !hasActiveFilters,
-            onClick: () => setFilters(EMPTY_MEMBER_FILTERS),
+            onClick: () => setFilters({ ...EMPTY_MEMBER_FILTERS, sort: filters.sort }),
           },
           {
+            key: 'active',
             label: t('نشطون', 'Active'),
             value: memberMetrics.active,
             Icon: UserCheck,
+            tone: 'green',
             selected: filters.activity === 'ACTIVE',
             onClick: () => setFilters((current) => ({ ...current, activity: current.activity === 'ACTIVE' ? 'ALL' : 'ACTIVE' })),
           },
           {
+            key: 'incomplete',
             label: t('يلزم استكمال بياناتهم', 'Need information'),
             value: memberMetrics.incomplete,
             Icon: AlertTriangle,
+            tone: 'amber',
             selected: filters.information === 'MISSING',
             onClick: () => setFilters((current) => ({ ...current, information: current.information === 'MISSING' ? 'ALL' : 'MISSING' })),
           },
           {
+            key: 'inactive',
             label: t('غير نشطين', 'Inactive'),
             value: memberMetrics.inactive,
             Icon: CircleMinus,
+            tone: 'red',
             selected: filters.activity === 'INACTIVE',
             onClick: () => setFilters((current) => ({ ...current, activity: current.activity === 'INACTIVE' ? 'ALL' : 'INACTIVE' })),
           },
-        ].map(({ label, value, Icon, selected, onClick }) => (
+        ].map(({ key, label, value, Icon, tone, selected, onClick }) => (
           <button
-            key={label}
+            key={key}
             type="button"
+            className="member-dir-stat"
+            data-tone={tone}
             onClick={onClick}
             disabled={query.data === undefined || query.isError}
             aria-pressed={selected}
-            className={`group min-h-24 min-w-0 rounded-[var(--radius-lg)] border p-4 text-start shadow-[var(--shadow-sm)] transition-[border-color,background-color,box-shadow] hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-md)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none ${selected ? 'border-[var(--primary)] bg-[var(--primary-soft)]' : 'border-[var(--border)] bg-[var(--surface)]'}`}
           >
-            <span className="flex items-start justify-between gap-2">
-              <span className="min-w-0 truncate text-xs font-bold leading-5 text-[var(--text-muted)]">{label}</span>
-              <Icon size={17} aria-hidden="true" className="shrink-0 text-[var(--link)]" />
-            </span>
-            <span className="mt-2 block text-2xl font-black tabular-nums text-[var(--text)]">{query.data === undefined || query.isError ? '—' : number(value)}</span>
+            <span className="member-dir-stat-label">{label}</span>
+            <span className="member-dir-stat-icon" aria-hidden="true"><Icon /></span>
+            <span className="member-dir-stat-value">{query.data === undefined || query.isError ? '—' : number(value)}</span>
           </button>
         ))}
       </div>
 
       {deletionIssue && deletionIssueCopy && (
-        <section className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-[var(--danger-text)] shadow-[var(--shadow-sm)] sm:p-5" role="alert" aria-live="assertive" aria-atomic="true">
-          <div className="flex items-start gap-3">
-            <AlertTriangle size={20} aria-hidden="true" className="mt-0.5 shrink-0" />
-            <div className="grid min-w-0 flex-1 gap-1">
-              <h2 className="text-sm font-black leading-6">{deletionIssueCopy.title}</h2>
-              <p className="text-xs font-semibold text-[var(--text-2)]">{deletionIssue.member.full_name}</p>
-              <p className="text-sm leading-6">{deletionIssueCopy.description}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setDeletionIssue(null)}
-              className="grid size-11 shrink-0 place-items-center rounded-lg text-[var(--danger-text)] hover:bg-[var(--surface)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2"
-              aria-label={t('إغلاق التنبيه', 'Dismiss alert')}
-            >
-              <X size={17} aria-hidden="true" />
-            </button>
+        <section className="member-dir-notice" role="alert" aria-live="assertive" aria-atomic="true">
+          <AlertTriangle size={18} aria-hidden="true" className="mt-0.5 shrink-0" />
+          <div className="grid min-w-0 flex-1 gap-1">
+            <h2>{deletionIssueCopy.title}</h2>
+            <p className="text-xs font-bold text-[var(--text-2)]">{deletionIssue.member.full_name}</p>
+            <p>{deletionIssueCopy.description}</p>
+            {deletionIssue.code === 'member_delete_dependency_invitations' && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {isOwner ? (
+                  <>
+                    <p className="text-xs leading-5 text-[var(--text-2)]">
+                      {t('فتح معاينة المالك لا يحذف شيئًا. راجع الهدف والأثر أولًا؛ التنفيذ النهائي اختياري ويحتاج تأكيدًا منفصلًا.', 'Opening the owner preview deletes nothing. Review the target and impact first; permanent execution is optional and needs separate confirmation.')}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => openOwnerErasureOptions(deletionIssue.member.id)}
+                      aria-controls={`member-owner-actions-${deletionIssue.member.id}`}
+                      className="member-dir-button"
+                    >
+                      {t('افتح معاينة المالك الآمنة', 'Open safe owner preview')}
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-xs leading-5 text-[var(--text-2)]">
+                    {t('إجراء المعاينة النهائية متاح للمالك فقط. اطلب من Owner مراجعة هذا السجل.', 'The permanent-erasure preview is available to the Owner only. Ask the Owner to review this record.')}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-          {deletionIssue.code === 'member_delete_dependency_invitations' && (
-            <div className="grid gap-2 border-t border-[var(--danger-border)] pt-3 sm:ms-8 sm:flex sm:items-center sm:justify-between">
-              {isOwner ? (
-                <>
-                  <p className="text-xs leading-5 text-[var(--text-2)]">{t('فتح معاينة المالك لا يحذف شيئًا. راجع الهدف والأثر أولًا؛ التنفيذ النهائي اختياري ويحتاج تأكيدًا منفصلًا.', 'Opening the owner preview does not delete anything. Review the exact target and impact first; permanent execution is optional and requires separate confirmation.')}</p>
-                  <button
-                    type="button"
-                    onClick={() => openOwnerErasureOptions(deletionIssue.member.id)}
-                    aria-controls={`member-owner-actions-${deletionIssue.member.id}`}
-                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--danger-border)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--danger-text)] hover:bg-[var(--surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2"
-                  >
-                    {t('افتح معاينة المالك الآمنة', 'Open safe owner preview')}
-                  </button>
-                </>
-              ) : (
-                <p className="text-xs leading-5 text-[var(--text-2)]">{t('إجراء المعاينة النهائية متاح للمالك فقط. اطلب من Owner مراجعة هذا السجل؛ لا تحاول إزالة الدعوة أو تعديل القيد بنفسك.', 'The permanent-erasure preview is available to the Owner only. Ask the Owner to review this record; do not remove the invitation or change the constraint yourself.')}</p>
-              )}
-            </div>
-          )}
+          <button type="button" onClick={() => setDeletionIssue(null)} className="member-dir-dismiss" aria-label={t('إغلاق التنبيه', 'Dismiss alert')}>
+            <X size={16} aria-hidden="true" />
+          </button>
         </section>
       )}
 
       <MemberJoinReviewQueue />
 
-      {isOwner && usageQuery.isError && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3" role="status"><p className="min-w-0 flex-1 text-xs leading-6 text-[var(--text-muted)]">{t('مؤشر استخدام التطبيق غير متاح حاليًا. لا يعني هذا أن الأعضاء لم يستخدموه؛ يلزم تفعيل schema الجديدة أو إعادة المحاولة.', 'App-use evidence is currently unavailable. This does not mean members have not used it; the new schema must be enabled or the request retried.')}</p><Button variant="secondary" onClick={() => { void usageQuery.refetch(); }}>{t('إعادة المحاولة', 'Retry')}</Button></div>}
+      {isOwner && usageQuery.isError && (
+        <div className="member-dir-notice" role="status">
+          <p className="min-w-0 flex-1">
+            {t('مؤشر استخدام التطبيق غير متاح حاليًا. لا يعني هذا أن الأعضاء لم يستخدموه؛ يلزم تفعيل schema الجديدة أو إعادة المحاولة.', 'App-use evidence is currently unavailable. This does not mean members have not used it; the new schema must be enabled or the request retried.')}
+          </p>
+          <Button variant="secondary" onClick={() => { void usageQuery.refetch(); }}>{t('إعادة المحاولة', 'Retry')}</Button>
+        </div>
+      )}
 
-      {/* Filters Section */}
-      <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-sm)] sm:p-4">
-        <MemberToolbar
-          workConditions={workConditions}
-          value={filters}
-          onChange={setFilters}
-          resultCount={visibleMembers.length}
-          totalCount={query.data?.length ?? 0}
-        />
-      </div>
+      <MemberToolbar
+        workConditions={workConditions}
+        value={filters}
+        onChange={setFilters}
+        resultCount={visibleMembers.length}
+        totalCount={query.data?.length ?? 0}
+      />
 
-      {/* Main Content Area */}
-      <div className="min-w-0 w-full rounded-[var(--radius-lg)] bg-transparent">
+      <div className="min-w-0 w-full">
         {query.isLoading ? (
           <div className="py-6">
             <CardSkeletons count={6} />
@@ -508,81 +504,70 @@ export default function MembersPage() {
           </div>
         ) : visibleMembers.length ? (
           <>
-            <div className="mb-4">
-              <MemberCards
-                members={pageMembers}
-                customFields={customFields}
-                appUsage={appUsage}
-                isOwner={isOwner}
-                currentOwnerUserId={ownerId}
-                onView={setDrawerMember}
-                onEdit={openEdit}
-                onDelete={askDelete}
-              />
-            </div>
+            <MemberCards
+              members={pageMembers}
+              customFields={customFields}
+              appUsage={appUsage}
+              isOwner={isOwner}
+              currentOwnerUserId={ownerId}
+              onView={setDrawerMember}
+              onEdit={openEdit}
+              onDelete={askDelete}
+            />
 
-            {/* Pagination */}
-            <nav
-              className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-sm)] sm:px-6"
-              aria-label={t('التنقل بين الصفحات', 'Pagination')}
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <label
-                  className="flex items-center gap-2 text-sm font-bold text-[var(--text-muted)]"
-                  htmlFor="member-page-size"
-                >
+            <nav className="member-dir-pagination glass-card mt-3" aria-label={t('التنقل بين الصفحات', 'Pagination')}>
+              <div className="member-dir-pagination-group">
+                <label className="flex items-center gap-2 text-xs font-bold text-[var(--text-muted)]" htmlFor="member-page-size">
                   {t('لكل صفحة', 'Per page')}
                   <select
                     id="member-page-size"
                     value={pageSize}
                     onChange={(event) => setPageSize(Number(event.target.value))}
-                    className="h-[var(--touch)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm font-bold text-[var(--text)] outline-none focus-visible:border-[var(--primary)]"
+                    className="member-dir-page-size"
                   >
                     {PAGE_SIZES.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
+                      <option key={size} value={size}>{size}</option>
                     ))}
                   </select>
                 </label>
-                <p className="text-sm font-bold tabular-nums text-[var(--text-muted)]" role="status">
+                <p role="status">
                   {t('عرض', 'Showing')} {number(rangeStart)}–{number(rangeEnd)} {t('من', 'of')} {number(visibleMembers.length)}
                 </p>
               </div>
-              <span className="flex items-center gap-3">
+              <span className="member-dir-pagination-group">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={safePage === 0}
-                  className="inline-flex size-[var(--touch)] items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2 disabled:opacity-50"
+                  className="member-dir-page-button"
                   aria-label={t('الصفحة السابقة', 'Previous page')}
                 >
-                  {dir === 'rtl' ? <ChevronRight size={18} aria-hidden="true" /> : <ChevronLeft size={18} aria-hidden="true" />}
+                  {dir === 'rtl' ? <ChevronRight size={17} aria-hidden="true" /> : <ChevronLeft size={17} aria-hidden="true" />}
                 </button>
-                <span className="text-sm font-bold tabular-nums text-[var(--text)]" aria-current="page">
+                <p aria-current="page">
                   {t('صفحة', 'Page')} {number(safePage + 1)} {t('من', 'of')} {number(totalPages)}
-                </span>
+                </p>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={safePage >= totalPages - 1}
-                  className="inline-flex size-[var(--touch)] items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--primary)] focus-visible:outline-offset-2 disabled:opacity-50"
+                  className="member-dir-page-button"
                   aria-label={t('الصفحة التالية', 'Next page')}
                 >
-                  {dir === 'rtl' ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+                  {dir === 'rtl' ? <ChevronLeft size={17} aria-hidden="true" /> : <ChevronRight size={17} aria-hidden="true" />}
                 </button>
               </span>
             </nav>
           </>
         ) : hasActiveFilters ? (
-          <div className="py-12">
+          <div className="member-dir-empty">
             <EmptyState
               title={t('لا توجد نتائج مطابقة', 'No matching members')}
               description={t('لم نعثر على أعضاء يطابقون البحث والفلاتر الحالية. امسح الفلاتر أو عدّلها لرؤية المزيد.', 'No members match the current search and filters. Clear or adjust them to see more results.')}
             />
           </div>
         ) : query.data?.length === 0 ? (
-          <div className="grid justify-items-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] bg-[var(--surface)] px-5 py-12 text-center">
+          <div className="member-dir-empty">
             <EmptyState
               title={t('لا يوجد أعضاء بعد', 'No members yet')}
               description={t('ابدأ بإضافة عضو يدويًا أو أنشئ رابط تسجيل ليقدّم العضو بياناته بنفسه.', 'Add a member manually or create a registration link so they can submit their own details.')}
@@ -592,7 +577,7 @@ export default function MembersPage() {
             </Button>
           </div>
         ) : (
-          <div className="py-12">
+          <div className="member-dir-empty">
             <EmptyState
               title={t('لا يوجد أعضاء ظاهرون الآن', 'No members are visible right now')}
               description={t('قد تكون بعض السجلات بانتظار اكتمال إجراء الحذف. حدّث القائمة بعد انتهاء الإجراء.', 'Some records may be pending deletion. Refresh the list after that action completes.')}

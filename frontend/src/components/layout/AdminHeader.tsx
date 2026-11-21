@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, ChevronDown, Command as CommandIcon, Menu, Moon, Search, Sun, X } from 'lucide-react';
+import { Bell, Command as CommandIcon, Menu, Moon, Search, Sun, X } from 'lucide-react';
 import { useLocale } from '../../i18n/useLocale';
 import { LanguageToggle } from '../../i18n/LanguageToggle';
 import { usePendingMemberJoinReviews } from '../../features/members/memberInviteApi';
@@ -32,7 +32,6 @@ const pages: Array<{ path: string; ar: string; en: string; permission?: AdminPer
 export interface ThemeOrigin { x: number; y: number }
 interface AdminHeaderProps {
   path: string;
-  userName: string;
   isDark: boolean;
   drawerOpen?: boolean;
   onToggleTheme: (origin?: ThemeOrigin) => void;
@@ -43,7 +42,7 @@ interface AdminHeaderProps {
 
 const isMac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
 
-export function AdminHeader({ path, userName, isDark, drawerOpen = false, onToggleTheme, onOpenMenu, isOwner = false, permissions = {} }: AdminHeaderProps) {
+export function AdminHeader({ path, isDark, drawerOpen = false, onToggleTheme, onOpenMenu, isOwner = false, permissions = {} }: AdminHeaderProps) {
   const { t, number } = useLocale();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -121,7 +120,7 @@ export function AdminHeader({ path, userName, isDark, drawerOpen = false, onTogg
           <kbd className="kbd workspace-search-kbd" dir="ltr">{mac ? <><CommandIcon size={11} aria-hidden="true" />K</> : 'Ctrl K'}</kbd>
         </button>
         <span className="workspace-tools-divider" aria-hidden="true" />
-        <LanguageToggle />
+        <LanguageToggle iconOnly />
         <button ref={themeButton} type="button" onClick={toggleTheme} className="header-icon header-theme" data-magnetic="0.3" aria-label={isDark ? t('شغّل الوضع الفاتح', 'Use light theme') : t('شغّل الوضع الداكن', 'Use dark theme')}>{isDark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}</button>
         {canMembers && <div className="notification-anchor">
           <button type="button" className="header-icon" data-magnetic="0.3" aria-label={t('طلبات الانضمام', 'Join requests')} aria-expanded={notificationsOpen} aria-controls="join-notifications" onClick={() => setNotificationsOpen((value) => !value)}><Bell size={18} aria-hidden="true" />{typeof reviewCount === 'number' && reviewCount > 0 && <span className="notification-dot" />}</button>
@@ -131,7 +130,6 @@ export function AdminHeader({ path, userName, isDark, drawerOpen = false, onTogg
             <Link to="/admin/members" onClick={() => setNotificationsOpen(false)}>{t('افتح طلبات المراجعة', 'Open review queue')}</Link>
           </section>}
         </div>}
-        <div className="header-account" title={userName}><span className="header-avatar" aria-hidden="true">{userName.trim().charAt(0).toUpperCase() || 'P'}<i className="header-avatar-status" /></span><span className="header-account-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('المشرف', 'Administrator')}</small></span><ChevronDown size={13} aria-hidden="true" className="header-account-chevron" /></div>
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} pages={visiblePages} isDark={isDark} onToggleTheme={() => onToggleTheme()} />
     </header>

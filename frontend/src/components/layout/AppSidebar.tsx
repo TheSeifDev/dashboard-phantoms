@@ -202,9 +202,9 @@ function SidebarLinks({
   const rail = useRailTooltip();
   const id = useId();
   const { pathname } = useLocation();
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set(['العمليات']),
-  );
+  // One group open at a time: opening another closes the previous one instead of
+  // growing the rail past the viewport and forcing a scroll.
+  const [openGroup, setOpenGroup] = useState<string | null>('العمليات');
   const canSee = (item: SidebarLink) =>
     (!item.ownerOnly || isOwner) &&
     (!item.permission || isOwner || permissions[item.permission] === true);
@@ -219,9 +219,7 @@ function SidebarLinks({
 
   useEffect(() => {
     if (!activeGroup) return;
-    setExpandedGroups((current) => current.has(activeGroup)
-      ? current
-      : new Set(current).add(activeGroup));
+    setOpenGroup(activeGroup);
   }, [activeGroup]);
 
   const label = (value: string) => t(value, EN[value] ?? value);
@@ -229,7 +227,7 @@ function SidebarLinks({
     <>
       {visibleGroups.map((group, index) => {
         const homeGroup = group.title === 'نظرة عامة';
-        const expanded = homeGroup || collapsed || expandedGroups.has(group.title);
+        const expanded = homeGroup || collapsed || openGroup === group.title;
         const groupId = `${id}-section-${index}`;
         const links = group.items.map(({ to, label: itemLabel, icon: Icon, end }) => (
           <li key={to}>
@@ -259,12 +257,7 @@ function SidebarLinks({
                 className="app-sidebar-section-toggle"
                 aria-expanded={expanded}
                 aria-controls={groupId}
-                onClick={() => setExpandedGroups((current) => {
-                  const next = new Set(current);
-                  if (next.has(group.title)) next.delete(group.title);
-                  else next.add(group.title);
-                  return next;
-                })}
+                onClick={() => setOpenGroup((current) => (current === group.title ? null : group.title))}
               >
                 <span className="app-sidebar-group-title">{label(group.title)}</span>
                 <ChevronDown className="app-sidebar-section-chevron" size={17} aria-hidden="true" />

@@ -18,7 +18,7 @@ function Sparkline({ values, tone }: { values: number[]; tone: Tone }) {
   const gradient = useId().replace(/:/g, '');
   const line = useRef<SVGPathElement>(null);
   const area = useRef<SVGPathElement>(null);
-  const dot = useRef<SVGCircleElement>(null);
+  const dot = useRef<HTMLSpanElement>(null);
   const width = 120;
   const height = 40;
   const { path, fill, last } = useMemo(() => {
@@ -44,23 +44,30 @@ function Sparkline({ values, tone }: { values: number[]; tone: Tone }) {
       gsap.fromTo(stroke, { strokeDasharray: length, strokeDashoffset: length }, { strokeDashoffset: 0, duration: 1.4, ease: 'power2.inOut', delay: 0.15, clearProps: 'strokeDasharray,strokeDashoffset' });
       if (area.current) gsap.fromTo(area.current, { opacity: 0 }, { opacity: 1, duration: 1.1, delay: 0.6, ease: 'power1.out' });
       if (dot.current) {
-        gsap.fromTo(dot.current, { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.5, delay: 1.35, ease: 'back.out(3)' });
+        gsap.fromTo(dot.current, { scale: 0 }, { scale: 1, duration: 0.5, delay: 1.35, ease: 'back.out(3)' });
       }
     });
     return () => context.revert();
   }, [path]);
   return (
-    <svg className="kpi-spark" data-tone={tone} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
-          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path ref={area} d={fill} fill={`url(#${gradient})`} />
-      <path ref={line} d={path} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      <circle ref={dot} cx={last[0]} cy={last[1]} r="3.2" fill="currentColor" className="kpi-spark-dot" />
-    </svg>
+    <span className="kpi-spark" data-tone={tone} aria-hidden="true">
+      <svg className="kpi-spark-svg" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" focusable="false">
+        <defs>
+          <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path ref={area} d={fill} fill={`url(#${gradient})`} />
+        <path ref={line} d={path} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      {/* A DOM dot stays a perfect circle; an SVG circle inside a stretched viewBox turns into an oval. */}
+      <span
+        ref={dot}
+        className="kpi-spark-dot"
+        style={{ left: `${(last[0] / width) * 100}%`, top: `${(last[1] / height) * 100}%` }}
+      />
+    </span>
   );
 }
 
@@ -82,16 +89,18 @@ function MetricCard({ title, value, detail, icon: Icon, tone, series, deltaLabel
   const Trend = delta < 0 ? TrendingDown : TrendingUp;
   return (
     <article className="kpi-card glass-card" data-tone={tone} data-tilt="4" data-reveal>
-      <div className="kpi-top">
+      <div className="kpi-head">
         <span className="kpi-icon" aria-hidden="true"><Icon size={18} /></span>
         <span className="kpi-title">{title}</span>
-        <span className="kpi-delta" data-trend={delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'}>
-          <Trend size={13} aria-hidden="true" />
-          {deltaLabel(delta)}
-        </span>
       </div>
       <div className="kpi-body">
-        <strong className="kpi-value"><AnimatedNumber value={value} format={number} /></strong>
+        <div className="kpi-value-row">
+          <strong className="kpi-value"><AnimatedNumber value={value} format={number} /></strong>
+          <span className="kpi-delta" data-trend={delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'}>
+            <Trend size={13} aria-hidden="true" />
+            {deltaLabel(delta)}
+          </span>
+        </div>
         <Sparkline values={series} tone={tone} />
       </div>
       <span className="kpi-detail">{detail}</span>

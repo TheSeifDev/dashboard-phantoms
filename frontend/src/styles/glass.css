@@ -41,16 +41,6 @@
   .app-backdrop__blob--2 { top: 28vh; inset-inline-start: -16vmax; background: radial-gradient(circle at 50% 50%, var(--aurora-2), transparent 64%); }
   .app-backdrop__blob--3 { bottom: -20vmax; inset-inline-end: 12vw; background: radial-gradient(circle at 50% 50%, var(--aurora-3), transparent 64%); }
   .app-backdrop__blob--4 { top: 8vh; inset-inline-start: 34vw; width: 30vmax; height: 30vmax; background: radial-gradient(circle at 50% 50%, var(--aurora-4), transparent 66%); }
-  .app-backdrop__grid {
-    position: absolute;
-    inset: -2px;
-    background-image:
-      linear-gradient(var(--grid-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 44px 44px;
-    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 30%, transparent 80%);
-    mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 30%, transparent 80%);
-  }
   .app-backdrop__hex {
     position: absolute;
     inset-inline-end: -40px;
