@@ -1,4 +1,4 @@
-import { Trophy, Medal, Award, User } from 'lucide-react';
+import { Trophy, Medal, Award, Coins, User } from 'lucide-react';
 import type { Member } from '../../types/db';
 import { formatSigned } from '../../lib/arabic';
 
@@ -22,84 +22,89 @@ export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: Ran
   const third = topMembers[2];
 
   const podiumSlots = [
-    { member: second, rank: 2, label: t('المركز الثاني', 'Second place'), colorBg: 'bg-slate-500', borderColor: 'border-slate-300 dark:border-slate-700', icon: Medal, height: 'sm:min-h-[220px]' },
-    { member: first, rank: 1, label: t('المركز الأول', 'First place'), colorBg: 'bg-amber-500', borderColor: 'border-amber-400 dark:border-amber-600', icon: Trophy, height: 'sm:min-h-[250px]' },
-    { member: third, rank: 3, label: t('المركز الثالث', 'Third place'), colorBg: 'bg-amber-700', borderColor: 'border-amber-600 dark:border-amber-800', icon: Award, height: 'sm:min-h-[200px]' },
+    { member: second, rank: 2, label: t('المركز الثاني', 'Second place'), icon: Medal },
+    { member: first, rank: 1, label: t('المركز الأول', 'First place'), icon: Trophy },
+    { member: third, rank: 3, label: t('المركز الثالث', 'Third place'), icon: Award },
   ];
 
   return (
-    <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-3 sm:items-end sm:gap-4">
-      {podiumSlots.map(({ member, rank, label, colorBg, borderColor, icon: Icon, height }) => {
+    <div className="rank-podium">
+      {podiumSlots.map(({ member, rank, label, icon: Icon }) => {
         if (!member) {
           return (
             <article
               key={`empty-${rank}`}
               aria-label={t(`${label}: لا يوجد عضو بعد`, `${label}: no member yet`)}
-              className={`flex flex-col items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-5 text-center text-[var(--text-muted)] ${height}`}
+              className={`rank-empty rank-card--${rank}`}
             >
-              <div className="mb-2 grid size-10 place-items-center rounded-full border border-[var(--border)] opacity-60">
-                <Icon size={18} aria-hidden="true" />
-              </div>
-              <span className="text-xs font-bold">{label}</span>
-              <span className="mt-1 text-[11px]">{t('بانتظار ظهور متصدر', 'Waiting for a leader')}</span>
+              <Icon size={20} aria-hidden="true" />
+              <b>{label}</b>
+              <span>{t('بانتظار ظهور متصدر', 'Waiting for a leader')}</span>
             </article>
           );
         }
+
+        const subLabel = member.completion_rank
+          ? t(`رتبة الإنجاز #${number(member.completion_rank)}`, `Completion rank #${number(member.completion_rank)}`)
+          : t('بدون رتبة إنجاز', 'No completion rank');
 
         return (
           <article
             key={member.id}
             aria-label={t(`${label}: ${member.full_name}`, `${label}: ${member.full_name}`)}
-            className={`group relative flex flex-col justify-between rounded-[var(--radius-lg)] border ${borderColor} bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-md sm:p-5 ${height}`}
+            className={`rank-card rank-card--${rank}`}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className={`inline-flex size-9 shrink-0 items-center justify-center rounded-xl ${colorBg} text-sm font-black text-white shadow-sm`}>
-                {number(rank)}
-              </span>
-              <span className="flex items-center gap-1 text-xs font-bold text-[var(--text-muted)]">
-                <Icon size={14} aria-hidden="true" />
-                {label}
+            <span className="rank-medal" aria-hidden="true">{number(rank)}</span>
+
+            <div className="rank-avatar-wrap">
+              <span className="rank-avatar-glow" aria-hidden="true" />
+              <span className="rank-avatar" aria-hidden="true">
+                {member.full_name ? member.full_name.trim().charAt(0) : <User size={24} />}
               </span>
             </div>
 
-            <div className="my-4 flex min-w-0 flex-col items-center text-center">
-              <div className="mb-2.5 grid size-14 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-lg font-black text-[var(--primary-ink)]" aria-hidden="true">
-                {member.full_name ? member.full_name.trim().charAt(0) : <User size={22} />}
-              </div>
+            <h3 className="rank-name">
               <button
                 type="button"
                 onClick={() => onSelectMember?.(member)}
                 aria-label={t(`اعرض الملف الشخصي لـ ${member.full_name}`, `View ${member.full_name}’s profile`)}
-                className="max-w-full rounded text-base font-black text-[var(--text)] transition-colors hover:text-[var(--primary-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--link)]"
               >
-                <span className="block max-w-full truncate">{member.full_name}</span>
+                {member.full_name}
               </button>
-              <span className="mt-0.5 max-w-full truncate text-xs text-[var(--text-muted)]" dir="ltr">{member.email}</span>
+            </h3>
 
-              <div className="mt-3 inline-flex max-w-full items-center gap-1.5 rounded-xl border border-[var(--primary)]/20 bg-[var(--primary-soft)] px-3 py-1.5 text-sm font-black text-[var(--primary-ink)]">
-                <span className="tabular-nums">{member.bonus_infinite === true ? '∞' : formatSigned(member.totalBonus)}</span>
-                <span className="text-xs font-semibold">{member.bonus_infinite === true ? t('بونص غير محدود', 'Unlimited bonus') : t('نقطة', 'points')}</span>
-              </div>
+            <p className="rank-sub">
+              <Icon size={12} aria-hidden="true" />
+              {subLabel}
+            </p>
+
+            <div className="rank-prize">
+              <span className="rank-prize-badge" aria-hidden="true"><Icon size={13} /></span>
+              <span className="rank-prize-value">
+                <Coins size={15} aria-hidden="true" />
+                {member.bonus_infinite === true ? '∞' : number(member.totalBonus)}
+              </span>
+              <span className="rank-prize-label">
+                {member.bonus_infinite === true ? t('بونص غير محدود', 'Unlimited bonus') : t('نقاط البونص', 'Bonus points')}
+              </span>
             </div>
 
-            <div className="flex items-center gap-2 border-t border-[var(--border)] pt-3">
-              <button
-                type="button"
-                onClick={() => onSelectMember?.(member)}
-                className="min-h-11 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 text-xs font-bold text-[var(--text)] transition-colors hover:bg-[var(--surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--link)]"
-              >
-                {t('الملف الشخصي', 'View profile')}
+            <div className="rank-card-actions">
+              <button type="button" className="rank-btn" onClick={() => onSelectMember?.(member)}>
+                {t('الملف الشخصي', 'Profile')}
               </button>
               {onAdjustBonus && (
                 <button
                   type="button"
+                  className="rank-btn rank-btn--tone"
                   onClick={() => onAdjustBonus(member)}
-                  className="min-h-11 rounded-lg bg-[var(--primary)] px-3 text-xs font-bold text-white transition-colors hover:bg-[var(--primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--link)]"
+                  aria-label={t(`عدّل نقاط ${member.full_name}`, `Adjust ${member.full_name}’s points`)}
                 >
-                  {t('تقييم', 'Evaluate')}
+                  {t('تقييم', 'Award')}
                 </button>
               )}
             </div>
+            <span className="sr-only">{formatSigned(member.totalBonus)}</span>
           </article>
         );
       })}
