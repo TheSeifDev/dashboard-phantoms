@@ -267,6 +267,23 @@ test('Auth runner lists the discovered suite and rejects incomplete final eviden
   assert.match(runner, /PHANTOMS_AUTH_JOIN_INVITE_NOTE/);
 });
 
+test('real Auth enrollment fixture fills the required academic/contact fields only in join mode', () => {
+  const suite = readFileSync(new URL('../e2e/auth-local.spec.ts', import.meta.url), 'utf8');
+  const helperStart = suite.indexOf('async function enrollFromJoin(');
+  const helperEnd = suite.indexOf('\nasync function setPasswordFromActionLink(', helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart);
+  const helper = suite.slice(helperStart, helperEnd);
+  const joinBranch = helper.match(/if \(mode === 'join'\) \{([\s\S]*?)\n  \}/)?.[1];
+  assert.ok(joinBranch, 'profile fields remain restricted to join enrollment, not password-only reset');
+  for (const id of ['full-name', 'phone', 'academic-number', 'academic-group']) {
+    assert.ok(joinBranch.includes(`page.locator('#join-${id}').fill(`), `missing required fixture field: ${id}`);
+  }
+  assert.ok(joinBranch.includes("page.locator('#join-specialization').selectOption('software')"));
+  assert.ok(joinBranch.includes("page.locator('#join-university-email')"));
+  assert.ok(joinBranch.includes('`${academicNumber}@batechu.com`'));
+  assert.ok(joinBranch.includes("toHaveJSProperty('readOnly', true)"));
+});
+
 test('HTTP bridge shutdown closes real connections within the bounded path', async () => {
   const server = createServer((_request, response) => response.end('ok'));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));

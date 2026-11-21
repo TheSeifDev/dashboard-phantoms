@@ -250,7 +250,14 @@ async function enrollFromJoin(
   await expect(emailInput).toBeVisible({ timeout: 30_000 });
   await emailInput.fill(email);
   if (mode === 'join') {
+    const academicNumber = email === existingMemberEmail ? '000101' : email === firstTimeMemberEmail ? '000102' : '000103';
     await page.locator('#join-full-name').fill(options.fullName ?? 'Disposable self-entered member');
+    await page.locator('#join-phone').fill('+201100000101');
+    await page.locator('#join-academic-number').fill(academicNumber);
+    await page.locator('#join-academic-group').fill('AUTH-FIXTURE');
+    await page.locator('#join-specialization').selectOption('software');
+    await expect(page.locator('#join-university-email')).toHaveValue(`${academicNumber}@batechu.com`);
+    await expect(page.locator('#join-university-email')).toHaveJSProperty('readOnly', true);
   }
   const passwords = memberJoinPasswordInputs(page);
   await expect(passwords).toHaveCount(2, { timeout: 10_000 });
