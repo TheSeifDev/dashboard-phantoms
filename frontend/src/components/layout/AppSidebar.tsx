@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FocusEvent, type PointerEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FocusEvent, type PointerEvent, type ReactNode } from 'react';
 import gsap from 'gsap';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -263,9 +263,9 @@ function SidebarLinks({
                 <ChevronDown className="app-sidebar-section-chevron" size={17} aria-hidden="true" />
               </button>
             )}
-            <ul className="app-sidebar-group" id={groupId} hidden={!expanded}>
+            <SidebarGroupList id={groupId} open={expanded}>
               {links}
-            </ul>
+            </SidebarGroupList>
           </section>
         );
       })}
@@ -280,6 +280,76 @@ function canAnimate() {
     && typeof globalThis.getComputedStyle === 'function'
     && typeof globalThis.requestAnimationFrame === 'function'
     && typeof window.matchMedia === 'function';
+}
+
+/**
+ * Group list that grows and shrinks instead of snapping open/closed.
+ * `hidden` is written imperatively so the closing tween can play out before the
+ * list leaves the accessibility tree.
+ */
+const GROUP_ANIM_EVENT = 'phantoms:sidebar-group-anim';
+
+function SidebarGroupList({ id, open, children }: { id: string; open: boolean; children: ReactNode }) {
+  const ref = useRef<HTMLUListElement>(null);
+  const mounted = useRef(false);
+
+  useLayoutEffect(() => {
+    const list = ref.current;
+    if (!list) return;
+    const reduced = !canAnimate() || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reset = () => {
+      list.style.removeProperty('height');
+      list.style.removeProperty('overflow');
+      list.style.removeProperty('opacity');
+      list.style.removeProperty('will-change');
+    };
+
+    if (!mounted.current) {
+      mounted.current = true;
+      list.hidden = !open;
+      return;
+    }
+
+    gsap.killTweensOf(list);
+    if (reduced) {
+      list.hidden = !open;
+      reset();
+      return;
+    }
+
+    list.style.overflow = 'hidden';
+    list.style.willChange = 'height, opacity';
+    const tick = () => { list.dispatchEvent(new CustomEvent(GROUP_ANIM_EVENT, { bubbles: true })); };
+    if (open) {
+      list.hidden = false;
+      gsap.fromTo(
+        list,
+        { height: 0, opacity: 0 },
+        {
+          height: list.scrollHeight,
+          opacity: 1,
+          duration: 0.34,
+          ease: 'power3.out',
+          onUpdate: tick,
+          onComplete: reset,
+        },
+      );
+      return;
+    }
+    gsap.to(list, {
+      height: 0,
+      opacity: 0,
+      duration: 0.24,
+      ease: 'power2.inOut',
+      onUpdate: tick,
+      onComplete: () => {
+        list.hidden = true;
+        reset();
+      },
+    });
+  }, [open]);
+
+  return <ul ref={ref} id={id} className="app-sidebar-group">{children}</ul>;
 }
 
 export function AppSidebar({
@@ -351,8 +421,11 @@ export function AppSidebar({
     mutation?.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
     const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
     resize?.observe(nav);
+    // Group open/close tweens change link positions without resizing the nav, so follow them too.
+    nav.addEventListener(GROUP_ANIM_EVENT, schedule);
     return () => {
       if (typeof window.cancelAnimationFrame === 'function') window.cancelAnimationFrame(frame);
+      nav.removeEventListener(GROUP_ANIM_EVENT, schedule);
       mutation?.disconnect();
       resize?.disconnect();
       if (animated) gsap.killTweensOf(indicator);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ChevronLeft, ChevronRight, CircleMinus, Eye, Link2, Settings2, UserCheck, UserPlus, Users, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, CircleMinus, Eye, Link2, MoreHorizontal, Settings2, UserCheck, UserPlus, Users, X } from 'lucide-react';
 import type { Member, MemberInsert } from '../../types/db';
 import { useMembers, useAddMember, useUpdateMember, useDeleteMember } from './api';
 import { useMemberCustomFields } from './customFieldsApi';
@@ -121,6 +121,7 @@ export default function MembersPage() {
   const [deletionIssue, setDeletionIssue] = useState<{ member: Member; code: MemberDeletionErrorCode } | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<number>(12);
+  const actionsMenuRef = useRef<HTMLDetailsElement>(null);
   const mountedRef = useRef(false);
   const scheduleDelete = useMemberDeletionStore((state) => state.scheduleDelete);
   const pendingDeleteMap = useMemberDeletionStore((state) => state.pendingMap);
@@ -223,6 +224,10 @@ export default function MembersPage() {
     setForm({ ...emptyMember, custom_fields: {} });
     setFormError('');
     setDialogOpen(true);
+  };
+
+  const closeActionsMenu = () => {
+    if (actionsMenuRef.current) actionsMenuRef.current.open = false;
   };
 
   const openEdit = (member: Member) => {
@@ -360,20 +365,35 @@ export default function MembersPage() {
         </div>
 
         <div className="member-dir-actions">
-          <Button onClick={openNew} icon={<UserPlus size={17} aria-hidden="true" />} variant="primary" className="whitespace-nowrap">
+          <Button onClick={openNew} icon={<UserPlus size={17} aria-hidden="true" />} variant="primary" className="member-dir-cta whitespace-nowrap">
             {t('إضافة عضو', 'Add member')}
           </Button>
-          <Button variant="secondary" onClick={() => setInviteModalOpen(true)} icon={<Link2 size={16} aria-hidden="true" />} className="whitespace-nowrap">
-            {t('رابط تسجيل عضو', 'Registration link')}
+          <Button variant="secondary" onClick={() => setInviteModalOpen(true)} icon={<Link2 size={16} aria-hidden="true" />} className="member-dir-cta whitespace-nowrap">
+            {t('رابط التسجيل', 'Registration link')}
           </Button>
-          <Button variant="secondary" onClick={() => setCustomFieldsModalOpen(true)} icon={<Settings2 size={16} aria-hidden="true" />} className="whitespace-nowrap">
-            {t('الحقول المخصصة', 'Custom fields')}{customFields.length > 0 ? ` (${number(customFields.length)})` : ''}
-          </Button>
-          <MemberExcelActions members={query.data ?? []} customFields={customFields} />
-          <Link to="/admin/members/experience" className="member-dir-button">
-            <Eye size={16} aria-hidden="true" />
-            {t('معاينة واجهة العضو', 'Preview member experience')}
-          </Link>
+          <details className="member-dir-menu" ref={actionsMenuRef}>
+            <summary className="member-dir-menu-trigger" aria-label={t('مزيد من إجراءات الدليل', 'More directory actions')}>
+              <MoreHorizontal size={18} aria-hidden="true" />
+              <span>{t('المزيد', 'More')}</span>
+            </summary>
+            <div className="member-dir-menu-panel" onClick={closeActionsMenu}>
+              <p className="member-dir-menu-label">{t('أدوات الدليل', 'Directory tools')}</p>
+              <button
+                type="button"
+                className="member-dir-menu-item"
+                onClick={() => setCustomFieldsModalOpen(true)}
+              >
+                <Settings2 size={16} aria-hidden="true" />
+                <span>{t('الحقول المخصصة', 'Custom fields')}</span>
+                {customFields.length > 0 && <em>{number(customFields.length)}</em>}
+              </button>
+              <MemberExcelActions members={query.data ?? []} customFields={customFields} />
+              <Link to="/admin/members/experience" className="member-dir-menu-item">
+                <Eye size={16} aria-hidden="true" />
+                <span>{t('معاينة واجهة العضو', 'Preview member experience')}</span>
+              </Link>
+            </div>
+          </details>
         </div>
       </header>
 
@@ -382,6 +402,7 @@ export default function MembersPage() {
           {
             key: 'all',
             label: t('كل الأعضاء', 'All members'),
+            note: t('السجل الكامل', 'Whole roster'),
             value: memberMetrics.total,
             Icon: Users,
             tone: 'blue',
@@ -391,6 +412,7 @@ export default function MembersPage() {
           {
             key: 'active',
             label: t('نشطون', 'Active'),
+            note: t('جاهزون للعمل', 'Ready to work'),
             value: memberMetrics.active,
             Icon: UserCheck,
             tone: 'green',
@@ -400,6 +422,7 @@ export default function MembersPage() {
           {
             key: 'incomplete',
             label: t('يلزم استكمال بياناتهم', 'Need information'),
+            note: t('بيانات ناقصة', 'Missing details'),
             value: memberMetrics.incomplete,
             Icon: AlertTriangle,
             tone: 'amber',
@@ -409,13 +432,14 @@ export default function MembersPage() {
           {
             key: 'inactive',
             label: t('غير نشطين', 'Inactive'),
+            note: t('خارج الخدمة', 'Out of service'),
             value: memberMetrics.inactive,
             Icon: CircleMinus,
             tone: 'red',
             selected: filters.activity === 'INACTIVE',
             onClick: () => setFilters((current) => ({ ...current, activity: current.activity === 'INACTIVE' ? 'ALL' : 'INACTIVE' })),
           },
-        ].map(({ key, label, value, Icon, tone, selected, onClick }) => (
+        ].map(({ key, label, note, value, Icon, tone, selected, onClick }) => (
           <button
             key={key}
             type="button"
@@ -425,9 +449,23 @@ export default function MembersPage() {
             disabled={query.data === undefined || query.isError}
             aria-pressed={selected}
           >
-            <span className="member-dir-stat-label">{label}</span>
-            <span className="member-dir-stat-icon" aria-hidden="true"><Icon /></span>
-            <span className="member-dir-stat-value">{query.data === undefined || query.isError ? '—' : number(value)}</span>
+            <span className="member-dir-stat-top">
+              <span className="member-dir-stat-label">{label}</span>
+              <span className="member-dir-stat-icon" aria-hidden="true"><Icon /></span>
+            </span>
+            <span className="member-dir-stat-figure">
+              <span className="member-dir-stat-value">{query.data === undefined || query.isError ? '—' : number(value)}</span>
+              <span className="member-dir-stat-note">{note}</span>
+            </span>
+            <span className="member-dir-stat-meter" aria-hidden="true">
+              <span
+                style={{
+                  width: query.data === undefined || query.isError || !memberMetrics.total
+                    ? '0%'
+                    : `${Math.round((value / memberMetrics.total) * 100)}%`,
+                }}
+              />
+            </span>
           </button>
         ))}
       </div>
