@@ -54,23 +54,23 @@ export function Drawer({
 
   return (
     <div className="fixed inset-0 z-[var(--z-modal)]" role="presentation" dir={dir}>
-      <button type="button" className="absolute inset-0 bg-slate-950/45" onClick={onClose} aria-label={t("اقفل القائمة الجانبية", "Close side panel")} />
+      <button type="button" className="ui-scrim absolute inset-0" style={{ animation: 'app-scrim-in 220ms ease-out' }} onClick={onClose} aria-label={t("اقفل القائمة الجانبية", "Close side panel")} />
       <section
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={label ?? title}
-        className={`absolute inset-y-0 end-0 flex w-full max-w-md min-w-0 flex-col border-s border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-lg)] ${className}`}
-        style={{ animation: 'app-drawer-in 180ms ease' }}
+        className={`ui-drawer absolute inset-y-0 end-0 flex w-full max-w-md min-w-0 flex-col overflow-hidden border-s text-[var(--text)] ${className}`}
+        style={{ ['--drawer-from' as string]: dir === 'rtl' ? '-36px' : '36px' }}
       >
-        <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-[var(--border)] px-4 py-3">
+        <header className="ui-drawer-header flex min-h-16 shrink-0 items-center justify-between gap-4 border-b px-4 py-3">
           <h2 className="min-w-0 flex-1 break-words text-base font-black leading-snug text-[var(--text)]" title={title}>
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--border)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--link)]"
+            className="ui-close grid size-11 shrink-0 place-items-center border text-[var(--text-muted)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--link)]"
             aria-label={t("اقفل", "Close")}
           >
             <X size={20} aria-hidden="true" />

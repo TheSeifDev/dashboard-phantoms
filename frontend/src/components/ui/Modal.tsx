@@ -97,24 +97,24 @@ export const Modal: React.FC<ModalProps> = ({
       <button
         type="button"
         tabIndex={-1}
-        className="absolute inset-0 cursor-default bg-slate-950/55 backdrop-blur-[2px]"
-        style={{ animation: 'app-scrim-in 160ms ease-out' }}
+        className="ui-scrim absolute inset-0 cursor-default"
+        style={{ animation: 'app-scrim-in 220ms ease-out' }}
         onClick={onClose}
         aria-label={t("اقفل النافذة", "Close dialog")}
       />
       <section
         ref={dialogRef}
         tabIndex={-1}
-        className={`relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-lg)] outline-none md:max-h-[calc(100dvh-3rem)] md:rounded-[var(--radius-lg)] ${maxWidths[maxWidth]}`}
-        style={{ animation: 'app-modal-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1)' }}
+        className={`ui-modal relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] border text-[var(--text)] outline-none md:max-h-[calc(100dvh-3rem)] md:rounded-[28px] ${maxWidths[maxWidth]}`}
+        style={{ animation: 'app-modal-in 420ms cubic-bezier(0.2, 0.9, 0.25, 1.15)' }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={subtitle ? subtitleId : undefined}
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3.5 sm:px-6 sm:py-4">
+        <header className="ui-modal-header flex shrink-0 items-start justify-between gap-3 border-b px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-start gap-3">
-            {icon && <span className="mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--link)]" aria-hidden="true">{icon}</span>}
+            {icon && <span className="ui-icon-tile mt-0.5 grid size-10 shrink-0 place-items-center rounded-2xl" aria-hidden="true">{icon}</span>}
             <div className="min-w-0">
               <h2 id={titleId} className="break-words text-base font-black leading-7 sm:text-lg">{title}</h2>
               {subtitle && <p id={subtitleId} className="mt-0.5 break-words text-sm leading-6 text-[var(--text-muted)]">{subtitle}</p>}
@@ -123,7 +123,7 @@ export const Modal: React.FC<ModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--border)] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+            className="ui-close grid size-11 shrink-0 place-items-center border text-[var(--text-muted)] transition-colors"
             aria-label={t("اقفل", "Close")}
           >
             <X size={20} aria-hidden="true" />
@@ -131,7 +131,7 @@ export const Modal: React.FC<ModalProps> = ({
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">{children}</div>
         {footer && (
-          <footer className="shrink-0 border-t border-[var(--border)] bg-[var(--surface)] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-4 sm:pt-4">
+          <footer className="ui-modal-footer shrink-0 border-t px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-4 sm:pt-4">
             {footer}
           </footer>
         )}

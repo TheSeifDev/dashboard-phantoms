@@ -13,7 +13,7 @@ const tones: Record<ChipTone, string> = {
 /** شارة حالة لا تلتف أبداً. */
 export function StatusChip({ tone = 'muted', children, title }: { tone?: ChipTone; children: ReactNode; title?: string }) {
   return (
-    <span title={title} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs font-bold ${tones[tone]}`}>
+    <span title={title} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold backdrop-blur-sm ${tones[tone]}`}>
       {children}
     </span>
   );

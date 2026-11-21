@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from 'react';
-
+/** Frosted glass card with the shared pointer spotlight (driven by MotionLayer). */
 export function Card({ className = '', ...props }: HTMLAttributes<HTMLElement>) {
-  return <section {...props} className={`min-w-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-5 ${className}`} />;
+  return <section {...props} className={`glass-card min-w-0 p-4 sm:p-5 ${className}`} />;
 }

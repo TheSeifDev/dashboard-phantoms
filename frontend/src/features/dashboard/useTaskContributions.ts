@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase/client';
 import {
   requestTaskContributions,
@@ -14,6 +14,8 @@ export function useTaskContributions(year: number, memberId: number | null) {
     queryKey: ['task-contributions', year, memberId],
     queryFn: () => requestTaskContributions(contributionsClient, year, memberId),
     staleTime: 60_000,
+    // Keep the previous year visible while another year loads instead of blanking the dashboard.
+    placeholderData: keepPreviousData,
     retry: false,
   });
 }

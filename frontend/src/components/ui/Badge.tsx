@@ -37,8 +37,8 @@ export const Badge: React.FC<BadgeProps> = ({
   }[size];
 
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border ${variantStyles} ${sizeStyles}`}>
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotStyles}`} />
+    <span className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border backdrop-blur-sm ${variantStyles} ${sizeStyles}`}>
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 shadow-[0_0_0_3px_color-mix(in_srgb,currentColor_16%,transparent)] ${dotStyles}`} />
       <span>{children}</span>
     </span>
   );

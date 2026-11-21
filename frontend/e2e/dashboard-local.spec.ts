@@ -692,10 +692,14 @@ test.describe('disposable local dashboard', () => {
     await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
     const contributions = page.getByTestId('dashboard-contributions');
     await expect(contributions).toBeVisible();
+    // Honeycomb cells are responsive pointy-top hexagons: width scales with the panel (clamped
+    // between 14px and 26px) and height keeps the regular-hexagon ratio of 2/sqrt(3).
     await expect.poll(async () => {
       const box = await contributions.locator('button.dashboard-heatmap-cell').first().boundingBox();
-      return { width: Math.round(box?.width ?? -1), height: Math.round(box?.height ?? -1) };
-    }).toEqual({ width: 10, height: 10 });
+      const width = box?.width ?? -1;
+      const height = box?.height ?? -1;
+      return { widthInRange: width >= 13 && width <= 27, hexRatio: width > 0 && Math.abs(height / width - 2 / Math.sqrt(3)) < 0.05 };
+    }).toEqual({ widthInRange: true, hexRatio: true });
     await expect(contributions.locator('.dashboard-contribution-number')).toHaveText(new Intl.NumberFormat('ar-EG').format(1));
     await expect(contributions.locator('.dashboard-streak strong').first()).toHaveText(new Intl.NumberFormat('ar-EG').format(1));
     await expect(contributions.locator('[data-untracked="true"]').first()).toBeVisible();

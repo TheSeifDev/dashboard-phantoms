@@ -1,0 +1,292 @@
+/*
+ * PHANTOMS Glass — shared surfaces, ambient backdrop and motion-ready primitives.
+ * Opaque semantic tokens stay in tokens.css; everything translucent lives here.
+ */
+@layer base {
+  html { background: var(--bg); }
+  body { background: transparent; }
+  html[lang="en"] h1, html[lang="en"] h2, html[lang="en"] .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
+  ::selection { background: color-mix(in srgb, var(--primary) 22%, transparent); color: var(--text); }
+  :is(input, select, textarea):focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--focus-ring) 16%, transparent);
+  }
+  ::-webkit-scrollbar-thumb { background-color: color-mix(in srgb, var(--text-muted) 32%, transparent); border: 2px solid transparent; background-clip: padding-box; }
+}
+
+@layer components {
+  /* ---------- Ambient backdrop ---------- */
+  .app-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    background:
+      radial-gradient(1200px 700px at 100% -10%, color-mix(in srgb, var(--aurora-1) 60%, transparent), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, color-mix(in srgb, var(--aurora-3) 70%, transparent), transparent 60%),
+      var(--bg);
+  }
+  .app-backdrop__blob {
+    position: absolute;
+    width: 46vmax;
+    height: 46vmax;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 1;
+    will-change: transform;
+  }
+  .app-backdrop__blob--1 { top: -14vmax; inset-inline-end: -8vmax; background: radial-gradient(circle at 40% 40%, var(--aurora-1), transparent 66%); }
+  .app-backdrop__blob--2 { top: 28vh; inset-inline-start: -16vmax; background: radial-gradient(circle at 50% 50%, var(--aurora-2), transparent 64%); }
+  .app-backdrop__blob--3 { bottom: -20vmax; inset-inline-end: 12vw; background: radial-gradient(circle at 50% 50%, var(--aurora-3), transparent 64%); }
+  .app-backdrop__blob--4 { top: 8vh; inset-inline-start: 34vw; width: 30vmax; height: 30vmax; background: radial-gradient(circle at 50% 50%, var(--aurora-4), transparent 66%); }
+  .app-backdrop__grid {
+    position: absolute;
+    inset: -2px;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 30%, transparent 80%);
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 30%, transparent 80%);
+  }
+  .app-backdrop__hex {
+    position: absolute;
+    inset-inline-end: -40px;
+    top: 90px;
+    width: 520px;
+    height: 520px;
+    opacity: .5;
+    color: var(--grid-line);
+    -webkit-mask-image: radial-gradient(circle at 60% 40%, #000 10%, transparent 70%);
+    mask-image: radial-gradient(circle at 60% 40%, #000 10%, transparent 70%);
+  }
+  .route-progress {
+    position: fixed;
+    inset-inline: 0;
+    top: 0;
+    z-index: var(--z-toast);
+    height: 2px;
+    transform-origin: left center;
+    transform: scaleX(0);
+    background: linear-gradient(90deg, var(--crew-1), var(--crew-2), var(--crew-3), var(--crimson));
+    box-shadow: 0 0 12px color-mix(in srgb, var(--crimson) 50%, transparent);
+    pointer-events: none;
+  }
+  [dir="rtl"] .route-progress { transform-origin: right center; }
+
+  /* ---------- Glass primitives ---------- */
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-inset), var(--glass-shadow);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+  .glass-strong {
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-inset), var(--shadow-xl);
+    -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.4)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(calc(var(--glass-blur) * 1.4)) saturate(var(--glass-saturate));
+  }
+  .glass-soft {
+    background: var(--glass-bg-soft);
+    border: 1px solid var(--glass-hairline);
+  }
+  .glass-card {
+    position: relative;
+    isolation: isolate;
+    min-width: 0;
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-inset), var(--glass-shadow);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+  /* Pointer spotlight (positions are written by the SpotlightLayer motion hook). */
+  .glass-card::before,
+  [data-spotlight]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, -40%), var(--spotlight), transparent 55%);
+    opacity: var(--spot, 0);
+    transition: opacity 260ms ease;
+    pointer-events: none;
+  }
+  [data-spotlight] { position: relative; isolation: isolate; }
+  .glass-card:hover::before, [data-spotlight]:hover::before { --spot: 1; }
+  .glass-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-hairline), transparent); border: 0; }
+
+  .icon-orb {
+    display: inline-grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--text);
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-inset), var(--shadow-xs);
+  }
+  .icon-orb svg { width: 18px; height: 18px; stroke-width: 1.8; }
+  .gradient-text {
+    background: linear-gradient(100deg, var(--crew-1), var(--crew-2) 40%, var(--crew-3) 70%, var(--crimson));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 6px;
+    border: 1px solid var(--glass-hairline);
+    background: var(--glass-bg-soft);
+    color: var(--text-muted);
+    font: 600 10px/1 var(--font-mono);
+  }
+  /* workspace.css lives in the nested components.components layer, which loses to this one. */
+  @media (max-width: 900px) { .workspace-search-trigger .kbd { display: none; } }
+  .live-dot { position: relative; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent); }
+  .live-dot::after { content: ""; position: absolute; inset: -4px; border-radius: inherit; border: 1px solid var(--success); animation: live-ping 2.2s var(--ease-out) infinite; }
+  @keyframes live-ping { from { transform: scale(.6); opacity: .9; } to { transform: scale(1.8); opacity: 0; } }
+
+  /* Shimmer skeleton */
+  .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+  }
+  .skeleton-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface) 70%, transparent), transparent);
+    animation: skeleton-sweep 1.4s ease-in-out infinite;
+  }
+  @keyframes skeleton-sweep { to { transform: translateX(100%); } }
+
+  /* Shared button glow + shine (Button component and legacy primary buttons) */
+  .btn-shine { position: relative; overflow: hidden; isolation: isolate; }
+  .btn-shine::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.32) 48%, transparent 62%);
+    transform: translateX(-120%);
+    transition: transform 700ms var(--ease-out);
+    pointer-events: none;
+  }
+  .btn-shine:hover::after { transform: translateX(120%); }
+  .btn-primary-glow {
+    background-image: linear-gradient(135deg, #F0234B, var(--primary) 45%, #B50F31);
+    box-shadow: var(--primary-glow), inset 0 1px 0 rgb(255 255 255 / 0.25);
+  }
+  .btn-primary-glow:hover { box-shadow: 0 14px 34px -8px rgb(220 20 60 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.3); }
+
+  /* Segmented pill control */
+  .seg {
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--glass-bg-soft);
+    border: 1px solid var(--glass-hairline);
+  }
+  .seg button {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 34px;
+    min-inline-size: 0;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: color 200ms ease;
+  }
+  .seg button svg { width: 15px; height: 15px; }
+  .seg button[aria-pressed="true"], .seg button[aria-selected="true"] { color: var(--pill-active-ink); }
+  .seg-thumb {
+    position: absolute;
+    z-index: 0;
+    top: 4px;
+    bottom: 4px;
+    left: 0;
+    width: 0;
+    border-radius: 999px;
+    background: var(--pill-active-bg);
+    box-shadow: var(--shadow-sm);
+  }
+  .seg:not([data-ready="true"]) button[aria-pressed="true"],
+  .seg:not([data-ready="true"]) button[aria-selected="true"] { background: var(--pill-active-bg); }
+}
+
+/*
+ * Legacy surface upgrade: older pages compose cards from Tailwind tokens
+ * (rounded + border + bg-[var(--surface)]). Keep single-class specificity so
+ * hover/state utilities still win, and never touch form controls or buttons.
+ */
+@layer utilities {
+  [class~="bg-[var(--surface)]"]:where([class*="rounded"]):where([class~="border"], [class*="border-"]):where(:not(input, select, textarea, button, option, [role="tooltip"], [role="listbox"], [role="menu"])),
+  [class~="bg-[var(--card)]"]:where([class*="rounded"]):where(:not(input, select, textarea, button, option)),
+  [class~="bg-[var(--surface-elevated)]"]:where([class*="rounded"]):where(:not(input, select, textarea, button, option)) {
+    background-color: var(--glass-bg);
+    box-shadow: var(--glass-inset), var(--glass-shadow);
+  }
+  [class~="border-[var(--border)]"]:where([class~="bg-[var(--surface)]"], [class~="bg-[var(--card)]"]):where([class*="rounded"]):where(:not(input, select, textarea, button, option)) {
+    border-color: var(--glass-border);
+  }
+  /* Sections nested inside cards get a quieter tinted well. */
+  :where([class~="bg-[var(--surface)]"], .glass-card, .glass) [class~="bg-[var(--surface)]"]:where([class*="rounded"]):where(:not(input, select, textarea, button, option)) {
+    background-color: var(--glass-bg-soft);
+    box-shadow: none;
+  }
+  [class~="bg-[var(--surface-2)]"]:where([class*="rounded"]):where(:not(input, select, textarea, option)) {
+    background-color: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  }
+  /* Page wrappers paint the global backdrop instead of a flat color. */
+  [class~="bg-[var(--bg)]"]:where([class~="min-h-screen"], [class~="min-h-dvh"], [class~="min-h-[100dvh]"]) {
+    background-color: transparent;
+  }
+  /* Raised primary actions everywhere. */
+  :where(button, a)[class~="bg-[var(--primary)]"]:where(:not(:disabled)) {
+    background-image: linear-gradient(135deg, #F0234B, var(--primary) 45%, #B50F31);
+    box-shadow: var(--primary-glow), inset 0 1px 0 rgb(255 255 255 / 0.22);
+  }
+  /* Field wells: frosted instead of flat page color. */
+  :is(input, select, textarea)[class~="bg-[var(--bg)]"] {
+    background-color: color-mix(in srgb, var(--bg) 70%, transparent);
+  }
+  :is(input, select, textarea)[class~="bg-[var(--surface)]"] {
+    background-color: color-mix(in srgb, var(--surface) 80%, transparent);
+  }
+}
+
+@media (max-width: 767px) {
+  .app-backdrop__blob { filter: blur(50px); }
+  .app-backdrop__hex { display: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-strong, .glass-card { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--surface); }
+}

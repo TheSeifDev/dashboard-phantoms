@@ -13,22 +13,23 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary: 'border-transparent bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]',
-  secondary: 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]',
-  ghost: 'border-transparent bg-transparent text-[var(--link)] hover:bg-[var(--primary-soft)]',
-  danger: 'border-transparent bg-[var(--danger)] text-[var(--on-danger)] hover:bg-[var(--danger-hover)]',
+  primary: 'ui-btn--primary btn-primary-glow btn-shine border-transparent bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]',
+  secondary: 'ui-btn--secondary border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text)] hover:border-[var(--border-strong)] hover:bg-[var(--surface)]',
+  ghost: 'ui-btn--ghost border-transparent bg-transparent text-[var(--link)] hover:bg-[var(--primary-soft)]',
+  danger: 'ui-btn--danger btn-shine border-transparent bg-[var(--danger)] text-[var(--on-danger)] hover:bg-[var(--danger-hover)]',
 };
 
 export function Button({ variant = 'primary', icon, fullOnMobile = false, isLoading = false, loadingText, className = '', children, disabled, ...props }: ButtonProps) {
   const isDisabled = disabled || isLoading;
   return (
     <button
+      data-magnetic={variant === 'primary' && !isDisabled ? '0.18' : undefined}
       {...props}
       disabled={isDisabled}
       aria-busy={isLoading || undefined}
       aria-disabled={isDisabled || undefined}
       className={twMerge(
-        'inline-flex min-h-[var(--touch)] items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+        'ui-btn inline-flex min-h-[var(--touch)] items-center justify-center gap-2 rounded-full border px-5 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60',
         variants[variant],
         fullOnMobile && 'w-full sm:w-auto',
         className
