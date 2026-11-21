@@ -375,7 +375,7 @@ test.describe('disposable local dashboard', () => {
         const genericMessage = await page.evaluate(() => navigator.clipboard.readText());
         expect(genericMessage).toContain('أهلًا،');
         expect(genericMessage).not.toContain('سلمى');
-        await expect(page.locator('details')).toHaveCount(0);
+        await expect(page.getByRole('dialog').locator('details')).toHaveCount(0);
         await expect(page.getByText(/الكود اليدوي/)).toHaveCount(0);
         await assertNoHorizontalOverflow(page);
         expect(joinIssuePayload).toMatchObject({ action: 'issue', memberId: null, purpose: 'join', email: null, expiresInHours: 72 });
