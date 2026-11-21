@@ -23,10 +23,7 @@
     z-index: -1;
     overflow: hidden;
     pointer-events: none;
-    background:
-      radial-gradient(1200px 700px at 100% -10%, color-mix(in srgb, var(--aurora-1) 60%, transparent), transparent 60%),
-      radial-gradient(900px 600px at -10% 110%, color-mix(in srgb, var(--aurora-3) 70%, transparent), transparent 60%),
-      var(--bg);
+    background: var(--bg);
   }
   .app-backdrop__blob {
     position: absolute;
@@ -60,8 +57,8 @@
     height: 2px;
     transform-origin: left center;
     transform: scaleX(0);
-    background: linear-gradient(90deg, var(--crew-1), var(--crew-2), var(--crew-3), var(--crimson));
-    box-shadow: 0 0 12px color-mix(in srgb, var(--crimson) 50%, transparent);
+    background: var(--primary);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 45%, transparent);
     pointer-events: none;
   }
   [dir="rtl"] .route-progress { transform-origin: right center; }
@@ -111,7 +108,7 @@
   }
   [data-spotlight] { position: relative; isolation: isolate; }
   .glass-card:hover::before, [data-spotlight]:hover::before { --spot: 1; }
-  .glass-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-hairline), transparent); border: 0; }
+  .glass-divider { height: 1px; background: var(--glass-hairline); border: 0; }
 
   .icon-orb {
     display: inline-grid;
@@ -127,10 +124,10 @@
   }
   .icon-orb svg { width: 18px; height: 18px; stroke-width: 1.8; }
   .gradient-text {
-    background: linear-gradient(100deg, var(--crew-1), var(--crew-2) 40%, var(--crew-3) 70%, var(--crimson));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    color: var(--primary);
   }
   .kbd {
     display: inline-flex;
@@ -174,17 +171,18 @@
     position: absolute;
     inset: -1px;
     z-index: -1;
-    background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.32) 48%, transparent 62%);
+    background: none;
     transform: translateX(-120%);
     transition: transform 700ms var(--ease-out);
     pointer-events: none;
   }
   .btn-shine:hover::after { transform: translateX(120%); }
   .btn-primary-glow {
-    background-image: linear-gradient(135deg, #F0234B, var(--primary) 45%, #B50F31);
-    box-shadow: var(--primary-glow), inset 0 1px 0 rgb(255 255 255 / 0.25);
+    background-image: none;
+    background-color: var(--primary);
+    box-shadow: var(--primary-glow), inset 0 1px 0 rgb(255 255 255 / 0.18);
   }
-  .btn-primary-glow:hover { box-shadow: 0 14px 34px -8px rgb(220 20 60 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.3); }
+  .btn-primary-glow:hover { background-color: var(--primary-hover); box-shadow: 0 14px 34px -8px rgb(220 20 60 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.22); }
 
   /* Segmented pill control */
   .seg {
@@ -261,7 +259,8 @@
   }
   /* Raised primary actions everywhere. */
   :where(button, a)[class~="bg-[var(--primary)]"]:where(:not(:disabled)) {
-    background-image: linear-gradient(135deg, #F0234B, var(--primary) 45%, #B50F31);
+    background-image: none;
+    background-color: var(--primary);
     box-shadow: var(--primary-glow), inset 0 1px 0 rgb(255 255 255 / 0.22);
   }
   /* Field wells: frosted instead of flat page color. */
