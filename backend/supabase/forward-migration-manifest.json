@@ -288,5 +288,15 @@
     "remote_applied_timestamp": "20261121142709",
     "original_source_version": "20261121142709",
     "original_source_filename": "backend/supabase/migrations/20261121142709_owner_member_erasure_lock_record_reference_fix.sql"
+  },
+  {
+    "version": "20261121143800",
+    "name": "owner_member_erasure_realtime_schema_lock_exclusion",
+    "canonical_repository_filename": "backend/supabase/migrations/20261121143800_owner_member_erasure_realtime_schema_lock_exclusion.sql",
+    "sha256": "06571a62d3cc65d80c20881676f39b2c187ef39da12d7fd5f71d51be708d6848",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261121144002",
+    "original_source_version": "20261121143800",
+    "original_source_filename": "backend/supabase/migrations/20261121143800_owner_member_erasure_realtime_schema_lock_exclusion.sql"
   }
 ]

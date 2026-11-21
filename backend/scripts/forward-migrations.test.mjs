@@ -29,6 +29,7 @@ const appliedOwnerErasureFiles = [
   '20261121135000_owner_member_erasure_pg17_lock_scope_fix.sql',
   '20261121142000_owner_member_erasure_realtime_metadata_lock_fix.sql',
   '20261121142709_owner_member_erasure_lock_record_reference_fix.sql',
+  '20261121143800_owner_member_erasure_realtime_schema_lock_exclusion.sql',
 ];
 
 function fixture() {
@@ -119,6 +120,17 @@ test('repository retains 24 initialized files and registers the applied Owner er
   assert.equal(lockAliasFix.remote_applied_timestamp, '20261121142709');
   assert.equal(lockAliasFix.canonical_repository_filename, 'backend/supabase/migrations/20261121142709_owner_member_erasure_lock_record_reference_fix.sql');
   assert.equal(lockAliasFix.sha256, createHash('sha256').update(readFileSync(join(root, lockAliasFix.canonical_repository_filename))).digest('hex'));
+  assert.equal(lockAliasFix.original_source_version, lockAliasFix.version);
+  assert.equal(lockAliasFix.original_source_filename, lockAliasFix.canonical_repository_filename);
+  const realtimeSchemaExclusion = entries.find(({ version }) => version === '20261121143800');
+  assert.ok(realtimeSchemaExclusion, 'missing _realtime schema lock-scope correction registration');
+  assert.equal(realtimeSchemaExclusion.name, 'owner_member_erasure_realtime_schema_lock_exclusion');
+  assert.equal(realtimeSchemaExclusion.production_status, 'applied');
+  assert.equal(realtimeSchemaExclusion.remote_applied_timestamp, '20261121144002');
+  assert.equal(realtimeSchemaExclusion.canonical_repository_filename, 'backend/supabase/migrations/20261121143800_owner_member_erasure_realtime_schema_lock_exclusion.sql');
+  assert.equal(realtimeSchemaExclusion.original_source_version, realtimeSchemaExclusion.version);
+  assert.equal(realtimeSchemaExclusion.original_source_filename, realtimeSchemaExclusion.canonical_repository_filename);
+  assert.equal(realtimeSchemaExclusion.sha256, createHash('sha256').update(readFileSync(join(root, realtimeSchemaExclusion.canonical_repository_filename))).digest('hex'));
   assert.equal(entries[0].version, forwardVersion);
   assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
   assert.equal(entries[0].production_status, 'applied');

@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the forward manifest preserves provenance and records the applied Owner erasure migration', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 29);
+  assert.equal(forward.length, 30);
   const appUsage = forward[24];
   assert.equal(appUsage.version, '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
@@ -102,6 +102,15 @@ test('the forward manifest preserves provenance and records the applied Owner er
   assert.equal(lockAliasFix.original_source_version, lockAliasFix.version);
   assert.equal(lockAliasFix.original_source_filename, lockAliasFix.canonical_repository_filename);
   assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, lockAliasFix.canonical_repository_filename))).digest('hex'), lockAliasFix.sha256);
+  const realtimeSchemaExclusion = forward[29];
+  assert.equal(realtimeSchemaExclusion.version, '20261121143800');
+  assert.equal(realtimeSchemaExclusion.name, 'owner_member_erasure_realtime_schema_lock_exclusion');
+  assert.equal(realtimeSchemaExclusion.production_status, 'applied');
+  assert.equal(realtimeSchemaExclusion.remote_applied_timestamp, '20261121144002');
+  assert.equal(realtimeSchemaExclusion.canonical_repository_filename, 'backend/supabase/migrations/20261121143800_owner_member_erasure_realtime_schema_lock_exclusion.sql');
+  assert.equal(realtimeSchemaExclusion.original_source_version, realtimeSchemaExclusion.version);
+  assert.equal(realtimeSchemaExclusion.original_source_filename, realtimeSchemaExclusion.canonical_repository_filename);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, realtimeSchemaExclusion.canonical_repository_filename))).digest('hex'), realtimeSchemaExclusion.sha256);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');
