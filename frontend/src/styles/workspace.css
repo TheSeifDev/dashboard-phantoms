@@ -69,6 +69,7 @@
     transition: background 180ms ease, color 180ms ease;
   }
   .language-toggle:hover { background: var(--surface); color: var(--text); }
+  .language-toggle--icon { width: 44px; min-width: 44px; padding: 0; gap: 0; }
   .workspace-search-trigger {
     position: relative;
     display: flex;
@@ -159,7 +160,8 @@
     .header-icon, .workspace-search-trigger { width: 40px; min-width: 40px; height: 40px; border-color: transparent; background: transparent; box-shadow: none; }
     .header-account { display: none; }
     .language-toggle { min-height: 40px; padding: 0 9px; border-color: transparent; background: transparent; box-shadow: none; font-size: 11px; }
-    .language-toggle svg { display: none; }
+    .language-toggle:not(.language-toggle--icon) svg { display: none; }
+    .language-toggle--icon { width: 40px; min-width: 40px; padding: 0; }
     .notification-popover { position: fixed; inset-inline: 0; top: calc(100% + 10px); width: auto; }
     .cmdk-root { padding-top: 56px; }
     .cmdk-item-hint { display: none; }
@@ -168,6 +170,7 @@
     .workspace-header { gap: 6px; }
     .header-icon, .workspace-search-trigger { width: 36px; min-width: 36px; height: 38px; min-height: 38px; }
     .language-toggle { padding: 0 6px; }
+    .language-toggle--icon { width: 38px; min-width: 38px; padding: 0; }
     .workspace-page-title { max-width: 130px; font-size: 14px; }
   }
   @media (prefers-reduced-motion: reduce) {

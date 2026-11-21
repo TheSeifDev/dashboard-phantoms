@@ -66,7 +66,7 @@ export default function MainLayout() {
       {!isDashboard && <a className="skip-link" href="#workspace-content">{t('انتقل إلى المحتوى الرئيسي', 'Skip to main content')}</a>}
       <AppSidebar userName={userName} isOwner={adminAccess.data?.is_owner === true} permissions={adminAccess.data?.permissions ?? {}} drawerOpen={drawerOpen} onCloseDrawer={closeDrawer} />
       <div className="app-workspace-column flex min-w-0 flex-1 flex-col min-h-[100dvh]">
-        <AdminHeader path={pathname} userName={userName} isDark={theme === 'dark'} drawerOpen={drawerOpen} onToggleTheme={toggleTheme} onOpenMenu={openDrawer} isOwner={adminAccess.data?.is_owner === true} permissions={adminAccess.data?.permissions ?? {}} />
+        <AdminHeader path={pathname} isDark={theme === 'dark'} drawerOpen={drawerOpen} onToggleTheme={toggleTheme} onOpenMenu={openDrawer} isOwner={adminAccess.data?.is_owner === true} permissions={adminAccess.data?.permissions ?? {}} />
         <main ref={content} id="workspace-content" tabIndex={isDashboard ? undefined : -1} className={isDashboard ? 'workspace-content mx-auto w-full max-w-[var(--content-max)] flex-1 px-4 py-5 md:px-7 md:py-6' : 'workspace-content workspace-content--operations mx-auto w-full max-w-[var(--content-max)] flex-1 px-4 py-5 md:px-7 md:py-6'}>
           <Outlet />
         </main>

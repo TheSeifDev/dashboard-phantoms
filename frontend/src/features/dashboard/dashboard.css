@@ -371,17 +371,14 @@ html[lang="ar"] .dashboard-hero-title { letter-spacing: 0; line-height: 1.25; }
 }
 .kpi-card {
   --tone: var(--chart-blue);
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    "icon title title"
-    "body body body"
-    "detail detail delta";
-  align-items: center;
-  gap: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   min-width: 0;
-  padding: 18px 18px 16px;
+  padding: 16px 18px 15px;
   border-radius: var(--radius-xl);
+  /* The tone bloom and the pointer spotlight must stay inside the glass edge. */
+  overflow: hidden;
   transform-style: preserve-3d;
   will-change: transform;
 }
@@ -391,21 +388,18 @@ html[lang="ar"] .dashboard-hero-title { letter-spacing: 0; line-height: 1.25; }
 .kpi-card::after {
   content: "";
   position: absolute;
-  inset-inline-end: -30px;
-  top: -40px;
+  inset-inline-end: -46px;
+  top: -58px;
   z-index: -1;
-  width: 140px;
-  height: 140px;
+  width: 190px;
+  height: 190px;
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in oklab, var(--tone) 18%, transparent), transparent 70%);
+  background: radial-gradient(circle, color-mix(in oklab, var(--tone) 20%, transparent), transparent 68%);
   pointer-events: none;
 }
-.kpi-top { display: contents; }
-.kpi-icon { grid-area: icon; }
-.kpi-title { grid-area: title; }
-.kpi-delta { grid-area: delta; align-self: end; }
-.kpi-body { grid-area: body; }
-.kpi-detail { grid-area: detail; align-self: end; }
+.kpi-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.kpi-body { display: grid; gap: 8px; min-width: 0; }
+.kpi-value-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
 .kpi-icon {
   display: grid;
   width: 36px;
@@ -432,7 +426,7 @@ html[lang="ar"] .dashboard-hero-title { letter-spacing: 0; line-height: 1.25; }
   flex: 0 0 auto;
   align-items: center;
   gap: 4px;
-  min-height: 24px;
+  min-height: 22px;
   padding: 0 8px;
   border-radius: 999px;
   background: var(--glass-bg-soft);
@@ -444,35 +438,40 @@ html[lang="ar"] .dashboard-hero-title { letter-spacing: 0; line-height: 1.25; }
 }
 .kpi-delta[data-trend="up"] { background: var(--success-soft); border-color: var(--success-border); color: var(--success-text); }
 .kpi-delta[data-trend="down"] { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger-text); }
-.kpi-body {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: end;
-  gap: 14px;
-}
 .kpi-value {
   color: var(--text);
   font-family: var(--font-display);
-  font-size: clamp(30px, 3cqi, 40px);
+  font-size: clamp(28px, 2.6cqi, 36px);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .kpi-spark {
+  position: relative;
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 1;
-  max-height: 46px;
-  overflow: visible;
+  height: 34px;
   color: var(--tone);
 }
-.kpi-spark-dot { filter: drop-shadow(0 0 5px var(--tone)); }
+[dir="rtl"] .kpi-spark { transform: scaleX(-1); }
+.kpi-spark-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.kpi-spark-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 999px;
+  background: var(--tone);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--tone) 18%, transparent), 0 0 10px color-mix(in oklab, var(--tone) 60%, transparent);
+  pointer-events: none;
+}
 .kpi-detail {
   color: var(--text-muted);
   font-size: 11.5px;
   line-height: 1.5;
+  min-width: 0;
 }
 
 /* ------------------------------------------------------------------ */

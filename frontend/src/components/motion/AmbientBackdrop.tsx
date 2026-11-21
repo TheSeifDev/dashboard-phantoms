@@ -2,8 +2,8 @@ import { useRef } from 'react';
 import { gsap, useGSAP, prefersReducedMotion } from './gsap';
 
 /**
- * Fixed aurora backdrop behind every screen: four blurred color fields that drift slowly,
- * a fading engineering grid and a honeycomb motif. Pointer parallax on fine pointers.
+ * Fixed aurora backdrop behind every screen: four blurred color fields that drift slowly
+ * plus a faint honeycomb motif. Pointer parallax on fine pointers.
  */
 export function AmbientBackdrop() {
   const root = useRef<HTMLDivElement>(null);
@@ -59,7 +59,6 @@ export function AmbientBackdrop() {
         <span className="app-backdrop__blob app-backdrop__blob--3" />
         <span className="app-backdrop__blob app-backdrop__blob--4" />
       </div>
-      <div className="app-backdrop__grid" />
       <svg className="app-backdrop__hex" viewBox="0 0 520 520" fill="none" stroke="currentColor" strokeWidth="1">
         <defs>
           <pattern id="phantoms-hex-pattern" width="52" height="90" patternUnits="userSpaceOnUse" patternTransform="scale(1)">
