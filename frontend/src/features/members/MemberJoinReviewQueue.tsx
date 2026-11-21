@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Clock3, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Check, CheckCircle2, Clock3, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -62,67 +62,140 @@ export function MemberJoinReviewQueue() {
     }
   };
 
+  const waiting = reviews.length;
+
   return (
     <section
       id="member-join-review-queue"
       data-testid="member-join-review-queue"
       dir={dir}
-      className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-5"
+      className="member-dir-review"
       aria-labelledby="member-join-review-title"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--info-soft)] text-[var(--info)]" aria-hidden="true"><ShieldCheck size={20} /></span>
-          <div className="min-w-0">
-            <h2 id="member-join-review-title" className="m-0 text-base font-black text-[var(--text)]">
-              {t('طلبات انضمام جديدة بانتظار المراجعة', 'New member requests awaiting review')}
-              <span className="ms-2 inline-flex min-w-6 justify-center rounded-full bg-[var(--info-soft)] px-2 py-0.5 text-xs tabular-nums text-[var(--info)]" data-testid="member-join-review-count" role="status" aria-live="polite" aria-label={t(`${reviews.length} طلبات بانتظار المراجعة`, `${reviews.length} requests awaiting review`)}>{reviews.length}</span>
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">{t('لا يظهر الطلب إلا بعد حفظ العضو بياناته وكلمة مروره بنجاح. القائمة تتحدّث تلقائيًا كل 15 ثانية أثناء فتح الصفحة.', 'Requests appear only after the member successfully saves their profile and password. This queue refreshes every 15 seconds while the page is open.')}</p>
-          </div>
+      <header className="member-dir-review-head">
+        <span className="member-dir-review-icon" aria-hidden="true"><ShieldCheck size={17} /></span>
+        <div className="member-dir-review-copy">
+          <h2 id="member-join-review-title" className="member-dir-review-title">
+            {t('طلبات انضمام بانتظار المراجعة', 'Join requests awaiting review')}
+            <span
+              className="member-dir-review-count"
+              data-testid="member-join-review-count"
+              role="status"
+              aria-live="polite"
+              aria-label={t(`${waiting} طلبات بانتظار المراجعة`, `${waiting} requests awaiting review`)}
+            >
+              {waiting}
+            </span>
+          </h2>
+          <p className="member-dir-review-hint">
+            {t(
+              'يظهر الطلب بعد حفظ العضو بياناته وكلمة مروره · تحديث تلقائي كل 15 ثانية',
+              'Requests appear after the member saves their profile and password · refreshes every 15 seconds',
+            )}
+          </p>
         </div>
-        <Button variant="secondary" onClick={() => void reviewsQuery.refetch()} icon={<RefreshCw size={15} aria-hidden="true" />} disabled={reviewsQuery.isFetching} className="whitespace-nowrap">{reviewsQuery.isFetching ? t('جارٍ التحديث…', 'Refreshing…') : t('تحديث الطلبات', 'Refresh requests')}</Button>
-      </div>
+        <button
+          type="button"
+          className="member-dir-review-refresh"
+          onClick={() => { void reviewsQuery.refetch(); }}
+          disabled={reviewsQuery.isFetching}
+          aria-label={t('تحديث الطلبات', 'Refresh requests')}
+          title={t('تحديث الطلبات', 'Refresh requests')}
+        >
+          <RefreshCw size={15} aria-hidden="true" className={reviewsQuery.isFetching ? 'member-dir-spin' : undefined} />
+          <span>{reviewsQuery.isFetching ? t('جارٍ التحديث…', 'Refreshing…') : t('تحديث', 'Refresh')}</span>
+        </button>
+      </header>
 
-      {actionError && <p role="alert" className="m-0 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]">{actionError}</p>}
+      {actionError && <p role="alert" className="member-dir-review-alert">{actionError}</p>}
+
       {reviewsQuery.isLoading && !reviewsQuery.data ? (
-        <p className="m-0 rounded-xl bg-[var(--surface-2)] p-4 text-sm text-[var(--text-muted)]" role="status">{t('جارٍ تحميل طلبات الانضمام…', 'Loading join requests…')}</p>
+        <p className="member-dir-review-empty" role="status">{t('جارٍ تحميل طلبات الانضمام…', 'Loading join requests…')}</p>
       ) : reviewsQuery.isError && !reviewsQuery.data ? (
         <ErrorState message={t('معرفناش نحمّل طلبات الانضمام للمراجعة.', 'Could not load join requests for review.')} onRetry={() => { void reviewsQuery.refetch(); }} />
-      ) : reviews.length ? (
+      ) : waiting ? (
         <>
-          {reviewsQuery.isError && reviewsQuery.data && <p role="alert" className="m-0 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm font-bold text-[var(--text)]">{t('تعذر تحديث الطابور؛ ما زالت الطلبات المحمّلة ظاهرة. حاول التحديث مرة أخرى.', 'Could not refresh the queue. Previously loaded requests are still shown; try refreshing again.')}</p>}
-          <ul className="grid gap-3" aria-label={t('طلبات الانضمام الجديدة', 'New join requests')}>
+          {reviewsQuery.isError && reviewsQuery.data && (
+            <p role="alert" className="member-dir-review-alert">
+              {t('تعذر تحديث الطابور؛ ما زالت الطلبات المحمّلة ظاهرة. حاول التحديث مرة أخرى.', 'Could not refresh the queue. Previously loaded requests are still shown; try refreshing again.')}
+            </p>
+          )}
+          <ul className="member-dir-review-list" aria-label={t('طلبات الانضمام الجديدة', 'New join requests')}>
             {reviews.map((review) => (
-            <li key={review.invitationId} data-testid="member-join-review-item" className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h3 className="m-0 text-base font-black text-[var(--text)]">{review.fullName}</h3>
-                  <p className="mt-1 text-sm text-[var(--text-2)]" dir="ltr">{review.email}</p>
+              <li key={review.invitationId} data-testid="member-join-review-item" className="member-dir-review-item">
+                <div className="member-dir-review-identity">
+                  <span className="member-dir-review-avatar" aria-hidden="true">{review.fullName.trim().charAt(0) || '؟'}</span>
+                  <div className="member-dir-review-identity-copy">
+                    <h3>{review.fullName}</h3>
+                    <p dir="ltr">{review.email}</p>
+                  </div>
+                  <span className="member-dir-review-time">
+                    <Clock3 size={13} aria-hidden="true" />
+                    {formatSubmittedAt(review.submittedAt, locale)}
+                  </span>
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--text-muted)]"><Clock3 size={14} aria-hidden="true" /> {t('أُرسل', 'Submitted')} {formatSubmittedAt(review.submittedAt, locale)}</span>
-              </div>
-              {!review.emailIdentityMatches && <p role="alert" data-testid="member-join-review-email-mismatch" className="m-0 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm font-bold leading-6 text-amber-900 dark:text-amber-100">{t('بريد الحساب الحالي لا يطابق بيانات الدعوة والعضوية. راجع البريد والربط قبل الموافقة؛ التفعيل متوقف لحين تطابق الهوية.', 'The current account email does not match the invitation and membership. Review the email binding before approval; activation is blocked until the identity matches.')}</p>}
-              <dl className="grid grid-cols-1 gap-2 border-t border-[var(--border)] pt-3 text-sm sm:grid-cols-2">
-                <div><dt className="inline font-semibold text-[var(--text-muted)]">{t('الهاتف:', 'Phone:')} </dt><dd className="inline font-bold text-[var(--text-2)]" dir="ltr">{review.phone || '—'}</dd></div>
-                <div><dt className="inline font-semibold text-[var(--text-muted)]">{t('بريد الدعوة:', 'Invitation email:')} </dt><dd className="inline font-bold text-[var(--text-2)]" dir="ltr">{review.invitationEmail}</dd></div>
-                <div><dt className="inline font-semibold text-[var(--text-muted)]">{t('الإقامة:', 'Residence:')} </dt><dd className="inline font-bold text-[var(--text-2)]">{review.residence || '—'}</dd></div>
-                <div><dt className="inline font-semibold text-[var(--text-muted)]">{t('ظروف العمل:', 'Work conditions:')} </dt><dd className="inline font-bold text-[var(--text-2)]">{review.workConditions || '—'}</dd></div>
-                <div><dt className="inline font-semibold text-[var(--text-muted)]">{t('الجهاز:', 'Device:')} </dt><dd className="inline font-bold text-[var(--text-2)]">{review.device || '—'}</dd></div>
-                <div><dt className="inline font-semibold text-[var(--text-muted)]">{t('الجنس:', 'Gender:')} </dt><dd className="inline font-bold text-[var(--text-2)]">{review.gender || '—'}</dd></div>
-                <div className="sm:col-span-2"><dt className="inline font-semibold text-[var(--text-muted)]">{t('نبذة:', 'Bio:')} </dt><dd className="inline whitespace-pre-wrap font-bold text-[var(--text-2)]">{review.bio || '—'}</dd></div>
-              </dl>
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
-                <p className="m-0 text-xs leading-5 text-[var(--text-muted)]">{review.emailIdentityMatches ? t('الحساب غير مفعّل؛ لن يستطيع العضو دخول البوابة قبل موافقتك.', 'Membership is inactive; the member cannot access the portal before your approval.') : t('الحساب غير مفعّل، والموافقة متوقفة حتى مراجعة تطابق البريد.', 'Membership is inactive and approval is blocked until the email match is reviewed.')}</p>
-                <Button variant="primary" icon={<Check size={16} aria-hidden="true" />} disabled={approve.isPending || !review.emailIdentityMatches} onClick={() => { setActionError(''); setTarget(review); }} className="whitespace-nowrap">{t('قبول وتفعيل العضوية', 'Approve and activate membership')}</Button>
-              </div>
-            </li>
+
+                {!review.emailIdentityMatches && (
+                  <p role="alert" data-testid="member-join-review-email-mismatch" className="member-dir-review-alert">
+                    {t('بريد الحساب الحالي لا يطابق بيانات الدعوة والعضوية. راجع البريد والربط قبل الموافقة؛ التفعيل متوقف لحين تطابق الهوية.', 'The current account email does not match the invitation and membership. Review the email binding before approval; activation is blocked until the identity matches.')}
+                  </p>
+                )}
+
+                <dl className="member-dir-review-facts">
+                  <div><dt>{t('الهاتف', 'Phone')}</dt><dd dir="ltr">{review.phone || '—'}</dd></div>
+                  <div><dt>{t('بريد الدعوة', 'Invitation email')}</dt><dd dir="ltr">{review.invitationEmail}</dd></div>
+                  <div><dt>{t('الإقامة', 'Residence')}</dt><dd>{review.residence || '—'}</dd></div>
+                  <div><dt>{t('ظروف العمل', 'Work conditions')}</dt><dd>{review.workConditions || '—'}</dd></div>
+                  <div><dt>{t('الجهاز', 'Device')}</dt><dd>{review.device || '—'}</dd></div>
+                  <div><dt>{t('الجنس', 'Gender')}</dt><dd>{review.gender || '—'}</dd></div>
+                </dl>
+
+                <p className="member-dir-review-bio">
+                  <span>{t('نبذة', 'Bio')}</span>
+                  {review.bio || '—'}
+                </p>
+
+                <div className="member-dir-review-foot">
+                  <p>
+                    {review.emailIdentityMatches
+                      ? t('الحساب غير مفعّل؛ لن يستطيع العضو دخول البوابة قبل موافقتك.', 'Membership is inactive; the member cannot access the portal before your approval.')
+                      : t('الحساب غير مفعّل، والموافقة متوقفة حتى مراجعة تطابق البريد.', 'Membership is inactive and approval is blocked until the email match is reviewed.')}
+                  </p>
+                  <Button
+                    variant="primary"
+                    icon={<Check size={16} aria-hidden="true" />}
+                    disabled={approve.isPending || !review.emailIdentityMatches}
+                    onClick={() => { setActionError(''); setTarget(review); }}
+                    className="whitespace-nowrap"
+                  >
+                    {t('قبول وتفعيل العضوية', 'Approve and activate membership')}
+                  </Button>
+                </div>
+              </li>
             ))}
           </ul>
         </>
-      ) : <p className="m-0 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm text-[var(--text-muted)]" data-testid="member-join-review-empty" role="status">{t('لا توجد تسجيلات مكتملة تنتظر المراجعة حاليًا. سيظهر الطلب هنا بعد إكمال التسجيل بنجاح.', 'No completed registrations are awaiting review. A request will appear here after registration is completed successfully.')}</p>}
-      {reviewsQuery.isFetchNextPageError && <p role="alert" className="m-0 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)] dark:border-[var(--danger-border)] dark:bg-[var(--danger-soft)] dark:text-[var(--danger-text)]">{t('تعذر تحميل الطلبات الأقدم؛ حاول مرة أخرى.', 'Unable to load older requests; try again.')}</p>}
-      {reviewsQuery.hasNextPage && <Button variant="secondary" onClick={() => { void reviewsQuery.fetchNextPage(); }} disabled={reviewsQuery.isFetchingNextPage} className="justify-self-center whitespace-nowrap">{reviewsQuery.isFetchingNextPage ? t('جارٍ تحميل الطلبات الأقدم…', 'Loading older requests…') : t('عرض الطلبات الأقدم', 'Load older requests')}</Button>}
+      ) : (
+        <p className="member-dir-review-empty" data-testid="member-join-review-empty" role="status">
+          <CheckCircle2 size={16} aria-hidden="true" />
+          {t('لا توجد تسجيلات مكتملة تنتظر المراجعة حاليًا. سيظهر الطلب هنا بعد إكمال التسجيل بنجاح.', 'No completed registrations are awaiting review. A request will appear here after registration is completed successfully.')}
+        </p>
+      )}
+
+      {reviewsQuery.isFetchNextPageError && (
+        <p role="alert" className="member-dir-review-alert">{t('تعذر تحميل الطلبات الأقدم؛ حاول مرة أخرى.', 'Unable to load older requests; try again.')}</p>
+      )}
+      {reviewsQuery.hasNextPage && (
+        <button
+          type="button"
+          className="member-dir-review-more"
+          onClick={() => { void reviewsQuery.fetchNextPage(); }}
+          disabled={reviewsQuery.isFetchingNextPage}
+        >
+          {reviewsQuery.isFetchingNextPage ? t('جارٍ تحميل الطلبات الأقدم…', 'Loading older requests…') : t('عرض الطلبات الأقدم', 'Load older requests')}
+        </button>
+      )}
+
       <ConfirmDialog isOpen={Boolean(target)} onClose={() => { if (!approve.isPending) setTarget(null); }} onConfirm={() => { void confirmApproval(); }} title={t('تأكيد تفعيل العضوية', 'Confirm member activation')} itemName={target?.fullName} description={t('بعد الموافقة ستصبح العضوية نشطة وسيتمكن صاحب الحساب من تسجيل الدخول إلى بوابة الأعضاء. سيتم تسجيل قرار المراجعة.', 'After approval, the member will become active and can sign in to the member portal. The review decision will be recorded.')} confirmLabel={t('موافقة وتفعيل', 'Approve and activate')} isPending={approve.isPending} pendingLabel={t('جارٍ تفعيل العضوية…', 'Activating member…')} />
     </section>
   );

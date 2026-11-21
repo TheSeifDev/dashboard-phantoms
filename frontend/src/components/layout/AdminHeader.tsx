@@ -64,14 +64,27 @@ export function AdminHeader({ path, isDark, drawerOpen = false, onToggleTheme, o
     const outside = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) setNotificationsOpen(false); };
     const keys = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setNotificationsOpen(false);
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setPaletteOpen((value) => !value); }
+    };
+    // Capture phase + preventDefault so Ctrl/⌘K opens the palette instead of the browser search bar.
+    const paletteKeys = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== 'k') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setPaletteOpen((value) => !value);
     };
     const scroll = () => setScrolled(window.scrollY > 8);
     document.addEventListener('pointerdown', outside);
     document.addEventListener('keydown', keys);
+    window.addEventListener('keydown', paletteKeys, true);
     window.addEventListener('scroll', scroll, { passive: true });
     scroll();
-    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', keys); window.removeEventListener('scroll', scroll); };
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', keys);
+      window.removeEventListener('keydown', paletteKeys, true);
+      window.removeEventListener('scroll', scroll);
+    };
   }, []);
 
   useEffect(() => { setPaletteOpen(false); setNotificationsOpen(false); }, [path]);
@@ -113,13 +126,14 @@ export function AdminHeader({ path, isDark, drawerOpen = false, onToggleTheme, o
           </>}
         </div>
       </div>
-      <div className="workspace-tools">
+      <div className="workspace-search-slot">
         <button type="button" className="workspace-search-trigger" onClick={() => setPaletteOpen(true)} aria-label={t('ابحث عن صفحة', 'Search pages')} aria-haspopup="dialog" aria-expanded={paletteOpen} aria-keyshortcuts="Control+K Meta+K" data-magnetic="0.15">
           <Search size={17} aria-hidden="true" />
           <span className="workspace-search-placeholder">{t('ابحث أو انتقل إلى...', 'Search or jump to…')}</span>
           <kbd className="kbd workspace-search-kbd" dir="ltr">{mac ? <><CommandIcon size={11} aria-hidden="true" />K</> : 'Ctrl K'}</kbd>
         </button>
-        <span className="workspace-tools-divider" aria-hidden="true" />
+      </div>
+      <div className="workspace-tools">
         <LanguageToggle iconOnly />
         <button ref={themeButton} type="button" onClick={toggleTheme} className="header-icon header-theme" data-magnetic="0.3" aria-label={isDark ? t('شغّل الوضع الفاتح', 'Use light theme') : t('شغّل الوضع الداكن', 'Use dark theme')}>{isDark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}</button>
         {canMembers && <div className="notification-anchor">
