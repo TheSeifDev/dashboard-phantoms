@@ -117,7 +117,7 @@ export function MemberToolbar({
             type="search"
             value={value.search}
             onChange={(event) => set('search', event.target.value)}
-            placeholder={t('ابحث بالاسم، الهاتف، الرقم الأكاديمي، المجموعة أو التخصص…', 'Search name, phone, academic number, group or specialization…')}
+            placeholder={t('ابحث بالاسم، الهاتف، الرقم الأكاديمي، المجموعة، أو التخصص…', 'Search name, phone, academic number, group, or specialization…')}
             aria-describedby={`${panelId}-help`}
           />
           {value.search && (
