@@ -1,23 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Award, Check, Minus, Plus, Search, Users } from 'lucide-react';
+import { Check, Search, Sparkles, Star, Users } from 'lucide-react';
 import type { Member } from '../../types/db';
-import {
-  EVALUATION_GRADE_LABELS,
-  useCreateEvaluations,
-} from './api';
+import { EVALUATION_GRADE_LABELS, useCreateEvaluations } from './api';
 import type { EvaluationGrade } from './api';
+import { EvalStars, EvalStarInput, MAX_STARS } from './StarRating';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
 import { sendPushNotification } from '../../lib/api/push';
 import { useLocale } from '../../i18n/useLocale';
+import './evaluations.css';
+
+interface StarsBalance {
+  stars: number;
+  count: number;
+}
 
 interface Props {
   isOpen: boolean;
   members: Member[];
   preselectedMemberId?: number | null;
+  /** رصيد النجوم المتراكم لكل عضو، لعرض «قبل / بعد» أثناء منح النجوم. */
+  starsByMember?: Record<number, StarsBalance>;
   onClose: () => void;
 }
 
@@ -48,15 +54,22 @@ const GRADE_LABELS_ENGLISH: Record<EvaluationGrade, string> = {
   needs_improvement: 'Needs improvement',
   warning: 'Notice',
 };
+/** التقدير يقترح عدد النجوم المقابل له تلقائياً. */
+const GRADE_STARS: Record<EvaluationGrade, number> = {
+  excellent: 5,
+  very_good: 4,
+  good: 3,
+  needs_improvement: 2,
+  warning: 1,
+};
 
-const POSITIVE_POINTS = [1, 2, 3, 5, 10] as const;
-const NEGATIVE_POINTS = [-1, -2, -3, -5] as const;
-const focusStyle = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]';
+const FORM_ID = 'eval-create-form';
 
 export function EvaluationCreateModal({
   isOpen,
   members,
   preselectedMemberId,
+  starsByMember = {},
   onClose,
 }: Props) {
   const { t, number, dir } = useLocale();
@@ -66,7 +79,7 @@ export function EvaluationCreateModal({
   const [memberSearch, setMemberSearch] = useState('');
   const [title, setTitle] = useState('تقييم الأداء الأسبوعي');
   const [grade, setGrade] = useState<EvaluationGrade>('very_good');
-  const [points, setPoints] = useState<number>(0);
+  const [stars, setStars] = useState<number>(GRADE_STARS.very_good);
   const [feedback, setFeedback] = useState('');
   const [evaluatorName, setEvaluatorName] = useState('إدارة PHANTOMS');
   const [error, setError] = useState('');
@@ -83,7 +96,7 @@ export function EvaluationCreateModal({
       setMemberSearch('');
       setTitle('تقييم الأداء الأسبوعي');
       setGrade('very_good');
-      setPoints(0);
+      setStars(GRADE_STARS.very_good);
       setFeedback('');
       setError('');
     }
@@ -114,6 +127,19 @@ export function EvaluationCreateModal({
     setSelectedIds([]);
   };
 
+  const handleGrade = (nextGrade: EvaluationGrade) => {
+    setGrade(nextGrade);
+    // لا نطمس اختيار النجوم اليدوي: نحدّثه فقط لو كان لا يزال على قيمة التقدير السابق.
+    setStars((current) => (current === GRADE_STARS[grade] || current === 0 ? GRADE_STARS[nextGrade] : current));
+  };
+
+  const singleMemberId = selectedIds.length === 1 ? selectedIds[0] : null;
+  const singleBalance = singleMemberId ? starsByMember[singleMemberId]?.stars ?? 0 : 0;
+  const selectedTotalStars = selectedIds.reduce(
+    (sum, id) => sum + (starsByMember[id]?.stars ?? 0),
+    0,
+  );
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
@@ -142,7 +168,7 @@ export function EvaluationCreateModal({
         memberNamesMap,
         title: title.trim(),
         grade,
-        points,
+        points: stars,
         feedback: feedback.trim(),
         evaluatorName: evaluatorName.trim() || 'إدارة PHANTOMS',
       });
@@ -167,67 +193,97 @@ export function EvaluationCreateModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('إضافة تقييم جديد للأعضاء', 'Add a member evaluation')} maxWidth="lg">
-      <form onSubmit={handleSubmit} className="grid gap-4 text-start" dir={dir} noValidate>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('تقييم جديد للأعضاء', 'New member evaluation')}
+      subtitle={t('اختر الأعضاء، حدّد التقدير، ثم امنح النجوم الذهبية من ١ إلى ٥.', 'Pick the members, set the grade, then award 1–5 golden stars.')}
+      icon={<Sparkles size={18} aria-hidden="true" />}
+      maxWidth="2xl"
+      footer={(
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} fullOnMobile>
+            {t('إلغاء', 'Cancel')}
+          </Button>
+          <Button
+            type="submit"
+            form={FORM_ID}
+            isLoading={createEvaluations.isPending}
+            loadingText={t('جارٍ حفظ وإرسال التقييم…', 'Saving and sending evaluation…')}
+            icon={<Star size={16} aria-hidden="true" />}
+            fullOnMobile
+          >
+            {t('إرسال وحفظ التقييم', 'Save and send evaluation')}
+          </Button>
+        </>
+      )}
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit} className="eval-form" dir={dir} noValidate>
         {error && (
-          <p className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm font-bold text-[var(--danger-text)]" role="alert" aria-live="assertive">
-            {error}
-          </p>
+          <p className="eval-form-alert" role="alert" aria-live="assertive">{error}</p>
         )}
 
-        <fieldset className="grid min-w-0 gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
-          <legend className="sr-only">{t('١. الأعضاء المستهدفون بالتقييم', '1. Members to evaluate')}</legend>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 id="eval-members-heading" className="flex items-center gap-1.5 text-sm font-black text-[var(--text)]">
-              <Users size={16} className="text-[var(--link)]" aria-hidden="true" />
-              {t('الأعضاء المستهدفون بالتقييم', 'Members to evaluate')} <span aria-label={t(`${selectedIds.length} أعضاء محددون`, `${selectedIds.length} selected`)}>({number(selectedIds.length)})</span>
+        <fieldset className="eval-block">
+          <legend className="sr-only">{t('الأعضاء المستهدفون بالتقييم', 'Members to evaluate')}</legend>
+          <div className="eval-block-head">
+            <h3 className="eval-block-title" id="eval-members-heading">
+              <span className="eval-step" aria-hidden="true">١</span>
+              <Users size={14} aria-hidden="true" />
+              {t('الأعضاء المستهدفون', 'Members to evaluate')}
+              <span className="eval-block-count" aria-label={t(`${selectedIds.length} أعضاء محددون`, `${selectedIds.length} selected`)}>
+                {number(selectedIds.length)}
+              </span>
             </h3>
-            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-              <button type="button" onClick={selectAllFiltered} className={`min-h-11 rounded-lg px-2 text-[var(--link)] hover:underline ${focusStyle}`}>
+            <div className="eval-block-actions">
+              <button type="button" className="eval-link" onClick={selectAllFiltered}>
                 {t('تحديد الظاهر', 'Select shown')}
               </button>
-              <span className="text-[var(--text-muted)]" aria-hidden="true">|</span>
-              <button type="button" onClick={clearSelection} className={`min-h-11 rounded-lg px-2 text-[var(--text-muted)] hover:text-[var(--text)] ${focusStyle}`}>
-                {t('إلغاء التحديد', 'Clear selection')}
+              <button type="button" className="eval-link eval-link--muted" onClick={clearSelection}>
+                {t('إلغاء التحديد', 'Clear')}
               </button>
             </div>
           </div>
 
-          <div className="relative">
-            <Search size={15} className="pointer-events-none absolute inset-y-0 start-3 my-auto text-[var(--text-muted)]" aria-hidden="true" />
+          <label className="eval-search">
+            <Search size={15} aria-hidden="true" />
+            <span className="sr-only">{t('ابحث عن عضو بالاسم أو البريد الإلكتروني', 'Search members by name or email')}</span>
             <input
               type="search"
-              aria-label={t('ابحث عن عضو بالاسم أو البريد الإلكتروني', 'Search members by name or email')}
-              placeholder={t('ابحث عن عضو بالاسم أو البريد...', 'Search members by name or email…')}
+              placeholder={t('ابحث عن عضو بالاسم أو البريد…', 'Search members by name or email…')}
               value={memberSearch}
               onChange={(event) => setMemberSearch(event.target.value)}
-              className="min-h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] pe-3 ps-9 text-sm text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
             />
-          </div>
+          </label>
 
           {filteredMembers.length > 0 ? (
-            <div className="grid max-h-56 grid-cols-1 gap-1.5 overflow-y-auto pe-1 sm:grid-cols-2" role="group" aria-labelledby="eval-members-heading">
+            <div className="eval-member-grid" role="group" aria-labelledby="eval-members-heading">
               {filteredMembers.map((member) => {
                 const checked = selectedIds.includes(member.id);
+                const balance = starsByMember[member.id]?.stars ?? 0;
                 return (
                   <button
                     key={member.id}
                     type="button"
                     onClick={() => toggleMember(member.id)}
                     aria-pressed={checked}
-                    className={`flex min-h-11 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-start text-sm font-bold transition-colors ${focusStyle} ${checked
-                      ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--text)]'
-                      : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:bg-[var(--bg)]'
-                    }`}
+                    className="eval-member"
                   >
-                    <span className="truncate">{member.full_name}</span>
-                    {checked && <Check size={16} className="shrink-0 text-[var(--link)]" aria-label={t('محدد', 'Selected')} />}
+                    <span className="eval-member-initial" aria-hidden="true">
+                      {member.full_name.trim().charAt(0) || 'ع'}
+                    </span>
+                    <span>{member.full_name}</span>
+                    {balance > 0 && (
+                      <span className="eval-star-pill eval-star-pill--muted" aria-label={t(`${balance} نجمة`, `${balance} stars`)}>
+                        {number(balance)}
+                      </span>
+                    )}
+                    {checked && <Check size={14} aria-hidden="true" />}
                   </button>
                 );
               })}
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed border-[var(--border)] p-3 text-center text-sm text-[var(--text-muted)]" role="status">
+            <p className="eval-empty-note" role="status">
               {members.length === 0
                 ? t('لا يوجد أعضاء متاحون للاختيار حالياً.', 'No members are currently available to select.')
                 : t('لم نعثر على أعضاء يطابقون البحث.', 'No members match this search.')}
@@ -235,10 +291,13 @@ export function EvaluationCreateModal({
           )}
         </fieldset>
 
-        <section className="grid gap-1.5" aria-labelledby="eval-title-label">
-          <label id="eval-title-label" className="text-sm font-bold text-[var(--text)]" htmlFor="eval-title-input">
-            {t('٢. عنوان التقييم', '2. Evaluation title')} <span aria-hidden="true">*</span>
-          </label>
+        <section className="eval-block" aria-labelledby="eval-title-label">
+          <div className="eval-block-head">
+            <h3 className="eval-block-title" id="eval-title-label">
+              <span className="eval-step" aria-hidden="true">٢</span>
+              {t('عنوان التقييم', 'Evaluation title')}
+            </h3>
+          </div>
           <input
             id="eval-title-input"
             type="text"
@@ -247,19 +306,16 @@ export function EvaluationCreateModal({
             placeholder={t('مثال: تقييم الأداء الأسبوعي', 'Example: Weekly performance review')}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+            className="eval-input"
           />
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5" aria-label={t('عناوين مقترحة', 'Suggested titles')}>
+          <div className="eval-chips" aria-label={t('عناوين مقترحة', 'Suggested titles')}>
             {TITLE_PRESETS.map((preset, index) => (
               <button
                 key={preset}
                 type="button"
                 onClick={() => setTitle(preset)}
                 aria-pressed={title === preset}
-                className={`min-h-11 rounded-lg border px-3 py-1 text-xs font-bold transition-colors ${focusStyle} ${title === preset
-                  ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--link)]'
-                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)]'
-                }`}
+                className="eval-chip"
               >
                 {t(preset, TITLE_PRESET_ENGLISH[index])}
               </button>
@@ -267,62 +323,86 @@ export function EvaluationCreateModal({
           </div>
         </section>
 
-        <fieldset className="grid min-w-0 gap-2" aria-labelledby="eval-grade-label">
-          <legend id="eval-grade-label" className="text-sm font-bold text-[var(--text)]">{t('٣. التقدير العام', '3. Overall grade')} <span aria-hidden="true">*</span></legend>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <fieldset className="eval-block">
+          <legend className="sr-only">{t('التقدير العام', 'Overall grade')}</legend>
+          <div className="eval-block-head">
+            <h3 className="eval-block-title" id="eval-grade-label">
+              <span className="eval-step" aria-hidden="true">٣</span>
+              {t('التقدير العام', 'Overall grade')}
+            </h3>
+            <span className="eval-hint">{t('اختيار التقدير يقترح النجوم تلقائياً', 'The grade suggests the stars')}</span>
+          </div>
+          <div className="eval-grades" role="group" aria-labelledby="eval-grade-label">
             {GRADES_ORDER.map((gradeOption) => {
               const active = grade === gradeOption;
               return (
                 <button
                   key={gradeOption}
                   type="button"
-                  onClick={() => setGrade(gradeOption)}
+                  onClick={() => handleGrade(gradeOption)}
                   aria-pressed={active}
-                  className={`min-h-11 rounded-xl border px-2.5 text-sm font-black transition-colors ${focusStyle} ${active
-                    ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
-                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--primary)]'
-                  }`}
+                  className={`eval-grade-option eval-grade--${gradeOption}`}
                 >
-                  {t(EVALUATION_GRADE_LABELS[gradeOption], GRADE_LABELS_ENGLISH[gradeOption])}
+                  <b>{t(EVALUATION_GRADE_LABELS[gradeOption], GRADE_LABELS_ENGLISH[gradeOption])}</b>
+                  <small>{t(`${GRADE_STARS[gradeOption]} نجوم`, `${GRADE_STARS[gradeOption]} stars`)}</small>
                 </button>
               );
             })}
           </div>
         </fieldset>
 
-        <fieldset className="grid min-w-0 gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5" aria-labelledby="eval-points-label">
-          <legend id="eval-points-label" className="text-sm font-bold text-[var(--text)]">{t('٤. نقاط البونص المصاحبة للتقييم', '4. Bonus points for this evaluation')}</legend>
-          <p className="text-xs leading-5 text-[var(--text-muted)]">{t('تُضاف أو تُخصم تلقائياً من رصيد العضو وترتيب الفريق.', 'Points are automatically added to or deducted from the member’s balance and team ranking.')}</p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button type="button" onClick={() => setPoints(0)} aria-pressed={points === 0} className={`min-h-11 rounded-lg px-3 text-xs font-black transition-colors ${focusStyle} ${points === 0 ? 'bg-[var(--primary)] text-white' : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'}`}>
-              {t('٠ (بدون تغيير)', '0 (no change)')}
-            </button>
-            <span className="ms-1 flex min-h-11 items-center gap-0.5 text-xs font-bold text-[var(--success-text)]"><Plus size={12} aria-hidden="true" />{t('مكافأة:', 'Bonus:')}</span>
-            {POSITIVE_POINTS.map((value) => (
-              <button key={`pos-${value}`} type="button" onClick={() => setPoints(value)} aria-pressed={points === value} aria-label={t(`مكافأة ${value} نقطة`, `${value} bonus points`)} className={`min-h-11 min-w-11 rounded-lg px-2.5 text-xs font-black transition-colors ${focusStyle} ${points === value ? 'bg-[var(--success)] text-[var(--on-success)]' : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'}`}>
-                +{number(value)}
-              </button>
-            ))}
-            <span className="ms-1 flex min-h-11 items-center gap-0.5 text-xs font-bold text-[var(--danger-text)]"><Minus size={12} aria-hidden="true" />{t('خصم:', 'Deduction:')}</span>
-            {NEGATIVE_POINTS.map((value) => (
-              <button key={`neg-${value}`} type="button" onClick={() => setPoints(value)} aria-pressed={points === value} aria-label={t(`خصم ${Math.abs(value)} نقاط`, `${Math.abs(value)} point deduction`)} className={`min-h-11 min-w-11 rounded-lg px-2.5 text-xs font-black transition-colors ${focusStyle} ${points === value ? 'bg-[var(--danger)] text-[var(--on-danger)]' : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'}`}>
-                {number(value)}
-              </button>
-            ))}
+        <fieldset className="eval-award">
+          <legend className="sr-only">{t('النجوم الذهبية', 'Golden stars')}</legend>
+          <div className="eval-award-head">
+            <h3 className="eval-award-title" id="eval-award-label">
+              <Star size={15} aria-hidden="true" />
+              {t('النجوم الذهبية للتقييم', 'Golden stars for this review')}
+            </h3>
+            <span className="eval-award-total">
+              <Star size={11} aria-hidden="true" />
+              {t(`${number(stars)} من ${number(MAX_STARS)}`, `${number(stars)} of ${number(MAX_STARS)}`)}
+            </span>
           </div>
-          <p className="flex items-start gap-1.5 text-xs leading-5 font-semibold text-[var(--text-muted)]" role="status" aria-live="polite">
-            <Award size={14} className="mt-0.5 shrink-0 text-[var(--link)]" aria-hidden="true" />
-            {points === 0
-              ? t('سيظهر التقييم كتوجيه دون تغيير نقاط البونص.', 'The evaluation will appear as feedback without changing bonus points.')
-              : points > 0
-                ? t(`سيحصل العضو على مكافأة ${number(points)} نقطة بونص عند حفظ التقييم.`, `The member will receive ${number(points)} bonus points when the evaluation is saved.`)
-                : t(`سيتم خصم ${number(Math.abs(points))} نقطة مع توثيق السبب.`, `${number(Math.abs(points))} bonus points will be deducted with the reason recorded.`)}
+
+          <EvalStarInput
+            value={stars}
+            onChange={setStars}
+            label={t('اختر عدد النجوم الذهبية من ١ إلى ٥', 'Choose 1 to 5 golden stars')}
+            describedBy="eval-award-readout"
+          />
+
+          <p className="eval-award-readout" id="eval-award-readout" role="status" aria-live="polite">
+            <Star size={13} aria-hidden="true" />
+            {stars === 0 ? (
+              t('لن تُضاف نجوم، وسيظهر التقييم كملاحظة فقط.', 'No stars will be added; the review stays as feedback only.')
+            ) : singleMemberId ? (
+              t(
+                `سيحصل العضو على ${number(stars)} نجمة، ورصيده يرتفع من ${number(singleBalance)} إلى ${number(singleBalance + stars)}.`,
+                `The member gets ${number(stars)} star${stars > 1 ? 's' : ''}: balance goes from ${number(singleBalance)} to ${number(singleBalance + stars)}.`,
+              )
+            ) : (
+              t(
+                `كل عضو من ${number(selectedIds.length)} سيحصل على ${number(stars)} نجمة — ${number(stars * selectedIds.length)} نجمة تُضاف للفريق.`,
+                `Each of ${number(selectedIds.length)} members gets ${number(stars)} star${stars > 1 ? 's' : ''} — ${number(stars * selectedIds.length)} stars added in total.`,
+              )
+            )}
+            {selectedIds.length > 0 && (
+              <span className="eval-award-balance">
+                <small>{t('الرصيد الحالي للمحددين', 'Current balance of selected')}</small>
+                <span><EvalStars value={Math.min(MAX_STARS, selectedTotalStars)} size="sm" /> {number(selectedTotalStars)}</span>
+              </span>
+            )}
+          </p>
+          <p className="eval-hint">
+            {t('النجوم تتراكم: كل تقييم يضيف نجومه إلى رصيد العضو، ويقدر يجمع عدد كبير منها مع الوقت.', 'Stars accumulate: every review adds to the member balance, so they can collect many over time.')}
           </p>
         </fieldset>
 
-        <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]" htmlFor="eval-feedback-input">
-          {t('٥. رسالة وتفاصيل التقييم', '5. Evaluation message and details')} <span aria-hidden="true">*</span>
-          <span className="text-xs font-normal leading-5 text-[var(--text-muted)]">{t('تظهر للعضو مباشرة عند دخوله البوابة.', 'Shown to the member when they sign in to the portal.')}</span>
+        <label className="eval-field" htmlFor="eval-feedback-input">
+          <span className="eval-label">
+            {t('رسالة وتفاصيل التقييم', 'Evaluation message and details')} <span aria-hidden="true">*</span>
+            <small>{t('تظهر للعضو مباشرة عند دخوله البوابة.', 'Shown to the member when they sign in to the portal.')}</small>
+          </span>
           <textarea
             id="eval-feedback-input"
             required
@@ -331,29 +411,20 @@ export function EvaluationCreateModal({
             placeholder={t('اكتب نقاط القوة وأي ملاحظات أو توجيهات للفترة القادمة…', 'Describe strengths and any feedback or guidance for the next period…')}
             value={feedback}
             onChange={(event) => setFeedback(event.target.value)}
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 text-sm leading-6 text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+            className="eval-textarea"
           />
         </label>
 
-        <label className="grid gap-1.5 text-sm font-bold text-[var(--text)]" htmlFor="eval-evaluator-input">
-          {t('٦. اسم المسؤول / المقيّم', '6. Evaluator name')}
+        <label className="eval-field" htmlFor="eval-evaluator-input">
+          <span className="eval-label">{t('اسم المسؤول / المقيّم', 'Evaluator name')}</span>
           <input
             id="eval-evaluator-input"
             type="text"
             value={evaluatorName}
             onChange={(event) => setEvaluatorName(event.target.value)}
-            className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm text-[var(--text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+            className="eval-input"
           />
         </label>
-
-        <div className="flex flex-col-reverse gap-2 border-t border-[var(--border)] pt-4 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" onClick={onClose} fullOnMobile>
-            {t('إلغاء', 'Cancel')}
-          </Button>
-          <Button type="submit" isLoading={createEvaluations.isPending} loadingText={t('جارٍ حفظ وإرسال التقييم…', 'Saving and sending evaluation…')} fullOnMobile>
-            {t('إرسال وحفظ التقييم', 'Save and send evaluation')}
-          </Button>
-        </div>
       </form>
     </Modal>
   );
