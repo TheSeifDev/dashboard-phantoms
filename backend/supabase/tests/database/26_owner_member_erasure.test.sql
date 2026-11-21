@@ -193,12 +193,12 @@ SELECT ok(EXISTS (
   WHERE n.nspname='public' AND p.proname='owner_member_erasure_execute_database'
     AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%LOCK TABLE public.members,public.member_auth_bindings%'
     AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%public.web_project_integrations,public.web_idea_reviews,storage.objects%'
-    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%AND ns.nspname <> ''_realtime'' AND rel.relkind IN (''r'',''p'')%'
+    AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%AND ns.nspname <> ''_realtime'' AND NOT (ns.nspname=''storage'' AND rel.relname=''vector_indexes'') AND rel.relkind IN (''r'',''p'')%'
     AND pg_catalog.pg_get_functiondef(p.oid) NOT ILIKE '%AND NOT (ns.nspname=''_realtime'' AND rel.relname IN (''extensions'',''feature_flags''))%'
     AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%rel.relkind IN (''r'',''p'')%'
     AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%r.nspname,r.relname%'
     AND pg_catalog.pg_get_functiondef(p.oid) NOT ILIKE '%r.nspname,rel.relname%'
-), 'erasure executor keeps application/Storage locks and excludes only the internal _realtime schema from the dynamic sweep');
+), 'erasure executor keeps application/Storage locks and excludes only _realtime and vector-index metadata from the dynamic sweep');
 
 SELECT ok(NOT EXISTS (
   SELECT 1 FROM pg_catalog.pg_proc AS p JOIN pg_catalog.pg_namespace AS n ON n.oid=p.pronamespace

@@ -29,15 +29,14 @@ function runCheck() {
     encoding: 'utf8',
   });
 }
-
-test('local inventory retains thirty applied forwards including exact app-use and Owner-erasure timestamps', () => {
+test('local inventory retains thirty-one applied forwards including exact app-use and Owner-erasure timestamps', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
-  assert.equal(applied, 30);
+  assert.equal(applied, 31);
   const appUsage = entries.find((entry) => entry.version === '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
   assert.equal(appUsage.production_status, 'applied');
@@ -76,6 +75,14 @@ test('local inventory retains thirty applied forwards including exact app-use an
   assert.equal(realtimeSchemaExclusion?.original_source_version, realtimeSchemaExclusion.version);
   assert.equal(realtimeSchemaExclusion?.original_source_filename, realtimeSchemaExclusion.canonical_repository_filename);
   assert.equal(createHash('sha256').update(readFileSync(resolve(repoRoot, realtimeSchemaExclusion.canonical_repository_filename))).digest('hex'), realtimeSchemaExclusion.sha256);
+  const storageVectorExclusion = entries.find((entry) => entry.version === '20261121144600');
+  assert.equal(storageVectorExclusion?.name, 'owner_member_erasure_storage_vector_index_lock_exclusion');
+  assert.equal(storageVectorExclusion?.production_status, 'applied');
+  assert.equal(storageVectorExclusion?.remote_applied_timestamp, '20261121144753');
+  assert.equal(storageVectorExclusion?.canonical_repository_filename, 'backend/supabase/migrations/20261121144600_owner_member_erasure_storage_vector_index_lock_exclusion.sql');
+  assert.equal(storageVectorExclusion?.original_source_version, storageVectorExclusion.version);
+  assert.equal(storageVectorExclusion?.original_source_filename, storageVectorExclusion.canonical_repository_filename);
+  assert.equal(createHash('sha256').update(readFileSync(resolve(repoRoot, storageVectorExclusion.canonical_repository_filename))).digest('hex'), storageVectorExclusion.sha256);
   const posture = readFileSync(resolve(repoRoot, 'backend/supabase/tests/database/01_schema_and_posture.test.sql'), 'utf8');
   const tableAllowlist = posture.match(/SELECT tables_are\('public', ARRAY\[([\s\S]*?)\]/)?.[1];
   assert.ok(tableAllowlist?.includes("'member_app_usage'"), 'new app-use table must be in the exact pgTAP schema allowlist');

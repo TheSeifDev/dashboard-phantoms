@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the forward manifest preserves provenance and records the applied Owner erasure migration', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 30);
+  assert.equal(forward.length, 31);
   const appUsage = forward[24];
   assert.equal(appUsage.version, '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
@@ -111,6 +111,15 @@ test('the forward manifest preserves provenance and records the applied Owner er
   assert.equal(realtimeSchemaExclusion.original_source_version, realtimeSchemaExclusion.version);
   assert.equal(realtimeSchemaExclusion.original_source_filename, realtimeSchemaExclusion.canonical_repository_filename);
   assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, realtimeSchemaExclusion.canonical_repository_filename))).digest('hex'), realtimeSchemaExclusion.sha256);
+  const storageVectorExclusion = forward[30];
+  assert.equal(storageVectorExclusion.version, '20261121144600');
+  assert.equal(storageVectorExclusion.name, 'owner_member_erasure_storage_vector_index_lock_exclusion');
+  assert.equal(storageVectorExclusion.production_status, 'applied');
+  assert.equal(storageVectorExclusion.remote_applied_timestamp, '20261121144753');
+  assert.equal(storageVectorExclusion.canonical_repository_filename, 'backend/supabase/migrations/20261121144600_owner_member_erasure_storage_vector_index_lock_exclusion.sql');
+  assert.equal(storageVectorExclusion.original_source_version, storageVectorExclusion.version);
+  assert.equal(storageVectorExclusion.original_source_filename, storageVectorExclusion.canonical_repository_filename);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, storageVectorExclusion.canonical_repository_filename))).digest('hex'), storageVectorExclusion.sha256);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');

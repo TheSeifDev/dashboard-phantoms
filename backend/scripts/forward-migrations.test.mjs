@@ -30,6 +30,7 @@ const appliedOwnerErasureFiles = [
   '20261121142000_owner_member_erasure_realtime_metadata_lock_fix.sql',
   '20261121142709_owner_member_erasure_lock_record_reference_fix.sql',
   '20261121143800_owner_member_erasure_realtime_schema_lock_exclusion.sql',
+  '20261121144600_owner_member_erasure_storage_vector_index_lock_exclusion.sql',
 ];
 
 function fixture() {
@@ -131,6 +132,15 @@ test('repository retains 24 initialized files and registers the applied Owner er
   assert.equal(realtimeSchemaExclusion.original_source_version, realtimeSchemaExclusion.version);
   assert.equal(realtimeSchemaExclusion.original_source_filename, realtimeSchemaExclusion.canonical_repository_filename);
   assert.equal(realtimeSchemaExclusion.sha256, createHash('sha256').update(readFileSync(join(root, realtimeSchemaExclusion.canonical_repository_filename))).digest('hex'));
+  const storageVectorExclusion = entries.find(({ version }) => version === '20261121144600');
+  assert.ok(storageVectorExclusion, 'missing storage.vector_indexes lock-scope correction registration');
+  assert.equal(storageVectorExclusion.name, 'owner_member_erasure_storage_vector_index_lock_exclusion');
+  assert.equal(storageVectorExclusion.production_status, 'applied');
+  assert.equal(storageVectorExclusion.remote_applied_timestamp, '20261121144753');
+  assert.equal(storageVectorExclusion.canonical_repository_filename, 'backend/supabase/migrations/20261121144600_owner_member_erasure_storage_vector_index_lock_exclusion.sql');
+  assert.equal(storageVectorExclusion.original_source_version, storageVectorExclusion.version);
+  assert.equal(storageVectorExclusion.original_source_filename, storageVectorExclusion.canonical_repository_filename);
+  assert.equal(storageVectorExclusion.sha256, createHash('sha256').update(readFileSync(join(root, storageVectorExclusion.canonical_repository_filename))).digest('hex'));
   assert.equal(entries[0].version, forwardVersion);
   assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
   assert.equal(entries[0].production_status, 'applied');
