@@ -5,6 +5,8 @@ import {
   useMemberEvaluations,
 } from '../evaluations/api';
 import { getGradeBadgeVariant } from '../evaluations/EvaluationsPage';
+import { EvalStars } from '../evaluations/StarRating';
+import '../evaluations/evaluations.css';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -34,6 +36,7 @@ export function MemberEvaluations({ memberId }: Props) {
 
   const evaluations = evaluationsQuery.data ?? [];
   const unreadCount = evaluations.filter((e) => !e.read_at).length;
+  const starBalance = evaluations.reduce((sum, e) => sum + Math.max(0, e.points), 0);
 
   const handleMarkRead = async (evaluationId: number, mode: 'native' | 'fallback') => {
     try {
@@ -90,6 +93,11 @@ export function MemberEvaluations({ memberId }: Props) {
           <h2 id="member-evaluations-title" className="text-lg font-black text-[var(--text)]">
             {t('تقييماتي وملاحظات الأداء', 'My evaluations and performance feedback')}
           </h2>
+          {starBalance > 0 && (
+            <span className="eval-star-pill" title={t('إجمالي النجوم التي جمعتها', 'Total stars you collected')}>
+              {t(`رصيدك ${number(starBalance)} نجمة`, `${number(starBalance)} stars collected`)}
+            </span>
+          )}
           {unreadCount > 0 && (
             <Badge variant="danger">
               {unreadCount === 1 ? t('تقييم جديد', 'New evaluation') : t(`${number(unreadCount)} تقييمات جديدة`, `${number(unreadCount)} new evaluations`)}
@@ -128,11 +136,16 @@ export function MemberEvaluations({ memberId }: Props) {
                     <Badge variant={getGradeBadgeVariant(ev.grade)}>
                       {t('التقدير: ', 'Grade: ')}{t(EVALUATION_GRADE_LABELS[ev.grade], GRADE_LABELS_ENGLISH[ev.grade])}
                     </Badge>
-                    {ev.points !== 0 && (
-                      <Badge variant={ev.points > 0 ? 'success' : 'danger'}>
-                        {ev.points > 0 ? `+${number(ev.points)} ${t('نقاط بونص', 'bonus points')}` : `${number(ev.points)} ${t('نقاط', 'points')}`}
-                      </Badge>
-                    )}
+                    {ev.points > 0 ? (
+                      <span className="eval-star-pill">
+                        <EvalStars value={ev.points} size="sm" />
+                        {t(`+${number(ev.points)} نجمة`, `+${number(ev.points)} stars`)}
+                      </span>
+                    ) : ev.points < 0 ? (
+                      <span className="eval-star-pill eval-star-pill--minus">
+                        {t(`${number(ev.points)} نقطة خصم`, `${number(ev.points)} points`)}
+                      </span>
+                    ) : null}
                     {!isRead && <Badge variant="info">{t('جديد', 'New')}</Badge>}
                   </div>
 
