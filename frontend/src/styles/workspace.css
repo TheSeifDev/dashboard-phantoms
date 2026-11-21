@@ -114,7 +114,7 @@
   .notification-popover a { background: var(--info-soft); color: var(--link); font-weight: 600; }
   .header-account { display: flex; align-items: center; gap: 10px; max-width: 230px; min-height: 48px; margin-inline-start: 2px; padding: 4px 12px 4px 4px; border: 1px solid var(--glass-hairline); border-radius: 999px; background: var(--glass-bg-soft); box-shadow: var(--glass-inset); }
   [dir="rtl"] .header-account { padding: 4px 4px 4px 12px; }
-  .header-avatar { position: relative; display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%; background: linear-gradient(135deg, var(--crew-1), var(--crew-2) 55%, var(--crew-3)); color: #FFFFFF; font-size: 14px; font-weight: 800; box-shadow: 0 6px 14px -6px var(--crew-2); }
+  .header-avatar { position: relative; display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%; background: var(--crew-2); color: #FFFFFF; font-size: 14px; font-weight: 800; box-shadow: 0 6px 14px -6px var(--crew-2); }
   .header-avatar-status { position: absolute; inset-block-end: -1px; inset-inline-end: -1px; width: 11px; height: 11px; border: 2px solid var(--surface); border-radius: 50%; background: var(--success); }
   .header-account-copy { display: grid; min-width: 0; max-width: 140px; gap: 2px; }
   .header-account-copy strong { overflow: hidden; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
@@ -128,7 +128,7 @@
   .cmdk-root { position: fixed; inset: 0; z-index: var(--z-modal); display: flex; align-items: flex-start; justify-content: center; padding: max(10vh, 64px) 16px 16px; perspective: 1200px; }
   .cmdk-scrim { position: absolute; inset: 0; background: color-mix(in srgb, var(--graphite-900) 42%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   .cmdk-panel { position: relative; display: flex; width: min(640px, 100%); max-height: min(560px, 76vh); flex-direction: column; overflow: hidden; border: 1px solid var(--glass-border); border-radius: 24px; background: var(--glass-bg-strong); color: var(--text); box-shadow: var(--glass-inset), 0 40px 90px -30px rgb(5 8 20 / .55); -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%); transform-origin: top center; }
-  .cmdk-panel::before { content: ""; position: absolute; inset: 0 0 auto; height: 1px; background: linear-gradient(90deg, transparent, var(--crew-1), var(--crew-2), var(--crew-3), transparent); opacity: .8; }
+  .cmdk-panel::before { content: ""; position: absolute; inset: 0 0 auto; height: 1px; background: var(--glass-hairline); opacity: 1; }
   .cmdk-search { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--glass-hairline); color: var(--text-muted); }
   .cmdk-search input { flex: 1; min-width: 0; min-height: 32px; border: 0; background: transparent; color: var(--text); font-size: 16px; outline: none; }
   .cmdk-list { flex: 1; overflow-y: auto; margin: 0; padding: 8px; list-style: none; scrollbar-width: thin; }

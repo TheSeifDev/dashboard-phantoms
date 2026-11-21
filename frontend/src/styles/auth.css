@@ -95,9 +95,7 @@
     padding: clamp(22px, 3vw, 42px);
     border: 1px solid color-mix(in srgb, var(--auth-blue) 14%, transparent);
     border-radius: 28px;
-    background:
-      radial-gradient(ellipse at 72% 45%, color-mix(in srgb, var(--auth-blue) 8%, transparent), transparent 56%),
-      var(--auth-story-surface, var(--auth-ice));
+    background: var(--auth-story-surface, var(--auth-ice));
   }
   .auth-story::before,
   .auth-story::after {
@@ -109,8 +107,8 @@
   .auth-story::before {
     inset: 0;
     opacity: .28;
-    background-image: linear-gradient(color-mix(in srgb, var(--auth-blue) 8%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--auth-blue) 8%, transparent) 1px, transparent 1px);
-    background-size: 34px 34px;
+    background-image: none;
+    background-size: auto;
     mask-image: linear-gradient(110deg, transparent 7%, #000 100%);
   }
   .auth-story::after {
@@ -672,19 +670,13 @@
     border: 1px solid var(--glass-border);
     border-radius: 24px;
     overflow: hidden;
-    background:
-      radial-gradient(90% 70% at 85% 8%, color-mix(in srgb, var(--crew-2) 26%, transparent), transparent 62%),
-      radial-gradient(80% 60% at 8% 96%, color-mix(in srgb, var(--crew-1) 24%, transparent), transparent 62%),
-      radial-gradient(60% 50% at 60% 60%, color-mix(in srgb, var(--crew-3) 12%, transparent), transparent 70%),
-      var(--glass-tint);
+    background: var(--glass-tint);
     box-shadow: var(--glass-inset);
   }
   .auth-story::before {
     opacity: 0.5;
-    background-image:
-      linear-gradient(color-mix(in srgb, var(--text) 6%, transparent) 1px, transparent 1px),
-      linear-gradient(90deg, color-mix(in srgb, var(--text) 6%, transparent) 1px, transparent 1px);
-    background-size: 32px 32px;
+    background-image: none;
+    background-size: auto;
     mask-image: radial-gradient(ellipse at 50% 45%, #000 20%, transparent 75%);
   }
   .auth-story::after { display: none; }
@@ -696,10 +688,8 @@
     font-weight: 700;
     line-height: 1.2;
     letter-spacing: -0.03em;
-    background: linear-gradient(100deg, var(--text) 30%, var(--crew-2) 70%, var(--crew-3));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    background: none;
+    color: var(--text);
   }
   .auth-story-copy { font-size: 13.5px; line-height: 1.8; }
   .auth-hive {
@@ -864,19 +854,19 @@
     min-height: 52px;
     border: 0;
     border-radius: 16px;
-    background: linear-gradient(110deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, var(--crew-3)) 60%, color-mix(in srgb, var(--primary) 55%, var(--crew-2)) 100%);
+    background: var(--primary);
     box-shadow: 0 12px 28px -10px color-mix(in srgb, var(--primary) 60%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.25);
   }
   .auth-submit::after {
     position: absolute;
     inset: 0;
     content: "";
-    background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.28) 50%, transparent 65%);
+    background: none;
     transform: translateX(-120%);
     transition: transform 0.7s var(--ease-out, ease);
     pointer-events: none;
   }
-  .auth-submit:hover:not(:disabled) { background: linear-gradient(110deg, var(--primary-hover) 0%, color-mix(in srgb, var(--primary) 62%, var(--crew-3)) 60%, color-mix(in srgb, var(--primary) 48%, var(--crew-2)) 100%); box-shadow: 0 16px 34px -10px color-mix(in srgb, var(--primary) 70%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.25); }
+  .auth-submit:hover:not(:disabled) { background: var(--primary-hover); box-shadow: 0 16px 34px -10px color-mix(in srgb, var(--primary) 70%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.25); }
   .auth-submit:hover:not(:disabled)::after { transform: translateX(120%); }
   .auth-remember-box { border-radius: 7px; }
   /* Icons are authored for RTL ("forward" = left); mirror them for LTR reading order. */
@@ -885,13 +875,9 @@
   .auth-footer { border-color: var(--glass-hairline); }
   .auth-page-footer { color: var(--text-muted); }
   [data-theme="dark"] .auth-story {
-    background:
-      radial-gradient(90% 70% at 85% 8%, color-mix(in srgb, var(--crew-2) 30%, transparent), transparent 62%),
-      radial-gradient(80% 60% at 8% 96%, color-mix(in srgb, var(--crew-1) 26%, transparent), transparent 62%),
-      radial-gradient(60% 50% at 60% 60%, color-mix(in srgb, var(--crew-4) 12%, transparent), transparent 70%),
-      rgb(10 12 20 / 0.72);
+    background: rgb(10 12 20 / 0.72);
   }
-  [data-theme="dark"] .auth-story h1 { color: transparent; }
+  [data-theme="dark"] .auth-story h1 { color: var(--text); }
   [data-theme="dark"] .auth-hive-base { fill: color-mix(in srgb, var(--heat-0) 92%, transparent); stroke: rgb(255 255 255 / 0.06); }
   @media (max-width: 1023px) and (min-width: 768px) {
     .auth-story { padding: 26px 20px; }

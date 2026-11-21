@@ -81,7 +81,7 @@ export function SubmissionSuccessModal({
       {celebration && (
         <div dir={dir} className="grid gap-4 text-center" aria-live="polite">
           <div className="grid justify-items-center gap-3 pt-1">
-            <span className="grid size-16 place-items-center rounded-full bg-gradient-to-br from-amber-300 to-[var(--primary)] text-white shadow-[var(--shadow-md)] motion-safe:animate-[celebrate-pop_480ms_cubic-bezier(0.2,0.9,0.3,1.3)_both]" aria-hidden="true">
+            <span className="grid size-16 place-items-center rounded-full bg-[var(--primary)] text-white shadow-[var(--shadow-md)] motion-safe:animate-[celebrate-pop_480ms_cubic-bezier(0.2,0.9,0.3,1.3)_both]" aria-hidden="true">
               <PartyPopper size={30} />
             </span>
             <div className="grid gap-1.5">
