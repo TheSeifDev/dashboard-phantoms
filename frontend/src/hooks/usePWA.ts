@@ -38,21 +38,8 @@ const storeKeyFingerprint = (fp: string): void => {
 };
 
 export function usePWA({ memberId, memberEmail }: { memberId?: number; memberEmail?: string }) {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const autoResubscribed = useRef(false);
-
-  useEffect(() => {
-    if (Capacitor.isNativePlatform()) return;
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -172,16 +159,6 @@ export function usePWA({ memberId, memberEmail }: { memberId?: number; memberEma
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSubscribed, memberId, memberEmail]);
 
-  const installPWA = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstallable(false);
-    }
-    setDeferredPrompt(null);
-  };
-
   const subscribeToPush = async () => {
     if (!memberId || !memberEmail) return;
     try {
@@ -260,5 +237,5 @@ export function usePWA({ memberId, memberEmail }: { memberId?: number; memberEma
     );
   };
 
-  return { isInstallable, installPWA, isSubscribed, subscribeToPush, sendTestNotification };
+  return { isSubscribed, subscribeToPush, sendTestNotification };
 }

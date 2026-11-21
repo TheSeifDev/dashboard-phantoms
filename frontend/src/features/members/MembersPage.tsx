@@ -26,6 +26,10 @@ import { useMemberDeletionStore } from '../../store/memberDeletion';
 
 import { memberSearchText } from './member-profile-display';
 import { useLocale } from '../../i18n/useLocale';
+import { useAuthStore } from '../../store/auth';
+import { useAdminAccess } from '../admin/access/api';
+import { useOwnerAppUsage } from '../app-usage/api';
+import type { AppUsageDisplay } from '../app-usage/MemberAppUsageDetails';
 const emptyMember: MemberInsert = {
   email: '',
   full_name: '',
@@ -52,6 +56,9 @@ export default function MembersPage() {
   const customFieldsQuery = useMemberCustomFields();
   const notesQuery = useNotes();
   const add = useAddMember();
+  const ownerId = useAuthStore((state) => state.user?.id ?? null);
+  const access = useAdminAccess(ownerId);
+  const isOwner = Boolean(ownerId) && access.data?.is_owner === true && !access.isError && access.isFetchedAfterMount;
   const update = useUpdateMember();
   const remove = useDeleteMember();
   const [filters, setFilters] = useState<MemberFiltersValue>({
@@ -118,6 +125,12 @@ export default function MembersPage() {
   const pageMembers = visibleMembers.slice(safePage * pageSize, safePage * pageSize + pageSize);
   const rangeStart = visibleMembers.length ? safePage * pageSize + 1 : 0;
   const rangeEnd = Math.min(visibleMembers.length, safePage * pageSize + pageSize);
+  const usageIds = [...pageMembers.map((member) => member.id), ...(drawerMember ? [drawerMember.id] : [])];
+  const usageQuery = useOwnerAppUsage(ownerId, isOwner, usageIds);
+  const usageStatus = usageQuery.isError ? 'unavailable' : usageQuery.isPending || !usageQuery.isFetchedAfterMount ? 'checking' : 'ready';
+  const appUsage: Record<number, AppUsageDisplay> | undefined = isOwner
+    ? Object.fromEntries(usageIds.map((id) => [id, { status: usageStatus, usage: usageStatus === 'ready' ? usageQuery.data?.find((row) => row.member_id === id) : undefined }]))
+    : undefined;
 
   const openNew = () => {
     setEditing(null);
@@ -278,6 +291,8 @@ export default function MembersPage() {
 
       <MemberJoinReviewQueue />
 
+      {isOwner && usageQuery.isError && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3" role="status"><p className="min-w-0 flex-1 text-xs leading-6 text-[var(--text-muted)]">{t('مؤشر استخدام التطبيق غير متاح حاليًا. لا يعني هذا أن الأعضاء لم يستخدموه؛ يلزم تفعيل schema الجديدة أو إعادة المحاولة.', 'App-use evidence is currently unavailable. This does not mean members have not used it; the new schema must be enabled or the request retried.')}</p><Button variant="secondary" onClick={() => { void usageQuery.refetch(); }}>{t('إعادة المحاولة', 'Retry')}</Button></div>}
+
       {/* Filters Section */}
       <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-sm)] sm:p-4">
         <MemberToolbar
@@ -310,6 +325,7 @@ export default function MembersPage() {
               <MemberCards
                 members={pageMembers}
                 customFields={customFields}
+                appUsage={appUsage}
                 onView={setDrawerMember}
                 onEdit={openEdit}
                 onDelete={askDelete}
@@ -416,6 +432,7 @@ export default function MembersPage() {
         isOpen={Boolean(drawerMember)}
         member={drawerMember}
         customFields={customFields}
+        appUsage={drawerMember ? appUsage?.[drawerMember.id] : undefined}
         notes={notesQuery.data ?? []}
         onClose={() => setDrawerMember(null)}
         onEdit={openEdit}

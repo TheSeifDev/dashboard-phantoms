@@ -25,7 +25,7 @@ const mocks = {
   'features/members/customFieldsApi.ts': { formatCustomFieldValue: (_, v) => String(v ?? ''), getMemberCustomFieldValue: (m, f) => m.custom_fields?.[f.id] },
   'features/members/MemberCells.tsx': { DeviceChips: () => null, ReadinessChip: () => null, WorkStatusChip: () => null },
 };
-const actual = new Set(['features/members/profile-fields.ts', 'features/members/member-profile-display.ts', 'features/members/MemberAcademicDetails.tsx', 'features/members/MemberCards.tsx', 'features/members/MemberProfileFields.tsx', 'features/members/MemberExperiencePreviewPage.tsx']);
+const actual = new Set(['features/members/profile-fields.ts', 'features/members/member-profile-display.ts', 'features/members/MemberAcademicDetails.tsx', 'features/members/MemberCards.tsx', 'features/members/MemberProfileFields.tsx', 'features/members/MemberExperiencePreviewPage.tsx', 'features/app-usage/MemberAppUsageDetails.tsx']);
 const modules = new Map();
 function load(path) {
   const base = resolve(frontend, 'src', path);

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import MainLayout from '../components/layout/MainLayout';
 import { PhantomLoader } from '../components/motion/PhantomLoader';
@@ -15,7 +15,9 @@ import { MemberAccessGuard } from '../features/auth/MemberAccessGuard';
 import { useLocale } from '../i18n/useLocale';
 import { managerDestination } from '../features/teams/access';
 import { MemberProfileCompletionGuard } from '../features/members/MemberProfileCompletionGuard';
+import { AppDownloadBanner } from '../features/app-download/AppDownloadBanner';
 
+const AppDownloadPage = lazy(() => import('../features/app-download/AppDownloadPage'));
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 const AdminLoginPage = lazy(() => import('../features/auth/AdminLoginPage'));
 const AdminSetPasswordPage = lazy(() => import('../features/auth/AdminSetPasswordPage'));
@@ -171,7 +173,12 @@ function RootRedirect() {
   return <Navigate to="/login" replace />;
 }
 
-export const router = createBrowserRouter([
+function AppDownloadShell() {
+  return <><AppDownloadBanner /><Outlet /></>;
+}
+
+export const router = createBrowserRouter([{ element: <AppDownloadShell />, children: [
+  { path: '/download', element: <Page><AppDownloadPage /></Page> },
   // Member Portal Routes
   {
     path: '/',
@@ -272,4 +279,4 @@ export const router = createBrowserRouter([
 
   // Fallback
   { path: '*', element: <Navigate to="/login" replace /> },
-]);
+] }]);

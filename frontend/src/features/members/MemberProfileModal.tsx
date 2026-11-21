@@ -22,10 +22,12 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { calculateBonus } from '../dashboard/metrics';
 import { useLocale } from '../../i18n/useLocale';
+import { MemberAppUsageDetails, type AppUsageDisplay } from '../app-usage/MemberAppUsageDetails';
 
 interface MemberProfileModalProps {
   isOpen: boolean;
   member: Member | null;
+  appUsage?: AppUsageDisplay;
   customFields?: MemberCustomField[];
   notes?: Note[];
   onClose: () => void;
@@ -37,6 +39,7 @@ interface MemberProfileModalProps {
 export function MemberProfileModal({
   isOpen,
   member,
+  appUsage,
   customFields,
   notes = [],
   onClose,
@@ -164,6 +167,8 @@ export function MemberProfileModal({
             </div>
           </div>
         </div>
+
+        {appUsage && <MemberAppUsageDetails display={appUsage} />}
 
         {/* Info Grid */}
         <div className="grid gap-3 sm:grid-cols-2">

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -29,14 +30,20 @@ function runCheck() {
   });
 }
 
-test('local inventory retains twenty-four applied forwards including exact owner demotion timestamp, with no pending forwards', () => {
+test('local inventory retains twenty-five applied forwards including the exact app-use application timestamp', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
-  assert.equal(applied, 24);
+  assert.equal(applied, 25);
+  const appUsage = entries.find((entry) => entry.version === '20261121090000');
+  assert.equal(appUsage.name, 'member_app_usage');
+  assert.equal(appUsage.production_status, 'applied');
+  assert.equal(appUsage.remote_applied_timestamp, '20261121091846');
+  assert.equal(appUsage.canonical_repository_filename, 'backend/supabase/migrations/20261121090000_member_app_usage.sql');
+  assert.equal(createHash('sha256').update(readFileSync(resolve(repoRoot, appUsage.canonical_repository_filename))).digest('hex'), appUsage.sha256);
   const demotion = entries.find((entry) => entry.version === '20261121074500');
   assert.equal(demotion.name, 'owner_admin_demotion');
   assert.equal(demotion.production_status, 'applied');

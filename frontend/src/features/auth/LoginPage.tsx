@@ -171,6 +171,7 @@ export default function LoginPage() {
         <div className="grid gap-2 text-center text-sm text-[var(--text-2)]">
           <Link className="auth-inline-link justify-center" to="/forgot-password">{t('نسيت كلمة المرور؟', 'Forgot your password?')}</Link>
           <Link className="auth-inline-link justify-center" to="/join">{t('لديك دعوة؟ إنشاء كلمة مرور', 'Have an invitation? Set a password')}</Link>
+          <Link className="auth-inline-link justify-center" to="/download">{t('تحميل تطبيق PHANTOMS لأندرويد', 'Download PHANTOMS for Android')}</Link>
         </div>
       )}
     >

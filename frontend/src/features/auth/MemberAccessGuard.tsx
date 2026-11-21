@@ -8,6 +8,7 @@ import { getMemberPasswordAccess } from './member-password-access';
 import { memberAuthErrorMessage, normalizeAuthEmail } from './member-password';
 import { PhantomLoader } from '../../components/motion/PhantomLoader';
 import { useLocale } from '../../i18n/useLocale';
+import { MemberAppUsageTracker } from '../app-usage/MemberAppUsageTracker';
 
 type GuardState = 'checking' | 'allowed' | 'denied';
 
@@ -205,7 +206,7 @@ export function MemberAccessGuard({ children }: { children: ReactNode }) {
   if (visibleState === 'checking') {
     return <PhantomLoader message={t('بنتأكد من جلسة العضو وصلاحية الجهاز...', 'Verifying the member session and device access...')} />;
   }
-  return <>{children}</>;
+  return <><MemberAppUsageTracker />{children}</>;
 }
 
 export function memberAccessErrorMessage(): string {

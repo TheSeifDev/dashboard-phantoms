@@ -23,10 +23,10 @@ END $$;
 
 -- The pending member-information migrations run only in this disposable chain;
 -- historical provenance remains the original 24 migrations.
-SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 48,
-  'local disposable migration history records all 48 canonical files');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261121074500',
-  'local disposable migration history ends at the pending owner demotion migration');
+SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 49,
+  'local disposable migration history records all 49 canonical files');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261121090000',
+  'local disposable migration history ends at the pending member app usage migration');
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
            WHERE version <= '20261114164006'), 24,
   'historical migration cohort through 20261114164006 remains exactly 24 migrations');

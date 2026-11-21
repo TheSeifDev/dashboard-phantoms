@@ -7,14 +7,18 @@ import { ToastViewport } from './components/ui/Toast';
 import { useThemeStore, parseTheme } from './store/theme';
 import { registerSW } from 'virtual:pwa-register';
 import { initCapacitorNativeBridge, isRunningInNativeApk } from './lib/capacitor';
+import { installBrowserInstallPromptGuard } from './lib/pwa-install';
 import { runLocalStorageMigration } from './lib/storageMigration';
 import './index.css';
 
 // إدارة وتهيئة مفاتيح الجلسة المحلية
 runLocalStorageMigration();
 
-// تهيئة بيئة تطبيق الأندرويد (زر الرجوع والتكامل الأصلي)
+// تهيئة بيئة الأندرويد (زر الرجوع والتكامل الأصلي)
 initCapacitorNativeBridge();
+
+// Keep browser install UI under our explicit APK/download route on every public and authenticated page.
+installBrowserInstallPromptGuard();
 
 // Register the service worker for PWA and push notifications on web only
 if (!isRunningInNativeApk()) {

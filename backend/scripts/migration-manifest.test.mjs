@@ -58,7 +58,14 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the reconciled forward migration preserves original provenance and canonical bytes outside initialization history', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 24);
+  assert.equal(forward.length, 25);
+  const appUsage = forward[24];
+  assert.equal(appUsage.version, '20261121090000');
+  assert.equal(appUsage.name, 'member_app_usage');
+  assert.equal(appUsage.production_status, 'applied');
+  assert.equal(appUsage.remote_applied_timestamp, '20261121091846');
+  assert.equal(appUsage.canonical_repository_filename, 'backend/supabase/migrations/20261121090000_member_app_usage.sql');
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, appUsage.canonical_repository_filename))).digest('hex'), appUsage.sha256);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');

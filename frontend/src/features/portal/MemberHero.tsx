@@ -1,8 +1,10 @@
 import { Laptop, MapPin, Bell, BellRing, Download, CheckCircle2, Gift } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { Member } from '../../types/db';
 import { usePWA } from '../../hooks/usePWA';
 import { formatSigned } from '../../lib/arabic';
 import { useLocale } from '../../i18n/useLocale';
+import { isRunningInNativeApk } from '../../lib/capacitor';
 
 export function MemberHero({
   member,
@@ -25,7 +27,7 @@ export function MemberHero({
   bonusStateLoading?: boolean;
   bonusStateError?: boolean;
 }) {
-  const { isInstallable, installPWA, isSubscribed, subscribeToPush, sendTestNotification } = usePWA({
+  const { isSubscribed, subscribeToPush, sendTestNotification } = usePWA({
     memberId: member.id,
     memberEmail: member.email,
   });
@@ -58,14 +60,13 @@ export function MemberHero({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {isInstallable && (
-            <button
-              type="button"
-              onClick={installPWA}
+          {!isRunningInNativeApk() && (
+            <Link
+              to="/download"
               className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--primary-soft)] px-3 text-xs font-bold text-[var(--link)] transition-colors hover:bg-[var(--primary)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
             >
-              <Download size={14} aria-hidden="true" /> {t('تثبيت التطبيق', 'Install app')}
-            </button>
+              <Download size={14} aria-hidden="true" /> {t('تنزيل APK لأندرويد', 'Download Android APK')}
+            </Link>
           )}
 
           <button

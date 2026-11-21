@@ -116,6 +116,8 @@ exports.AuthShell = function AuthShell({ title, description, children, footer })
 exports.PhantomLoader = function PhantomLoader({ label, message, children }) {
   return React.createElement('div', { role: 'status' }, label || message || children || 'جارٍ التحميل');
 };\n`;
+  } else if (normalized.endsWith('features/app-usage/MemberAppUsageTracker.tsx')) {
+    body = `exports.MemberAppUsageTracker = () => null;\n`;
   } else if (normalized.endsWith('lib/validators.ts')) {
     body = `exports.isValidEmail = (value) => /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value);\n`;
   } else if (normalized.endsWith('lib/supabase/member-client.ts')) {
