@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import MainLayout from '../components/layout/MainLayout';
 import { PhantomLoader } from '../components/motion/PhantomLoader';
@@ -132,10 +132,13 @@ function AdminStartRedirect() {
   const { t } = useLocale();
   const user = useAuthStore((s) => s.user);
   const access = useAdminAccess(user?.id ?? null);
+  // Keyed by history entry: a repeated navigation to /admin (same route, already mounted)
+  // must redirect again instead of leaving an empty outlet behind.
+  const { key } = useLocation();
   if (access.isPending) return <PhantomLoader message={t('بنتأكد من صلاحياتك...', 'Checking your access...')} />;
   if (access.isError) return <ErrorState message={t('معرفناش نتحقق من صلاحياتك.', 'Could not verify your access.')} onRetry={() => { void access.refetch(); }} />;
   const path = firstAllowedAdminPath(access.data?.permissions);
-  return path ? <Navigate to={path} replace /> : <NoAdminSections />;
+  return path ? <Navigate key={key} to={path} replace /> : <NoAdminSections />;
 }
 
 function RequireAdminPermission({ permission, children }: { permission: AdminPermission; children: React.ReactNode }) {

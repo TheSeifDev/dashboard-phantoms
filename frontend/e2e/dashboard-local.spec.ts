@@ -49,35 +49,11 @@ async function signIn(client: SupabaseClient, email: string, password: string): 
 }
 
 async function loginInBrowser(page: Page): Promise<void> {
-  const diagErrors: string[] = [];
-  const onPageError = (error: Error) => diagErrors.push(`pageerror: ${error.message.slice(0, 300)}`);
-  const onConsole = (message: { type(): string; text(): string }) => { if (message.type() === 'error' || message.type() === 'warning') diagErrors.push(`${message.type()}: ${message.text().slice(0, 300)}`); };
-  page.on('pageerror', onPageError);
-  page.on('console', onConsole);
   await page.goto('/admin/login', { waitUntil: 'domcontentloaded' });
   await page.locator('#admin-email').fill(ownerEmail);
   await page.locator('#admin-password').fill(ownerPassword);
   await page.getByRole('button', { name: 'ادخل مركز الإدارة' }).click();
-  try {
-    await expect(page).toHaveURL(/\/admin\/dashboard$/);
-  } catch (error) {
-    // TEMP diagnostics (redesign PR): describe the stuck screen without fixture data.
-    const state = await page.evaluate(() => ({
-      path: location.pathname,
-      status: Array.from(document.querySelectorAll('[role="status"]')).map((el) => (el as HTMLElement).innerText.slice(0, 120)),
-      alerts: Array.from(document.querySelectorAll('[role="alert"]')).map((el) => (el as HTMLElement).innerText.slice(0, 160)),
-      headings: Array.from(document.querySelectorAll('h1, h2, h3')).map((el) => (el as HTMLElement).innerText.slice(0, 80)).slice(0, 6),
-      hasLayout: Boolean(document.querySelector('.app-workspace')),
-      hasLoader: Boolean(document.querySelector('.phantom-loader')),
-      bodyClasses: Array.from(document.body.children).map((el) => `${el.tagName.toLowerCase()}.${(el as HTMLElement).className}`.slice(0, 60)).slice(0, 6),
-    })).catch((cause: unknown) => ({ evaluateFailed: String(cause).slice(0, 200) }));
-    console.log(`[login-diag] ${JSON.stringify(state)}`);
-    console.log(`[login-diag] errors ${JSON.stringify(diagErrors.slice(0, 12))}`);
-    throw error;
-  } finally {
-    page.off('pageerror', onPageError);
-    page.off('console', onConsole);
-  }
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
   await expect(page.getByRole('heading', { name: 'لوحة الفريق', exact: true })).toBeVisible();
 }
 

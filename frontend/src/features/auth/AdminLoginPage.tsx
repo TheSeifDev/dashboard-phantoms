@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, ArrowLeft, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { AuthShell } from '../../components/layout/AuthShell';
 import { PhantomLoader } from '../../components/motion/PhantomLoader';
@@ -9,7 +10,8 @@ import { useAuthStore, getAdminRemember, setAdminRemember } from '../../store/au
 import { supabase, syncAdminSessionStorage } from '../../lib/supabase/client';
 import { toAppError } from '../../lib/supabase/errors';
 import { isValidEmail } from '../../lib/validators';
-import { useAdminAccess } from '../admin/access/api';
+import { adminAccessKey, useAdminAccess } from '../admin/access/api';
+import type { AdminAccess } from '../../types/db';
 import { clearAdminSetupIntent } from './auth-flow';
 import { managerDestination } from '../teams/access';
 
@@ -25,7 +27,7 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const setSession = useAuthStore((state) => state.setSession);
   const clearSession = useAuthStore((state) => state.clear);
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { t } = useLocale();
 
   // جلسة إدارة محفوظة (تذكرني) — لا تعرض نموذج الدخول أصلاً.
@@ -117,8 +119,11 @@ export default function AdminLoginPage() {
           return;
         }
         syncAdminSessionStorage(remember);
+        // Seed the verified access and let the render-time <Navigate> above route exactly once.
+        // The auth listener may already have mounted that redirect; a second, late
+        // navigate('/admin') would undo AdminStartRedirect's hop to the first allowed section.
+        queryClient.setQueryData<AdminAccess>(adminAccessKey(data.session.user.id), accessData as AdminAccess);
         setSession(data.session);
-        navigate(destination);
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('حصلت مشكلة وإحنا بنتصل بالخادم.', 'Something went wrong while connecting to the server.'));
