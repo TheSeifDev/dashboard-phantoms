@@ -30,20 +30,26 @@ function runCheck() {
   });
 }
 
-test('local inventory retains twenty-five applied forwards including the exact app-use application timestamp', () => {
+test('local inventory retains twenty-six applied forwards including exact app-use and Owner-erasure timestamps', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
-  assert.equal(applied, 25);
+  assert.equal(applied, 26);
   const appUsage = entries.find((entry) => entry.version === '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
   assert.equal(appUsage.production_status, 'applied');
   assert.equal(appUsage.remote_applied_timestamp, '20261121091846');
   assert.equal(appUsage.canonical_repository_filename, 'backend/supabase/migrations/20261121090000_member_app_usage.sql');
   assert.equal(createHash('sha256').update(readFileSync(resolve(repoRoot, appUsage.canonical_repository_filename))).digest('hex'), appUsage.sha256);
+  const ownerErasure = entries.find((entry) => entry.version === '20261121110000');
+  assert.equal(ownerErasure.name, 'owner_member_erasure');
+  assert.equal(ownerErasure.production_status, 'applied');
+  assert.equal(ownerErasure.remote_applied_timestamp, '20261121133819');
+  assert.equal(ownerErasure.canonical_repository_filename, 'backend/supabase/migrations/20261121110000_owner_member_erasure.sql');
+  assert.equal(createHash('sha256').update(readFileSync(resolve(repoRoot, ownerErasure.canonical_repository_filename))).digest('hex'), ownerErasure.sha256);
   const posture = readFileSync(resolve(repoRoot, 'backend/supabase/tests/database/01_schema_and_posture.test.sql'), 'utf8');
   const tableAllowlist = posture.match(/SELECT tables_are\('public', ARRAY\[([\s\S]*?)\]/)?.[1];
   assert.ok(tableAllowlist?.includes("'member_app_usage'"), 'new app-use table must be in the exact pgTAP schema allowlist');
