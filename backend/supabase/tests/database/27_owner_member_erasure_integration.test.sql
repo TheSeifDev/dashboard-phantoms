@@ -335,8 +335,9 @@ BEGIN
     RAISE EXCEPTION 'DATABASE_COMPLETION_MUST_NOT_CLAIM_STORAGE_OR_AUTH: %',v_status;
   END IF;
 
-  -- The following SQL statements simulate successful Storage API and GoTrue calls
-  -- against these disposable fixtures only. The production Edge uses Storage/Auth APIs.
+  -- Simulate successful Storage API and GoTrue responses for disposable fixtures.
+  -- The Edge suite tests Storage API removal; this SQL test verifies direct DELETE
+  -- remains protected, then records only the exact synthetic API-success result.
   PERFORM set_config('request.jwt.claims',jsonb_build_object('role','service_role')::text,true);
   BEGIN
     INSERT INTO storage.objects(bucket_id,name,owner_id,metadata)
@@ -349,7 +350,12 @@ BEGIN
   IF jsonb_array_length(v_pending)<>1 OR v_pending->0->>'name'<>'target/private-fixture.txt' THEN
     RAISE EXCEPTION 'PENDING_STORAGE_MANIFEST_SCOPE_FAILED: %',v_pending;
   END IF;
-  DELETE FROM storage.objects WHERE bucket_id=v_pending->0->>'bucket_id' AND name=v_pending->0->>'name';
+  BEGIN
+    DELETE FROM storage.objects WHERE bucket_id=v_pending->0->>'bucket_id' AND name=v_pending->0->>'name';
+    RAISE EXCEPTION 'TEST_EXPECTED_STORAGE_DELETE_PROTECTION';
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    IF SQLERRM<>'Direct deletion from storage tables is not allowed. Use the Storage API instead.' THEN RAISE; END IF;
+  END;
   v_marked := public.owner_member_erasure_mark_storage_batch(v_operation,v_pending);
   IF (v_marked->>'marked_count')::integer<>1 THEN RAISE EXCEPTION 'STORAGE_MARK_COUNT_FAILED: %',v_marked; END IF;
   DELETE FROM auth.users WHERE id=v_target_auth;
