@@ -1,0 +1,65 @@
+-- Self-service member settings: exact caller identity, device and atomic validation.
+BEGIN;
+\ir _helpers.psql
+SELECT no_plan();
+SELECT phantoms_test.create_member('settings_one', NULL, true);
+SELECT phantoms_test.create_member('settings_two', NULL, true);
+SELECT phantoms_test.create_user('settings_admin');
+SELECT phantoms_test.grant_admin('settings_admin', 'admin', phantoms_test.perms('members'));
+SELECT phantoms_test.bind_device('settings_one');
+SELECT phantoms_test.bind_device('settings_two');
+INSERT INTO phantoms_test.vars(key,value) VALUES ('settings_profile', '{"fullName":"Test Settings One","phone":"+20123456789","academicNumber":"٠٠١۲۳","academicGroup":"Group A","specialization":"software","linkedinUrl":"https://www.linkedin.com/in/member","portfolioUrl":"https://github.com/member","residence":"","workConditions":"","bio":"","device":"","gender":""}');
+
+SELECT ok(has_function_privilege('authenticated', 'public.member_get_profile_settings(text)', 'EXECUTE'), 'authenticated member can request own settings');
+SELECT ok(NOT has_function_privilege('anon', 'public.member_get_profile_settings(text)', 'EXECUTE'), 'anonymous settings read denied');
+SELECT ok(NOT has_function_privilege('service_role', 'public.member_get_profile_settings(text)', 'EXECUTE'), 'member read RPC does not retain service default execute');
+SELECT ok(NOT has_function_privilege('anon', 'public.member_update_profile_settings(text,jsonb)', 'EXECUTE'), 'anonymous settings write denied');
+SELECT ok(NOT has_function_privilege('authenticated', 'public.member_profile_validate(jsonb)', 'EXECUTE'), 'validator remains private');
+SELECT ok(NOT has_function_privilege('service_role', 'public.member_password_complete_profile_legacy(uuid,uuid,uuid,jsonb)', 'EXECUTE'), 'legacy enrollment cannot bypass required profile');
+SELECT ok(has_column_privilege('authenticated', 'public.members', 'academic_number', 'SELECT'), 'admin scoped projection can include academic information');
+SELECT ok(NOT has_column_privilege('authenticated', 'public.members', 'academic_number', 'UPDATE'), 'academic columns have no direct authenticated update grant');
+
+SELECT phantoms_test.login_as('settings_one');
+INSERT INTO phantoms_test.vars(key,value) VALUES ('settings_before', public.member_get_profile_settings(phantoms_test.tok('settings_one'))::text);
+SELECT is((phantoms_test.var('settings_before')::jsonb ->> 'member_id')::bigint, phantoms_test.mid('settings_one'), 'server derives own member ID');
+SELECT is(phantoms_test.var('settings_before')::jsonb ->> 'profile_complete', 'false', 'legacy member is incomplete without disabling identity');
+SELECT ok(phantoms_test.var('settings_before')::jsonb -> 'missing_fields' ? 'academicNumber', 'new academic field explicitly missing');
+SELECT is(phantoms_test.var('settings_before')::jsonb ->> 'university_email', NULL::text, 'university email absent until academic number supplied');
+SELECT throws_like($$SELECT public.member_get_profile_settings(phantoms_test.tok('settings_two'))$$, '%DEVICE_REQUIRED%', 'another member device does not select another profile');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"email":"other@example.test"}'::jsonb)$$, '%INVALID_INPUT%', 'caller cannot change canonical Auth email');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"member_id":999,"role":"owner"}'::jsonb)$$, '%INVALID_INPUT%', 'caller cannot select member or role');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"work_status":"active","team_id":"anything"}'::jsonb)$$, '%INVALID_INPUT%', 'membership status and team are not profile fields');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"phone":""}'::jsonb)$$, '%INVALID_INPUT%', 'WhatsApp phone required on server');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"academicGroup":""}'::jsonb)$$, '%INVALID_INPUT%', 'academic group required on server');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"specialization":"owner"}'::jsonb)$$, '%INVALID_INPUT%', 'specialization strictly enumerated');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"portfolioUrl":"javascript:alert(1)"}'::jsonb)$$, '%INVALID_INPUT%', 'unsafe optional link rejected');
+INSERT INTO phantoms_test.vars(key,value) VALUES ('settings_after', public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb)::text);
+SELECT is(phantoms_test.var('settings_after')::jsonb ->> 'full_name', 'Test Settings One', 'save response returns freshly persisted name');
+SELECT is(phantoms_test.var('settings_after')::jsonb ->> 'academic_number', '00123', 'leading zeros and localized digits canonicalized');
+SELECT is(phantoms_test.var('settings_after')::jsonb ->> 'university_email', '00123@batechu.com', 'server derives exact requested university domain');
+SELECT is(phantoms_test.var('settings_after')::jsonb ->> 'profile_complete', 'true', 'save confirms completeness from server');
+SELECT is(jsonb_array_length(phantoms_test.var('settings_after')::jsonb -> 'missing_fields'), 0, 'missing fields cleared after valid save');
+SELECT ok(NOT (phantoms_test.var('settings_after')::jsonb ?| ARRAY['session_token','push_subscription','auth_user_id','token_hash']), 'profile projection excludes secrets');
+
+RESET ROLE;
+SELECT is((SELECT email FROM public.members WHERE id=phantoms_test.mid('settings_one')), 'settings_one@phantoms-test.example', 'profile save preserves member email');
+SELECT is((SELECT email FROM auth.users WHERE id=phantoms_test.uid('settings_one')), 'settings_one@phantoms-test.example', 'profile save preserves Auth email');
+SELECT is((SELECT auth_user_id FROM public.member_auth_bindings WHERE member_id=phantoms_test.mid('settings_one')), phantoms_test.uid('settings_one'), 'profile save preserves exact Auth UUID');
+SELECT is((SELECT work_status FROM public.members WHERE id=phantoms_test.mid('settings_one')), 'active', 'old member remains active');
+SELECT is((SELECT count(*)::int FROM public.team_memberships WHERE member_id=phantoms_test.mid('settings_one')), 0, 'specialization never creates team membership');
+SELECT is((SELECT count(*)::int FROM public.admin_accounts WHERE user_id=phantoms_test.uid('settings_one')), 0, 'specialization never grants admin');
+SELECT phantoms_test.login_as('settings_two');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_two'), phantoms_test.var('settings_profile')::jsonb)$$, '%duplicate key%', 'academic number conflict is rejected atomically');
+RESET ROLE;
+SELECT is((SELECT academic_number FROM public.members WHERE id=phantoms_test.mid('settings_two')), NULL::text, 'conflicting save persists none of the new profile');
+SELECT is((SELECT full_name FROM public.members WHERE id=phantoms_test.mid('settings_two')), 'Test settings_two', 'conflicting save rolls back name too');
+SELECT phantoms_test.login_as('settings_admin');
+SELECT throws_like($$SELECT public.member_get_profile_settings(phantoms_test.tok('settings_one'))$$, '%UNAUTHORIZED%', 'admin identity cannot impersonate member Settings');
+RESET ROLE;
+SELECT phantoms_test.login_as('settings_one');
+RESET ROLE;
+DELETE FROM auth.sessions WHERE id=current_setting('request.jwt.claim.session_id')::uuid;
+SET LOCAL ROLE authenticated;
+SELECT throws_like($$SELECT public.member_get_profile_settings(phantoms_test.tok('settings_one'))$$, '%MEMBER_SESSION_REQUIRED%', 'revoked live Auth session denied despite JWT claims');
+SELECT * FROM finish();
+ROLLBACK;

@@ -1,4 +1,5 @@
-import { Bell, LogOut, Moon, Sun } from 'lucide-react';
+import { Bell, LogOut, Moon, Settings2, Sun } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import { useThemeStore } from '../../store/theme';
 import { useNotificationStore } from '../../lib/notifications';
 import { PhantomsLogo } from '../../components/brand/PhantomsLogo';
@@ -14,14 +15,17 @@ export function PortalHeader({ onLogout }: { onLogout: () => void }) {
   const controlClass = 'grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--border)] text-[var(--link)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2';
 
   return (
-    <header dir={dir} className="sticky top-0 z-[var(--z-sticky)] flex min-h-[calc(var(--header-h)+env(safe-area-inset-top))] items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface)] px-3 pt-[env(safe-area-inset-top)] sm:px-6">
+    <header dir={dir} className="sticky top-0 z-[var(--z-sticky)] flex min-h-[calc(var(--header-h)+env(safe-area-inset-top))] flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface)] px-3 pb-2 pt-[calc(.5rem+env(safe-area-inset-top))] sm:flex-nowrap sm:px-6">
       <div className="flex min-w-0 shrink items-center">
         <PhantomsLogo size="sm" subtitle={t('بوابة أعضاء الفريق', 'Team member portal')} />
         <div className="sr-only">
           <strong className="block text-sm font-black sm:text-base">PHANTOMS</strong>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+      <div className="flex w-full shrink-0 items-center justify-between gap-1 sm:w-auto sm:gap-2">
+        <NavLink to="/portal/settings" className={({ isActive }) => `${controlClass} ${isActive ? 'bg-[var(--primary-soft)] text-[var(--primary-ink)]' : ''}`} aria-label={t('الإعدادات وبياناتي', 'Settings and my information')} title={t('الإعدادات وبياناتي', 'Settings and my information')}>
+          <Settings2 size={19} aria-hidden="true" />
+        </NavLink>
         <button
           type="button"
           onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}

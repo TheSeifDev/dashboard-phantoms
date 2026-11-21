@@ -19,7 +19,8 @@ SELECT phantoms_test.create_user('join_admin');
 SELECT phantoms_test.grant_admin('join_admin', 'admin', phantoms_test.perms('members'));
 SELECT phantoms_test.create_member('existing_reset', 'reset-self@phantoms-test.example', true);
 UPDATE public.members
-SET full_name = 'Stored Member Profile', phone = '+201234567890', residence = 'Alexandria'
+SET full_name = 'Stored Member Profile', phone = '+201234567890', residence = 'Alexandria',
+    academic_number = '009876', academic_group = 'RESET-1', specialization = 'hardware'
 WHERE email = 'reset-self@phantoms-test.example';
 
 SELECT has_table('public', 'member_password_invitations', 'private invitation table exists');
@@ -30,6 +31,19 @@ SELECT ok(NOT has_function_privilege('anon', 'public.member_password_complete_pr
           AND NOT has_function_privilege('authenticated', 'public.member_password_complete_profile(uuid,uuid,uuid,jsonb)', 'EXECUTE')
           AND has_function_privilege('service_role', 'public.member_password_complete_profile(uuid,uuid,uuid,jsonb)', 'EXECUTE'),
           'profile completion RPC is service-only');
+SELECT is((SELECT count(*)::int FROM information_schema.columns
+           WHERE table_schema = 'public' AND table_name = 'members'
+             AND column_name IN ('academic_number', 'academic_group', 'specialization',
+                                 'university_email', 'linkedin_url', 'portfolio_url')), 6,
+          'academic and profile URL columns exist additively');
+SELECT ok(NOT has_function_privilege('anon', 'public.member_profile_validate(jsonb)', 'EXECUTE')
+          AND NOT has_function_privilege('authenticated', 'public.member_profile_validate(jsonb)', 'EXECUTE'),
+          'profile validator is private to security-definer callers');
+SELECT ok(NOT has_function_privilege('anon', 'public.member_get_profile_settings(text)', 'EXECUTE')
+          AND has_function_privilege('authenticated', 'public.member_get_profile_settings(text)', 'EXECUTE')
+          AND NOT has_function_privilege('anon', 'public.member_update_profile_settings(text,jsonb)', 'EXECUTE')
+          AND has_function_privilege('authenticated', 'public.member_update_profile_settings(text,jsonb)', 'EXECUTE'),
+          'profile settings RPCs are authenticated-only');
 SELECT ok(NOT has_function_privilege('anon', 'public.get_member_pending_review()', 'EXECUTE')
           AND has_function_privilege('authenticated', 'public.get_member_pending_review()', 'EXECUTE'),
           'pending review status is available only to authenticated clients');
@@ -112,12 +126,18 @@ SELECT throws_like($$SELECT public.member_password_complete_profile(
 SELECT is((SELECT status FROM public.member_password_invitations
            WHERE normalized_email = 'new-self@phantoms-test.example'), 'reserved',
           'a missing profile does not partially complete or create a member');
+SELECT throws_like($$SELECT public.member_password_complete_profile(
+  (SELECT id FROM public.member_password_invitations WHERE normalized_email = 'new-self@phantoms-test.example'),
+  ((SELECT value::jsonb FROM phantoms_test.vars WHERE key = 'join_claim') ->> 'claim_id')::uuid,
+  '40000000-0000-4000-8000-000000000001',
+  '{"fullName":"Legacy Seven","phone":"+201112223333","residence":null,"workConditions":null,"bio":null,"device":null,"gender":null}'::jsonb)$$, '%INVALID_INPUT%',
+  'new registration rejects the legacy seven-key profile payload');
 
 SELECT lives_ok($$SELECT public.member_password_complete_profile(
   (SELECT id FROM public.member_password_invitations WHERE normalized_email = 'new-self@phantoms-test.example'),
   ((SELECT value::jsonb FROM phantoms_test.vars WHERE key = 'join_claim') ->> 'claim_id')::uuid,
   '40000000-0000-4000-8000-000000000001',
-  '{"fullName":"Self Service Member","phone":"+201112223333","residence":"Cairo","workConditions":"Remote","bio":"Member supplied","device":"لابتوب","gender":"ذكر"}'::jsonb)$$,
+  '{"fullName":"Self Service Member","phone":"+201112223333","residence":"Cairo","workConditions":"Remote","bio":"Member supplied","device":"لابتوب","gender":"ذكر","academicNumber":"٠٠۱۲۳۴","academicGroup":"CSE-1","specialization":"software","linkedinUrl":"https://www.linkedin.com/in/self-service","portfolioUrl":"https://example.com/self-service"}'::jsonb)$$,
   'self-entered profile completes the reserved join atomically');
 SELECT is((SELECT count(*)::int FROM public.members WHERE email = 'new-self@phantoms-test.example'), 1,
           'join creates exactly one member after the guarded Auth write');
@@ -137,6 +157,18 @@ SELECT is((SELECT device FROM public.members WHERE email = 'new-self@phantoms-te
           'the submitted device is saved');
 SELECT is((SELECT gender FROM public.members WHERE email = 'new-self@phantoms-test.example'), 'ذكر',
           'the submitted gender is saved');
+SELECT is((SELECT academic_number FROM public.members WHERE email = 'new-self@phantoms-test.example'), '001234',
+          'Arabic and Persian academic digits are normalized to ASCII while preserving leading zeroes');
+SELECT is((SELECT academic_group FROM public.members WHERE email = 'new-self@phantoms-test.example'), 'CSE-1',
+          'the submitted academic group is saved');
+SELECT is((SELECT specialization FROM public.members WHERE email = 'new-self@phantoms-test.example'), 'software',
+          'the submitted specialization is saved');
+SELECT is((SELECT university_email FROM public.members WHERE email = 'new-self@phantoms-test.example'), '001234@batechu.com',
+          'university email is derived from the canonical academic number');
+SELECT is((SELECT linkedin_url FROM public.members WHERE email = 'new-self@phantoms-test.example'), 'https://www.linkedin.com/in/self-service',
+          'the submitted LinkedIn URL is saved');
+SELECT is((SELECT portfolio_url FROM public.members WHERE email = 'new-self@phantoms-test.example'), 'https://example.com/self-service',
+          'the submitted portfolio URL is saved');
 SELECT is((SELECT b.auth_user_id FROM public.member_auth_bindings b JOIN public.members m ON m.id = b.member_id
            WHERE m.email = 'new-self@phantoms-test.example'), '40000000-0000-4000-8000-000000000001'::uuid,
           'the new inactive member binds only to the exact invitation Auth user');
@@ -362,12 +394,14 @@ SELECT lives_ok($$SELECT public.member_password_complete_profile(
   (SELECT id FROM public.member_password_invitations WHERE note = 'unbound join email optional'),
   ((SELECT value::jsonb FROM phantoms_test.vars WHERE key = 'unbound_join_claim') ->> 'claim_id')::uuid,
   '40000000-0000-4000-8000-000000000002',
-  '{"fullName":"Unbound Self Service Member","phone":"","residence":"","workConditions":"","bio":"","device":"","gender":""}'::jsonb)$$,
+  '{"fullName":"Unbound Self Service Member","phone":"+201112223344","residence":"","workConditions":"","bio":"","device":"","gender":"","academicNumber":"987654","academicGroup":"UNBOUND-1","specialization":"ai","linkedinUrl":null,"portfolioUrl":null}'::jsonb)$$,
   'email-free Admin issuance still completes the member-entered profile behind the guarded Auth write');
 SELECT is((SELECT count(*)::int FROM public.members WHERE email = 'unbound-self@phantoms-test.example'), 1,
           'email-free issuance creates exactly one member only after redemption');
 SELECT is((SELECT work_status FROM public.members WHERE email = 'unbound-self@phantoms-test.example'), 'inactive',
           'email-free join remains inactive pending Admin review');
+SELECT is((SELECT university_email FROM public.members WHERE email = 'unbound-self@phantoms-test.example'), '987654@batechu.com',
+          'email-free join still derives the university email from its academic number');
 SELECT is((SELECT status FROM public.member_password_invitations WHERE note = 'unbound join email optional'), 'complete',
           'email-free link reaches a terminal completed state');
 SELECT throws_like($$SELECT public.member_password_reserve(
@@ -410,6 +444,10 @@ SELECT is((SELECT phone FROM public.members WHERE email = 'reset-self@phantoms-t
           'password reset preserves the existing member phone');
 SELECT is((SELECT residence FROM public.members WHERE email = 'reset-self@phantoms-test.example'), 'Alexandria',
           'password reset preserves the existing member residence');
+SELECT is((SELECT academic_number FROM public.members WHERE email = 'reset-self@phantoms-test.example'), '009876',
+          'password reset preserves the existing academic number');
+SELECT is((SELECT university_email FROM public.members WHERE email = 'reset-self@phantoms-test.example'), '009876@batechu.com',
+          'password reset preserves the derived university email');
 SELECT is((SELECT details ->> 'membership' FROM public.member_password_audit
            WHERE action = 'completed' AND member_id = phantoms_test.mid('existing_reset')
            ORDER BY created_at DESC LIMIT 1), 'active',

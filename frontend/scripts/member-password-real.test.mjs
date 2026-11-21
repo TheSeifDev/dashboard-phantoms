@@ -417,6 +417,8 @@ async function enrollRequest(email, token, password, confirmPassword = password,
   if (!fixture.resetTokens.has(token)) body.profile = {
     fullName: 'Self Service HTTP Member', phone: '+201100000001', residence: 'Alexandria',
     workConditions: 'Remote', bio: 'Owned disposable fixture', device: 'لابتوب', gender: 'ذكر',
+    academicNumber: String(BigInt('0x' + createHash('sha256').update(String(email)).digest('hex').slice(0, 20))),
+    academicGroup: 'HTTP-FIXTURE', specialization: 'software', linkedinUrl: '', portfolioUrl: '',
   };
   if (extra) Object.assign(body, extra);
   const response = await bounded(fetch(`${API_ORIGIN}${FUNCTION_PATH}`, {

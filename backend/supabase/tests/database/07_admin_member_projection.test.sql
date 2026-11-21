@@ -1,4 +1,4 @@
--- 07 — Authenticated member projection: the 17 safe columns are readable by
+-- 07 — Authenticated member projection: the 23 safe columns are readable by
 -- admins without broadening table SELECT, RLS, anon access, or secret columns.
 BEGIN;
 \ir _helpers.psql
@@ -21,12 +21,12 @@ BEGIN
   WHERE email = 'alice@phantoms-test.example';
 END $$;
 
--- The pending Web Projects forward migration is applied only inside this
--- disposable chain; historical provenance remains the original 24 migrations.
-SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 45,
-  'local disposable migration history records all 45 canonical files including Web Projects');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261120223000',
-  'local disposable migration history ends at the pending Web Projects migration');
+-- The pending member-information migrations run only in this disposable chain;
+-- historical provenance remains the original 24 migrations.
+SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 47,
+  'local disposable migration history records all 47 canonical files');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261121003000',
+  'local disposable migration history ends at the pending member recovery migration');
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
            WHERE version <= '20261114164006'), 24,
   'historical migration cohort through 20261114164006 remains exactly 24 migrations');
@@ -41,12 +41,12 @@ SELECT is(
    WHERE table_schema = 'public' AND table_name = 'members'
      AND grantee = 'authenticated' AND privilege_type = 'SELECT'),
   ARRAY[
-    'bio', 'bonus_infinite', 'can_go_alexandria', 'completion_rank',
+    'academic_group', 'academic_number', 'bio', 'bonus_infinite', 'can_go_alexandria', 'completion_rank',
     'created_at', 'custom_fields', 'device', 'email', 'full_name', 'gender',
-    'id', 'meeting_attendance', 'phone', 'residence', 'team_notes',
-    'work_conditions', 'work_status'
+    'id', 'linkedin_url', 'meeting_attendance', 'phone', 'portfolio_url', 'residence', 'specialization', 'team_notes',
+    'university_email', 'work_conditions', 'work_status'
   ]::text[],
-  'authenticated has SELECT on exactly the 17 safe member columns');
+  'authenticated has SELECT on exactly the 23 safe member columns');
 SELECT ok(NOT has_table_privilege('authenticated', 'public.members', 'SELECT'),
   'authenticated has no table-level SELECT privilege on members');
 SELECT is((SELECT count(*)::int FROM information_schema.column_privileges

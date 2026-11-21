@@ -82,6 +82,8 @@ function isPasswordImplementation(path, source = '') {
     || name === joinPath.toLowerCase()
     || name.endsWith('i18n/uselocale.ts')
     || name.includes('member-password')
+    || name.includes('profile-fields')
+    || name.includes('memberprofilefields')
     || name.includes('password-access')
     || name.endsWith('memberaccessguard.tsx')
     || name.endsWith('memberinviteapi.ts')
@@ -240,9 +242,11 @@ function installDom() {
     url: 'http://localhost/login',
     pretendToBeVisual: true,
   });
-  for (const name of ['window', 'document', 'navigator', 'localStorage', 'sessionStorage', 'HTMLElement', 'Node', 'MutationObserver', 'Event', 'KeyboardEvent', 'MouseEvent', 'HTMLInputElement']) {
+  for (const name of ['window', 'document', 'navigator', 'localStorage', 'sessionStorage', 'HTMLElement', 'Node', 'MutationObserver', 'Event', 'KeyboardEvent', 'MouseEvent', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement']) {
     Object.defineProperty(globalThis, name, { configurable: true, value: dom.window[name] });
   }
+  dom.window.HTMLElement.prototype.attachEvent ??= () => {};
+  dom.window.HTMLElement.prototype.detachEvent ??= () => {};
   globalThis.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
   globalThis.requestAnimationFrame = dom.window.requestAnimationFrame.bind(dom.window);
   globalThis.cancelAnimationFrame = dom.window.cancelAnimationFrame.bind(dom.window);
@@ -349,7 +353,12 @@ function button(container, predicate) {
     : predicate(node)) ?? null;
 }
 function setInputValue(node, value) {
-  const setter = Object.getOwnPropertyDescriptor(node.ownerDocument.defaultView.HTMLInputElement.prototype, 'value')?.set;
+  const prototype = node instanceof node.ownerDocument.defaultView.HTMLSelectElement
+    ? node.ownerDocument.defaultView.HTMLSelectElement.prototype
+    : node instanceof node.ownerDocument.defaultView.HTMLTextAreaElement
+      ? node.ownerDocument.defaultView.HTMLTextAreaElement.prototype
+      : node.ownerDocument.defaultView.HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
   if (setter) setter.call(node, value); else node.value = value;
   const reactPropsKey = Object.keys(node).find((key) => key.startsWith('__reactProps$'));
   const onChange = reactPropsKey && node[reactPropsKey]?.onChange;
@@ -359,6 +368,13 @@ function setInputValue(node, value) {
 }
 async function setValue(container, id, value) {
   await act(async () => { setInputValue(input(container, id), value); await settle(); });
+}
+async function setValidJoinProfile(container) {
+  await setValue(container, 'join-full-name', 'Member Test');
+  await setValue(container, 'join-phone', '+20123456789');
+  await setValue(container, 'join-academic-number', '01234567');
+  await setValue(container, 'join-academic-group', 'Computer Science');
+  await setValue(container, 'join-specialization', 'software');
 }
 async function submit(container, id, twice = false) {
   await act(async () => {
@@ -477,7 +493,7 @@ async function main() {
       assert.ok(input(container, 'member-password'));
       assert.ok(input(container, 'member-remember'));
       assertNoForbiddenCalls();
-      assert.equal(textOf(container).includes('مسئول') || textOf(container).includes('مسؤول'), true, 'contact administrator recovery copy is required');
+      assert.ok(container.querySelector('a[href="/forgot-password"]'), 'dedicated member recovery entry is required');
     });
 
     await scenario('login show/hide password toggles only the password input', async () => {
@@ -798,14 +814,14 @@ async function main() {
 
     await scenario('valid join sends only recipient-entered profile/password data, clears secrets and reports pending review without Auth sign-in', async () => {
       assert.equal(container.querySelector('#join-token'), null);
-      await setValue(container, 'join-email', ` ${EMAIL.toUpperCase()} `); await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-phone', ''); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
+      await setValue(container, 'join-email', ` ${EMAIL.toUpperCase()} `); await setValidJoinProfile(container); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
       assert.equal(control.invokeCalls.length, 1);
       const invocation = control.invokeCalls[0];
       assert.equal(invocation.name, 'member-password-enrollment');
       const body = invocation.options?.body ?? invocation.body;
       assert.deepEqual(Object.keys(body).sort(), ['action', 'confirmPassword', 'email', 'password', 'profile', 'token'].sort());
       assert.equal(body.action, 'enroll'); assert.equal(body.email, EMAIL); assert.equal(body.token, TOKEN); assert.equal(body.password, PASSWORD); assert.equal(body.confirmPassword, PASSWORD);
-      assert.deepEqual(body.profile, { fullName: 'Member Test', phone: '', residence: '', workConditions: '', bio: '', device: '', gender: '' });
+      assert.deepEqual(body.profile, { fullName: 'Member Test', phone: '+20123456789', residence: '', workConditions: '', bio: '', device: '', gender: '', academicNumber: '01234567', academicGroup: 'Computer Science', specialization: 'software', linkedinUrl: '', portfolioUrl: '' });
       assert.equal(Object.hasOwn(body, 'memberId'), false); assert.equal(Object.hasOwn(body, 'role'), false); assert.equal(Object.hasOwn(body, 'authUserId'), false);
       assert.equal(control.signInCalls.length, 0);
       await act(async () => { await settleMore(); });
@@ -849,7 +865,7 @@ async function main() {
     for (const code of ['EXPIRED', 'REVOKED', 'ALREADY_USED', 'INVALID_TOKEN']) {
       await scenario(`join ${code} is a safe error with no secret leakage`, async () => {
         control.invoke = async (name, options) => { control.invokeCalls.push({ name, options }); return { data: null, error: { code, message: `secret ${code} SQL` } }; };
-        await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
+        await setValue(container, 'join-email', EMAIL); await setValidJoinProfile(container); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
         assert.equal(textOf(container).includes(`secret ${code}`), false);
         assert.equal(textOf(container).includes('SQL'), false);
         assert.notEqual(currentPath, '/portal');
@@ -859,7 +875,7 @@ async function main() {
     await scenario('join network failure permits an explicit retry without duplicating stale submit state', async () => {
       let attempts = 0;
       control.invoke = async (name, options) => { attempts += 1; control.invokeCalls.push({ name, options }); if (attempts === 1) return { data: null, error: { code: 'SERVER_UNAVAILABLE', message: 'secret network' } }; return { data: { ok: true, membership: 'pending_review' }, error: null }; };
-      await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
+      await setValue(container, 'join-email', EMAIL); await setValidJoinProfile(container); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD); await submit(container, 'join-email');
       assert.equal(textOf(container).includes('secret network'), false);
       const retry = button(container, (node) => /حاول|تاني|إعادة|retry/i.test(node.textContent || ''));
       if (retry) await click(retry); else await submit(container, 'join-email');
@@ -870,7 +886,7 @@ async function main() {
     await scenario('join double-submit is single-flight with captured recipient and unmount ignores completion', async () => {
       const pending = deferred();
       control.invoke = async (name, options) => { control.invokeCalls.push({ name, options }); return pending.promise; };
-      await setValue(container, 'join-email', EMAIL); await setValue(container, 'join-full-name', 'Member Test'); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD);
+      await setValue(container, 'join-email', EMAIL); await setValidJoinProfile(container); await setValue(container, 'join-password', PASSWORD); await setValue(container, 'join-confirm-password', PASSWORD);
       await submit(container, 'join-email', true);
       assert.equal(control.invokeCalls.length, 1);
       assert.equal((control.invokeCalls[0].options?.body ?? {}).email, EMAIL);
@@ -879,8 +895,8 @@ async function main() {
       assert.equal(dom.window.localStorage.getItem('phantoms_member_session'), null);
     }, `/join#invite=${TOKEN}`);
 
-    await scenario('contact administrator is recovery-only: no reset email or public signup endpoint', async () => {
-      assert.match(textOf(container), /مسؤول|مشكلة|الإدارة/);
+    await scenario('recovery is explicit: login mount does not send reset email or call public signup', async () => {
+      assert.ok(container.querySelector('a[href="/forgot-password"]'));
       assert.equal(control.invokeCalls.length, 0); assert.equal(control.signInCalls.length, 0);
       assertNoForbiddenCalls();
     });

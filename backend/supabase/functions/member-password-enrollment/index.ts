@@ -4,6 +4,7 @@ import {
   createMemberPasswordEnrollmentController,
   type ControllerRuntime,
 } from './controller.ts';
+import type { RecoveryRuntime } from './recovery.ts';
 import { validateOriginConfiguration } from './pureorigins.ts';
 
 const url = Deno.env.get('SUPABASE_URL') ?? '';
@@ -34,7 +35,7 @@ const serviceClient = createClient(safeUrl, safeServiceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const runtime: ControllerRuntime = {
+const runtime = {
   configReady,
   serviceDb: serviceClient,
   adminDb: serviceClient,
@@ -53,6 +54,31 @@ const runtime: ControllerRuntime = {
     if (permissionError || allowed !== true) return null;
     return { userId: userData.user.id };
   },
-};
+  sendRecoveryEmail: async (email: string, redirectTo: string, codeChallenge: string) => {
+    // PKCE preserves the native recovery authentication method. Implicit recovery
+    // emits OTP on pinned GoTrue and intentionally cannot satisfy our SQL proof.
+    // The browser owns the verifier; neither this Edge nor Auth receives it here.
+    const delivery = await boundedFetch(`${safeUrl}/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`, {
+      method: 'POST',
+      headers: { apikey: safeAnonKey, Authorization: `Bearer ${safeAnonKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code_challenge: codeChallenge, code_challenge_method: 's256' }),
+    });
+    return { error: delivery.ok ? null : { message: 'EMAIL_SEND_FAILED' } };
+  },
+  authorizeRecovery: async (authorization: string) => {
+    if (!configReady || !authorization) return null;
+    const recoveryClient = createClient(safeUrl, safeAnonKey, {
+      global: { headers: { Authorization: authorization }, fetch: boundedFetch },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: userData, error: userError } = await recoveryClient.auth.getUser();
+    const email = userData.user?.email?.trim().toLowerCase() ?? '';
+    if (userError || !userData.user?.id || !email) return null;
+    return { userId: userData.user.id, email, db: recoveryClient };
+  },
+} as ControllerRuntime & RecoveryRuntime;
 
-serve(createMemberPasswordEnrollmentController(runtime, { allowedOrigins: configuredOrigins }));
+serve(createMemberPasswordEnrollmentController(runtime, {
+  allowedOrigins: configuredOrigins,
+  recoveryRedirectTo: `${configuredOrigins[0]}/member/recovery`,
+}));

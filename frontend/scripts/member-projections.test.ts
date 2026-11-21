@@ -21,6 +21,7 @@ const ADMIN_COLUMNS = [
   'id', 'created_at', 'email', 'full_name', 'completion_rank', 'team_notes',
   'residence', 'work_conditions', 'bio', 'phone', 'device', 'gender',
   'meeting_attendance', 'work_status', 'can_go_alexandria', 'bonus_infinite', 'custom_fields',
+  'academic_number', 'academic_group', 'specialization', 'university_email', 'linkedin_url', 'portfolio_url',
 ];
 const PUBLIC_PROJECTION =
   'id, created_at, email, full_name, completion_rank, bio, device, meeting_attendance, work_status, can_go_alexandria';
@@ -31,16 +32,16 @@ function projectionLiteral(source: string, constantName: string) {
   return match[1];
 }
 
-test('actual exported administrator projection contains exactly the 17 safe columns', () => {
+test('actual exported administrator projection contains exactly the 23 safe information columns', () => {
   assert.equal(ADMIN_MEMBER_COLUMNS, ADMIN_COLUMNS.join(','));
   assert.deepEqual(ADMIN_MEMBER_COLUMNS.split(','), ADMIN_COLUMNS);
-  assert.equal(new Set(ADMIN_MEMBER_COLUMNS.split(',')).size, 17);
+  assert.equal(new Set(ADMIN_MEMBER_COLUMNS.split(',')).size, 23);
   assert.doesNotMatch(ADMIN_MEMBER_COLUMNS, /session_token|push_subscription/);
   assert.match(api, /export \{ ADMIN_MEMBER_COLUMNS \} from '\.\/memberColumns'/);
 });
 
-test('the pre-custom-fields projection omits only the unavailable column and remains secret-free', () => {
-  assert.deepEqual(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS.split(','), ADMIN_COLUMNS.filter((column) => column !== 'custom_fields'));
+test('the historical pre-custom-fields projection remains the original secret-free 16 columns', () => {
+  assert.deepEqual(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS.split(','), ADMIN_COLUMNS.slice(0, 17).filter((column) => column !== 'custom_fields'));
   assert.equal(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS.split(',').length, 16);
   assert.doesNotMatch(PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS, /session_token|push_subscription|custom_fields/);
 });

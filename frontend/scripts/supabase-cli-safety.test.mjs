@@ -29,14 +29,20 @@ function runCheck() {
   });
 }
 
-test('local inventory records twenty-one applied forwards including Web Projects and no pending migration', () => {
+test('local inventory retains twenty-three applied forwards including member information and recovery, with no pending forwards', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
-  assert.equal(applied, 21);
+  assert.equal(applied, 23);
+  const appliedMemberTimestamps = new Map([['20261121002000', '20261121003655'], ['20261121003000', '20261121003716']]);
+  for (const [version, remoteTimestamp] of appliedMemberTimestamps) {
+    const entry = entries.find((item) => item.version === version);
+    assert.equal(entry?.production_status, 'applied');
+    assert.equal(entry?.remote_applied_timestamp, remoteTimestamp);
+  }
   const webProjects = entries.find((entry) => entry.version === '20261120223000');
   assert.equal(webProjects?.name, 'web_projects_foundation');
   assert.equal(webProjects?.production_status, 'applied');

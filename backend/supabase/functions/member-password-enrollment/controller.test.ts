@@ -100,7 +100,10 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
 }
 
 const token = 'phpw_' + 'a'.repeat(64);
-const profile = { fullName: 'Member Test', phone: '', residence: '', workConditions: '', bio: '', device: '', gender: '' };
+const profile = {
+  fullName: 'Member Test', phone: '+201112223333', residence: '', workConditions: '', bio: '', device: '', gender: '',
+  academicNumber: '001234', academicGroup: 'CSE-1', specialization: 'software', linkedinUrl: '', portfolioUrl: '',
+};
 const enrollBody = (overrides: Record<string, unknown> = {}) => ({
   action: 'enroll', email: 'member@phantoms-test.example', token,
   password: 'StrongMemberPassword1', confirmPassword: 'StrongMemberPassword1', profile, ...overrides,
@@ -135,7 +138,10 @@ test('new join invitation creates only the recipient Auth identity and returns p
   assert.equal(state.calls.filter((call) => call.name === 'createUser').length, 1);
   assert.equal(state.calls.some((call) => call.name === 'updateUserById'), false);
   const completion = state.calls.find((call) => call.name === 'member_password_complete_profile');
-  assert.deepEqual(completion?.args?.p_profile, { fullName: 'Member Test', phone: null, residence: null, workConditions: null, bio: null, device: null, gender: null });
+  assert.deepEqual(completion?.args?.p_profile, {
+    fullName: 'Member Test', phone: '+201112223333', residence: null, workConditions: null, bio: null, device: null, gender: null,
+    academicNumber: '001234', academicGroup: 'CSE-1', specialization: 'software', linkedinUrl: null, portfolioUrl: null,
+  });
   assert.equal(state.reviews.length, 0);
 });
 
@@ -187,6 +193,40 @@ test('password mismatch, weak password, extra key, and malformed token stop befo
     assert.equal(result.code, expected);
     assert.equal(state.calls.some((call) => call.name === 'member_password_reserve'), false);
     assert.equal(state.calls.some((call) => call.name === 'createUser' || call.name === 'updateUserById'), false);
+  }
+});
+
+test('profile validation canonicalizes Arabic/Persian academic digits and rejects invalid required fields and URLs', async () => {
+  const canonical = baseState();
+  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(canonical))(
+    request(enrollBody({ profile: { ...profile, academicNumber: '٠٠۱۲۳۴', linkedinUrl: 'https://www.linkedin.com/in/member' } })),
+  ));
+  assert.deepEqual(result, { ok: true, membership: 'active' });
+  const completion = canonical.calls.find((call) => call.name === 'member_password_complete_profile');
+  assert.equal((completion?.args?.p_profile as Record<string, unknown>)?.academicNumber, '001234');
+
+  for (const invalidProfile of [
+    { ...profile, phone: '' },
+    { ...profile, phone: '+20123' },
+    { ...profile, phone: '+20(111)223-333-444-55' },
+    { ...profile, academicNumber: '12-34' },
+    { ...profile, academicGroup: '   ' },
+    { ...profile, specialization: 'design' },
+    { ...profile, linkedinUrl: 'http://linkedin.com/in/member' },
+    { ...profile, linkedinUrl: 'https://evil.example/member' },
+    { ...profile, portfolioUrl: 'https://localhost/me' },
+    { ...profile, portfolioUrl: 'https://127.0.0.1/me' },
+    { ...profile, portfolioUrl: 'https://example' },
+    { ...profile, portfolioUrl: 'https://user:pass@example.com/me' },
+    { ...profile, portfolioUrl: 'https://example.com/me#fragment' },
+    { ...profile, unexpected: true },
+  ]) {
+    const state = baseState();
+    const response = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+      request(enrollBody({ profile: invalidProfile })),
+    ));
+    assert.equal(response.code, 'INVALID_INPUT');
+    assert.equal(state.calls.some((call) => call.name === 'member_password_reserve'), false);
   }
 });
 

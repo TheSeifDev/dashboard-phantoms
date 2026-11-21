@@ -7,6 +7,8 @@ import {
   readMemberEndpointCode,
   validateMemberPassword,
 } from './member-password';
+import { validateMemberProfile } from '../members/profile-fields';
+import type { MemberProfileInput } from '../members/profile-fields';
 
 export interface EnrollMemberPasswordInput {
   email: string;
@@ -16,15 +18,7 @@ export interface EnrollMemberPasswordInput {
   profile?: MemberSelfServiceProfile;
 }
 
-export interface MemberSelfServiceProfile {
-  fullName: string;
-  phone: string;
-  residence: string;
-  workConditions: string;
-  bio: string;
-  device: string;
-  gender: string;
-}
+export type MemberSelfServiceProfile = MemberProfileInput;
 
 export class MemberPasswordApiError extends Error {
   readonly code: string;
@@ -46,24 +40,13 @@ export async function enrollMemberPassword(input: EnrollMemberPasswordInput): Pr
   if (!passwordResult.ok) {
     throw new MemberPasswordApiError(input.password === input.confirmPassword ? 'WEAK_PASSWORD' : 'PASSWORD_MISMATCH');
   }
-  const deviceOptions = ['', 'لابتوب', 'كمبيوتر مكتبي (PC)', 'بدون جهاز', 'هاتف محمول', 'لابتوب، هاتف محمول', 'لابتوب، جهاز لوحي، هاتف محمول'];
   let safeProfile: MemberSelfServiceProfile | undefined;
   if (input.profile !== undefined) {
-    const profile = input.profile;
-    if (!profile || typeof profile !== 'object'
-      || Object.keys(profile).sort().join('|') !== ['bio', 'device', 'fullName', 'gender', 'phone', 'residence', 'workConditions'].sort().join('|')
-      || Object.values(profile).some((value) => typeof value !== 'string')
-      || !profile.fullName.trim() || profile.fullName.trim().length > 160
-      || (profile.phone.trim() !== '' && !/^\+?[0-9 ()-]{7,32}$/.test(profile.phone.trim()))
-      || profile.residence.trim().length > 160 || profile.workConditions.trim().length > 2000 || profile.bio.trim().length > 4000
-      || !deviceOptions.includes(profile.device.trim())
-      || (profile.gender.trim() !== '' && profile.gender.trim() !== 'ذكر' && profile.gender.trim() !== 'أنثى')) {
+    const profileResult = validateMemberProfile(input.profile);
+    if (!profileResult.ok) {
       throw new MemberPasswordApiError('INVALID_INPUT');
     }
-    safeProfile = {
-      fullName: profile.fullName.trim(), phone: profile.phone.trim(), residence: profile.residence.trim(),
-      workConditions: profile.workConditions.trim(), bio: profile.bio.trim(), device: profile.device.trim(), gender: profile.gender.trim(),
-    };
+    safeProfile = profileResult.profile;
   }
 
   const { data, error } = await memberSupabase.functions.invoke<{ ok?: boolean; membership?: string; code?: string }>(

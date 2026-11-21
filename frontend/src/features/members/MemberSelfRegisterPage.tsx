@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, Info, LockKeyhole, Mail, ShieldAlert, UserRound } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, Info, LockKeyhole, Mail, ShieldAlert } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AuthShell } from '../../components/layout/AuthShell';
 import { useLocale } from '../../i18n/useLocale';
+import { getMemberProfileFieldId, MemberProfileFields } from './MemberProfileFields';
+import { EMPTY_MEMBER_PROFILE, validateMemberProfile } from './profile-fields';
+import type { MemberProfileField, MemberProfileInput } from './profile-fields';
 import { enrollMemberPassword, MemberPasswordApiError } from '../auth/member-password-api';
-import type { MemberSelfServiceProfile } from '../auth/member-password-api';
 import {
   isLegacyMemberInviteToken,
   isMemberInviteToken,
@@ -16,14 +18,6 @@ import {
   validateMemberPassword,
 } from '../auth/member-password';
 import { isValidEmail } from '../../lib/validators';
-
-const EMPTY_PROFILE: MemberSelfServiceProfile = {
-  fullName: '', phone: '', residence: '', workConditions: '', bio: '', device: '', gender: '',
-};
-const DEVICE_OPTIONS = [
-  'لابتوب', 'كمبيوتر مكتبي (PC)', 'بدون جهاز', 'هاتف محمول',
-  'لابتوب، هاتف محمول', 'لابتوب، جهاز لوحي، هاتف محمول',
-] as const;
 
 const MEMBER_ERROR_ENGLISH: Record<string, string> = {
   INVALID_INPUT: 'Check the email, password, and invitation code, then try again.',
@@ -50,6 +44,26 @@ function memberUiError(code: string, t: (arabic: string, english: string) => str
   return t(memberAuthErrorMessage(code), MEMBER_ERROR_ENGLISH[code] ?? 'Could not complete the request. Try again or contact the team administrator.');
 }
 
+const PROFILE_ERROR_ENGLISH: Record<string, string> = {
+  REQUIRED: 'Complete this required field.',
+  TOO_LONG: 'This field is longer than allowed.',
+  CONTROL_CHARACTERS: 'Control characters are not allowed.',
+  INVALID_FORMAT: 'Use the required format for this field.',
+  INVALID_OPTION: 'Choose one of the available options.',
+  INVALID_URL: 'Use a valid HTTPS link for this field.',
+  INVALID_KEYS: 'The profile fields are incomplete. Refresh and try again.',
+  INVALID_TYPE: 'Profile fields must be text values.',
+};
+
+function memberProfileUiError(code: string, field: MemberProfileField, t: (arabic: string, english: string) => string): string {
+  const arabic = code === 'REQUIRED' ? 'أكمل هذا الحقل المطلوب.'
+    : field === 'phone' ? 'اكتب رقم هاتف صحيحاً من 7 إلى 15 رقماً.'
+      : field === 'academicNumber' ? 'اكتب الرقم الأكاديمي من 1 إلى 32 رقماً.'
+        : field === 'linkedinUrl' || field === 'portfolioUrl' ? 'استخدم رابط HTTPS صحيحاً وآمناً.'
+          : 'راجع قيمة هذا الحقل.';
+  return t(arabic, PROFILE_ERROR_ENGLISH[code] ?? 'Check this profile field.');
+}
+
 export default function MemberSelfRegisterPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
@@ -58,14 +72,14 @@ export default function MemberSelfRegisterPage() {
   const isPasswordReset = location.pathname.startsWith('/reset');
   const [token, setToken] = useState('');
   const [email, setEmail] = useState('');
-  const [profile, setProfile] = useState<MemberSelfServiceProfile>(EMPTY_PROFILE);
+  const [profile, setProfile] = useState<MemberProfileInput>(EMPTY_MEMBER_PROFILE);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [fieldError, setFieldError] = useState<'email' | 'name' | 'phone' | 'password' | 'confirm' | 'invitation' | null>(null);
+  const [fieldError, setFieldError] = useState<'email' | 'password' | 'confirm' | 'invitation' | MemberProfileField | null>(null);
   const [completion, setCompletion] = useState<'pending_review' | 'password_updated' | 'enrollment_ready' | null>(null);
   const capturedRef = useRef(false);
   const liveRef = useRef(true);
@@ -103,7 +117,7 @@ export default function MemberSelfRegisterPage() {
     }
   }, [isPasswordReset, legacyRouteToken, location.hash, location.pathname, location.search, navigate]);
 
-  const updateProfile = (key: keyof MemberSelfServiceProfile, value: string) => {
+  const updateProfile = (key: MemberProfileField, value: string) => {
     setProfile((current) => ({ ...current, [key]: value }));
     setFieldError(null);
     if (error) setError('');
@@ -135,15 +149,16 @@ export default function MemberSelfRegisterPage() {
         setError(isPasswordReset ? t('افتح رابط إعادة التعيين المخصص لك أو اطلب رابطاً جديداً من الإدارة.', 'Open your personal password reset link or request a new one from the administrators.') : t('افتح رابط الدعوة المخصص لك أو اطلب رابطاً جديداً من الإدارة.', 'Open your personal invitation link or request a new one from the administrators.'));
         return;
       }
-      if (!isPasswordReset && !submittedProfile.fullName.trim()) {
-        setFieldError('name');
-        setError(t('اكتب اسمك الكامل.', 'Enter your full name.'));
-        return;
-      }
-      if (!isPasswordReset && submittedProfile.phone.trim() && !/^\+?[0-9 ()-]{7,32}$/.test(submittedProfile.phone.trim())) {
-        setFieldError('phone');
-        setError(t('اكتب رقم هاتف صحيحاً أو اترك الحقل فارغاً.', 'Enter a valid phone number or leave the field blank.'));
-        return;
+      let normalizedProfile: MemberProfileInput | null = null;
+      if (!isPasswordReset) {
+        const profileResult = validateMemberProfile(submittedProfile);
+        if (!profileResult.ok) {
+          setFieldError(profileResult.field);
+          setError(memberProfileUiError(profileResult.code, profileResult.field, t));
+          window.requestAnimationFrame(() => document.getElementById(getMemberProfileFieldId(profileResult.field, 'join'))?.focus());
+          return;
+        }
+        normalizedProfile = profileResult.profile;
       }
       const passwordResult = validateMemberPassword(submittedPassword, submittedConfirmPassword);
       if (!passwordResult.ok) {
@@ -161,13 +176,13 @@ export default function MemberSelfRegisterPage() {
           token: submittedToken,
           password: submittedPassword,
           confirmPassword: submittedConfirmPassword,
-          ...(!isPasswordReset ? { profile: submittedProfile } : {}),
+          ...(!isPasswordReset && normalizedProfile ? { profile: normalizedProfile } : {}),
         });
         // Clear all sensitive enrollment material before leaving this screen.
         setPassword('');
         setConfirmPassword('');
         setToken('');
-        setProfile(EMPTY_PROFILE);
+        setProfile(EMPTY_MEMBER_PROFILE);
         if (liveRef.current) setCompletion(
           membership === 'pending_review' ? 'pending_review' : isPasswordReset ? 'password_updated' : 'enrollment_ready',
         );
@@ -230,36 +245,7 @@ export default function MemberSelfRegisterPage() {
         <label className="auth-field" htmlFor="join-email">{t('بريدك الإلكتروني للتسجيل', 'Email address for registration')}
           <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="join-email" type="email" dir="ltr" autoCapitalize="none" spellCheck={false} autoComplete="email" required maxLength={254} placeholder="name@example.com" value={email} disabled={submitting} onChange={(event) => { setEmail(event.target.value); setFieldError(null); if (error) setError(''); }} aria-invalid={fieldError === 'email' || undefined} aria-describedby={fieldError === 'email' ? 'join-form-error' : undefined} /></span>
         </label>
-        {!isPasswordReset && <section className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5" aria-labelledby="join-profile-heading">
-          <div><h2 id="join-profile-heading" className="flex items-center gap-2 text-sm font-black text-[var(--text)]"><UserRound size={16} aria-hidden="true" /> {t('بياناتك الشخصية', 'Your personal details')}</h2><p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{t('املأ معلوماتك بنفسك؛ الإدارة تراجع العضوية الجديدة قبل تفعيلها.', 'Enter your own details. Administrators review new memberships before activation.')}</p></div>
-          <label className="auth-field" htmlFor="join-full-name">{t('الاسم الكامل *', 'Full name *')}
-            <input id="join-full-name" type="text" dir="auto" autoComplete="name" required maxLength={160} value={profile.fullName} disabled={submitting} onChange={(event) => updateProfile('fullName', event.target.value)} aria-invalid={fieldError === 'name' || undefined} aria-describedby={fieldError === 'name' ? 'join-form-error' : undefined} />
-          </label>
-          <label className="auth-field" htmlFor="join-phone">{t('رقم الهاتف (اختياري)', 'Phone number (optional)')}
-            <input id="join-phone" type="tel" dir="ltr" autoComplete="tel" maxLength={32} placeholder="+20 ..." value={profile.phone} disabled={submitting} onChange={(event) => updateProfile('phone', event.target.value)} aria-invalid={fieldError === 'phone' || undefined} aria-describedby={fieldError === 'phone' ? 'join-form-error' : 'join-phone-hint'} />
-          </label>
-          <p id="join-phone-hint" className="-mt-3 text-xs leading-5 text-[var(--text-muted)]">{t('أدخل 7 إلى 32 رقماً، ويمكن إضافة + أو مسافات أو أقواس أو شرطات.', 'Use 7–32 digits; a leading +, spaces, parentheses, and hyphens are also accepted.')}</p>
-          <label className="auth-field" htmlFor="join-residence">{t('محل الإقامة (اختياري)', 'Residence (optional)')}
-            <input id="join-residence" type="text" dir="auto" autoComplete="address-level2" maxLength={160} value={profile.residence} disabled={submitting} onChange={(event) => updateProfile('residence', event.target.value)} />
-          </label>
-          <label className="auth-field" htmlFor="join-work-conditions">{t('ظروف العمل (اختياري)', 'Work conditions (optional)')}
-            <textarea id="join-work-conditions" dir="auto" maxLength={2000} rows={3} value={profile.workConditions} disabled={submitting} onChange={(event) => updateProfile('workConditions', event.target.value)} />
-          </label>
-          <label className="auth-field" htmlFor="join-bio">{t('نبذة أو الدور (اختياري)', 'Bio or role (optional)')}
-            <textarea id="join-bio" dir="auto" maxLength={4000} rows={3} value={profile.bio} disabled={submitting} onChange={(event) => updateProfile('bio', event.target.value)} />
-          </label>
-          <label className="auth-field" htmlFor="join-device">{t('الجهاز المتوفر (اختياري)', 'Available device (optional)')}
-            <select id="join-device" value={profile.device} disabled={submitting} onChange={(event) => updateProfile('device', event.target.value)}>
-              <option value="">{t('— غير محدد —', '— Not specified —')}</option>
-              {DEVICE_OPTIONS.map((device) => <option key={device} value={device}>{t(device, ({ 'لابتوب': 'Laptop', 'كمبيوتر مكتبي (PC)': 'Desktop computer (PC)', 'بدون جهاز': 'No device', 'هاتف محمول': 'Mobile phone', 'لابتوب، هاتف محمول': 'Laptop, mobile phone', 'لابتوب، جهاز لوحي، هاتف محمول': 'Laptop, tablet, mobile phone' } as Record<string, string>)[device] ?? device)}</option>)}
-            </select>
-          </label>
-          <label className="auth-field" htmlFor="join-gender">{t('الجنس (اختياري)', 'Gender (optional)')}
-            <select id="join-gender" value={profile.gender} disabled={submitting} onChange={(event) => updateProfile('gender', event.target.value)}>
-              <option value="">{t('— غير محدد —', '— Not specified —')}</option><option value="ذكر">{t('ذكر', 'Male')}</option><option value="أنثى">{t('أنثى', 'Female')}</option>
-            </select>
-          </label>
-        </section>}
+        {!isPasswordReset && <MemberProfileFields profile={profile} onChange={updateProfile} disabled={submitting} invalidField={fieldError && fieldError !== 'email' && fieldError !== 'password' && fieldError !== 'confirm' && fieldError !== 'invitation' ? fieldError : null} errorId="join-form-error" idPrefix="join" />}
 
         <label className="auth-field" htmlFor="join-password">{t('كلمة المرور الجديدة', 'New password')}
           <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="join-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="new-password" required value={password} disabled={submitting} onChange={(event) => { setPassword(event.target.value); setFieldError(null); if (error) setError(''); }} aria-invalid={fieldError === 'password' || undefined} aria-describedby={fieldError === 'password' ? 'join-form-error' : 'join-password-requirements'} /><button type="button" className="auth-password-toggle" disabled={submitting} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')} aria-pressed={showPassword}>{showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button></span>

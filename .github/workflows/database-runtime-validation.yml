@@ -98,6 +98,7 @@ jobs:
           set -euo pipefail
           ../frontend/node_modules/.bin/tsx --test scripts/member-password.test.ts
           node --test scripts/member-password-component.test.mjs
+          node --test scripts/member-settings-component.test.mjs
           node --test scripts/auth-callback-state.test.mjs
           node --test scripts/sidebar-navigation.test.mjs
           node --test scripts/web-projects-navigation.test.mjs
@@ -107,7 +108,9 @@ jobs:
             scripts/web-projects-domain.test.ts
           ../frontend/node_modules/.bin/tsx --test \
             ../backend/supabase/functions/member-password-enrollment/controller.test.ts \
+            ../backend/supabase/functions/member-password-enrollment/recovery.test.ts \
             ../backend/supabase/functions/member-password-enrollment/pureorigins.test.ts \
+            scripts/profile-fields.test.ts \
             scripts/auth-flow.test.ts \
             scripts/member-auth-storage.test.ts \
             scripts/member-logout.test.ts \

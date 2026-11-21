@@ -1,1 +1,121 @@
-{"routes":[{"path":"/","title":"PHANTOMS"},{"path":"/login","title":"Member login"},{"path":"/join","title":"Member password enrollment"},{"path":"/join/:token","title":"Legacy member invite input"},{"path":"/reset","title":"Member password reset"},{"path":"/reset/:token","title":"Legacy member password reset input"},{"path":"/portal","title":"Member portal"},{"path":"/admin/login","title":"Admin login"},{"path":"/admin/forgot-password","title":"Admin password recovery"},{"path":"/admin/recovery/callback","title":"Admin recovery callback"},{"path":"/admin/set-password","title":"Admin password setup"},{"path":"/admin","title":"Admin dashboard"},{"path":"/admin/dashboard","title":"Admin dashboard"},{"path":"/admin/members","title":"Members"},{"path":"/admin/tasks","title":"Tasks"},{"path":"/admin/evaluations","title":"Evaluations"},{"path":"/admin/ranking","title":"Ranking"},{"path":"/admin/notes","title":"Notes"},{"path":"/admin/announcements","title":"Announcements"},{"path":"/admin/ai-assistant","title":"AI assistant"},{"path":"/admin/whatsapp","title":"WhatsApp tasks"},{"path":"/admin/admins","title":"Admin accounts"},{"path":"/admin/teams","title":"Internal teams"},{"path":"/team","title":"Team workspace"},{"path":"/team/:teamId","title":"Assigned team workspace"},{"path":"/portal/projects","title":"My Web Projects"},{"path":"/portal/projects/:projectId","title":"Project workspace"},{"path":"/admin/web-projects","title":"Web Projects"},{"path":"/admin/web-projects/ideas","title":"Project ideas"},{"path":"/admin/web-projects/projects","title":"Project directory"},{"path":"/admin/web-projects/projects/:projectId","title":"Project workspace"},{"path":"/admin/web-projects/timeline","title":"Project timeline"},{"path":"/admin/web-projects/agile","title":"Agile boards"},{"path":"/admin/web-projects/tasks","title":"Project tasks"},{"path":"/admin/web-projects/reports","title":"Project reports"},{"path":"/admin/web-projects/resources","title":"Project resources"}]}
+{
+  "routes": [
+    {
+      "path": "/"
+    },
+    {
+      "path": "/login"
+    },
+    {
+      "path": "/forgot-password"
+    },
+    {
+      "path": "/member/recovery"
+    },
+    {
+      "path": "/portal/settings"
+    },
+    {
+      "path": "/join"
+    },
+    {
+      "path": "/join/:token"
+    },
+    {
+      "path": "/reset"
+    },
+    {
+      "path": "/reset/:token"
+    },
+    {
+      "path": "/portal"
+    },
+    {
+      "path": "/portal/projects"
+    },
+    {
+      "path": "/portal/projects/:projectId"
+    },
+    {
+      "path": "/admin/login"
+    },
+    {
+      "path": "/admin/forgot-password"
+    },
+    {
+      "path": "/admin/recovery/callback"
+    },
+    {
+      "path": "/admin/set-password"
+    },
+    {
+      "path": "/admin"
+    },
+    {
+      "path": "/admin/dashboard"
+    },
+    {
+      "path": "/admin/members"
+    },
+    {
+      "path": "/admin/tasks"
+    },
+    {
+      "path": "/admin/evaluations"
+    },
+    {
+      "path": "/admin/ranking"
+    },
+    {
+      "path": "/admin/notes"
+    },
+    {
+      "path": "/admin/announcements"
+    },
+    {
+      "path": "/admin/ai-assistant"
+    },
+    {
+      "path": "/admin/whatsapp"
+    },
+    {
+      "path": "/admin/admins"
+    },
+    {
+      "path": "/admin/teams"
+    },
+    {
+      "path": "/admin/web-projects"
+    },
+    {
+      "path": "/admin/web-projects/ideas"
+    },
+    {
+      "path": "/admin/web-projects/projects"
+    },
+    {
+      "path": "/admin/web-projects/projects/:projectId"
+    },
+    {
+      "path": "/admin/web-projects/timeline"
+    },
+    {
+      "path": "/admin/web-projects/agile"
+    },
+    {
+      "path": "/admin/web-projects/tasks"
+    },
+    {
+      "path": "/admin/web-projects/reports"
+    },
+    {
+      "path": "/admin/web-projects/resources"
+    },
+    {
+      "path": "/team"
+    },
+    {
+      "path": "/team/:teamId"
+    }
+  ]
+}

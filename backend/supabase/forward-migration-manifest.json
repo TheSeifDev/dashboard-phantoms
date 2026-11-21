@@ -208,5 +208,25 @@
     "remote_applied_timestamp": "20261120223727",
     "original_source_version": "20261120223000",
     "original_source_filename": "backend/supabase/migrations/20261120223000_web_projects_foundation.sql"
+  },
+  {
+    "version": "20261121002000",
+    "name": "member_profile_settings",
+    "canonical_repository_filename": "backend/supabase/migrations/20261121002000_member_profile_settings.sql",
+    "sha256": "6b4c53b81f5b10094cc7461fe6450b5416508d28c6e5f56abd9fa5ccf0f1384c",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261121003655",
+    "original_source_version": "20261121002000",
+    "original_source_filename": "backend/supabase/migrations/20261121002000_member_profile_settings.sql"
+  },
+  {
+    "version": "20261121003000",
+    "name": "member_password_self_recovery",
+    "canonical_repository_filename": "backend/supabase/migrations/20261121003000_member_password_self_recovery.sql",
+    "sha256": "4922737b9b4186c9cac23997baff105c11d234c68f2a746852b5fe9583280f1e",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261121003716",
+    "original_source_version": "20261121003000",
+    "original_source_filename": "backend/supabase/migrations/20261121003000_member_password_self_recovery.sql"
   }
 ]

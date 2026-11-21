@@ -12,6 +12,9 @@ import {
   Briefcase,
   Trash2,
   Tag,
+  GraduationCap,
+  Mail,
+  Link2,
 } from 'lucide-react';
 import type { Member, MemberCustomField, Note } from '../../types/db';
 import { formatCustomFieldValue, getMemberCustomFieldValue, useMemberCustomFields } from './customFieldsApi';
@@ -72,7 +75,13 @@ export function MemberProfileModal({
   });
 
   const infoItems = [
-    { icon: Phone, label: t('رقم الهاتف', 'Phone number'), val: member.phone || t('مش متسجل', 'Not provided'), dir: 'ltr' as const, isAlex: false },
+    { icon: Phone, label: t('رقم الهاتف (WhatsApp)', 'WhatsApp phone number'), val: member.phone || t('مش متسجل', 'Not provided'), dir: 'ltr' as const, isAlex: false },
+    { icon: GraduationCap, label: t('الرقم الأكاديمي', 'Academic number'), val: member.academic_number || t('يلزم الاستكمال', 'Completion required'), dir: 'ltr' as const, isAlex: false },
+    { icon: GraduationCap, label: t('المجموعة', 'Academic group'), val: member.academic_group || t('يلزم الاستكمال', 'Completion required'), dir: undefined, isAlex: false },
+    { icon: Briefcase, label: t('التخصص في التيم', 'Primary specialization'), val: member.specialization ? ({ software: 'Software', hardware: 'Hardware', ai: 'AI' }[member.specialization]) : t('يلزم الاستكمال', 'Completion required'), dir: 'ltr' as const, isAlex: false },
+    { icon: Mail, label: t('البريد الجامعي', 'University email'), val: member.university_email || t('يظهر بعد الرقم الأكاديمي', 'Derived from academic number'), dir: 'ltr' as const, isAlex: false },
+    { icon: Link2, label: 'LinkedIn', val: member.linkedin_url || t('غير مضاف (اختياري)', 'Not provided (optional)'), dir: 'ltr' as const, isAlex: false },
+    { icon: Link2, label: 'GitHub / Portfolio / Behance', val: member.portfolio_url || t('غير مضاف (اختياري)', 'Not provided (optional)'), dir: 'ltr' as const, isAlex: false },
     { icon: MapPin, label: t('محل الإقامة', 'Residence'), val: member.residence || t('مش محدد', 'Not specified'), dir: undefined, isAlex: false },
     {
       icon: Laptop,

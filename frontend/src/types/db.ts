@@ -24,9 +24,16 @@ export type Member = {
   session_token?: string | null;
   /** قيم الحقول المخصصة الديناميكية لكل عضو { [fieldId]: value } */
   custom_fields?: Record<string, string | number | boolean | null>;
+  /** Additive member information; legacy rows remain valid until completion. */
+  academic_number?: string | null;
+  academic_group?: string | null;
+  specialization?: 'software' | 'hardware' | 'ai' | null;
+  university_email?: string | null;
+  linkedin_url?: string | null;
+  portfolio_url?: string | null;
 }
 
-export type MemberInsert = Omit<Member, 'id' | 'created_at' | 'bonus_infinite'>;
+export type MemberInsert = Omit<Member, 'id' | 'created_at' | 'bonus_infinite' | 'university_email'>;
 export type MemberUpdate = Partial<MemberInsert> & { id: Member['id'] };
 
 export type MemberCustomFieldType = 'short_text' | 'long_text' | 'number' | 'date' | 'yes_no' | 'select';
@@ -339,6 +346,9 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      member_get_profile_settings: { Args: { p_device_token: string }; Returns: unknown };
+      member_update_profile_settings: { Args: { p_device_token: string; p_profile: unknown }; Returns: unknown };
+      member_password_self_recovery_access: { Args: Record<string, never>; Returns: boolean };
       team_list_roster: { Args: { p_team_id: string; p_feature: TeamPermission }; Returns: unknown };
       team_list_tasks: { Args: { p_team_id: string }; Returns: unknown };
       team_create_task: { Args: { p_team_id: string; p_title: string; p_description: string | null; p_assigned_to: unknown; p_has_deadline: boolean; p_deadline_date: string | null; p_bonus_points: number }; Returns: number };

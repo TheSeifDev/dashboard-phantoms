@@ -23,6 +23,7 @@ const appliedTeamMigrations = [
   ['20261120125000', '20261120075039', 'internal_team_announcements'],
 ];
 const appliedWebProjects = ['20261120223000', 'web_projects_foundation'];
+const appliedMemberFiles = ['20261121002000_member_profile_settings.sql', '20261121003000_member_password_self_recovery.sql'];
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'phantoms-forward-inventory-'));
@@ -62,15 +63,22 @@ function withFixture(body) {
   try { body(f); } finally { f.cleanup(); }
 }
 
-test('repository retains 24 initialized files and exact applied forwards including Web Projects', () => {
+test('repository retains 24 initialized files and exact applied forwards including Web Projects and member settings/recovery', () => {
   const result = validateMigrationManifest({ rootDir: root });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, 24);
-  assert.equal(result.forwardEntryCount, 13 + appliedTeamMigrations.length + 1);
-  assert.equal(result.migrationFiles.length, 24 + 13 + appliedTeamMigrations.length + 1);
+  assert.equal(result.forwardEntryCount, 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length);
+  assert.equal(result.migrationFiles.length, 24 + 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length);
   const teamFiles = appliedTeamMigrations.map(([, remoteVersion, name]) => `${remoteVersion}_${name}.sql`);
-  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql', '20261118200500_member_password_optional_join_email.sql', '20261119005000_member_password_owner_join_review.sql', '20261119183000_task_contribution_ledger.sql', ...teamFiles, '20261120223000_web_projects_foundation.sql']);
+  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql', '20261118200500_member_password_optional_join_email.sql', '20261119005000_member_password_owner_join_review.sql', '20261119183000_task_contribution_ledger.sql', ...teamFiles, '20261120223000_web_projects_foundation.sql', ...appliedMemberFiles]);
   const entries = JSON.parse(readFileSync(join(root, FORWARD_MANIFEST_PATH), 'utf8'));
+  const appliedMemberTimestamps = new Map([['20261121002000', '20261121003655'], ['20261121003000', '20261121003716']]);
+  for (const entry of entries.slice(-2)) {
+    assert.equal(entry.production_status, 'applied');
+    assert.equal(entry.remote_applied_timestamp, appliedMemberTimestamps.get(entry.version));
+    assert.equal(entry.original_source_version, entry.version);
+    assert.equal(entry.original_source_filename, entry.canonical_repository_filename);
+  }
   assert.equal(entries[0].version, forwardVersion);
   assert.equal(entries[0].canonical_repository_filename, `backend/supabase/migrations/${forwardVersion}_${forwardName}.sql`);
   assert.equal(entries[0].production_status, 'applied');
@@ -123,7 +131,7 @@ test('repository retains 24 initialized files and exact applied forwards includi
     assert.equal(entry.original_source_version, originalVersion);
     assert.equal(entry.sha256, createHash('sha256').update(readFileSync(join(root, entry.canonical_repository_filename))).digest('hex'));
   }
-  const webProjects = entries.at(-1);
+  const webProjects = entries.find((entry) => entry.version === appliedWebProjects[0]);
   assert.equal(webProjects.version, appliedWebProjects[0]);
   assert.equal(webProjects.name, appliedWebProjects[1]);
   assert.equal(webProjects.production_status, 'applied');

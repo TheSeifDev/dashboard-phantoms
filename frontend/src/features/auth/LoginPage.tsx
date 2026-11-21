@@ -169,7 +169,7 @@ export default function LoginPage() {
       description={t('استخدم البريد المسجل وكلمة المرور التي أعددتها عبر دعوة الفريق.', 'Use your registered email and the password you set through your team invitation.')}
       footer={(
         <div className="grid gap-2 text-center text-sm text-[var(--text-2)]">
-          <p>{t('نسيت كلمة المرور؟ تواصل مع مسؤول الفريق لإصدار دعوة إعادة ضبط يدوية لمرة واحدة. لا نرسل رسائل استعادة تلقائية.', 'Forgot your password? Contact the team administrator for a one-time reset invitation. Automatic recovery emails are not sent.')}</p>
+          <Link className="auth-inline-link justify-center" to="/forgot-password">{t('نسيت كلمة المرور؟', 'Forgot your password?')}</Link>
           <Link className="auth-inline-link justify-center" to="/join">{t('لديك دعوة؟ إنشاء كلمة مرور', 'Have an invitation? Set a password')}</Link>
         </div>
       )}

@@ -14,6 +14,7 @@ import { clearAdminSetupIntent, inspectAdminCallback } from '../features/auth/au
 import { MemberAccessGuard } from '../features/auth/MemberAccessGuard';
 import { useLocale } from '../i18n/useLocale';
 import { managerDestination } from '../features/teams/access';
+import { MemberProfileCompletionGuard } from '../features/members/MemberProfileCompletionGuard';
 
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 const AdminLoginPage = lazy(() => import('../features/auth/AdminLoginPage'));
@@ -24,6 +25,9 @@ const MemberPortalPage = lazy(() => import('../features/portal/MemberPortalPage'
 const MemberWebProjectsPage = lazy(() => import('../features/web-projects/MemberWebProjectsPage'));
 const ProjectWorkspacePage = lazy(() => import('../features/web-projects/ProjectWorkspacePage'));
 const MemberSelfRegisterPage = lazy(() => import('../features/members/MemberSelfRegisterPage'));
+const MemberSettingsPage = lazy(() => import('../features/members/MemberSettingsPage'));
+const MemberForgotPasswordPage = lazy(() => import('../features/auth/MemberForgotPasswordPage'));
+const MemberRecoveryPage = lazy(() => import('../features/auth/MemberRecoveryPage'));
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
 const MembersPage = lazy(() => import('../features/members/MembersPage'));
 const TasksPage = lazy(() => import('../features/tasks/TasksPage'));
@@ -147,10 +151,10 @@ function AdminSection({ permission, children }: { permission: AdminPermission; c
 }
 
 /** حارس بوابة الأعضاء */
-function ProtectedMemberRoute({ children }: { children: React.ReactNode }) {
+function ProtectedMemberRoute({ children, allowIncompleteProfile = false }: { children: React.ReactNode; allowIncompleteProfile?: boolean }) {
   const member = useAuthStore((s) => s.currentMember);
   if (!member) return <Navigate to="/login" replace />;
-  return <MemberAccessGuard>{children}</MemberAccessGuard>;
+  return <MemberAccessGuard>{allowIncompleteProfile ? children : <MemberProfileCompletionGuard>{children}</MemberProfileCompletionGuard>}</MemberAccessGuard>;
 }
 
 /** الجذر: وجّه الجلسات المحفوظة (تذكرني) مباشرة بدل رمي الجميع على الدخول */
@@ -176,6 +180,9 @@ export const router = createBrowserRouter([
     path: '/login',
     element: <Page><LoginPage /></Page>,
   },
+  { path: '/forgot-password', element: <Page><MemberForgotPasswordPage /></Page> },
+  { path: '/member/recovery', element: <Page><MemberRecoveryPage /></Page> },
+  { path: '/portal/settings', element: <ProtectedMemberRoute allowIncompleteProfile><Page><MemberSettingsPage /></Page></ProtectedMemberRoute> },
   {
     path: '/join',
     element: <Page><MemberSelfRegisterPage /></Page>,

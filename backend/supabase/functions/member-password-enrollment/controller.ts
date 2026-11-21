@@ -1,3 +1,5 @@
+import { handleMemberRecoveryAction, type RecoveryRuntime } from './recovery.ts';
+
 export type RpcError = { message?: string } | null;
 export type RpcResult<T = unknown> = { data: T | null; error: RpcError };
 
@@ -18,7 +20,7 @@ export interface AdminActor {
   userId: string;
 }
 
-export interface ControllerRuntime {
+export interface ControllerRuntime extends RecoveryRuntime {
   configReady: boolean;
   serviceDb: RpcClient;
   adminDb: RpcClient;
@@ -30,6 +32,7 @@ export interface ControllerOptions {
   allowedOrigins?: readonly string[];
   maxBodyBytes?: number;
   now?: () => Date;
+  recoveryRedirectTo?: string;
 }
 
 const SAFE_CODES = new Set([
@@ -43,11 +46,16 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TOKEN_RE = /^phpw_[0-9a-f]{64}$/;
 const MAX_MEMBER_PASSWORD_BYTES = 72;
 const MAX_MEMBER_PASSWORD_CODE_UNITS = 128;
-const PROFILE_KEYS = ['fullName', 'phone', 'residence', 'workConditions', 'bio', 'device', 'gender'] as const;
+const PROFILE_KEYS = [
+  'fullName', 'phone', 'residence', 'workConditions', 'bio', 'device', 'gender',
+  'academicNumber', 'academicGroup', 'specialization', 'linkedinUrl', 'portfolioUrl',
+] as const;
 const MEMBER_DEVICES = new Set(['', 'لابتوب', 'كمبيوتر مكتبي (PC)', 'بدون جهاز', 'هاتف محمول', 'لابتوب، هاتف محمول', 'لابتوب، جهاز لوحي، هاتف محمول']);
 type MemberSelfServiceProfile = {
   fullName: string; phone: string | null; residence: string | null;
   workConditions: string | null; bio: string | null; device: string | null; gender: string | null;
+  academicNumber: string; academicGroup: string; specialization: 'software' | 'hardware' | 'ai';
+  linkedinUrl: string | null; portfolioUrl: string | null;
 };
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://dashboard-phantoms.vercel.app',
@@ -173,21 +181,49 @@ async function markReview(runtime: ControllerRuntime, claim: { invitation_id: st
 
 function validateProfile(value: unknown): MemberSelfServiceProfile | null {
   const profile = parseObject(value);
-  if (!profile || !hasExactKeys(profile, PROFILE_KEYS) || PROFILE_KEYS.some((key) => typeof profile[key] !== 'string')) return null;
-  const values = Object.fromEntries(PROFILE_KEYS.map((key) => [key, (profile[key] as string).trim()])) as Record<typeof PROFILE_KEYS[number], string>;
+  if (!profile || !hasExactKeys(profile, PROFILE_KEYS)) return null;
+  const requiredString = ['fullName', 'phone', 'academicNumber', 'academicGroup', 'specialization'] as const;
+  const optionalString = ['residence', 'workConditions', 'bio', 'device', 'gender', 'linkedinUrl', 'portfolioUrl'] as const;
+  if (requiredString.some((key) => typeof profile[key] !== 'string')
+      || optionalString.some((key) => profile[key] !== null && typeof profile[key] !== 'string')) return null;
+  const values = Object.fromEntries(PROFILE_KEYS.map((key) => [key, typeof profile[key] === 'string' ? profile[key].trim() : ''])) as Record<typeof PROFILE_KEYS[number], string>;
   const noControls = (text: string) => !/[\u0000-\u001f\u007f]/.test(text);
   const optional = (text: string) => text || null;
+  const normalizeAcademicNumber = (text: string) => text.replace(/[٠-٩۰-۹]/g, (digit) => {
+    const code = digit.codePointAt(0) ?? 0;
+    return String(code >= 0x06f0 ? code - 0x06f0 : code - 0x0660);
+  });
+  const normalizeUrl = (text: string, kind: 'linkedin' | 'portfolio') => {
+    if (!text) return null;
+    if (text.length > 2048 || /[\u0000-\u001f\u007f]/.test(text) || /[^\x00-\x7f]/.test(text)) return undefined;
+    let url: URL;
+    try { url = new URL(text); } catch { return undefined; }
+    if (url.protocol !== 'https:' || url.username || url.password || url.hash || url.port) return undefined;
+    const host = url.hostname.toLowerCase();
+    const dnsHost = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(host);
+    if (!dnsHost || (kind === 'linkedin' && host !== 'linkedin.com' && host !== 'www.linkedin.com')) return undefined;
+    return text;
+  };
+  const academicNumber = normalizeAcademicNumber(values.academicNumber);
+  const phoneDigits = values.phone.replace(/[^0-9]/g, '');
+  const linkedinUrl = normalizeUrl(values.linkedinUrl, 'linkedin');
+  const portfolioUrl = normalizeUrl(values.portfolioUrl, 'portfolio');
   if (!values.fullName || values.fullName.length > 160 || !noControls(values.fullName)
-      || (values.phone !== '' && (values.phone.length > 32 || !/^\+?[0-9 ()-]{7,32}$/.test(values.phone)))
+      || values.phone.length > 32 || !/^\+?[0-9 ()-]+$/.test(values.phone) || phoneDigits.length < 7 || phoneDigits.length > 15
       || (values.residence !== '' && (values.residence.length > 160 || !noControls(values.residence)))
       || (values.workConditions !== '' && (values.workConditions.length > 2000 || !noControls(values.workConditions)))
       || (values.bio !== '' && (values.bio.length > 4000 || !noControls(values.bio)))
       || !MEMBER_DEVICES.has(values.device)
-      || (values.gender !== '' && values.gender !== 'ذكر' && values.gender !== 'أنثى')) return null;
+      || (values.gender !== '' && values.gender !== 'ذكر' && values.gender !== 'أنثى')
+      || !/^[0-9]{1,32}$/.test(academicNumber)
+      || (values.academicGroup.length < 1 || values.academicGroup.length > 80 || !noControls(values.academicGroup))
+      || (values.specialization !== 'software' && values.specialization !== 'hardware' && values.specialization !== 'ai')
+      || linkedinUrl === undefined || portfolioUrl === undefined) return null;
   return {
     fullName: values.fullName, phone: optional(values.phone), residence: optional(values.residence),
     workConditions: optional(values.workConditions), bio: optional(values.bio),
-    device: optional(values.device), gender: optional(values.gender),
+    device: optional(values.device), gender: optional(values.gender), academicNumber, academicGroup: values.academicGroup,
+    specialization: values.specialization, linkedinUrl, portfolioUrl,
   };
 }
 
@@ -501,6 +537,11 @@ export function createMemberPasswordEnrollmentController(runtime: ControllerRunt
       const body = await readBody(req, maxBodyBytes);
       if (!body || typeof body.action !== 'string') return errorResponse('INVALID_INPUT', 400, origin);
       const authorization = req.headers.get('Authorization') ?? '';
+      if (body.action === 'request_recovery' || body.action === 'complete_recovery') {
+        return await handleMemberRecoveryAction(runtime, body, req, origin,
+          (enrollmentBody) => enroll(runtime, enrollmentBody, req, origin),
+          options.recoveryRedirectTo ?? `${DEFAULT_ALLOWED_ORIGINS[0]}/member/recovery`);
+      }
       if (body.action === 'enroll') return await enroll(runtime, body, req, origin);
       if (body.action === 'issue' || body.action === 'revoke' || body.action === 'list'
           || body.action === 'list_join_reviews' || body.action === 'approve_join') {
