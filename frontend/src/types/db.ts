@@ -396,6 +396,7 @@ export interface Database {
       get_member_pending_review: { Args: never; Returns: { status: string } | null };
       admin_list_accounts: { Args: never; Returns: AdminAccount[] };
       admin_add_account: { Args: { p_email: string }; Returns: AdminAccount };
+      admin_demote_account: { Args: { p_user_id: string }; Returns: { target_uuid: string; demoted: boolean; member_linked: boolean } };
       admin_update_permissions: { Args: { p_user_id: string; p_permissions: AdminPermissions }; Returns: boolean };
       lookup_member_by_email: { Args: { p_email: string; p_device_token?: string | null }; Returns: MemberLookupRow[] };
       logout_member_device: { Args: { p_member_id: number; p_device_token?: string | null }; Returns: boolean };

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Link2, Settings2, UserPlus, Users } from 'lucide-react';
 import type { Member, MemberInsert } from '../../types/db';
 import { useMembers, useAddMember, useUpdateMember, useDeleteMember } from './api';
@@ -23,6 +24,7 @@ import { handleSupabaseError, logError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
 import { useMemberDeletionStore } from '../../store/memberDeletion';
 
+import { memberSearchText } from './member-profile-display';
 import { useLocale } from '../../i18n/useLocale';
 const emptyMember: MemberInsert = {
   email: '',
@@ -94,14 +96,7 @@ export default function MembersPage() {
       (query.data ?? []).filter((member) => {
         if (pendingDeleteMap[member.id]) return false;
         const term = filters.search.trim().toLowerCase();
-        const customValuesText = Object.values(member.custom_fields ?? {})
-          .filter((v) => v !== null && v !== undefined)
-          .join(' ');
-        const matchesText =
-          !term ||
-          `${member.full_name} ${member.email} ${member.phone ?? ''} ${member.residence ?? ''} ${member.bio ?? ''} ${customValuesText}`
-            .toLowerCase()
-            .includes(term);
+        const matchesText = !term || memberSearchText(member).includes(term);
         const matchesWorkConditions =
           filters.work_conditions === 'ALL' || member.work_conditions === filters.work_conditions;
         const matchesDevice =
@@ -257,6 +252,11 @@ export default function MembersPage() {
           </div>
         </div>
 
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--surface-2)] p-3">
+          <p className="min-w-0 flex-1 text-xs leading-6 text-[var(--text-muted)]">{t('بيانات الدراسة والتواصل ظاهرة في كل بطاقة والملف. العضو يستكمل المعلومات المطلوبة من إعداداته؛ يمكنك تجربة الحقول بأمان دون الدخول بحسابه.', 'Academic and contact information appears in every card and profile. Members complete required information in their Settings; you can safely try the fields without signing in as them.')}</p>
+          <Link to="/admin/members/experience" className="inline-flex min-h-11 items-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-bold text-[var(--link)]">{t('معاينة وتجربة واجهة العضو', 'Preview member experience')}</Link>
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-3">
           <span className="text-xs font-bold text-[var(--text-muted)]">
             {t('إدارة الحقول الإضافية وملفات البيانات', 'Manage custom fields and member data')}
@@ -404,7 +404,7 @@ export default function MembersPage() {
         itemName={memberToDelete?.full_name}
         description={
           memberToDelete
-            ? t(`هيتم مسح ${memberToDelete.full_name} نهائيًا. تقدر تلغي الحذف خلال 5 ثواني من إشعار التأكيد.`, `${memberToDelete.full_name} will be permanently deleted. You can undo this for 5 seconds from the confirmation notification.`)
+            ? t(`سيُطلب حذف ${memberToDelete.full_name} بعد 5 ثوانٍ يمكنك خلالها التراجع. لا يتم الحذف إلا بعد تأكيد الخادم؛ سجلات الدعوات أو الفرق أو المشروعات قد تمنعه لحماية التاريخ. هذا لا يحذف حساب تسجيل الدخول ولا يلغي Admin.`, `Deletion of ${memberToDelete.full_name} will be requested after a 5-second undo window. It is complete only after server confirmation; invitation, team or project history may block it. This does not delete the sign-in account or revoke Admin access.`)
             : undefined
         }
         confirmLabel={t('مسح نهائي', 'Delete permanently')}

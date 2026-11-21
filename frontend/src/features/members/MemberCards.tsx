@@ -1,7 +1,8 @@
 import type { Member, MemberCustomField } from '../../types/db';
 import { formatCustomFieldValue, getMemberCustomFieldValue } from './customFieldsApi';
 import { DeviceChips, ReadinessChip, WorkStatusChip } from './MemberCells';
-import { parseBio } from './memberDisplay';
+import { memberSpecializationLabel } from './member-profile-display';
+import { MemberAcademicDetails, MemberInformationStatus } from './MemberAcademicDetails';
 import { Eye, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { useLocale } from '../../i18n/useLocale';
 
@@ -24,7 +25,7 @@ export function MemberCards({
   return (
     <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3" aria-label={t('قائمة الأعضاء', 'Member list')}>
       {members.map((member) => {
-        const { specialization } = parseBio(member.bio);
+        const specialization = memberSpecializationLabel(member.specialization);
         return (
           <li
             key={member.id}
@@ -60,6 +61,11 @@ export function MemberCards({
                 )}
               </div>
               <WorkStatusChip status={member.work_status} />
+            </div>
+
+            <div className="grid min-w-0 gap-3 border-t border-[var(--border)] pt-3">
+              <div><MemberInformationStatus member={member} /></div>
+              <MemberAcademicDetails member={member} />
             </div>
 
             <dl className="grid gap-2 border-t border-[var(--border)] pt-3 text-sm">

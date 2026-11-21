@@ -12,6 +12,12 @@ export interface AdminInviteResult {
   invited: boolean;
 }
 
+export interface AdminDemotionResult {
+  target_uuid: string;
+  demoted: true;
+  member_linked: boolean;
+}
+
 async function functionError(error: unknown, fallback: string): Promise<Error> {
   const response = (error as Error & { context?: unknown })?.context;
   if (response instanceof Response) {
@@ -75,6 +81,33 @@ export function useRemoveAdminAccount() {
       const { data, error } = await supabase.functions.invoke<{ deleted: boolean }>('admin-delete-account', { body: { user_id: userId } });
       if (error) throw await functionError(error, 'معرفناش نحذف الحساب.');
       if (!data?.deleted) throw new Error('ADMIN_DELETE_FAILED: لم يتم حذف الحساب.');
+      return data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminAccountsKey });
+      await queryClient.invalidateQueries({ queryKey: ['admin-access'] });
+    },
+  });
+}
+
+function isAdminDemotionResult(value: unknown): value is AdminDemotionResult {
+  if (!value || typeof value !== 'object') return false;
+  const result = value as Record<string, unknown>;
+  return Object.keys(result).sort().join(',') === 'demoted,member_linked,target_uuid'
+    && typeof result.target_uuid === 'string'
+    && result.demoted === true
+    && typeof result.member_linked === 'boolean';
+}
+
+export function useDemoteAdminAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string): Promise<AdminDemotionResult> => {
+      const { data, error } = await supabase.rpc('admin_demote_account', { p_user_id: userId });
+      if (error) throw toAppError(error, 'معرفناش نشيل صلاحية الإدارة العامة.');
+      if (!isAdminDemotionResult(data) || data.target_uuid !== userId) {
+        throw new Error('INVALID_ADMIN_DEMOTION_RESULT: تعذر تأكيد إزالة صلاحية الإدارة.');
+      }
       return data;
     },
     onSuccess: async () => {

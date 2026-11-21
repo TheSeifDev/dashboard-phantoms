@@ -29,14 +29,18 @@ function runCheck() {
   });
 }
 
-test('local inventory retains twenty-three applied forwards including member information and recovery, with no pending forwards', () => {
+test('local inventory retains twenty-four applied forwards including exact owner demotion timestamp, with no pending forwards', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
-  assert.equal(applied, 23);
+  assert.equal(applied, 24);
+  const demotion = entries.find((entry) => entry.version === '20261121074500');
+  assert.equal(demotion.name, 'owner_admin_demotion');
+  assert.equal(demotion.production_status, 'applied');
+  assert.equal(demotion.remote_applied_timestamp, '20261121082239');
   const appliedMemberTimestamps = new Map([['20261121002000', '20261121003655'], ['20261121003000', '20261121003716']]);
   for (const [version, remoteTimestamp] of appliedMemberTimestamps) {
     const entry = entries.find((item) => item.version === version);

@@ -58,6 +58,9 @@
       "path": "/admin/members"
     },
     {
+      "path": "/admin/members/experience"
+    },
+    {
       "path": "/admin/tasks"
     },
     {

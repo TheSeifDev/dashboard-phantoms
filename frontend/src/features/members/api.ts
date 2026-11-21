@@ -18,6 +18,7 @@ import {
 } from './customFieldsApi';
 import { isInvitePlaceholderMember, syncPendingPre0020Invites } from './memberInviteApi';
 import { ADMIN_MEMBER_COLUMNS, PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS } from './memberColumns';
+import { assertMemberDeletionResult } from './member-delete-errors';
 export { ADMIN_MEMBER_COLUMNS } from './memberColumns';
 
 /**
@@ -193,9 +194,12 @@ export const useDeleteMember = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
-      const { error } = await supabase.from(TABLES.members).delete().eq('id', id);
-      if (error) throw toAppError(error, 'معرفناش نمسح العضو.');
-      return id;
+      const { data, error } = await supabase
+        .from(TABLES.members)
+        .delete()
+        .eq('id', id)
+        .select('id');
+      return assertMemberDeletionResult(id, data, error);
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['members'] }),
   });

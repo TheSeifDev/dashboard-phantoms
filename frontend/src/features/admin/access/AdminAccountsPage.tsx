@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyRound, Pencil, Save, ShieldCheck, ShieldPlus, Trash2, UserCog, Users } from 'lucide-react';
+import { KeyRound, Pencil, Save, ShieldCheck, ShieldOff, ShieldPlus, Trash2, UserCog, Users } from 'lucide-react';
 import { useAuthStore } from '../../../store/auth';
 import { toast } from '../../../store/toast';
 import { toAppError } from '../../../lib/supabase/errors';
@@ -12,7 +12,7 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { CardSkeletons } from '../../../components/ui/Skeleton';
 import { Modal } from '../../../components/ui/Modal';
-import { useAdminAccess, useAdminAccounts, useAddAdminAccount, useRemoveAdminAccount, useUpdateAdminPermissions } from './api';
+import { useAdminAccess, useAdminAccounts, useAddAdminAccount, useDemoteAdminAccount, useRemoveAdminAccount, useUpdateAdminPermissions } from './api';
 import type { AdminAccount, AdminPermission, AdminPermissions } from '../../../types/db';
 import { ADMIN_PERMISSION_OPTIONS, FULL_ADMIN_PERMISSIONS, normalizeAdminPermissions } from './permissions';
 import { useLocale } from '../../../i18n/useLocale';
@@ -42,9 +42,11 @@ export default function AdminAccountsPage() {
   const access = useAdminAccess(user?.id ?? null);
   const accounts = useAdminAccounts();
   const addAccount = useAddAdminAccount();
+  const demoteAccount = useDemoteAdminAccount();
   const removeAccount = useRemoveAdminAccount();
   const updatePermissions = useUpdateAdminPermissions();
   const [email, setEmail] = useState('');
+  const [pendingDemotion, setPendingDemotion] = useState<AdminAccount | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<AdminAccount | null>(null);
   const [editingAccount, setEditingAccount] = useState<AdminAccount | null>(null);
   const [permissionDraft, setPermissionDraft] = useState<AdminPermissions>(FULL_ADMIN_PERMISSIONS);
@@ -72,6 +74,19 @@ export default function AdminAccountsPage() {
       setPendingRemoval(null);
     } catch (cause) {
       toast.error(toAppError(cause, t('معرفناش نحذف المشرف.', 'Could not delete the administrator.')).message);
+    }
+  };
+
+  const demoteAdmin = async () => {
+    if (!pendingDemotion) return;
+    try {
+      const result = await demoteAccount.mutateAsync(pendingDemotion.user_id);
+      toast.success(result.member_linked
+        ? t('اتشالت صلاحية الإدارة العامة واتحفظ الربط الدقيق بالعضو. يقدر يستخدم دخول العضو بعد تحقق شروطه الحالية.', 'Global administrator access was removed and the exact Member/Auth binding was preserved. The person can use Member login only if the current Member checks pass.')
+        : t('اتشالت صلاحية الإدارة العامة. الهوية غير المرتبطة لم تتحول تلقائياً إلى عضو ولم ننشئ لها ربطاً.', 'Global administrator access was removed. This unbound identity was not automatically turned into a Member and no binding was created.'));
+      setPendingDemotion(null);
+    } catch (cause) {
+      toast.error(toAppError(cause, t('معرفناش نشيل صلاحية الإدارة العامة.', 'Could not remove global administrator access.')).message);
     }
   };
 
@@ -261,6 +276,16 @@ export default function AdminAccountsPage() {
                             </Button>
                             <Button
                               type="button"
+                              variant="secondary"
+                              icon={<ShieldOff size={16} />}
+                              onClick={() => setPendingDemotion(account)}
+                              aria-label={t(`إزالة الإدارة العامة من ${account.email}`, `Remove global administrator access from ${account.email}`)}
+                              fullOnMobile
+                            >
+                              {t('إزالة الإدارة العامة', 'Remove global admin')}
+                            </Button>
+                            <Button
+                              type="button"
                               variant="danger"
                               icon={<Trash2 size={16} />}
                               onClick={() => setPendingRemoval(account)}
@@ -280,6 +305,18 @@ export default function AdminAccountsPage() {
           )}
         </section>
       </Card>
+
+      <ConfirmDialog
+        isOpen={pendingDemotion !== null}
+        onClose={() => { if (!demoteAccount.isPending) setPendingDemotion(null); }}
+        onConfirm={() => void demoteAdmin()}
+        title={t('إزالة الإدارة العامة؟', 'Remove global administrator access?')}
+        itemName={pendingDemotion?.email}
+        description={t('ده يشيل صف الإدارة العامة فقط ويحافظ على حساب Auth وكلمة المرور والأجهزة والدعوات والسجل والفرق والمشروعات. لو فيه ربط Member/Auth دقيق يظل محفوظاً، ويمكن استخدام دخول العضو بعد تحقق شروطه؛ الهوية غير المرتبطة لا تتحول تلقائياً إلى Member.', 'This removes only the global administrator row and preserves the Auth account, password, devices, invitations, history, teams, and projects. An exact existing Member/Auth binding stays intact and may use Member login after its eligibility checks; an unbound identity is not automatically made a Member.')}
+        confirmLabel={t('إزالة الإدارة العامة', 'Remove global admin')}
+        isPending={demoteAccount.isPending}
+        pendingLabel={t('بنزيل الإدارة العامة...', 'Removing global admin...')}
+      />
 
       <ConfirmDialog
         isOpen={pendingRemoval !== null}

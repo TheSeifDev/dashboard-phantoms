@@ -27,6 +27,7 @@ const ProjectWorkspacePage = lazy(() => import('../features/web-projects/Project
 const MemberSelfRegisterPage = lazy(() => import('../features/members/MemberSelfRegisterPage'));
 const MemberSettingsPage = lazy(() => import('../features/members/MemberSettingsPage'));
 const MemberForgotPasswordPage = lazy(() => import('../features/auth/MemberForgotPasswordPage'));
+const MemberExperiencePreviewPage = lazy(() => import('../features/members/MemberExperiencePreviewPage'));
 const MemberRecoveryPage = lazy(() => import('../features/auth/MemberRecoveryPage'));
 const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
 const MembersPage = lazy(() => import('../features/members/MembersPage'));
@@ -244,6 +245,7 @@ export const router = createBrowserRouter([
       { index: true, element: <AdminStartRedirect /> },
       { path: 'dashboard', element: <AdminSection permission="dashboard"><Page><DashboardPage /></Page></AdminSection> },
       { path: 'members', element: <AdminSection permission="members"><Page><MembersPage /></Page></AdminSection> },
+      { path: 'members/experience', element: <AdminSection permission="members"><Page><MemberExperiencePreviewPage /></Page></AdminSection> },
       { path: 'tasks', element: <AdminSection permission="tasks"><Page><TasksPage /></Page></AdminSection> },
       { path: 'evaluations', element: <AdminSection permission="ranking"><Page><EvaluationsPage /></Page></AdminSection> },
       { path: 'ranking', element: <AdminSection permission="ranking"><Page><RankingPage /></Page></AdminSection> },

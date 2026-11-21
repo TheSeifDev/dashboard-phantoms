@@ -99,6 +99,9 @@ jobs:
           ../frontend/node_modules/.bin/tsx --test scripts/member-password.test.ts
           node --test scripts/member-password-component.test.mjs
           node --test scripts/member-settings-component.test.mjs
+          node --test scripts/owner-member-visibility.test.mjs
+          ../frontend/node_modules/.bin/tsx --test scripts/owner-member-deletion.test.mjs
+          node --test scripts/owner-admin-demotion.test.mjs
           node --test scripts/auth-callback-state.test.mjs
           node --test scripts/sidebar-navigation.test.mjs
           node --test scripts/web-projects-navigation.test.mjs
