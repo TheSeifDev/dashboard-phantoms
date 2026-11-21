@@ -44,6 +44,10 @@ test('local inventory retains twenty-five applied forwards including the exact a
   assert.equal(appUsage.remote_applied_timestamp, '20261121091846');
   assert.equal(appUsage.canonical_repository_filename, 'backend/supabase/migrations/20261121090000_member_app_usage.sql');
   assert.equal(createHash('sha256').update(readFileSync(resolve(repoRoot, appUsage.canonical_repository_filename))).digest('hex'), appUsage.sha256);
+  const posture = readFileSync(resolve(repoRoot, 'backend/supabase/tests/database/01_schema_and_posture.test.sql'), 'utf8');
+  const tableAllowlist = posture.match(/SELECT tables_are\('public', ARRAY\[([\s\S]*?)\]/)?.[1];
+  assert.ok(tableAllowlist?.includes("'member_app_usage'"), 'new app-use table must be in the exact pgTAP schema allowlist');
+  assert.match(posture, /SELECT plan\(57\);/, 'preserve all historical posture assertions');
   const demotion = entries.find((entry) => entry.version === '20261121074500');
   assert.equal(demotion.name, 'owner_admin_demotion');
   assert.equal(demotion.production_status, 'applied');
