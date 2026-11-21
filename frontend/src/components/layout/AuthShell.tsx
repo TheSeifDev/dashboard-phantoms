@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Moon, ShieldCheck, Sparkles, Sun } from 'lucide-react';
+import { Flame, GitMerge, History, Moon, ShieldCheck, Sparkles, Sun } from 'lucide-react';
 import { useThemeStore } from '../../store/theme';
 import { LanguageToggle } from '../../i18n/LanguageToggle';
 import { useLocale } from '../../i18n/useLocale';
-import { PhantomNetwork } from '../motion/PhantomNetwork';
+import { AuthHive } from '../motion/AuthHive';
 import { PhantomsLogo } from '../brand/PhantomsLogo';
 
 interface AuthShellProps {
@@ -43,7 +43,12 @@ export function AuthShell({ title, description, badge, audience, children, foote
             <h1>{t('فريق واحد. تأثير أبعد.', 'One team. Greater impact.')}</h1>
             <p className="auth-story-copy">{t('وصّل الناس بالأفكار. نظّم المهام، وتابع الإنجاز مع PHANTOMS.', 'Connect people and ideas. Organise tasks and track progress with PHANTOMS.')}</p>
           </div>
-          <PhantomNetwork />
+          <AuthHive />
+          <ul className="auth-features">
+            <li><i><GitMerge size={15} aria-hidden="true" /></i><span>{t('تسليمات المهام وGitHub في خلية واحدة', 'Task deliveries and GitHub in one hive')}</span></li>
+            <li><i><Flame size={15} aria-hidden="true" /></i><span>{t('اللون يسخن كل ما زاد عدد المشاركين', 'Cells heat up as more people pitch in')}</span></li>
+            <li><i><History size={15} aria-hidden="true" /></i><span>{t('سجل كامل لكل يوم بضغطة', 'Full history of any day in one click')}</span></li>
+          </ul>
         </section>
         <section className="auth-panel" aria-labelledby="auth-title">
           <div className="auth-heading">

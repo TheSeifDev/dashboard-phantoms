@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
 import { ToastViewport } from './components/ui/Toast';
+import { AmbientBackdrop } from './components/motion/AmbientBackdrop';
+import { MotionLayer } from './components/motion/MotionLayer';
 import { useThemeStore, parseTheme } from './store/theme';
 import { registerSW } from 'virtual:pwa-register';
 import { initCapacitorNativeBridge, isRunningInNativeApk } from './lib/capacitor';
@@ -39,6 +41,8 @@ useThemeStore.getState().setTheme(
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+      <AmbientBackdrop />
+      <MotionLayer />
       <RouterProvider router={router} />
       <ToastViewport />
     </QueryClientProvider>

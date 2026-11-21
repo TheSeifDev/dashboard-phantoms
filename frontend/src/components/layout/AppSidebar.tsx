@@ -1,19 +1,29 @@
 import { useEffect, useId, useRef, useState, type FocusEvent, type PointerEvent } from 'react';
+import gsap from 'gsap';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Bot,
-  CheckSquare,
+  ChartGantt,
   ChevronDown,
+  CircleUserRound,
   ClipboardCheck,
-  Home,
-  Layers3,
+  FileChartColumn,
+  FolderGit2,
+  FolderKanban,
+  LayoutDashboard,
+  Library,
+  Lightbulb,
+  ListChecks,
+  ListTodo,
   LogOut,
   Megaphone,
   MessageCircle,
+  Network,
   PanelLeft,
   PanelRight,
   ShieldCheck,
+  Sparkles,
+  SquareKanban,
   StickyNote,
   Trophy,
   Users,
@@ -58,7 +68,7 @@ const GROUPS: SidebarGroup[] = [
       {
         to: '/admin/dashboard',
         label: 'الرئيسية',
-        icon: Home,
+        icon: LayoutDashboard,
         end: true,
         permission: 'dashboard',
       },
@@ -67,12 +77,12 @@ const GROUPS: SidebarGroup[] = [
   {
     title: 'العمليات',
     items: [
-      { to: '/admin/tasks', label: 'المهام', icon: CheckSquare, permission: 'tasks' },
+      { to: '/admin/tasks', label: 'المهام', icon: ListChecks, permission: 'tasks' },
       { to: '/admin/members', label: 'الأعضاء', icon: Users, permission: 'members' },
       {
         to: '/admin/teams',
         label: 'الفرق الداخلية',
-        icon: Layers3,
+        icon: Network,
         ownerOnly: true,
       },
       {
@@ -88,14 +98,14 @@ const GROUPS: SidebarGroup[] = [
   {
     title: 'مشروعات الويب',
     items: [
-      { to: '/admin/web-projects', label: 'ملخص المشروعات', icon: Layers3, end: true, permission: 'web_projects' },
-      { to: '/admin/web-projects/ideas', label: 'الأفكار', icon: StickyNote, permission: 'web_projects' },
-      { to: '/admin/web-projects/projects', label: 'المشروعات', icon: Layers3, permission: 'web_projects' },
-      { to: '/admin/web-projects/timeline', label: 'المخطط الزمني', icon: ClipboardCheck, permission: 'web_projects' },
-      { to: '/admin/web-projects/agile', label: 'لوحات أجايل', icon: CheckSquare, permission: 'web_projects' },
-      { to: '/admin/web-projects/tasks', label: 'مهام المشروعات', icon: CheckSquare, permission: 'web_projects' },
-      { to: '/admin/web-projects/reports', label: 'تقارير المشروعات', icon: ClipboardCheck, permission: 'web_projects' },
-      { to: '/admin/web-projects/resources', label: 'الموارد', icon: StickyNote, permission: 'web_projects' },
+      { to: '/admin/web-projects', label: 'ملخص المشروعات', icon: FolderKanban, end: true, permission: 'web_projects' },
+      { to: '/admin/web-projects/ideas', label: 'الأفكار', icon: Lightbulb, permission: 'web_projects' },
+      { to: '/admin/web-projects/projects', label: 'المشروعات', icon: FolderGit2, permission: 'web_projects' },
+      { to: '/admin/web-projects/timeline', label: 'المخطط الزمني', icon: ChartGantt, permission: 'web_projects' },
+      { to: '/admin/web-projects/agile', label: 'لوحات أجايل', icon: SquareKanban, permission: 'web_projects' },
+      { to: '/admin/web-projects/tasks', label: 'مهام المشروعات', icon: ListTodo, permission: 'web_projects' },
+      { to: '/admin/web-projects/reports', label: 'تقارير المشروعات', icon: FileChartColumn, permission: 'web_projects' },
+      { to: '/admin/web-projects/resources', label: 'الموارد', icon: Library, permission: 'web_projects' },
     ],
   },
   {
@@ -116,12 +126,12 @@ const GROUPS: SidebarGroup[] = [
       {
         to: '/admin/ai-assistant',
         label: 'المساعد الذكي',
-        icon: Bot,
+        icon: Sparkles,
         permission: 'ai_assistant',
       },
     ],
   },
-  { title: 'الحساب', items: [{ to: '/portal', label: 'بوابة الأعضاء', icon: Users }] },
+  { title: 'الحساب', items: [{ to: '/portal', label: 'بوابة الأعضاء', icon: CircleUserRound }] },
   {
     title: 'إدارة النظام',
     items: [
@@ -271,6 +281,14 @@ function SidebarLinks({
   );
 }
 
+/** GSAP needs a real rendering environment; DOM-less runtimes fall back to plain style writes. */
+function canAnimate() {
+  return typeof window !== 'undefined'
+    && typeof globalThis.getComputedStyle === 'function'
+    && typeof globalThis.requestAnimationFrame === 'function'
+    && typeof window.matchMedia === 'function';
+}
+
 export function AppSidebar({
   userName,
   isOwner,
@@ -293,11 +311,70 @@ export function AppSidebar({
   const { pathname } = useLocation();
   const closeRef = useRef(onCloseDrawer);
   closeRef.current = onCloseDrawer;
+  const asideRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
 
   // إغلاق الدرج عند التنقل
   useEffect(() => {
     closeRef.current();
   }, [pathname]);
+
+  // Sliding active pill: GSAP glides one indicator to the active route instead of swapping fills.
+  useEffect(() => {
+    const nav = navRef.current;
+    const indicator = indicatorRef.current;
+    if (!nav || !indicator || typeof window === 'undefined') return;
+    const animated = canAnimate();
+    const reduced = !animated || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let first = true;
+    let frame = 0;
+    const place = () => {
+      const active = nav.querySelector<HTMLElement>('.app-sidebar-item.is-active');
+      const rect = active?.getBoundingClientRect();
+      if (!active || !rect || rect.width === 0 || active.closest('[hidden]')) {
+        nav.dataset.indicator = 'off';
+        indicator.style.opacity = '0';
+        return;
+      }
+      const navRect = nav.getBoundingClientRect();
+      const box = { x: rect.left - navRect.left + nav.scrollLeft, y: rect.top - navRect.top + nav.scrollTop, width: rect.width, height: rect.height };
+      nav.dataset.indicator = 'on';
+      if (animated) {
+        gsap.to(indicator, { ...box, opacity: 1, duration: first || reduced ? 0 : 0.55, ease: 'power3.out', overwrite: 'auto' });
+      } else {
+        Object.assign(indicator.style, { transform: `translate(${box.x}px, ${box.y}px)`, width: `${box.width}px`, height: `${box.height}px`, opacity: '1' });
+      }
+      first = false;
+    };
+    const schedule = () => {
+      if (typeof window.requestAnimationFrame !== 'function') { place(); return; }
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(place);
+    };
+    place();
+    schedule();
+    const mutation = typeof MutationObserver === 'undefined' ? null : new MutationObserver(schedule);
+    mutation?.observe(nav, { subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
+    const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule);
+    resize?.observe(nav);
+    return () => {
+      if (typeof window.cancelAnimationFrame === 'function') window.cancelAnimationFrame(frame);
+      mutation?.disconnect();
+      resize?.disconnect();
+      if (animated) gsap.killTweensOf(indicator);
+    };
+  }, [pathname, collapsed]);
+
+  // Entrance: the rail fades in and links cascade once per mount.
+  useEffect(() => {
+    const aside = asideRef.current;
+    if (!aside || !canAnimate() || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const items = aside.querySelectorAll('.app-sidebar-brand, .app-sidebar-section, .app-sidebar-footer');
+    const tween = gsap.fromTo(items, { opacity: 0, x: dir === 'rtl' ? 14 : -14 }, { opacity: 1, x: 0, duration: 0.6, stagger: 0.05, ease: 'power3.out', clearProps: 'opacity,transform' });
+    return () => { tween.kill(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -324,10 +401,11 @@ export function AppSidebar({
 
   return (
     <>
-      <aside className="app-sidebar" data-collapsed={collapsed} aria-label={t('الشريط الجانبي', 'Sidebar')}>
+      <aside ref={asideRef} className="app-sidebar" data-collapsed={collapsed} aria-label={t('الشريط الجانبي', 'Sidebar')}>
         <div className="app-sidebar-header">
           <NavLink to="/admin" className="app-sidebar-brand" aria-label={t('PHANTOMS — الرئيسية', 'PHANTOMS — Home')}>
-            <PhantomsLogo size="md" symbolOnly themeMode="dark" className="app-sidebar-logo" />
+            <span className="app-sidebar-logo-orb"><PhantomsLogo size="md" symbolOnly themeMode="dark" className="app-sidebar-logo" /></span>
+            <span className="app-sidebar-brand-copy" aria-hidden="true"><strong>PHANTOMS</strong><small>{t('مساحة الفريق', 'Team workspace')}</small></span>
             <span className="sr-only"><span>PHANTOMS</span></span>
           </NavLink>
           <button
@@ -342,10 +420,15 @@ export function AppSidebar({
             <CollapseIcon size={20} aria-hidden="true" />
           </button>
         </div>
-        <nav id="desktop-sidebar-navigation" aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-sidebar-nav">
+        <nav ref={navRef} id="desktop-sidebar-navigation" aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-sidebar-nav">
+          <span ref={indicatorRef} className="app-sidebar-indicator" aria-hidden="true" />
           <SidebarLinks railTips collapsed={collapsed} isOwner={isOwner} permissions={permissions} />
         </nav>
         <div className="app-sidebar-footer">
+          <div className="app-sidebar-user" aria-hidden="true">
+            <span className="app-sidebar-user-avatar">{userName.trim().charAt(0).toUpperCase() || 'P'}<i className="app-sidebar-user-status" /></span>
+            <span className="app-sidebar-user-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('مدير النظام', 'Administrator')}</small></span>
+          </div>
           <button
             type="button"
             onClick={() => void logout()}

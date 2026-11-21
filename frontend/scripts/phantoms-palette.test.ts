@@ -73,45 +73,53 @@ function assertFamily(theme: Record<string, string>, tokenNames: string[], refer
   }
 }
 
-test('canonical brand roots and charcoal theme anchors match the latest visual direction', () => {
+test('canonical brand roots and ink theme anchors match the glass SaaS direction', () => {
   assert.equal(color('crimson'), '#dc143c');
   assert.equal(color('emerald'), '#10b981');
-  assert.equal(color('graphite-900'), '#171a1e');
-  assert.equal(color('prussian-blue'), '#171a1e', 'legacy Prussian token remains a neutral compatibility alias');
-  assert.equal(color('bg', dark), '#171a1e');
+  assert.equal(color('graphite-900'), '#12151d');
+  assert.equal(color('prussian-blue'), color('graphite-900'), 'legacy Prussian token remains a neutral compatibility alias');
+  assert.equal(color('bg', dark), '#090b11');
   assert.equal(color('sidebar-bg', light), '#ffffff');
-  assert.equal(color('sidebar-bg', dark), '#171a1e');
+  assert.equal(color('sidebar-bg', dark), '#0e1118');
   assert.equal(color('primary'), '#dc143c');
   assert.equal(color('success'), '#10b981');
 });
-
-test('Crimson and Emerald retain their semantic families while auxiliary UI colors stay muted-neutral', () => {
-  const crimson = ['primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'accent-pink', 'accent-pink-soft', 'sidebar-focus-ring'];
-  const emerald = ['success', 'success-hover', 'success-soft', 'success-border', 'success-text', 'heat-1', 'heat-2', 'heat-3', 'heat-4'];
-  const neutral = ['link', 'link-hover', 'accent', 'chart-blue', 'chart-ice', 'chart-cyan', 'chart-slate', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-muted'];
+test('Crimson and Emerald retain their semantic families; links, info and the honeycomb ramp stay in the indigo/blue family', () => {
+  const crimson = ['primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'accent-pink', 'accent-pink-soft', 'sidebar-focus-ring', 'crew-4'];
+  const emerald = ['success', 'success-hover', 'success-soft', 'success-border', 'success-text'];
+  const indigo = ['link', 'accent', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text'];
+  const blue = ['heat-1', 'heat-2', 'heat-3', 'heat-4', 'crew-1', 'chart-blue'];
+  const neutral = ['chart-slate', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-muted'];
   for (const theme of [light, dark]) {
     assertFamily(theme, crimson, 'crimson', 18);
     assertFamily(theme, emerald, 'emerald', 16);
+    assertFamily(theme, indigo, 'indigo', 16);
+    assertFamily(theme, blue, 'crew-1', 14);
     for (const token of neutral) {
-      assert.ok(saturation(color(token, theme)) <= 0.22,
-        `--${token} should remain a low-saturation graphite/stone neutral`);
+      assert.ok(saturation(color(token, theme)) <= 0.22, `--${token} should remain a low-saturation ink neutral`);
     }
     assertFamily(theme, ['sidebar-logout-color'], 'crimson', 18);
   }
 });
-
-test('dark surfaces stay in the low-saturation graphite family and heatmap endpoints map to background and Emerald', () => {
-  const surfaces = ['bg', 'surface', 'surface-2', 'surface-hover', 'bg-elevated', 'surface-elevated', 'card', 'card-hover'];
-  for (const token of surfaces) {
-    assert.ok(saturation(color(token, dark)) <= 0.08,
-      `dark --${token} should remain a neutral charcoal surface`);
-  }
+test('crew hues warm up from blue to crimson as more people contribute on the same day', () => {
   for (const theme of [light, dark]) {
-    assert.equal(color('heat-0', theme), color('bg', theme), 'heatmap level zero is the theme background');
-    assert.equal(color('heat-4', theme), color('emerald'), 'heatmap level four is canonical Emerald');
+    const hues = ['crew-1', 'crew-2', 'crew-3', 'crew-4'].map((token) => hue(color(token, theme)));
+    for (let index = 1; index < hues.length; index += 1) {
+      assert.ok(hues[index] > hues[index - 1], `crew-${index + 1} hue must be warmer than crew-${index}`);
+    }
   }
 });
-
+test('dark surfaces stay in the low-saturation ink family and the empty honeycomb cell sits close to the surface', () => {
+  const surfaces = ['bg', 'surface', 'surface-2', 'surface-hover', 'bg-elevated', 'surface-elevated', 'card', 'card-hover'];
+  for (const token of surfaces) {
+    assert.ok(saturation(color(token, dark)) <= 0.08, `dark --${token} should remain a neutral ink surface`);
+  }
+  for (const theme of [light, dark]) {
+    assert.ok(saturation(color('heat-0', theme)) <= 0.08, 'heatmap level zero is a quiet neutral');
+    assert.ok(contrast(color('heat-0', theme), color('surface', theme)) < 1.5, 'empty hexes stay subtle against cards');
+    assert.ok(luminance(color('heat-4', theme)) !== luminance(color('heat-1', theme)), 'intensity ramp has distinct steps');
+  }
+});
 test('text colors maintain WCAG AA contrast over every theme surface', () => {
   const surfaceNames = ['bg', 'surface', 'surface-2', 'surface-hover', 'bg-elevated', 'surface-elevated', 'card', 'card-hover'];
   const textNames = ['text', 'text-2', 'text-secondary', 'text-muted'];
@@ -157,15 +165,14 @@ test('light and dark sidebar tokens meet AA for every text, active, focus, and c
   assert.doesNotMatch(sidebarCss, /var\(--graphite-800\)/, 'sidebar controls must follow the theme, not a hard-coded dark surface');
 });
 
-test('sidebar active state uses a neutral fill and has no colored indicator rail', () => {
-  assert.equal(color('sidebar-active-bg', dark), '#292e34');
-  assert.equal(color('sidebar-active-bg', light), '#eceef0');
+test('sidebar active state uses a high-contrast neutral pill and has no colored indicator rail', () => {
+  assert.equal(color('sidebar-active-bg', dark), '#f3f5fa');
+  assert.equal(color('sidebar-active-bg', light), '#0c1019');
   for (const theme of [light, dark]) assert.ok(saturation(color('sidebar-active-bg', theme)) <= 0.08);
   assert.doesNotMatch(sidebarCss, /\.app-sidebar-item\.is-active::before/);
   assert.match(sidebarCss, /outline: 2px solid var\(--sidebar-focus-ring\)/);
   assert.match(sidebarCss, /\.app-sidebar-section-toggle/);
 });
-
 test('collapsed icon rows reset inherited start alignment and center icons in both directions', () => {
   const rail = sidebarCss.match(/\.app-sidebar\[data-collapsed="true"\] \.app-sidebar-item\s*\{([^}]+)\}/)?.[1];
   assert.ok(rail);

@@ -13,13 +13,13 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)] sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+    <header className="glass-card ui-page-header flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 items-start gap-4">
-        <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--link)]" aria-hidden="true">
+        <div className="ui-page-header-orb" aria-hidden="true">
           {icon}
         </div>
         <div className="min-w-0">
-          <h1 className="m-0 text-xl font-black text-[var(--text)] sm:text-2xl">{title}</h1>
+          <h1 className="ui-page-header-title m-0 text-xl font-bold text-[var(--text)] sm:text-2xl">{title}</h1>
           {description && <p className="mt-1 max-w-xl text-sm leading-7 text-[var(--text-muted)]">{description}</p>}
         </div>
       </div>

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Bell, ChevronDown, Menu, Moon, Search, Sun, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Bell, ChevronDown, Command as CommandIcon, Menu, Moon, Search, Sun, X } from 'lucide-react';
 import { useLocale } from '../../i18n/useLocale';
 import { LanguageToggle } from '../../i18n/LanguageToggle';
 import { usePendingMemberJoinReviews } from '../../features/members/memberInviteApi';
 import type { AdminPermission, AdminPermissions } from '../../types/db';
+import { CommandPalette } from './CommandPalette';
+import { gsap, prefersReducedMotion } from '../motion/gsap';
 
 const pages: Array<{ path: string; ar: string; en: string; permission?: AdminPermission; ownerOnly?: boolean }> = [
   { path: '/admin/dashboard', ar: 'لوحة التحكم', en: 'Dashboard', permission: 'dashboard' },
@@ -27,93 +29,111 @@ const pages: Array<{ path: string; ar: string; en: string; permission?: AdminPer
   { path: '/admin/web-projects/reports', ar: 'تقارير المشروعات', en: 'Project reports', permission: 'web_projects' },
   { path: '/admin/web-projects/resources', ar: 'موارد المشروعات', en: 'Project resources', permission: 'web_projects' },
 ];
+export interface ThemeOrigin { x: number; y: number }
 interface AdminHeaderProps {
   path: string;
   userName: string;
   isDark: boolean;
   drawerOpen?: boolean;
-  onToggleTheme: () => void;
+  onToggleTheme: (origin?: ThemeOrigin) => void;
   onOpenMenu: () => void;
   isOwner?: boolean;
   permissions?: Partial<AdminPermissions>;
 }
 
+const isMac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
+
 export function AdminHeader({ path, userName, isDark, drawerOpen = false, onToggleTheme, onOpenMenu, isOwner = false, permissions = {} }: AdminHeaderProps) {
   const { t, number } = useLocale();
-  const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [compactSearchOpen, setCompactSearchOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const ref = useRef<HTMLElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const themeButton = useRef<HTMLButtonElement>(null);
   const canMembers = isOwner || permissions.members === true;
   const reviews = usePendingMemberJoinReviews(canMembers && notificationsOpen);
   const visiblePages = pages.filter((item) => (!item.ownerOnly || isOwner) && (!item.permission || isOwner || permissions[item.permission] === true));
-  const results = visiblePages.filter((item) => `${item.ar} ${item.en}`.toLowerCase().includes(search.trim().toLowerCase()));
   const normalizedPath = path.replace(/\/+$/, '') || '/';
   const current = pages
     .filter((item) => normalizedPath === item.path || normalizedPath.startsWith(`${item.path}/`))
     .sort((left, right) => right.path.length - left.path.length)[0] ?? pages[0];
   const reviewCount = reviews.data?.pages.flat().length;
   const isDashboard = normalizedPath === '/admin/dashboard' || normalizedPath === '/admin';
+  const mac = isMac();
 
   useEffect(() => {
-    const outside = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) { setSearchOpen(false); setCompactSearchOpen(false); setNotificationsOpen(false); }
+    const outside = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) setNotificationsOpen(false); };
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setNotificationsOpen(false);
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setPaletteOpen((value) => !value); }
     };
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setSearchOpen(false); setCompactSearchOpen(false); setNotificationsOpen(false); } };
+    const scroll = () => setScrolled(window.scrollY > 8);
     document.addEventListener('pointerdown', outside);
-    document.addEventListener('keydown', escape);
-    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
+    document.addEventListener('keydown', keys);
+    window.addEventListener('scroll', scroll, { passive: true });
+    scroll();
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', keys); window.removeEventListener('scroll', scroll); };
   }, []);
 
-  useEffect(() => {
-    if (compactSearchOpen) searchInputRef.current?.focus();
-  }, [compactSearchOpen]);
+  useEffect(() => { setPaletteOpen(false); setNotificationsOpen(false); }, [path]);
 
+  // Header tools cascade in once; the title re-types itself on every route change.
   useEffect(() => {
-    setSearch('');
-    setSearchOpen(false);
-    setCompactSearchOpen(false);
-    setNotificationsOpen(false);
+    if (prefersReducedMotion() || !ref.current) return;
+    const tween = gsap.fromTo(ref.current.querySelectorAll('.workspace-tools > *'), { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.05, ease: 'power3.out', clearProps: 'opacity,transform' });
+    return () => { tween.kill(); };
+  }, []);
+  useEffect(() => {
+    if (prefersReducedMotion() || !ref.current) return;
+    const tween = gsap.fromTo(ref.current.querySelectorAll('.workspace-heading-copy > *'), { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.06, ease: 'power3.out', clearProps: 'opacity,transform' });
+    return () => { tween.kill(); };
   }, [path]);
+  useEffect(() => {
+    const icon = themeButton.current?.querySelector('svg');
+    if (!icon || prefersReducedMotion()) return;
+    const tween = gsap.fromTo(icon, { rotate: -120, scale: 0.4, opacity: 0 }, { rotate: 0, scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(2)' });
+    return () => { tween.kill(); };
+  }, [isDark]);
+
+  const toggleTheme = () => {
+    const rect = themeButton.current?.getBoundingClientRect();
+    onToggleTheme(rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : undefined);
+  };
 
   return (
-    <header ref={ref} className={`workspace-header ${isDashboard ? 'workspace-header--dashboard' : 'workspace-header--operations'}`}>
+    <header ref={ref} data-scrolled={scrolled} className={`workspace-header ${isDashboard ? 'workspace-header--dashboard' : 'workspace-header--operations'}`}>
       <div className="workspace-heading">
         <button type="button" onClick={onOpenMenu} aria-expanded={drawerOpen} className="header-icon lg:hidden" aria-label={t('افتح القائمة الرئيسية', 'Open main menu')} aria-haspopup="dialog"><Menu size={20} aria-hidden="true" /></button>
-        <div className="min-w-0">
+        <div className="workspace-heading-copy min-w-0">
           {isDashboard ? <>
             <nav aria-label={t('مسار الصفحة', 'Breadcrumb')} className="workspace-breadcrumb"><span>PHANTOMS</span><span aria-hidden="true">/</span><span>{t('مساحة العمل', 'Workspace')}</span></nav>
             <h1 className="workspace-page-title">{t(current.ar, current.en)}</h1>
-          </> : <nav aria-label={t('مسار الصفحة', 'Breadcrumb')} className="workspace-breadcrumb"><span>PHANTOMS</span><span aria-hidden="true">/</span><span>{t('مساحة العمل', 'Workspace')}</span><span aria-hidden="true">/</span><span aria-current="page">{t(current.ar, current.en)}</span></nav>}
+          </> : <>
+            <nav aria-label={t('مسار الصفحة', 'Breadcrumb')} className="workspace-breadcrumb"><span>PHANTOMS</span><span aria-hidden="true">/</span><span>{t('مساحة العمل', 'Workspace')}</span><span aria-hidden="true">/</span><span aria-current="page">{t(current.ar, current.en)}</span></nav>
+            <p className="workspace-page-title" aria-hidden="true">{t(current.ar, current.en)}</p>
+          </>}
         </div>
       </div>
       <div className="workspace-tools">
-        {!isDashboard && <button type="button" className="header-icon workspace-compact-search-toggle" onClick={() => { setCompactSearchOpen((value) => !value); setSearchOpen(true); }} aria-label={t('ابحث عن صفحة', 'Search pages')} aria-expanded={compactSearchOpen} aria-controls="workspace-search-form"><Search size={19} aria-hidden="true" /></button>}
-        <form id="workspace-search-form" className={`workspace-search${compactSearchOpen ? ' workspace-search--compact-open' : ''}`} onSubmit={(event) => { event.preventDefault(); if (results[0]) { navigate(results[0].path); setSearchOpen(false); setCompactSearchOpen(false); setSearch(''); } }}>
+        <button type="button" className="workspace-search-trigger" onClick={() => setPaletteOpen(true)} aria-label={t('ابحث عن صفحة', 'Search pages')} aria-haspopup="dialog" aria-expanded={paletteOpen} aria-keyshortcuts="Control+K Meta+K" data-magnetic="0.15">
           <Search size={17} aria-hidden="true" />
-          <input ref={searchInputRef} type="search" value={search} onChange={(event) => { setSearch(event.target.value); setSearchOpen(true); }} onFocus={() => setSearchOpen(true)} aria-label={t('ابحث عن صفحة', 'Search pages')} placeholder={t('ابحث في مساحة العمل...', 'Search workspace…')} aria-expanded={searchOpen} aria-controls="workspace-search-results" />
-          <span className="search-key" aria-hidden="true">↵</span>
-          {compactSearchOpen && <button type="button" className="header-icon workspace-search-close" onClick={() => { setCompactSearchOpen(false); setSearchOpen(false); setSearch(''); }} aria-label={t('إغلاق البحث', 'Close search')}><X size={18} aria-hidden="true" /></button>}
-          {searchOpen && <div id="workspace-search-results" className="header-popover search-results">
-            <p>{t('انتقل إلى', 'Navigate to')}</p>
-            {results.length ? results.map((item) => <Link key={item.path} to={item.path} onClick={() => { setSearchOpen(false); setCompactSearchOpen(false); setSearch(''); }}>{t(item.ar, item.en)}</Link>) : <span>{t('مفيش صفحة مطابقة', 'No matching pages')}</span>}
-          </div>}
-        </form>
+          <span className="workspace-search-placeholder">{t('ابحث أو انتقل إلى...', 'Search or jump to…')}</span>
+          <kbd className="kbd workspace-search-kbd" dir="ltr">{mac ? <><CommandIcon size={11} aria-hidden="true" />K</> : 'Ctrl K'}</kbd>
+        </button>
+        <span className="workspace-tools-divider" aria-hidden="true" />
         <LanguageToggle />
-        <button type="button" onClick={onToggleTheme} className="header-icon" aria-label={isDark ? t('شغّل الوضع الفاتح', 'Use light theme') : t('شغّل الوضع الداكن', 'Use dark theme')}>{isDark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}</button>
+        <button ref={themeButton} type="button" onClick={toggleTheme} className="header-icon header-theme" data-magnetic="0.3" aria-label={isDark ? t('شغّل الوضع الفاتح', 'Use light theme') : t('شغّل الوضع الداكن', 'Use dark theme')}>{isDark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}</button>
         {canMembers && <div className="notification-anchor">
-          <button type="button" className="header-icon" aria-label={t('طلبات الانضمام', 'Join requests')} aria-expanded={notificationsOpen} aria-controls="join-notifications" onClick={() => setNotificationsOpen((value) => !value)}><Bell size={19} aria-hidden="true" />{typeof reviewCount === 'number' && reviewCount > 0 && <span className="notification-dot" />}</button>
+          <button type="button" className="header-icon" data-magnetic="0.3" aria-label={t('طلبات الانضمام', 'Join requests')} aria-expanded={notificationsOpen} aria-controls="join-notifications" onClick={() => setNotificationsOpen((value) => !value)}><Bell size={18} aria-hidden="true" />{typeof reviewCount === 'number' && reviewCount > 0 && <span className="notification-dot" />}</button>
           {notificationsOpen && <section id="join-notifications" className="header-popover notification-popover" aria-label={t('طلبات الانضمام', 'Join requests')}>
             <div className="flex items-center justify-between gap-2"><h2>{t('مراجعة الانضمام', 'Join review')}</h2><button type="button" className="header-icon" onClick={() => setNotificationsOpen(false)} aria-label={t('اقفل', 'Close')}><X size={16} /></button></div>
             <p role="status">{reviews.isPending ? t('بنحمّل الطلبات...', 'Loading requests…') : reviews.isError ? t('تعذر تحميل الطلبات. راجع صفحة الأعضاء.', 'Unable to load requests. Open team members.') : `${number(reviewCount ?? 0)} ${t('طلب في انتظار المراجعة', 'requests awaiting review')}${reviews.hasNextPage ? '+' : ''}`}</p>
             <Link to="/admin/members" onClick={() => setNotificationsOpen(false)}>{t('افتح طلبات المراجعة', 'Open review queue')}</Link>
           </section>}
         </div>}
-        <div className="header-account" title={userName}><span className="header-avatar" aria-hidden="true">{userName.trim().charAt(0).toUpperCase() || 'P'}</span><span className="header-account-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('المشرف', 'Administrator')}</small></span>{isDashboard && <ChevronDown size={13} aria-hidden="true" />}</div>
+        <div className="header-account" title={userName}><span className="header-avatar" aria-hidden="true">{userName.trim().charAt(0).toUpperCase() || 'P'}<i className="header-avatar-status" /></span><span className="header-account-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('المشرف', 'Administrator')}</small></span><ChevronDown size={13} aria-hidden="true" className="header-account-chevron" /></div>
       </div>
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} pages={visiblePages} isDark={isDark} onToggleTheme={() => onToggleTheme()} />
     </header>
   );
 }
