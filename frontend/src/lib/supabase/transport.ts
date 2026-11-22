@@ -63,6 +63,12 @@ function isAbortError(error: unknown): boolean {
   return name === 'AbortError' || name === 'TimeoutError';
 }
 
+/** استجابة HTML معناها إن المسار ما وصلش للبروكسي أصلاً (SPA fallback). */
+export function isHtmlResponse(response: Response): boolean {
+  const contentType = response.headers.get('content-type') ?? '';
+  return contentType.toLowerCase().includes('text/html');
+}
+
 /**
  * يبني قائمة عناوين المحاولة: العنوان الأصلي الأول، وبعده المسار البديل
  * (بروكسي ↔ مباشر) لو الطلب كان على واحد منهم.
@@ -144,7 +150,16 @@ export function createSupabaseFetch(options: SupabaseFetchOptions): typeof fetch
         : null;
 
       try {
-        return await fetchImpl(target, { ...baseInit, signal: controller.signal });
+        const response = await fetchImpl(target, { ...baseInit, signal: controller.signal });
+        // لو البروكسي رجّع صفحة HTML بدل JSON (مسار مش متسجّل على الاستضافة)،
+        // بنعتبره فشل ونروح على Supabase مباشرة.
+        const hasAlternative = index < attempts.length - 1;
+        if (hasAlternative && isHtmlResponse(response)) {
+          await response.body?.cancel().catch(() => undefined);
+          lastError = new SupabaseTransportError('network', target, new Error('HTML_RESPONSE_FROM_PROXY'));
+          continue;
+        }
+        return response;
       } catch (error) {
         if (upstreamSignal?.aborted) throw error;
         if (timedOut) lastError = new SupabaseTransportError('timeout', target, error);

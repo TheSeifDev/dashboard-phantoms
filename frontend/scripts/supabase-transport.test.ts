@@ -128,3 +128,29 @@ test('isTransportFailure: بيعرف أخطاء الشبكة والـ transport 
   assert.equal(isTransportFailure(new Error('Invalid login credentials')), false);
   assert.equal(isTransportFailure({ status: 400, code: 'invalid_credentials' }), false);
 });
+
+test('createSupabaseFetch: لو البروكسي رجّع HTML بيكمّل على Supabase مباشرة', async () => {
+  const calls: string[] = [];
+  const fakeFetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    calls.push(url);
+    if (url.startsWith(PROXY)) {
+      return new Response('<!doctype html><html></html>', { status: 200, headers: { 'content-type': 'text/html' } });
+    }
+    return new Response('{"ok":true}', { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+
+  const resilientFetch = createSupabaseFetch({ primaryBase: PROXY, fallbackBase: DIRECT, fetchImpl: fakeFetch });
+  const response = await resilientFetch(`${PROXY}/rest/v1/members`, { method: 'GET' });
+
+  assert.equal(response.headers.get('content-type'), 'application/json');
+  assert.deepEqual(calls, [`${PROXY}/rest/v1/members`, `${DIRECT}/rest/v1/members`]);
+});
+
+test('createSupabaseFetch: HTML على مسار واحد بس بيتم تسليمه زي ما هو', async () => {
+  const fakeFetch = (async () => new Response('<html></html>', { status: 200, headers: { 'content-type': 'text/html' } })) as typeof fetch;
+  const resilientFetch = createSupabaseFetch({ primaryBase: null, fallbackBase: DIRECT, fetchImpl: fakeFetch });
+  const response = await resilientFetch(`${DIRECT}/rest/v1/members`);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type') ?? '', /text\/html/);
+});
