@@ -52,19 +52,10 @@ export function resolveSupabaseProxyBase(params: ProxyBaseParams = {}): string |
   return `${origin}${SUPABASE_PROXY_PATH}`;
 }
 
-interface SupabaseEnv {
-  VITE_SUPABASE_URL?: string;
-  VITE_SUPABASE_PROXY?: string;
-}
+type SupabaseEnv = Record<string, string | undefined>;
 
-function readEnv(): SupabaseEnv {
-  try {
-    const meta = import.meta as ImportMeta & { env?: SupabaseEnv };
-    return meta.env ?? {};
-  } catch {
-    return {};
-  }
-}
+// لازم نقرأ import.meta.env بالشكل ده بالظبط عشان Vite يحقن القيم وقت البناء.
+const env = (import.meta.env ?? {}) as SupabaseEnv;
 
 function detectNativeShell(): boolean {
   if (typeof window === 'undefined') return false;
@@ -80,8 +71,6 @@ function detectNativeShell(): boolean {
   }
   return false;
 }
-
-const env = readEnv();
 
 /** العنوان المباشر لمشروع Supabase. */
 export const supabaseDirectUrl = readDirectSupabaseUrl(env.VITE_SUPABASE_URL);
