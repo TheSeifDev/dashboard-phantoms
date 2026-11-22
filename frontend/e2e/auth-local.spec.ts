@@ -111,7 +111,10 @@ async function installRequestGate(page: Page, metadata: AuthSafetyMetadata): Pro
       || url.origin === API_ORIGIN
       || url.origin === bridge.origin
       || url.origin === 'https://fonts.googleapis.com'
-      || url.origin === 'https://fonts.gstatic.com';
+      || url.origin === 'https://fonts.gstatic.com'
+      // Member avatars are served by GitHub when a handle is linked.
+      || url.origin === 'https://github.com'
+      || url.origin === 'https://avatars.githubusercontent.com';
     if (!allowed) {
       blocked.push(`${request.method()} ${url.origin}${url.pathname}`);
       await route.abort('blockedbyclient');
