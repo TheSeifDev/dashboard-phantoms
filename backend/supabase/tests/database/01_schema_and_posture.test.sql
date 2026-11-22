@@ -28,7 +28,7 @@ SELECT tables_are('public', ARRAY[
   'member_password_audit', 'member_password_invitations', 'member_password_rate_limits',
   'member_password_recovery_sessions', 'member_strikes',
   'member_auth_bindings', 'member_registration_invites', 'members', 'notes',
-  'meetings', 'meeting_attendance',
+  'meetings', 'meeting_attendance', 'reference_links',
   'owner_member_erasure_operations', 'owner_member_erasure_storage_objects', 'tasks',
   'task_contribution_events', 'task_contribution_ledger_config', 'whatsapp_settings',
   'teams', 'team_memberships', 'team_admin_assignments', 'team_access_audit',

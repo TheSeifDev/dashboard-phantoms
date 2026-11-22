@@ -29,6 +29,7 @@ const MemberPortalLayout = lazy(() => import('../features/portal/MemberPortalLay
 const MemberTeamPage = lazy(() => import('../features/portal/MemberTeamPage'));
 const MemberWebProjectsPage = lazy(() => import('../features/web-projects/MemberWebProjectsPage'));
 const MemberMeetingsPage = lazy(() => import('../features/meetings/MemberMeetingsPage'));
+const MemberReferencesPage = lazy(() => import('../features/references/MemberReferencesPage'));
 const ProjectWorkspacePage = lazy(() => import('../features/web-projects/ProjectWorkspacePage'));
 const MemberSelfRegisterPage = lazy(() => import('../features/members/MemberSelfRegisterPage'));
 const MemberSettingsPage = lazy(() => import('../features/members/MemberSettingsPage'));
@@ -41,6 +42,7 @@ const TasksPage = lazy(() => import('../features/tasks/TasksPage'));
 const EvaluationsPage = lazy(() => import('../features/evaluations/EvaluationsPage'));
 const NotesPage = lazy(() => import('../features/notes/NotesPage'));
 const MeetingsPage = lazy(() => import('../features/meetings/MeetingsPage'));
+const ReferencesPage = lazy(() => import('../features/references/ReferencesPage'));
 const RankingPage = lazy(() => import('../features/ranking/RankingPage'));
 const AiAssistantPage = lazy(() => import('../features/ai-assistant/AiAssistantPage'));
 const WhatsAppTasksPage = lazy(() => import('../features/whatsapp/WhatsAppTasksPage'));
@@ -226,6 +228,7 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
       { index: true, element: <Page><MemberPortalPage /></Page> },
       { path: 'team', element: <Page><MemberTeamPage /></Page> },
       { path: 'meetings', element: <Page><MemberMeetingsPage /></Page> },
+      { path: 'references', element: <Page><MemberReferencesPage /></Page> },
       { path: 'projects', element: <Page><MemberWebProjectsPage /></Page> },
     ],
   },
@@ -263,6 +266,7 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
       { path: 'dashboard', element: <AdminSection permission="dashboard"><Page><DashboardPage /></Page></AdminSection> },
       { path: 'members', element: <AdminSection permission="members"><Page><MembersPage /></Page></AdminSection> },
       { path: 'meetings', element: <AdminSection permission="members"><Page><MeetingsPage /></Page></AdminSection> },
+      { path: 'references', element: <AdminSection permission="members"><Page><ReferencesPage /></Page></AdminSection> },
       { path: 'members/experience', element: <AdminSection permission="members"><Page><MemberExperiencePreviewPage /></Page></AdminSection> },
       { path: 'tasks', element: <AdminSection permission="tasks"><Page><TasksPage /></Page></AdminSection> },
       { path: 'evaluations', element: <AdminSection permission="ranking"><Page><EvaluationsPage /></Page></AdminSection> },
