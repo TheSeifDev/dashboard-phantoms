@@ -11,6 +11,7 @@ import { PortalHeader } from './PortalHeader';
 import { toast } from '../../store/toast';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { MemberHero } from './MemberHero';
+import { MemberHomeCards } from './MemberHomeCards';
 import { MemberTasks } from './MemberTasks';
 import { MemberEvaluations } from './MemberEvaluations';
 import { SubmissionModal } from './SubmissionModal';
@@ -192,6 +193,16 @@ export default function MemberPortalPage() {
           bonusStateLoading={bonusInfiniteQuery.isLoading}
           bonusStateError={bonusInfiniteQuery.isError}
         />
+
+        {activeTab === 'ALL' && (
+          <MemberHomeCards
+            member={member}
+            tasks={myTasks}
+            evaluations={myEvaluations}
+            bonus={bonusQuery.data ?? null}
+            onOpenTab={setActiveTab}
+          />
+        )}
 
         <nav
           aria-label={t('أقسام بوابة العضو', 'Member portal sections')}

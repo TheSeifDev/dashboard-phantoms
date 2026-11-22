@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 import MainLayout from '../components/layout/MainLayout';
+import PublicWorkspaceLayout from '../components/layout/PublicWorkspaceLayout';
 import { PhantomLoader } from '../components/motion/PhantomLoader';
 import { supabase } from '../lib/supabase/client';
 import { useAdminAccess } from '../features/admin/access/api';
@@ -181,7 +182,11 @@ function AppDownloadShell() {
 }
 
 export const router = createBrowserRouter([{ element: <AppDownloadShell />, children: [
-  { path: '/download', element: <Page><AppDownloadPage /></Page> },
+  {
+    path: '/download',
+    element: <PublicWorkspaceLayout />,
+    children: [{ index: true, element: <Page><AppDownloadPage /></Page> }],
+  },
   // Member Portal Routes
   {
     path: '/',

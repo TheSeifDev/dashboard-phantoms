@@ -60,6 +60,8 @@ interface TaskStreakHeatmapProps {
   github: GithubControl;
   onOpenDay: (date: string) => void;
   isRefreshing?: boolean;
+  /** Phones: fewer weeks, no 3D scene, no entrance/ambient animations. */
+  compact?: boolean;
 }
 
 interface CellModel {
@@ -98,6 +100,7 @@ export function TaskStreakHeatmap({
   github,
   onOpenDay,
   isRefreshing = false,
+  compact = false,
 }: TaskStreakHeatmapProps) {
   const { locale, t, number, date } = useLocale();
   const theme = useThemeStore((state) => state.theme);
@@ -118,15 +121,25 @@ export function TaskStreakHeatmap({
     () => calculateContributionStreaks(activity.mergedDays, contributions.today),
     [activity.mergedDays, contributions.today],
   );
+  // On phones the hive only shows the last quarter of the year: fewer nodes, same meaning.
+  const startCol = compact && calendar ? Math.max(0, calendar.weeks.length - 14) : 0;
+  const visibleWeeks = calendar ? calendar.weeks.length - startCol : 0;
+  const monthLabels = calendar ? calendar.monthLabels
+    .filter((entry) => entry.weekIndex >= startCol)
+    .map((entry) => ({ ...entry, weekIndex: entry.weekIndex - startCol })) : [];
+  const activeView: HeatmapView = compact ? 'hex' : view;
   const isCurrentYear = dataYear === Number(contributions.today.slice(0, 4));
   const cells = useMemo<CellModel[]>(() => {
     if (!calendar) return [];
     const list: CellModel[] = [];
-    calendar.weeks.forEach((week, col) => week.forEach((day, row) => {
-      if (day.inSelectedYear) list.push({ day, team: activity.byDate.get(day.date), col, row });
-    }));
+    calendar.weeks.forEach((week, col) => {
+      if (col < startCol) return;
+      week.forEach((day, row) => {
+        if (day.inSelectedYear) list.push({ day, team: activity.byDate.get(day.date), col: col - startCol, row });
+      });
+    });
     return list;
-  }, [calendar, activity.byDate]);
+  }, [calendar, activity.byDate, startCol]);
   const calendarKey = `${dataYear}:${selectedMemberId ?? 'team'}:${github.enabled ? 'gh' : 'ledger'}`;
   const tabStopDate = focusedDate?.startsWith(`${dataYear}-`)
     ? focusedDate
@@ -158,7 +171,7 @@ export function TaskStreakHeatmap({
   const grid = useMemo(() => {
     if (!calendar) return null;
     return (
-      <div ref={gridRef} className="hex-grid" style={{ '--weeks': calendar.weeks.length } as CSSProperties}>
+      <div ref={gridRef} className="hex-grid" style={{ '--weeks': visibleWeeks } as CSSProperties}>
         {cells.map((cell) => {
           const { day, team, col, row } = cell;
           const position = { '--c': col, '--r': row, '--o': row % 2 } as CSSProperties;
@@ -191,7 +204,7 @@ export function TaskStreakHeatmap({
     );
     // Labels depend on locale; handlers are delegated so the grid only re-renders on data/focus/locale.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cells, calendar, tabStopDate, locale, contributions.today]);
+  }, [cells, calendar, tabStopDate, locale, contributions.today, visibleWeeks]);
 
   const showTip = (target: HTMLElement) => {
     const stage = stageRef.current;
@@ -255,10 +268,10 @@ export function TaskStreakHeatmap({
   // Entrance: cells bloom outward from the middle of the year (the fill animates, never the hit area).
   useLayoutEffect(() => {
     const gridElement = gridRef.current;
-    if (!gridElement || view !== 'hex' || prefersReducedMotion()) return;
+    if (!gridElement || activeView !== 'hex' || compact || prefersReducedMotion()) return;
     const fills = Array.from(gridElement.querySelectorAll<HTMLElement>('.hex-cell-fill, .hex-future'));
     if (!fills.length) return;
-    const weeks = calendar?.weeks.length ?? 53;
+    const weeks = visibleWeeks || 53;
     const tween = gsap.fromTo(fills, { scale: 0.15, opacity: 0 }, {
       scale: 1,
       opacity: 1,
@@ -274,12 +287,12 @@ export function TaskStreakHeatmap({
       },
     });
     return () => { tween.kill(); gsap.set(fills, { clearProps: 'transform,opacity' }); };
-  }, [calendarKey, view, calendar]);
+  }, [calendarKey, activeView, calendar, compact, visibleWeeks]);
 
   // Multi-person days breathe so "hot" team days read at a glance.
   useEffect(() => {
     const gridElement = gridRef.current;
-    if (!gridElement || view !== 'hex' || prefersReducedMotion()) return;
+    if (!gridElement || activeView !== 'hex' || compact || prefersReducedMotion()) return;
     const glows = gridElement.querySelectorAll<HTMLElement>('.hex-cell-glow');
     if (!glows.length) return;
     const tween = gsap.to(glows, {
@@ -290,22 +303,22 @@ export function TaskStreakHeatmap({
       stagger: { each: 0.14, from: 'random', repeat: -1, yoyo: true },
     });
     return () => { tween.kill(); gsap.set(glows, { clearProps: 'transform,opacity' }); };
-  }, [calendarKey, view, cells]);
+  }, [calendarKey, activeView, cells, compact]);
 
   // The current week is the interesting edge: start scrolled to today on narrow screens.
   useLayoutEffect(() => {
     const scroller = scrollRef.current;
-    if (!scroller || view !== 'hex' || !isCurrentYear) return;
+    if (!scroller || activeView !== 'hex' || !isCurrentYear) return;
     if (scroller.scrollWidth <= scroller.clientWidth + 1) return;
     const todayCell = scroller.querySelector<HTMLElement>('[data-today="true"]');
     if (!todayCell) { scroller.scrollLeft = scroller.scrollWidth; return; }
     // Keep today near the trailing edge with a couple of upcoming weeks visible for context.
     const delta = todayCell.getBoundingClientRect().right - scroller.getBoundingClientRect().right;
     scroller.scrollLeft += delta + todayCell.offsetWidth * 2.5;
-  }, [calendarKey, view, isCurrentYear]);
+  }, [calendarKey, activeView, isCurrentYear]);
 
   useEffect(() => {
-    if (!totalRef.current || prefersReducedMotion()) return;
+    if (!totalRef.current || compact || prefersReducedMotion()) return;
     const tween = gsap.fromTo(totalRef.current, { scale: 0.82, opacity: 0.4 }, { scale: 1, opacity: 1, duration: 0.8, ease: 'elastic.out(1, 0.5)', clearProps: 'transform,opacity' });
     return () => { tween.kill(); };
   }, [activity.totals.total, calendarKey]);
@@ -386,15 +399,17 @@ export function TaskStreakHeatmap({
               {memberOptions.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
             </select>
           </label>
-          <Segmented<HeatmapView>
-            label={t('طريقة عرض المساهمات', 'Contribution view')}
-            value={view}
-            onChange={changeView}
-            options={[
-              { value: 'hex', label: t('خلية', 'Hive'), icon: <Hexagon aria-hidden="true" /> },
-              { value: '3d', label: '3D', icon: <Box aria-hidden="true" /> },
-            ]}
-          />
+          {!compact && (
+            <Segmented<HeatmapView>
+              label={t('طريقة عرض المساهمات', 'Contribution view')}
+              value={view}
+              onChange={changeView}
+              options={[
+                { value: 'hex', label: t('خلية', 'Hive'), icon: <Hexagon aria-hidden="true" /> },
+                { value: '3d', label: '3D', icon: <Box aria-hidden="true" /> },
+              ]}
+            />
+          )}
         </div>
       </header>
 
@@ -439,20 +454,20 @@ export function TaskStreakHeatmap({
         <span className="dashboard-heatmap-hint"><MousePointerClick size={14} aria-hidden="true" />{t('اضغط على أي خلية لعرض كل اللي حصل في اليوم', 'Click any cell for that day’s full history')}</span>
       </div>
 
-      <div ref={stageRef} className="hex-stage" data-view={view} onPointerLeave={() => setTip(null)}>
+      <div ref={stageRef} className="hex-stage" data-view={activeView} onPointerLeave={() => setTip(null)}>
         {calendar ? (
           <>
             <div
               ref={scrollRef}
               className="dashboard-heatmap-scroll"
               dir="ltr"
-              hidden={view !== 'hex'}
+              hidden={activeView !== 'hex'}
               aria-label={t('تقويم مساهمات السنة', 'Calendar of contributions for the year')}
               onScroll={() => setTip(null)}
             >
-              <div className="hex-canvas" style={{ '--weeks': calendar.weeks.length } as CSSProperties}>
+              <div className="hex-canvas" style={{ '--weeks': visibleWeeks } as CSSProperties}>
                 <div className="hex-months" aria-hidden="true">
-                  {calendar.monthLabels.map(({ weekIndex, month }) => (
+                  {monthLabels.map(({ weekIndex, month }) => (
                     <span key={month} style={{ '--c': weekIndex } as CSSProperties}>{monthName(month)}</span>
                   ))}
                 </div>
@@ -482,7 +497,7 @@ export function TaskStreakHeatmap({
                 </div>
               </div>
             </div>
-            {view === '3d' && (
+            {activeView === '3d' && (
               <Suspense fallback={<div className="hex-3d-loading"><span className="hex-loader" aria-hidden="true" />{t('بنجهز المشهد ثلاثي الأبعاد…', 'Preparing the 3D scene…')}</div>}>
                 <HexSkyline3D
                   cells={skyCells}

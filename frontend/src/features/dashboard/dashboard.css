@@ -1649,3 +1649,31 @@ html[lang="ar"] .dashboard-hero-title { letter-spacing: 0; line-height: 1.25; }
   .hex-legend-cell { forced-color-adjust: none; }
   .dashboard-heatmap-cell:focus-visible { outline: 2px solid CanvasText; }
 }
+
+/* ===== Mobile performance budget (<=767px) =====
+   The desktop dashboard paints a full year of cells, a 3D scene and layered glass.
+   On phones we keep the same information but drop the expensive paint work. */
+@media (max-width: 767px) {
+  /* No content-visibility here: off-screen subtrees report zero sizes, which
+     breaks charts that measure their own boxes (and the dashboard E2E). */
+  /* Backdrop blur is the single most expensive effect on low-end GPUs. */
+  .dashboard-root .glass-card,
+  .dashboard-root .glass-card::before,
+  .dashboard-root .glass-card::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .dashboard-root .glass-card { box-shadow: none; }
+  .dashboard-hero { padding: 16px; gap: 14px; }
+  .dashboard-hero-visual { display: none; }
+  .dashboard-hero-title { font-size: 30px; }
+  .dashboard-panel { padding: 14px; }
+  .dashboard-heatmap-header { gap: 10px; }
+  .dashboard-heatmap-controls { width: 100%; }
+  .dashboard-select-wrap { flex: 1 1 45%; }
+  .dashboard-contribution-summary { gap: 10px; }
+  .dashboard-heatmap-footer .hex-legend-crew { display: none; }
+  .dashboard-github-bar .dashboard-heatmap-hint { display: none; }
+  /* Fewer composited layers while scrolling. */
+  .hex-cell-glow { animation: none !important; }
+  .crew-hex-ring { animation: none !important; }
+  .dashboard-bento { gap: 12px; }
+  .dashboard-chart { height: 200px; }
+}

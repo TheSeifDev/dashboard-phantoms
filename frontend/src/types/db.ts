@@ -358,6 +358,7 @@ export interface Database {
       owner_expel_member: { Args: { p_member_id: number; p_reason?: string | null }; Returns: { member_id: number; expelled: boolean; strikes: number; reason: string | null } };
       member_my_strikes: { Args: Record<string, never>; Returns: { limit: number; strikes: { id: number; reason: string; created_at: string; issued_by_name: string | null }[] } };
       member_strike_limit: { Args: Record<string, never>; Returns: number };
+      member_internal_teams: { Args: Record<string, never>; Returns: { team_id: string; slug: string; name: string; status: string; approved_at: string | null }[] };
       team_list_roster: { Args: { p_team_id: string; p_feature: TeamPermission }; Returns: unknown };
       team_list_tasks: { Args: { p_team_id: string }; Returns: unknown };
       team_create_task: { Args: { p_team_id: string; p_title: string; p_description: string | null; p_assigned_to: unknown; p_has_deadline: boolean; p_deadline_date: string | null; p_bonus_points: number }; Returns: number };

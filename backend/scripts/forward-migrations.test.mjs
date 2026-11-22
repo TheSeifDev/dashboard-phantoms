@@ -33,6 +33,7 @@ const appliedOwnerErasureFiles = [
   '20261121144600_owner_member_erasure_storage_vector_index_lock_exclusion.sql',
 ];
 const profileForwardFiles = ['20261122010000_member_profile_all_required.sql', '20261122070000_owner_member_identity.sql', '20261122105000_evaluation_strikes.sql'];
+const portalForwardFiles = ['20261122150000_member_internal_teams.sql', '20261122154000_member_internal_teams_status_filter.sql'];
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'phantoms-forward-inventory-'));
@@ -76,10 +77,10 @@ test('repository retains 24 initialized files and registers the applied Owner er
   const result = validateMigrationManifest({ rootDir: root });
   assert.equal(result.valid, true, result.errors.join('\n'));
   assert.equal(result.entryCount, 24);
-  assert.equal(result.forwardEntryCount, 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length + 2 + appliedOwnerErasureFiles.length + profileForwardFiles.length);
-  assert.equal(result.migrationFiles.length, 24 + 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length + 2 + appliedOwnerErasureFiles.length + profileForwardFiles.length);
+  assert.equal(result.forwardEntryCount, 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length + 2 + appliedOwnerErasureFiles.length + profileForwardFiles.length + portalForwardFiles.length);
+  assert.equal(result.migrationFiles.length, 24 + 13 + appliedTeamMigrations.length + 1 + appliedMemberFiles.length + 2 + appliedOwnerErasureFiles.length + profileForwardFiles.length + portalForwardFiles.length);
   const teamFiles = appliedTeamMigrations.map(([, remoteVersion, name]) => `${remoteVersion}_${name}.sql`);
-  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql', '20261118200500_member_password_optional_join_email.sql', '20261119005000_member_password_owner_join_review.sql', '20261119183000_task_contribution_ledger.sql', ...teamFiles, '20261120223000_web_projects_foundation.sql', ...appliedMemberFiles, '20261121074500_owner_admin_demotion.sql', '20261121090000_member_app_usage.sql', ...appliedOwnerErasureFiles, ...profileForwardFiles]);
+  assert.deepEqual(result.forwardFiles, [`${forwardVersion}_${forwardName}.sql`, '20261116234800_member_password_auth.sql', '20261117163000_member_password_runtime_guards.sql', '20261117164800_member_password_session_guards.sql', '20261117170000_member_password_invitation_lock_guards.sql', '20261117172500_member_password_anonymous_session_guards.sql', '20261117173500_member_password_gotrue_insert_compat.sql', '20261117174000_member_password_gotrue_bound_guard_reconciliation.sql', '20261117175500_member_password_limiter_storage_guards.sql', '20261118153000_member_password_self_service_join.sql', '20261118200500_member_password_optional_join_email.sql', '20261119005000_member_password_owner_join_review.sql', '20261119183000_task_contribution_ledger.sql', ...teamFiles, '20261120223000_web_projects_foundation.sql', ...appliedMemberFiles, '20261121074500_owner_admin_demotion.sql', '20261121090000_member_app_usage.sql', ...appliedOwnerErasureFiles, ...profileForwardFiles, ...portalForwardFiles]);
   const entries = JSON.parse(readFileSync(join(root, FORWARD_MANIFEST_PATH), 'utf8'));
   const appliedMemberTimestamps = new Map([['20261121002000', '20261121003655'], ['20261121003000', '20261121003716']]);
   for (const version of appliedMemberTimestamps.keys()) {
