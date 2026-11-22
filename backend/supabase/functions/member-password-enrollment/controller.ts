@@ -306,7 +306,10 @@ async function enroll(runtime: ControllerRuntime, body: Record<string, unknown>,
   const health = await runtime.serviceDb.rpc<boolean>('member_password_service_health');
   if (health.error || health.data !== true) return errorResponse('SERVER_UNAVAILABLE', 503, origin);
 
-  let claim: { invitation_id: string; claim_id: string; member_id: number | null; email: string; purpose: 'enroll' | 'reset' | 'join'; expected_auth_user_id: string | null } | null = null;
+  let claim: {
+    invitation_id: string; claim_id: string; member_id: number | null; email: string;
+    purpose: 'enroll' | 'reset' | 'join'; expected_auth_user_id: string | null; adopt_auth_user_id: string | null;
+  } | null = null;
   let reviewMarked = false;
   const quarantine = async () => {
     if (!claim || reviewMarked) return;
@@ -320,7 +323,8 @@ async function enroll(runtime: ControllerRuntime, body: Record<string, unknown>,
 
   try {
     const reserved = await runtime.serviceDb.rpc<{
-      invitation_id: string; claim_id: string; member_id: number | null; email: string; purpose: 'enroll' | 'reset' | 'join'; expected_auth_user_id: string | null;
+      invitation_id: string; claim_id: string; member_id: number | null; email: string;
+      purpose: 'enroll' | 'reset' | 'join'; expected_auth_user_id: string | null; adopt_auth_user_id?: string | null;
     }>('member_password_reserve', { p_token_hash: await sha256Hex(parsed.token), p_email: parsed.email });
     if (reserved.error || !reserved.data) {
       const code = errorCode(reserved.error) ?? 'SERVER_UNAVAILABLE';
@@ -336,13 +340,17 @@ async function enroll(runtime: ControllerRuntime, body: Record<string, unknown>,
         || typeof reserved.data.claim_id !== 'string' || !UUID_RE.test(reserved.data.claim_id)) {
       return errorResponse('REVIEW_REQUIRED', 409, origin);
     }
-    claim = reserved.data;
+    claim = { ...reserved.data, adopt_auth_user_id: reserved.data.adopt_auth_user_id ?? null };
     const validMemberBinding = claim.purpose === 'join'
       ? claim.member_id === null && claim.expected_auth_user_id === null
       : Number.isSafeInteger(claim.member_id) && (claim.member_id ?? 0) > 0;
+    const validAdoption = claim.adopt_auth_user_id === null
+      || (claim.purpose === 'join' && typeof claim.adopt_auth_user_id === 'string' && UUID_RE.test(claim.adopt_auth_user_id));
     if (!validMemberBinding || claim.email !== parsed.email
         || (claim.purpose !== 'enroll' && claim.purpose !== 'reset' && claim.purpose !== 'join')
         || (claim.expected_auth_user_id !== null && (typeof claim.expected_auth_user_id !== 'string' || !UUID_RE.test(claim.expected_auth_user_id)))
+        || !validAdoption
+        || (claim.adopt_auth_user_id !== null && claim.expected_auth_user_id !== null)
         || (claim.purpose === 'reset' && claim.expected_auth_user_id === null)) {
       await quarantine();
       return errorResponse('REVIEW_REQUIRED', 409, origin);
@@ -374,6 +382,30 @@ async function enroll(runtime: ControllerRuntime, body: Record<string, unknown>,
         await quarantine();
         return errorResponse(state.data.has_password === true ? 'PASSWORD_ALREADY_SET' : 'REVIEW_REQUIRED', 409, origin);
       }
+    } else if (claim.adopt_auth_user_id) {
+      // Self-service join may adopt an Auth identity that has no membership
+      // binding and no member row. Re-check that shape here, then rotate its
+      // password; the Auth guard only accepts the write through this claim.
+      const stranded = await runtime.serviceDb.rpc<{
+        exists?: boolean; adoptable?: boolean; auth_user_id?: string;
+      }>('member_password_stranded_identity', { p_email: parsed.email });
+      if (stranded.error || stranded.data?.exists !== true || stranded.data.auth_user_id !== claim.adopt_auth_user_id) {
+        await quarantine();
+        return errorResponse('REVIEW_REQUIRED', 409, origin);
+      }
+      if (stranded.data.adoptable !== true) {
+        await quarantine();
+        return errorResponse('IDENTITY_CONFLICT', 409, origin);
+      }
+      const adopted = await runtime.authAdmin.auth.admin.updateUserById(claim.adopt_auth_user_id, {
+        password: parsed.password,
+        email_confirm: true,
+      });
+      if (adopted.error || adopted.data?.user?.id !== claim.adopt_auth_user_id) {
+        await quarantine();
+        return errorResponse('REVIEW_REQUIRED', 409, origin);
+      }
+      authUserId = claim.adopt_auth_user_id;
     } else {
       const identity = await runtime.serviceDb.rpc<{
         exists: boolean; auth_user_id?: string; has_password?: boolean; email_confirmed?: boolean; usable?: boolean; is_admin?: boolean;
@@ -392,7 +424,10 @@ async function enroll(runtime: ControllerRuntime, body: Record<string, unknown>,
       await quarantine();
       return errorResponse('REVIEW_REQUIRED', 409, origin);
     }
-    if (claim.expected_auth_user_id) {
+    if (claim.adopt_auth_user_id) {
+      // The adoption branch above already rotated this identity's password.
+      if (!authUserId) throw new Error('missing adopted Auth user id');
+    } else if (claim.expected_auth_user_id) {
       const write = await runtime.authAdmin.auth.admin.updateUserById(claim.expected_auth_user_id, {
         password: parsed.password,
         ...(claim.purpose === 'enroll' ? { email_confirm: true as const } : {}),

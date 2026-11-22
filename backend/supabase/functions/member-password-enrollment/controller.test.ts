@@ -6,9 +6,10 @@ import { createMemberPasswordEnrollmentController, type ControllerRuntime, type 
 type State = {
   rate: boolean;
   health: boolean;
-  reserve: { invitation_id: string; claim_id: string; member_id: number | null; email: string; purpose: 'enroll' | 'reset' | 'join'; expected_auth_user_id: string | null } | null;
+  reserve: { invitation_id: string; claim_id: string; member_id: number | null; email: string; purpose: 'enroll' | 'reset' | 'join'; expected_auth_user_id: string | null; adopt_auth_user_id?: string | null } | null;
   reserveError: string | null;
   identity: { exists: boolean; auth_user_id?: string; has_password?: boolean; is_admin?: boolean };
+  stranded: { exists: boolean; adoptable?: boolean; auth_user_id?: string };
   identityState: { exists: boolean; auth_user_id?: string; email_matches?: boolean; has_password?: boolean; is_admin?: boolean; usable?: boolean };
   complete: boolean;
   authCreate: { id: string } | null;
@@ -27,6 +28,7 @@ const baseState = (): State => ({
   reserve: { invitation_id: '11111111-1111-4111-8111-111111111111', claim_id: '22222222-2222-4222-8222-222222222222', member_id: 9, email: 'member@phantoms-test.example', purpose: 'enroll', expected_auth_user_id: null },
   reserveError: null,
   identity: { exists: false },
+  stranded: { exists: false, adoptable: false },
   identityState: { exists: true, email_matches: true, has_password: false, is_admin: false, usable: true },
   complete: true,
   authCreate: { id: '33333333-3333-4333-8333-333333333333' },
@@ -49,6 +51,7 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
       if (rpcName === 'member_password_reserve') return state.reserveError
         ? { data: null, error: { message: state.reserveError } } : { data: state.reserve as T, error: null };
       if (rpcName === 'member_password_identity_by_email') return { data: state.identity as T, error: null };
+      if (rpcName === 'member_password_stranded_identity') return { data: state.stranded as T, error: null };
       if (rpcName === 'member_password_identity_state') return { data: {
         auth_user_id: state.reserve?.expected_auth_user_id,
         ...state.identityState,
@@ -161,6 +164,61 @@ test('password reset accepts no profile and never creates a new Auth identity', 
   assert.equal(state.calls.filter((call) => call.name === 'updateUserById').length, 1);
   assert.equal(state.calls.some((call) => call.name === 'createUser'), false);
   assert.equal(state.reviews.length, 0);
+});
+
+test('self-service join adopts a stranded Auth identity instead of blocking the email', async () => {
+  const state = baseState();
+  const strandedId = '77777777-7777-4777-8777-777777777777';
+  state.reserve = {
+    ...state.reserve!, member_id: null, email: 'stranded@phantoms-test.example',
+    purpose: 'join', expected_auth_user_id: null, adopt_auth_user_id: strandedId,
+  };
+  state.stranded = { exists: true, adoptable: true, auth_user_id: strandedId };
+  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request(enrollBody({ email: 'stranded@phantoms-test.example' })),
+  ));
+  assert.deepEqual(result, { ok: true, membership: 'pending_review' });
+  assert.equal(state.calls.some((call) => call.name === 'createUser'), false);
+  const adoption = state.calls.find((call) => call.name === 'updateUserById');
+  assert.equal(adoption?.args?.userId, strandedId);
+  assert.equal(adoption?.args?.password, 'StrongMemberPassword1');
+  assert.equal(adoption?.args?.email_confirm, true);
+  const completion = state.calls.find((call) => call.name === 'member_password_complete_profile');
+  assert.equal(completion?.args?.p_auth_user_id, strandedId);
+  assert.equal(state.reviews.length, 0);
+});
+
+test('join adoption is refused when the identity is no longer stranded', async () => {
+  const state = baseState();
+  const strandedId = '77777777-7777-4777-8777-777777777777';
+  state.reserve = {
+    ...state.reserve!, member_id: null, email: 'stranded@phantoms-test.example',
+    purpose: 'join', expected_auth_user_id: null, adopt_auth_user_id: strandedId,
+  };
+  state.stranded = { exists: true, adoptable: false, auth_user_id: strandedId };
+  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request(enrollBody({ email: 'stranded@phantoms-test.example' })),
+  ));
+  assert.equal(result.code, 'IDENTITY_CONFLICT');
+  assert.equal(state.calls.some((call) => call.name === 'updateUserById'), false);
+  assert.equal(state.calls.some((call) => call.name === 'member_password_complete_profile'), false);
+  assert.equal(state.reviews.length, 1);
+});
+
+test('an adopted identity id that belongs to another email is quarantined', async () => {
+  const state = baseState();
+  const strandedId = '77777777-7777-4777-8777-777777777777';
+  state.reserve = {
+    ...state.reserve!, member_id: null, email: 'stranded@phantoms-test.example',
+    purpose: 'join', expected_auth_user_id: null, adopt_auth_user_id: strandedId,
+  };
+  state.stranded = { exists: true, adoptable: true, auth_user_id: '88888888-8888-4888-8888-888888888888' };
+  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request(enrollBody({ email: 'stranded@phantoms-test.example' })),
+  ));
+  assert.equal(result.code, 'REVIEW_REQUIRED');
+  assert.equal(state.calls.some((call) => call.name === 'updateUserById'), false);
+  assert.equal(state.reviews.length, 1);
 });
 
 test('purpose/profile mismatch is quarantined before any Auth write', async () => {
