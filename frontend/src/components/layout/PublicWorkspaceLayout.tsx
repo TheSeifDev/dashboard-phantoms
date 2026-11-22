@@ -1,28 +1,9 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { CircleUserRound, LifeBuoy, ShieldCheck, Smartphone } from 'lucide-react';
-import { AppSidebar, useSidebarDrawer, type SidebarGroup } from './AppSidebar';
+import { AppSidebar, useSidebarDrawer } from './AppSidebar';
+import { MEMBER_WORKSPACE_GROUPS } from './workspace-groups';
 import { PublicHeader } from './PublicHeader';
 import { useLocale } from '../../i18n/useLocale';
-
-/** نفس شكل شريط الأدمن، لكن بروابط عامة متاحة لأي زائر. */
-const PUBLIC_GROUPS: SidebarGroup[] = [
-  {
-    title: 'نظرة عامة',
-    items: [{ to: '/download', label: 'تطبيقات PHANTOMS', icon: Smartphone, end: true }],
-  },
-  {
-    title: 'الحساب',
-    items: [
-      { to: '/login', label: 'بوابة الأعضاء', icon: CircleUserRound },
-      { to: '/admin/login', label: 'دخول الإدارة', icon: ShieldCheck },
-    ],
-  },
-  {
-    title: 'المساعدة',
-    items: [{ to: '/forgot-password', label: 'استعادة كلمة المرور', icon: LifeBuoy }],
-  },
-];
 
 const TITLES: Record<string, { ar: string; en: string; shortAr: string; shortEn: string }> = {
   '/download': { ar: 'تطبيقات PHANTOMS', en: 'PHANTOMS apps', shortAr: 'التطبيقات', shortEn: 'Apps' },
@@ -47,9 +28,10 @@ export default function PublicWorkspaceLayout() {
         userName={t('زائر', 'Guest')}
         isOwner={false}
         permissions={{}}
-        groups={PUBLIC_GROUPS}
+        groups={MEMBER_WORKSPACE_GROUPS}
         guest
-        brandTo="/download"
+        brandTo="/portal"
+        brandSubtitle={t('بوابة العضو', 'Member portal')}
         drawerOpen={drawerOpen}
         onCloseDrawer={closeDrawer}
       />

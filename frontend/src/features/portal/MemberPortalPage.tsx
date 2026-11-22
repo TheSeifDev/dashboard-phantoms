@@ -8,6 +8,7 @@ import type { Task } from '../../types/db';
 import { toast } from '../../store/toast';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { MemberHero } from './MemberHero';
+import '../dashboard/dashboard.css';
 import { MemberHomeCards } from './MemberHomeCards';
 import { MemberTasks } from './MemberTasks';
 import { MemberEvaluations } from './MemberEvaluations';
@@ -148,12 +149,14 @@ export default function MemberPortalPage() {
           void sendTestNotification();
         }}
       />
-      <div className="grid gap-5">
+      <div className="dashboard-root">
         <ProfileReminderBanner />
         {activeTab === 'ALL' && (
           <>
             <MemberHero
               member={member}
+              tasks={myTasks}
+              evaluations={myEvaluations}
               onToggleField={toggleFieldReadiness}
               isUpdating={isTogglingReadiness}
               totalBonus={bonusQuery.data ?? null}

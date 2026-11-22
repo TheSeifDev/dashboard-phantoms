@@ -19,6 +19,7 @@ import { useMemberTeams } from './useMemberTeams';
 import { useMemberProjectRoles } from './useMemberProjectRoles';
 import { hasRequiredMemberInformation, missingMemberProfileFields } from '../members/member-profile-display';
 import type { NotificationTargetTab } from '../../lib/notifications';
+import './portal-home.css';
 
 type HomeCardTone = 'neutral' | 'accent' | 'warn' | 'success';
 
@@ -40,22 +41,24 @@ const TONE_CLASS: Record<HomeCardTone, string> = {
 };
 
 function HomeCard({ icon, title, value, hint, action, tone = 'neutral', loading }: HomeCardProps) {
+  // Same KPI card anatomy as the admin dashboard so both surfaces read as one product.
+  const kpiTone = tone === 'warn' ? 'red' : tone === 'success' ? 'green' : tone === 'accent' ? 'violet' : undefined;
   return (
-    <article className="flex min-w-0 flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4">
-      <div className="flex items-start gap-2.5">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]" aria-hidden="true">
-          {icon}
-        </span>
-        <h3 className="pt-1.5 text-sm font-black leading-tight text-[var(--text-muted)]">{title}</h3>
+    <article className="kpi-card glass-card" data-tone={kpiTone} data-tilt="4" data-reveal>
+      <div className="kpi-head">
+        <span className="kpi-icon" aria-hidden="true">{icon}</span>
+        <span className="kpi-title">{title}</span>
       </div>
-      <div className="min-w-0">
-        {loading ? (
-          <span className="block h-7 w-24 animate-pulse rounded-md bg-[var(--surface-2)]" aria-hidden="true" />
-        ) : (
-          <p className={`truncate text-2xl font-black tabular-nums ${TONE_CLASS[tone]}`}>{value}</p>
-        )}
-        {hint ? <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--text-muted)]">{hint}</p> : null}
+      <div className="kpi-body">
+        <div className="kpi-value-row">
+          {loading ? (
+            <span className="block h-7 w-24 animate-pulse rounded-md bg-[var(--glass-bg-soft)]" aria-hidden="true" />
+          ) : (
+            <strong className={`kpi-value ${TONE_CLASS[tone]}`}>{value}</strong>
+          )}
+        </div>
       </div>
+      {hint ? <span className="kpi-detail line-clamp-2">{hint}</span> : null}
       {action ? (
         action.to ? (
           <Link
@@ -129,7 +132,7 @@ export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="kpi-grid kpi-grid--trio">
         <HomeCard
           icon={<ClipboardCheck size={18} />}
           title={t('تقييماتي وملاحظات الأداء', 'My evaluations')}
@@ -245,7 +248,7 @@ export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }
       {/* Full-width row: keeps the 3-up grid even and turns the profile nudge into a CTA. */}
       <Link
         to="/portal/settings"
-        className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors hover:border-[var(--border-strong,var(--border))] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+        className="portal-settings-row glass-card transition-colors hover:bg-[var(--surface-2)]"
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]" aria-hidden="true">
           <Cog size={18} />
