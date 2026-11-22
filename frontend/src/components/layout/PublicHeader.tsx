@@ -16,7 +16,7 @@ const PAGES: PaletteEntry[] = [
 
 const isMac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
 
-export function PublicHeader({ title, crumb }: { title: string; crumb: string }) {
+export function PublicHeader({ title, crumb, shortTitle }: { title: string; crumb: string; shortTitle?: string }) {
   const { t } = useLocale();
   const { theme, toggle: toggleTheme } = useThemeStore();
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -56,14 +56,11 @@ export function PublicHeader({ title, crumb }: { title: string; crumb: string })
             <Menu size={20} aria-hidden="true" />
           </button>
           <div className="workspace-heading-copy min-w-0">
-            <nav aria-label={t('مسار الصفحة', 'Breadcrumb')} className="workspace-breadcrumb">
-              <span>PHANTOMS</span>
-              <span aria-hidden="true">/</span>
-              <span>{t('مساحة العمل', 'Workspace')}</span>
-              <span aria-hidden="true">/</span>
-              <span aria-current="page">{crumb}</span>
-            </nav>
-            <p className="workspace-page-title" aria-hidden="true">{title}</p>
+            <h1 className="workspace-page-title">
+              <span className="hidden sm:inline">{title}</span>
+              <span className="sm:hidden">{shortTitle ?? title}</span>
+            </h1>
+            <span className="sr-only">{crumb}</span>
           </div>
         </div>
         <div className="workspace-search-slot">

@@ -302,14 +302,16 @@
 }
 
 .app-sidebar-guest-cta {
-  background: var(--crimson);
-  color: #FFFFFF;
+  border: 1px solid var(--sidebar-border);
   border-radius: 12px;
+  background: var(--glass-bg-strong);
+  color: var(--sidebar-text);
+  font-weight: 700;
 }
 
 .app-sidebar-guest-cta:hover {
-  background: var(--deep-red);
-  color: #FFFFFF;
+  background: var(--sidebar-hover);
+  color: var(--sidebar-text);
 }
 
 .app-sidebar[data-collapsed="true"] .app-sidebar-guest-actions {
