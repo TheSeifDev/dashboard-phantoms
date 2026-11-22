@@ -377,6 +377,13 @@ async function setValidJoinProfile(container) {
   await setValue(container, 'join-academic-number', '01234567');
   await setValue(container, 'join-academic-group', 'Computer Science');
   await setValue(container, 'join-specialization', 'software');
+  await setValue(container, 'join-residence', 'Cairo');
+  await setValue(container, 'join-device', 'لابتوب');
+  await setValue(container, 'join-gender', 'ذكر');
+  await setValue(container, 'join-work-conditions', 'Remote, evenings');
+  await setValue(container, 'join-bio', 'Frontend member');
+  await setValue(container, 'join-linkedin-url', 'https://www.linkedin.com/in/member');
+  await setValue(container, 'join-portfolio-url', 'https://github.com/member');
 }
 async function submit(container, id, twice = false) {
   await act(async () => {
@@ -823,7 +830,7 @@ async function main() {
       const body = invocation.options?.body ?? invocation.body;
       assert.deepEqual(Object.keys(body).sort(), ['action', 'confirmPassword', 'email', 'password', 'profile', 'token'].sort());
       assert.equal(body.action, 'enroll'); assert.equal(body.email, EMAIL); assert.equal(body.token, TOKEN); assert.equal(body.password, PASSWORD); assert.equal(body.confirmPassword, PASSWORD);
-      assert.deepEqual(body.profile, { fullName: 'Member Test', phone: '+20123456789', residence: '', workConditions: '', bio: '', device: '', gender: '', academicNumber: '01234567', academicGroup: 'Computer Science', specialization: 'software', linkedinUrl: '', portfolioUrl: '' });
+      assert.deepEqual(body.profile, { fullName: 'Member Test', phone: '+20123456789', residence: 'Cairo', workConditions: 'Remote, evenings', bio: 'Frontend member', device: 'لابتوب', gender: 'ذكر', academicNumber: '01234567', academicGroup: 'Computer Science', specialization: 'software', linkedinUrl: 'https://www.linkedin.com/in/member', portfolioUrl: 'https://github.com/member' });
       assert.equal(Object.hasOwn(body, 'memberId'), false); assert.equal(Object.hasOwn(body, 'role'), false); assert.equal(Object.hasOwn(body, 'authUserId'), false);
       assert.equal(control.signInCalls.length, 0);
       await act(async () => { await settleMore(); });

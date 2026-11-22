@@ -2,7 +2,8 @@ import type { Member, MemberCustomField } from '../../types/db';
 import { formatCustomFieldValue, getMemberCustomFieldValue } from './customFieldsApi';
 import { DeviceChips, ReadinessChip, WorkStatusChip } from './MemberCells';
 import { memberSpecializationLabel } from './member-profile-display';
-import { MemberAcademicDetails, MemberInformationStatus } from './MemberAcademicDetails';
+import { MemberAcademicDetails, MemberInformationStatus, MemberMissingFields } from './MemberAcademicDetails';
+import { MemberAvatar } from '../../components/ui/MemberAvatar';
 import { OwnerMemberErasure } from './OwnerMemberErasure';
 import { ChevronDown, Eye, Mail, MapPin, Pencil, Phone, ShieldAlert, Trash2 } from 'lucide-react';
 import { useLocale } from '../../i18n/useLocale';
@@ -37,7 +38,7 @@ export function MemberCards({
         return (
           <li key={member.id} id={`member-card-${member.id}`} className="member-dir-card glass-card">
             <div className="member-dir-card-head">
-              <span className="member-dir-avatar" aria-hidden="true">{member.full_name.trim().charAt(0)}</span>
+              <MemberAvatar member={member} name={member.full_name} className="member-dir-avatar" />
               <div className="member-dir-card-copy">
                 <button type="button" className="member-dir-name" onClick={() => onView(member)} title={member.full_name}>
                   {member.full_name}
@@ -55,6 +56,7 @@ export function MemberCards({
 
             <div className="member-dir-body">
               <MemberInformationStatus member={member} />
+              <MemberMissingFields member={member} />
               <MemberAcademicDetails member={member} />
               {appUsage?.[member.id] && <MemberAppUsageDetails compact display={appUsage[member.id]} />}
             </div>

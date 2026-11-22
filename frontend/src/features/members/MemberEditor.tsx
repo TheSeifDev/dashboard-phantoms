@@ -18,7 +18,7 @@ import { Button } from '../../components/ui/Button';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
 import { useLocale } from '../../i18n/useLocale';
-import { MemberAcademicDetails, MemberInformationStatus } from './MemberAcademicDetails';
+import { MemberAcademicDetails, MemberInformationStatus, MemberMissingFields } from './MemberAcademicDetails';
 
 interface Props {
   isOpen: boolean;
@@ -292,7 +292,7 @@ export function MemberEditor({
         <section className="grid min-w-0 gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5" aria-label={t('معلومات العضو المطلوبة', 'Required member information')}>
           <h3 className="text-sm font-black text-[var(--text)]">{t('الدراسة والتخصص والروابط', 'Academic details, specialization and links')}</h3>
           <p className="text-xs leading-6 text-[var(--text-muted)]">{t('العضو يستكمل هذه المعلومات بنفسه من الإعدادات بعد دخوله. التخصص منفصل عن عضوية الفرق وصلاحيات الإدارة.', 'Members complete this information in their Settings after signing in. Specialization is separate from team membership and administrator permissions.')}</p>
-          {member ? <><div><MemberInformationStatus member={member} /></div><MemberAcademicDetails member={member} showSpecialization /></> : <p className="text-xs leading-6 text-[var(--text-muted)]">{t('الإضافة اليدوية تنشئ سجلًا تمهيديًا غير مكتمل، وليست تسجيل العضو. رابط التسجيل يطلب جميع البيانات الإلزامية قبل الإرسال.', 'Manual entry creates an incomplete provisional record, not member registration. The registration link requires all mandatory information before submission.')}</p>}
+          {member ? <><div><MemberInformationStatus member={member} /></div><MemberMissingFields member={member} /><MemberAcademicDetails member={member} showSpecialization /></> : <p className="text-xs leading-6 text-[var(--text-muted)]">{t('الإضافة اليدوية تنشئ سجلًا تمهيديًا غير مكتمل، وليست تسجيل العضو. رابط التسجيل يطلب جميع البيانات الإلزامية قبل الإرسال.', 'Manual entry creates an incomplete provisional record, not member registration. The registration link requires all mandatory information before submission.')}</p>}
         </section>
 
         <div className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5">

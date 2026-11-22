@@ -3,6 +3,7 @@ import type { Member } from '../../types/db';
 import type { RankedMember } from './RankingPodium';
 
 import { useLocale } from '../../i18n/useLocale';
+import { MemberAvatar } from '../../components/ui/MemberAvatar';
 interface RankingTableProps {
   members: RankedMember[];
   onSelectMember?: (member: Member) => void;
@@ -84,9 +85,7 @@ export function RankingTable({ members, onSelectMember, onAdjustBonus, hasFilter
 
                 <td data-label={labels[1]}>
                   <span className="rank-member">
-                    <span className="rank-member-avatar" aria-hidden="true">
-                      {member.full_name.trim().charAt(0) || <User size={15} />}
-                    </span>
+                    <MemberAvatar member={member} name={member.full_name} size={64} className="rank-member-avatar" fallback={<User size={15} />} />
                     <span className="rank-member-copy">
                       <button
                         type="button"

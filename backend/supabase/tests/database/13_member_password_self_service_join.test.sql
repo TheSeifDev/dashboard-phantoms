@@ -394,7 +394,7 @@ SELECT lives_ok($$SELECT public.member_password_complete_profile(
   (SELECT id FROM public.member_password_invitations WHERE note = 'unbound join email optional'),
   ((SELECT value::jsonb FROM phantoms_test.vars WHERE key = 'unbound_join_claim') ->> 'claim_id')::uuid,
   '40000000-0000-4000-8000-000000000002',
-  '{"fullName":"Unbound Self Service Member","phone":"+201112223344","residence":"","workConditions":"","bio":"","device":"","gender":"","academicNumber":"987654","academicGroup":"UNBOUND-1","specialization":"ai","linkedinUrl":null,"portfolioUrl":null}'::jsonb)$$,
+  '{"fullName":"Unbound Self Service Member","phone":"+201112223344","residence":"Alexandria","workConditions":"Remote","bio":"AI member","device":"هاتف محمول","gender":"أنثى","academicNumber":"987654","academicGroup":"UNBOUND-1","specialization":"ai","linkedinUrl":"https://www.linkedin.com/in/unbound-self","portfolioUrl":"https://github.com/unbound-self"}'::jsonb)$$,
   'email-free Admin issuance still completes the member-entered profile behind the guarded Auth write');
 SELECT is((SELECT count(*)::int FROM public.members WHERE email = 'unbound-self@phantoms-test.example'), 1,
           'email-free issuance creates exactly one member only after redemption');

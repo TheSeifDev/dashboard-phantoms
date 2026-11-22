@@ -21,6 +21,7 @@ import { useMemberBonus, useMemberInfiniteBonus } from './useMemberBonus';
 import { useMemberEvaluations } from '../evaluations/api';
 import { taskBonus } from '../tasks/taskMeta';
 import { WhatsAppNotificationCenter } from './WhatsAppNotificationCenter';
+import { ProfileReminderBanner } from '../members/ProfileReminderBanner';
 import { usePWA } from '../../hooks/usePWA';
 import type { NotificationTargetTab } from '../../lib/notifications';
 import { useLocale } from '../../i18n/useLocale';
@@ -179,6 +180,7 @@ export default function MemberPortalPage() {
         }}
       />
       <main className="mx-auto grid w-full max-w-[var(--content-max)] gap-6 px-4 pb-8 pt-5 sm:px-6 sm:pt-7">
+        <ProfileReminderBanner />
         <MemberHero
           member={member}
           onToggleField={toggleFieldReadiness}

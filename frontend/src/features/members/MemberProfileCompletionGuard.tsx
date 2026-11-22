@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useMemberProfile } from './profile-api';
+import { isMemberCoreProfileComplete, useMemberProfile } from './profile-api';
 import { PhantomLoader } from '../../components/motion/PhantomLoader';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useLocale } from '../../i18n/useLocale';
@@ -21,6 +21,8 @@ export function MemberProfileCompletionGuard({ children }: { children: ReactNode
       <main className="mx-auto max-w-xl p-5"><ErrorState message={t('تعذّر تحميل بيانات الملف. حسابك لم يُحذف أو يُعطّل. أعد المحاولة أو تواصل مع الإدارة.', 'Your profile could not be loaded. Your account has not been deleted or disabled. Retry or contact the administrators.')} onRetry={() => { void profile.refetch(); }} /></main>
     </div>
   );
-  if (!profile.data.profile_complete) return <Navigate to="/portal/settings" replace state={{ profileCompletionRequired: true, from: location.pathname }} />;
+  // Every profile field is mandatory, but only the core identity fields block
+  // the workspace; the rest is collected by the completion banner + reminders.
+  if (!isMemberCoreProfileComplete(profile.data)) return <Navigate to="/portal/settings" replace state={{ profileCompletionRequired: true, from: location.pathname }} />;
   return <>{children}</>;
 }

@@ -1,0 +1,18 @@
+/* Shared member avatar: GitHub photo when linked, initials otherwise. */
+.member-avatar {
+  overflow: hidden;
+  line-height: 1;
+}
+
+.member-avatar-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.member-avatar[data-avatar='github'] {
+  background: var(--surface-2);
+}

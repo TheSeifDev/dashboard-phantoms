@@ -24,9 +24,10 @@ const mocks = {
   'components/ui/Button.tsx': { Button: ({ variant: _variant, icon: _icon, children, ...props }) => el('button', props, children) },
   'features/members/customFieldsApi.ts': { formatCustomFieldValue: (_, v) => String(v ?? ''), getMemberCustomFieldValue: (m, f) => m.custom_fields?.[f.id] },
   'features/members/MemberCells.tsx': { DeviceChips: () => null, ReadinessChip: () => null, WorkStatusChip: () => null },
+  'features/dashboard/github.ts': { githubAvatarUrl: (handle, size = 64) => `https://github.com/${handle}.png?size=${size}`, resolveGithubHandle: () => null },
   'features/members/OwnerMemberErasure.tsx': { OwnerMemberErasure: ({ isOwner }) => isOwner ? el('button', { 'data-testid': 'owner-erasure-preview' }, 'Owner erasure preview') : null },
 };
-const actual = new Set(['features/members/profile-fields.ts', 'features/members/member-profile-display.ts', 'features/members/MemberAcademicDetails.tsx', 'features/members/MemberCards.tsx', 'features/members/MemberProfileFields.tsx', 'features/members/MemberExperiencePreviewPage.tsx', 'features/app-usage/MemberAppUsageDetails.tsx']);
+const actual = new Set(['features/members/profile-fields.ts', 'features/members/member-profile-display.ts', 'features/members/MemberAcademicDetails.tsx', 'features/members/MissingProfileFields.tsx', 'features/members/MemberCards.tsx', 'features/members/MemberProfileFields.tsx', 'features/members/MemberExperiencePreviewPage.tsx', 'features/app-usage/MemberAppUsageDetails.tsx', 'components/ui/MemberAvatar.tsx']);
 const modules = new Map();
 function load(path) {
   const base = resolve(frontend, 'src', path);
@@ -48,7 +49,7 @@ function load(path) {
 const Preview = load('features/members/MemberExperiencePreviewPage.tsx').default;
 const { MemberCards } = load('features/members/MemberCards.tsx');
 const display = load('features/members/member-profile-display.ts');
-const member = { id: 42, full_name: 'Demo', email: 'demo@example.com', phone: '+201000000000', bio: 'specialization: LEGACY BIO', academic_number: '003001', academic_group: 'G-1', specialization: 'ai', university_email: '003001@batechu.com', linkedin_url: 'https://www.linkedin.com/in/demo', portfolio_url: 'https://example.com/portfolio', custom_fields: {} };
+const member = { id: 42, full_name: 'Demo', email: 'demo@example.com', phone: '+201000000000', bio: 'specialization: LEGACY BIO', residence: 'Cairo', work_conditions: 'Remote', device: 'لابتوب', gender: 'ذكر', academic_number: '003001', academic_group: 'G-1', specialization: 'ai', university_email: '003001@batechu.com', linkedin_url: 'https://www.linkedin.com/in/demo', portfolio_url: 'https://example.com/portfolio', custom_fields: {} };
 async function mount(node, language = 'en') {
   lang = language; localStorage.clear(); sessionStorage.clear();
   localStorage.setItem('owner-sentinel', 'untouched'); sessionStorage.setItem('member-sentinel', 'untouched');
@@ -60,7 +61,8 @@ const text = () => document.body.textContent;
 const query = (id) => document.getElementById(id);
 async function change(id, value) {
   const node = query(id); assert.ok(node, id);
-  await act(async () => { Object.getOwnPropertyDescriptor(node.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype, 'value').set.call(node, value); node.dispatchEvent(new Event(node.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); });
+  const prototype = node.tagName === 'SELECT' ? HTMLSelectElement.prototype : node.tagName === 'TEXTAREA' ? dom.window.HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  await act(async () => { Object.getOwnPropertyDescriptor(prototype, 'value').set.call(node, value); node.dispatchEvent(new Event(node.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); });
 }
 async function submit() { await act(async () => document.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))); }
 afterEach(unmount); after(() => dom.window.close());
@@ -68,8 +70,10 @@ afterEach(unmount); after(() => dom.window.close());
 test('canonical academic fields/search/completeness ignore legacy bio and optional legacy data', () => {
   assert.equal(display.memberSpecializationLabel('ai'), 'AI');
   assert.equal(display.memberSpecializationLabel(null), '');
-  assert.equal(display.hasRequiredMemberInformation({ ...member, device: 'legacy unknown' }), true);
-  for (const key of ['academic_number', 'academic_group', 'specialization', 'university_email', 'phone']) assert.equal(display.hasRequiredMemberInformation({ ...member, [key]: null }), false, key);
+  assert.equal(display.hasRequiredMemberInformation(member), true);
+  assert.equal(display.hasRequiredMemberInformation({ ...member, device: 'legacy unknown' }), false);
+  assert.deepEqual(display.missingMemberProfileFields({ ...member, device: 'legacy unknown' }), ['device']);
+  for (const key of ['academic_number', 'academic_group', 'specialization', 'university_email', 'phone', 'residence', 'work_conditions', 'bio', 'device', 'gender', 'linkedin_url', 'portfolio_url']) assert.equal(display.hasRequiredMemberInformation({ ...member, [key]: null }), false, key);
   for (const term of ['003001', 'g-1', '003001@batechu.com', 'ai', 'portfolio']) assert.ok(display.memberSearchText(member).includes(term));
 });
 test('professional links reject script/data/http/private URLs and wrong LinkedIn host', () => {
@@ -105,9 +109,10 @@ test('preview requires core fields, keeps emails read-only and validates without
   assert.ok(text().includes('Demo preview only'));
   for (const suffix of ['full-name', 'phone', 'academic-number', 'academic-group', 'specialization']) assert.equal(query('preview-' + suffix).required, true);
   assert.equal(query('preview-email').readOnly, true); assert.equal(query('preview-university-email').readOnly, true);
-  assert.equal(query('preview-linkedin-url').required, false);
-  await submit(); assert.equal(query('preview-academic-group').getAttribute('aria-invalid'), 'true'); assert.equal(document.activeElement.id, 'preview-academic-group');
+  assert.equal(query('preview-linkedin-url').required, true);
+  await submit(); assert.equal(query('preview-residence').getAttribute('aria-invalid'), 'true'); assert.equal(document.activeElement.id, 'preview-residence');
   await change('preview-academic-number', '٠٠۳۰۰۱'); await change('preview-academic-group', 'G-1'); await change('preview-specialization', 'ai');
+  for (const [suffix, value] of [['residence', 'Cairo'], ['device', 'لابتوب'], ['gender', 'ذكر'], ['work-conditions', 'Remote'], ['bio', 'Frontend member'], ['linkedin-url', 'https://www.linkedin.com/in/demo'], ['portfolio-url', 'https://github.com/demo']]) await change('preview-' + suffix, value);
   assert.equal(query('preview-university-email').value, '003001@batechu.com');
   await submit(); assert.ok(text().includes('Preview validation passed')); assert.ok(text().includes('No real member was saved'));
   assert.equal(localStorage.getItem('owner-sentinel'), 'untouched'); assert.equal(localStorage.length, 1); assert.equal(sessionStorage.length, 1);

@@ -19,6 +19,7 @@ import {
   useDeleteEvaluation,
 } from './api';
 import type { EvaluationGrade, MemberEvaluation } from './api';
+import type { Member } from '../../types/db';
 import { EvaluationCreateModal } from './EvaluationCreateModal';
 import { EvalStars } from './StarRating';
 import { Button } from '../../components/ui/Button';
@@ -29,6 +30,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { toast } from '../../store/toast';
 import { useLocale } from '../../i18n/useLocale';
+import { MemberAvatar } from '../../components/ui/MemberAvatar';
 import './evaluations.css';
 
 type ReadStatusFilter = 'ALL' | 'READ' | 'UNREAD';
@@ -81,6 +83,12 @@ export default function EvaluationsPage() {
   const memberNameMap = useMemo(() => {
     const map: Record<number, string> = {};
     for (const member of members) map[member.id] = member.full_name;
+    return map;
+  }, [members]);
+  /** Member rows keyed by id so cards can show the linked GitHub picture. */
+  const memberById = useMemo(() => {
+    const map: Record<number, Member> = {};
+    for (const member of members) map[member.id] = member;
     return map;
   }, [members]);
 
@@ -396,7 +404,7 @@ export default function EvaluationsPage() {
             const stars = Math.max(0, evaluation.points);
             return (
               <article key={`${evaluation.mode}-${evaluation.id}`} className={`eval-card ${viewed ? '' : 'eval-card--unread'}`}>
-                <span className="eval-avatar" aria-hidden="true">{memberName.trim().charAt(0) || 'ع'}</span>
+                <MemberAvatar member={memberById[evaluation.member_id]} name={memberName} className="eval-avatar" fallback="ع" />
                 <div className="eval-body">
                   <div className="eval-head">
                     <div className="eval-identity">

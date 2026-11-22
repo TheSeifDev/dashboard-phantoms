@@ -1,0 +1,128 @@
+/* Member profile completion reminder + shared missing-field chips. Flat colours only. */
+.profile-reminder {
+  display: grid;
+  gap: .75rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--warning) 42%, var(--border));
+  border-radius: 1rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.profile-reminder-head {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+}
+
+.profile-reminder-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  border-radius: .75rem;
+  background: var(--warning-soft, var(--surface-2));
+  color: var(--warning);
+}
+
+.profile-reminder-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.profile-reminder-copy h2 {
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 900;
+}
+
+.profile-reminder-copy p {
+  margin: .25rem 0 0;
+  font-size: .8rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.profile-reminder-count {
+  flex: 0 0 auto;
+  padding: .25rem .6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.profile-reminder-progress {
+  height: .4rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.profile-reminder-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--warning);
+  transition: width .35s ease;
+}
+
+.profile-missing-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-missing-chip {
+  padding: .2rem .55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.profile-missing-chip--more {
+  color: var(--text-muted);
+}
+
+.profile-reminder-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.profile-reminder-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  min-height: 2.5rem;
+  padding: 0 .9rem;
+  border-radius: .7rem;
+  background: var(--primary);
+  color: var(--on-primary, #fff);
+  font-size: .82rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.profile-reminder-cta:hover {
+  background: var(--primary-hover);
+}
+
+.profile-reminder-cta:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .profile-reminder { padding: 1.1rem 1.25rem; }
+}
