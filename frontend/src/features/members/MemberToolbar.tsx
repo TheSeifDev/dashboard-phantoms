@@ -1,11 +1,15 @@
-import { useId, useState } from 'react';
-import { ArrowUpDown, Check, CircleMinus, Filter, RotateCcw, Search, SlidersHorizontal, Sparkles, UserCheck, X } from 'lucide-react';
+import { useId, useState, type ReactElement } from 'react';
+import { ArrowUpDown, Filter, RotateCcw, Search, SlidersHorizontal, Smartphone, Users, X } from 'lucide-react';
 
 import { useLocale } from '../../i18n/useLocale';
 
 export type MemberActivityFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 export type MemberInformationFilter = 'ALL' | 'COMPLETE' | 'MISSING';
 export type MemberSort = 'name' | 'newest' | 'oldest' | 'incomplete';
+/** ALL أو كود التيم الداخلي (ai / software / hardware) */
+export type MemberTeamFilter = string;
+/** مين نزّل التطبيق ومين لسه */
+export type MemberAppFilter = 'ALL' | 'INSTALLED' | 'NOT_INSTALLED';
 
 export interface MemberFiltersValue {
   search: string;
@@ -14,6 +18,8 @@ export interface MemberFiltersValue {
   alexandria: string;
   activity: MemberActivityFilter;
   information: MemberInformationFilter;
+  team: MemberTeamFilter;
+  app: MemberAppFilter;
   sort: MemberSort;
 }
 
@@ -24,6 +30,8 @@ export const EMPTY_MEMBER_FILTERS: MemberFiltersValue = {
   alexandria: 'ALL',
   activity: 'ALL',
   information: 'ALL',
+  team: 'ALL',
+  app: 'ALL',
   sort: 'name',
 };
 
@@ -35,6 +43,8 @@ export function countActiveFilters(value: MemberFiltersValue): number {
     value.alexandria !== 'ALL',
     value.activity !== 'ALL',
     value.information !== 'ALL',
+    value.team !== 'ALL',
+    value.app !== 'ALL',
   ].filter(Boolean).length;
 }
 
@@ -45,6 +55,9 @@ export function MemberToolbar({
   resultCount,
   totalCount,
   deviceOptions,
+  teamOptions = [],
+  showAppFilter = false,
+  appCounts,
 }: {
   workConditions: string[];
   value: MemberFiltersValue;
@@ -52,6 +65,9 @@ export function MemberToolbar({
   resultCount: number;
   totalCount: number;
   deviceOptions?: Array<{ value: string; label: string }>;
+  teamOptions?: Array<{ value: string; label: string; count?: number }>;
+  showAppFilter?: boolean;
+  appCounts?: { installed: number; missing: number };
 }) {
   const { t, number } = useLocale();
   const panelId = useId();
@@ -68,36 +84,35 @@ export function MemberToolbar({
     { value: 'بدون', label: t('بدون جهاز', 'No device') },
   ];
 
-  const chips = [
-    {
-      key: 'active',
-      label: t('نشطون', 'Active'),
-      icon: <UserCheck aria-hidden="true" />,
-      pressed: value.activity === 'ACTIVE',
-      toggle: () => set('activity', value.activity === 'ACTIVE' ? 'ALL' : 'ACTIVE'),
-    },
-    {
-      key: 'inactive',
-      label: t('غير نشطين', 'Inactive'),
-      icon: <CircleMinus aria-hidden="true" />,
-      pressed: value.activity === 'INACTIVE',
-      toggle: () => set('activity', value.activity === 'INACTIVE' ? 'ALL' : 'INACTIVE'),
-    },
-    {
-      key: 'incomplete',
-      label: t('يحتاج بيانات', 'Needs information'),
-      icon: <Sparkles aria-hidden="true" />,
-      pressed: value.information === 'MISSING',
-      toggle: () => set('information', value.information === 'MISSING' ? 'ALL' : 'MISSING'),
-    },
-    {
-      key: 'ready',
-      label: t('جاهز للميدان', 'Field ready'),
-      icon: <Check aria-hidden="true" />,
-      pressed: value.alexandria === 'YES',
-      toggle: () => set('alexandria', value.alexandria === 'YES' ? 'ALL' : 'YES'),
-    },
-  ];
+  const teamChips = teamOptions.map((option) => ({
+    key: `team-${option.value}`,
+    label: option.label,
+    count: option.count,
+    icon: <Users aria-hidden="true" />,
+    pressed: value.team === option.value,
+    toggle: () => set('team', value.team === option.value ? 'ALL' : option.value),
+  }));
+
+  const appChips: Array<{ key: string; label: string; count?: number; icon: ReactElement; pressed: boolean; toggle: () => void }> = showAppFilter
+    ? [
+        {
+          key: 'app-installed',
+          label: t('نزّلوا التطبيق', 'App installed'),
+          count: appCounts?.installed,
+          icon: <Smartphone aria-hidden="true" />,
+          pressed: value.app === 'INSTALLED',
+          toggle: () => set('app', value.app === 'INSTALLED' ? 'ALL' : 'INSTALLED'),
+        },
+        {
+          key: 'app-missing',
+          label: t('لسه ما نزّلوه', 'Not installed yet'),
+          count: appCounts?.missing,
+          icon: <Smartphone aria-hidden="true" />,
+          pressed: value.app === 'NOT_INSTALLED',
+          toggle: () => set('app', value.app === 'NOT_INSTALLED' ? 'ALL' : 'NOT_INSTALLED'),
+        },
+      ]
+    : [];
 
   const tags: Array<{ key: string; label: string; clear: () => void }> = [];
   if (value.search.trim()) tags.push({ key: 'search', label: `${t('بحث', 'Search')}: ${value.search.trim()}`, clear: () => set('search', '') });
@@ -106,6 +121,8 @@ export function MemberToolbar({
   if (value.alexandria !== 'ALL') tags.push({ key: 'alexandria', label: value.alexandria === 'YES' ? t('جاهز للميدان', 'Field ready') : t('مش متاح للميدان', 'Not field ready'), clear: () => set('alexandria', 'ALL') });
   if (value.device !== 'ALL') tags.push({ key: 'device', label: devices.find((option) => option.value === value.device)?.label ?? value.device, clear: () => set('device', 'ALL') });
   if (value.work_conditions !== 'ALL') tags.push({ key: 'work_conditions', label: value.work_conditions, clear: () => set('work_conditions', 'ALL') });
+  if (value.team !== 'ALL') tags.push({ key: 'team', label: `${t('تيم', 'Team')}: ${teamOptions.find((option) => option.value === value.team)?.label ?? value.team}`, clear: () => set('team', 'ALL') });
+  if (value.app !== 'ALL') tags.push({ key: 'app', label: value.app === 'INSTALLED' ? t('نزّلوا التطبيق', 'App installed') : t('لسه ما نزّلوه', 'Not installed yet'), clear: () => set('app', 'ALL') });
 
   return (
     <div className="member-dir-toolbar glass-card">
@@ -161,10 +178,20 @@ export function MemberToolbar({
       </p>
 
       <div className="member-dir-chips-row">
-        {chips.map((chip) => (
-          <button key={chip.key} type="button" className="member-dir-chip" aria-pressed={chip.pressed} onClick={chip.toggle}>
+        {teamChips.length > 0 && <span className="member-dir-sep" aria-hidden="true" />}
+        {teamChips.map((chip) => (
+          <button key={chip.key} type="button" className="member-dir-chip" data-tone="team" aria-pressed={chip.pressed} onClick={chip.toggle}>
             {chip.icon}
             {chip.label}
+            {typeof chip.count === 'number' && <em className="member-dir-chip-count">{number(chip.count)}</em>}
+          </button>
+        ))}
+        {appChips.length > 0 && <span className="member-dir-sep" aria-hidden="true" />}
+        {appChips.map((chip) => (
+          <button key={chip.key} type="button" className="member-dir-chip" data-tone="app" aria-pressed={chip.pressed} onClick={chip.toggle}>
+            {chip.icon}
+            {chip.label}
+            {typeof chip.count === 'number' && <em className="member-dir-chip-count">{number(chip.count)}</em>}
           </button>
         ))}
         <span className="member-dir-sep" aria-hidden="true" />
@@ -219,6 +246,27 @@ export function MemberToolbar({
               <option value="INACTIVE">{t('غير نشط', 'Inactive')}</option>
             </select>
           </label>
+          {teamOptions.length > 0 && (
+            <label className="member-dir-field">
+              <span>{t('التيم الداخلي', 'Internal team')}</span>
+              <select value={value.team} onChange={(event) => set('team', event.target.value)}>
+                <option value="ALL">{t('كل التيمات', 'All teams')}</option>
+                {teamOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          {showAppFilter && (
+            <label className="member-dir-field">
+              <span>{t('تطبيق الموبايل', 'Mobile app')}</span>
+              <select value={value.app} onChange={(event) => set('app', event.target.value as MemberAppFilter)}>
+                <option value="ALL">{t('الكل', 'All')}</option>
+                <option value="INSTALLED">{t('نزّلوا التطبيق', 'App installed')}</option>
+                <option value="NOT_INSTALLED">{t('لسه ما نزّلوه', 'Not installed yet')}</option>
+              </select>
+            </label>
+          )}
           <label className="member-dir-field">
             <span>{t('اكتمال البيانات', 'Information')}</span>
             <select value={value.information} onChange={(event) => set('information', event.target.value as MemberInformationFilter)}>

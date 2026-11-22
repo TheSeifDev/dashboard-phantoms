@@ -13,6 +13,8 @@ export function MemberCards({
   members,
   customFields = [],
   appUsage,
+  teamsByMember,
+  teamNames,
   isOwner = false,
   currentOwnerUserId = null,
   onView,
@@ -22,6 +24,10 @@ export function MemberCards({
   members: Member[];
   customFields?: MemberCustomField[];
   appUsage?: Record<number, AppUsageDisplay>;
+  /** member_id → أكواد التيمات الداخلية النشطة */
+  teamsByMember?: Record<number, string[]>;
+  /** كود التيم → الاسم المعروض */
+  teamNames?: Record<string, string>;
   isOwner?: boolean;
   currentOwnerUserId?: string | null;
   onView: (member: Member) => void;
@@ -35,6 +41,7 @@ export function MemberCards({
     <ul className="member-dir-grid" aria-label={t('قائمة الأعضاء', 'Member list')}>
       {members.map((member) => {
         const specialization = memberSpecializationLabel(member.specialization);
+        const memberTeams = teamsByMember?.[member.id] ?? [];
         return (
           <li key={member.id} id={`member-card-${member.id}`} className="member-dir-card glass-card">
             <div className="member-dir-card-head">
@@ -44,6 +51,13 @@ export function MemberCards({
                   {member.full_name}
                 </button>
                 <span className="member-dir-meta">{specialization || t('التخصص مش محدد', 'Specialization not specified')}</span>
+                {memberTeams.length > 0 && (
+                  <span className="member-dir-teams">
+                    {memberTeams.map((slug) => (
+                      <span key={slug} className="member-dir-team" data-team={slug}>{teamNames?.[slug] ?? slug}</span>
+                    ))}
+                  </span>
+                )}
                 {(member.email || member.phone) && (
                   <span className="member-dir-contact">
                     {member.email && <span dir="ltr" title={member.email}><Mail aria-hidden="true" />{member.email}</span>}

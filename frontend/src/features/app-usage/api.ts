@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase/client';
 import { memberSupabase } from '../../lib/supabase/member-client';
 
@@ -65,4 +65,30 @@ export async function recordMemberAppUsage(deviceToken: string, version: string,
     p_device_token: deviceToken, p_app_version: version, p_app_build: build,
   });
   if (error) throw new Error('APP_USAGE_UNAVAILABLE');
+}
+
+/**
+ * سجل استخدام التطبيق لكل الأعضاء (للفلترة على مستوى الدليل).
+ * الخادم يقبل 100 معرّف في المرة، فبنقسّم الطلب على دفعات ونلمّ النتيجة.
+ */
+export function useOwnerAppUsageDirectory(ownerId: string | null, isOwner: boolean, ids: number[]) {
+  const memberIds = appUsageMemberIds(ids);
+  const chunks: number[][] = [];
+  for (let index = 0; index < memberIds.length; index += 100) chunks.push(memberIds.slice(index, index + 100));
+  const results = useQueries({
+    queries: chunks.map((chunk) => ({
+      queryKey: ['owner-app-usage-directory', ownerId, chunk],
+      enabled: Boolean(ownerId) && isOwner && chunk.length > 0,
+      queryFn: () => fetchOwnerAppUsage(chunk),
+      staleTime: 30_000,
+      retry: false,
+    })),
+  });
+  const rows = results.flatMap((result) => result.data ?? []);
+  return {
+    data: rows,
+    isLoading: results.some((result) => result.isPending),
+    isError: results.some((result) => result.isError),
+    refetch: () => { for (const result of results) void result.refetch(); },
+  };
 }

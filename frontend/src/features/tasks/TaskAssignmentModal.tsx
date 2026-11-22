@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
-import { AlertCircle, CheckSquare, Gift, Search, UserCheck, Users, X } from 'lucide-react';
+import { AlertCircle, CheckSquare, Layers, Search, ShieldCheck, Star, UserCheck, Users, X } from 'lucide-react';
 import type { Member, TaskInsert, TaskTrackingEntry } from '../../types/db';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
@@ -7,17 +7,17 @@ import { toast } from '../../store/toast';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { addDaysISO, combineLocalDateTime, daysRemaining, formatDeadline, hoursRemaining } from '../../lib/dateUtils';
 import { AR, arCount, arDaysPhrase, arDurationPhrase, formatSigned, normalizeArabic } from '../../lib/arabic';
-import { useCreateTask } from './api';
+import { useCreateTask, useTaskAudienceGroups } from './api';
+import { POINTS_PER_STAR, STAR_MAX, audienceCount, resolveAudienceIds, starsLabel, starsToBonusPoints, type TaskAssignMode } from './taskAudience';
 
 import { useLocale } from '../../i18n/useLocale';
 const TITLE_MIN = 3;
 const TITLE_MAX = 120;
 const DESC_MAX = 2000;
-const BONUS_MAX = 50;
-const QUICK_BONUS = [0, 5, 10, 15, 20];
+export { POINTS_PER_STAR, STAR_MAX };
 
-type AssignMode = 'all' | 'specific';
-type FieldErrors = Partial<Record<'title' | 'deadline' | 'bonus' | 'assignees', string>>;
+type AssignMode = TaskAssignMode;
+type FieldErrors = Partial<Record<'title' | 'deadline' | 'assignees', string>>;
 
 const QUICK_DEADLINES: Array<{ label: string; days: number | null }> = [
   { label: 'بدون موعد', days: null },
@@ -62,13 +62,6 @@ function deadlineHint(dateValue: string, time: string, locale: 'ar' | 'en', t: (
     : `${time ? `Due on ${label}` : `Due by the end of ${label}`}${when ? ` — ${when}` : ''}.`;
 }
 
-/** "10" → 10 ؛ فارغ → 0 ؛ غير صالح → NaN */
-function parseBonus(input: string): number {
-  const clean = input.trim();
-  if (!clean) return 0;
-  return /^\d+$/.test(clean) ? Number(clean) : Number.NaN;
-}
-
 export function TaskAssignmentModal({
   isOpen,
   members,
@@ -82,6 +75,7 @@ export function TaskAssignmentModal({
 }) {
   const { t, number, date, locale } = useLocale();
   const create = useCreateTask();
+  const groups = useTaskAudienceGroups(isOpen);
   const formId = useId();
   const ids = {
     title: `${formId}-title`,
@@ -91,9 +85,8 @@ export function TaskAssignmentModal({
     deadlineHint: `${formId}-deadline-hint`,
     deadlineError: `${formId}-deadline-error`,
     time: `${formId}-time`,
-    bonus: `${formId}-bonus`,
     bonusHint: `${formId}-bonus-hint`,
-    bonusError: `${formId}-bonus-error`,
+    stars: `${formId}-stars`,
     search: `${formId}-search`,
     assigneesError: `${formId}-assignees-error`,
   };
@@ -102,7 +95,7 @@ export function TaskAssignmentModal({
   const [description, setDescription] = useState('');
   const [deadline, setDeadline] = useState('');
   const [deadlineTime, setDeadlineTime] = useState('');
-  const [bonusInput, setBonusInput] = useState('0');
+  const [stars, setStars] = useState(0);
   const [mode, setMode] = useState<AssignMode>('all');
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState('');
@@ -118,6 +111,15 @@ export function TaskAssignmentModal({
   const memberIds = useMemo(() => new Set(members.map((member) => String(member.id))), [members]);
   const selectedValid = useMemo(() => selected.filter((id) => memberIds.has(id)), [selected, memberIds]);
 
+  // مجموعات الإسناد الجماعي (قادة مشاريع الويب / رؤساء ومراقبي التيمات) بعد مطابقتها بأعضاء الفريق الحاليين
+  const groupMembers = useMemo(() => {
+    const byId = new Map(members.map((member) => [member.id, member]));
+    const resolve = (ids: number[] | undefined) => (ids ?? []).map((id) => byId.get(id)).filter((member): member is Member => Boolean(member));
+    return { leads: resolve(groups.data?.leads), heads: resolve(groups.data?.heads) };
+  }, [members, groups.data]);
+  const groupAudience = mode === 'leads' ? groupMembers.leads : mode === 'heads' ? groupMembers.heads : [];
+  const groupsUnavailable = groups.isError;
+
   const today = addDaysISO(0);
   const filtered = useMemo(() => {
     const needle = normalizeArabic(query);
@@ -132,22 +134,31 @@ export function TaskAssignmentModal({
     else if (cleanTitle.length < TITLE_MIN) errors.title = t(`العنوان قصير قوي — ${TITLE_MIN} حروف على الأقل.`, `The title is too short — at least ${TITLE_MIN} characters are required.`);
     if (deadline && deadline < today) errors.deadline = t('مينفعش تختار تاريخ فات — اختار النهارده أو تاريخ بعد كده.', 'Choose today or a future date. Past dates are not allowed.');
     else if (deadline && deadlineTime && (hoursRemaining(deadlineValue(deadline, deadlineTime)) ?? 1) <= 0) errors.deadline = t('الساعة دي عدّت — اختار وقت بعد كده النهارده أو يوم تاني.', 'That time has passed — choose a later time today or another day.');
-    const bonusValue = parseBonus(bonusInput);
-    if (Number.isNaN(bonusValue) || bonusValue < 0 || bonusValue > BONUS_MAX) errors.bonus = t(`البونص لازم يكون رقم صحيح من 0 لـ ${BONUS_MAX}.`, `Bonus must be a whole number from 0 to ${BONUS_MAX}.`);
     if (!membersLoading && members.length === 0) errors.assignees = t('مفيش أعضاء في الفريق لسه — ضيف أعضاء من صفحة الأعضاء الأول.', 'There are no team members yet — add members from the Members page first.');
     else if (mode === 'specific' && selectedValid.length === 0) errors.assignees = t('اختار عضو واحد على الأقل، أو ادّي المهمة لكل الفريق.', 'Select at least one member or assign the task to the whole team.');
+    else if ((mode === 'leads' || mode === 'heads') && groupsUnavailable) errors.assignees = t('معرفناش نحمّل المجموعة دي — اقفل النافذة وجرّب تاني.', 'Could not load this audience group — close and try again.');
+    else if ((mode === 'leads' || mode === 'heads') && groupAudience.length === 0) errors.assignees = mode === 'leads'
+      ? t('مفيش قادة مشاريع ويب معيّنين حاليًا — عيّن قائد من صفحة مشاريع الويب.', 'No web-project leaders are assigned yet — assign a lead from Web Projects.')
+      : t('مفيش رؤساء أو مراقبين معيّنين على التيمات حاليًا.', 'No team heads or monitors are assigned yet.');
     return errors;
   };
   const errors = attempted ? validate() : {};
 
-  const assigneeCount = mode === 'all' ? members.length : selectedValid.length;
+  const audience = resolveAudienceIds(mode, { memberIds: members.map((member) => member.id), leadIds: groupMembers.leads.map((member) => member.id), headIds: groupMembers.heads.map((member) => member.id) }, selectedValid);
+  const assigneeCount = audienceCount(mode, { memberIds: members.map((member) => member.id), leadIds: groupMembers.leads.map((member) => member.id), headIds: groupMembers.heads.map((member) => member.id) }, selectedValid);
   const summary = membersLoading
     ? t('بنحمّل قائمة الأعضاء...', 'Loading member list...')
     : mode === 'all'
       ? t(`هتتسند لكل الفريق (${arCount(members.length, AR.member)}).`, `Assigned to the entire team (${number(members.length)} ${members.length === 1 ? 'member' : 'members'}).`)
-        : selectedValid.length
-        ? locale === 'ar' ? `هتتسند لـ ${arCount(selectedValid.length, AR.memberGen)}.` : `Assigned to ${number(selectedValid.length)} ${selectedValid.length === 1 ? 'member' : 'members'}.`
-        : t('لسه ما اخترتش أي عضو.', 'No members selected yet.');
+        : mode === 'specific'
+        ? selectedValid.length
+          ? locale === 'ar' ? `هتتسند لـ ${arCount(selectedValid.length, AR.memberGen)}.` : `Assigned to ${number(selectedValid.length)} ${selectedValid.length === 1 ? 'member' : 'members'}.`
+          : t('لسه ما اخترتش أي عضو.', 'No members selected yet.')
+        : groupAudience.length
+          ? locale === 'ar'
+            ? `هتتسند لـ ${arCount(groupAudience.length, AR.memberGen)} من ${mode === 'leads' ? 'قادة مشاريع الويب' : 'رؤساء ومراقبي التيمات'}.`
+            : `Assigned to ${number(groupAudience.length)} ${mode === 'leads' ? 'web-project leaders' : 'team heads & monitors'}.`
+          : groups.isLoading ? t('بنحمّل المجموعة...', 'Loading the group...') : t('المجموعة دي فاضية حاليًا.', 'This group is currently empty.');
 
   const toggleMember = (id: string) =>
     setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
@@ -159,7 +170,7 @@ export function TaskAssignmentModal({
       : Array.from(new Set([...current, ...filteredIds])));
 
   const resetForm = () => {
-    setTitle(''); setDescription(''); setDeadline(''); setDeadlineTime(''); setBonusInput('0'); setMode('all'); setSelected([]); setQuery('');
+    setTitle(''); setDescription(''); setDeadline(''); setDeadlineTime(''); setStars(0); setMode('all'); setSelected([]); setQuery('');
     setAttempted(false); setServerError('');
   };
 
@@ -169,25 +180,24 @@ export function TaskAssignmentModal({
     setAttempted(true);
     setServerError('');
     const found = validate();
-    const firstInvalid = found.title ? ids.title : found.deadline ? ids.deadline : found.bonus ? ids.bonus : found.assignees ? (mode === 'specific' && members.length ? ids.search : null) : null;
+    const firstInvalid = found.title ? ids.title : found.deadline ? ids.deadline : found.assignees ? (mode === 'specific' && members.length ? ids.search : null) : null;
     if (Object.keys(found).length) {
       if (firstInvalid) document.getElementById(firstInvalid)?.focus();
       return;
     }
 
     const cleanTitle = title.trim();
-    const bonus = parseBonus(bonusInput);
-    const assignees = mode === 'all' ? members.map((member) => String(member.id)) : selectedValid;
+    const bonus = starsToBonusPoints(stars);
     const now = new Date().toISOString();
     const tracking: Record<string, TaskTrackingEntry> = Object.fromEntries(
-      assignees.map((id) => [id, { status: 'pending', updated_at: now, note: '', submission_url: '' }]),
+      (audience === 'ALL' ? members.map((member) => String(member.id)) : audience).map((id) => [id, { status: 'pending', updated_at: now, note: '', submission_url: '' }]),
     );
     const payload: TaskInsert = {
       title: cleanTitle,
       description: description.trim() || null,
       has_deadline: Boolean(deadline),
       deadline_date: deadline ? deadlineValue(deadline, deadlineTime) : null,
-      assigned_to: mode === 'all' ? 'ALL' : assignees,
+      assigned_to: audience,
       tracking,
       bonus_points: bonus,
     };
@@ -195,7 +205,13 @@ export function TaskAssignmentModal({
       const result = await create.mutateAsync(payload);
       const formattedBonus = locale === 'ar' ? formatSigned(bonus) : new Intl.NumberFormat('en-GB', { signDisplay: 'always', maximumFractionDigits: 0 }).format(bonus);
       const bonusText = bonus > 0 && !result.bonusSkipped ? t(` ببونص ${formattedBonus}`, ` with ${formattedBonus} bonus`) : '';
-      const assignedLabel = mode === 'all' ? t('كل الفريق', 'the entire team') : locale === 'ar' ? arCount(assignees.length, AR.memberGen) : `${number(assignees.length)} ${assignees.length === 1 ? 'member' : 'members'}`;
+      const assignedLabel = mode === 'all'
+        ? t('كل الفريق', 'the entire team')
+        : mode === 'leads'
+          ? t('قادة مشاريع الويب', 'web-project leaders')
+          : mode === 'heads'
+            ? t('رؤساء ومراقبي التيمات', 'team heads & monitors')
+            : locale === 'ar' ? arCount(assigneeCount, AR.memberGen) : `${number(assigneeCount)} ${assigneeCount === 1 ? 'member' : 'members'}`;
       toast.success(t(`اتعملت «${cleanTitle}»${bonusText} واتسندت لـ ${assignedLabel}.`, `“${cleanTitle}” was created${bonusText} and assigned to ${assignedLabel}.`));
       if (bonus > 0 && result.bonusSkipped) toast.warning(t('اتعملت المهمة من غير بونص: قاعدة البيانات محتاجة تحديث 0012 الأول.', 'Task created without a bonus: the database needs migration 0012.'));
       resetForm();
@@ -208,6 +224,8 @@ export function TaskAssignmentModal({
   const modeOptions: Array<{ value: AssignMode; title: string; hint: string; Icon: typeof Users }> = [
     { value: 'all', title: t('كل الفريق', 'Entire team'), hint: membersLoading ? t('بنحمّل...', 'Loading...') : locale === 'ar' ? arCount(members.length, AR.member) : `${number(members.length)} ${members.length === 1 ? 'member' : 'members'}`, Icon: Users },
     { value: 'specific', title: t('أعضاء محددين', 'Specific members'), hint: selectedValid.length ? locale === 'ar' ? `اتحدد ${arCount(selectedValid.length, AR.memberGen)}` : `${number(selectedValid.length)} selected` : t('اختار بالاسم', 'Choose by name'), Icon: UserCheck },
+    { value: 'leads', title: t('قادة مشاريع الويب', 'Web-project leaders'), hint: groups.isLoading ? t('بنحمّل...', 'Loading...') : locale === 'ar' ? arCount(groupMembers.leads.length, AR.member) : `${number(groupMembers.leads.length)} ${groupMembers.leads.length === 1 ? 'leader' : 'leaders'}`, Icon: Layers },
+    { value: 'heads', title: t('رؤساء ومراقبو التيمات', 'Team heads & monitors'), hint: groups.isLoading ? t('بنحمّل...', 'Loading...') : locale === 'ar' ? arCount(groupMembers.heads.length, AR.member) : `${number(groupMembers.heads.length)} ${groupMembers.heads.length === 1 ? 'member' : 'members'}`, Icon: ShieldCheck },
   ];
 
   return (
@@ -352,51 +370,44 @@ export function TaskAssignmentModal({
             : <p id={ids.deadlineHint} className="text-xs leading-5 text-[var(--text-muted)]">{deadline ? deadlineHint(deadline, deadlineTime, locale, t, (value) => locale === 'ar' ? formatDeadline(value, { weekday: true, year: 'always' }) : date(value, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), number) : t('من غير موعد نهائي — المهمة مش هتظهر متأخرة.', 'Without a deadline, the task will not be marked overdue.')}</p>}
         </div>
 
-        {/* البونص */}
+        {/* البونص بالنجوم */}
         <div className="grid gap-2">
-          <label htmlFor={ids.bonus} className="flex items-center gap-1.5 text-sm font-bold">
-            <Gift size={16} className="text-amber-600 dark:text-amber-300" aria-hidden="true" />
-            {t('بونص المهمة', 'Task bonus')} <span className="text-xs font-medium text-[var(--text-muted)]">({t('اختياري', 'optional')})</span>
-          </label>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('اختيار سريع للبونص', 'Quick bonus selection')}>
-              {QUICK_BONUS.map((value) => {
-                const active = parseBonus(bonusInput) === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setBonusInput(String(value))}
-                    className={`min-h-10 min-w-12 rounded-full border px-3 text-xs font-black tabular-nums transition-colors ${active ? 'border-amber-500 bg-amber-500 text-white dark:border-amber-400 dark:bg-amber-400 dark:text-amber-950' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:border-amber-500 hover:text-amber-700 dark:hover:text-amber-300'}`}
-                  >
-                    {value === 0 ? t('بدون', 'None') : locale === 'ar' ? formatSigned(value) : new Intl.NumberFormat('en-GB', { signDisplay: 'always', maximumFractionDigits: 0 }).format(value)}
-                  </button>
-                );
-              })}
-            </div>
-            <input
-              id={ids.bonus}
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={BONUS_MAX}
-              step={1}
-              value={bonusInput}
-              onChange={(event) => setBonusInput(event.target.value)}
-              aria-invalid={Boolean(errors.bonus) || undefined}
-              aria-describedby={errors.bonus ? ids.bonusError : ids.bonusHint}
-              aria-label={t(`قيمة بونص مخصصة من 0 لـ ${BONUS_MAX}`, `Custom bonus value from 0 to ${BONUS_MAX}`)}
-              className={`min-h-10 !w-24 shrink-0 text-center tabular-nums ${fieldClass(Boolean(errors.bonus))}`}
-            />
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm font-bold">{t('بونص المهمة', 'Task bonus')} <span className="text-xs font-medium text-[var(--text-muted)]">({t('اختياري', 'optional')})</span></span>
+            <span className="text-xs font-bold tabular-nums text-[var(--text-muted)]" aria-live="polite">
+              {starsLabel(stars, locale)}
+            </span>
           </div>
-          {errors.bonus
-            ? <FieldError id={ids.bonusError}>{errors.bonus}</FieldError>
-            : <p id={ids.bonusHint} className="text-xs leading-5 text-[var(--text-muted)]">
-                {parseBonus(bonusInput) > 0
-                  ? t(`كل عضو هياخد ${formatSigned(parseBonus(bonusInput))} بونص تلقائيًا لما تسليمه يتعتمد، وهيظهر في الترتيب.`, `Each member will automatically earn ${new Intl.NumberFormat('en-GB', { signDisplay: 'always', maximumFractionDigits: 0 }).format(parseBonus(bonusInput))} bonus points when their submission is approved; it will appear in the rankings.`)
-                  : t('من غير بونص — العضو هياخد نقاط الاعتماد العادية بس.', 'No bonus — members will only receive the standard approval points.')}
-              </p>}
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('بونص المهمة بالنجوم', 'Task bonus in stars')} id={ids.stars}>
+            {Array.from({ length: STAR_MAX }, (_, index) => index + 1).map((value) => {
+              const active = stars >= value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={stars === value}
+                  aria-label={t(`${number(value)} نجوم`, `${number(value)} stars`)}
+                  onClick={() => setStars(stars === value ? 0 : value)}
+                  className={`grid size-11 place-items-center rounded-xl border transition-colors ${active ? 'border-amber-500 bg-amber-500/12 text-amber-600 dark:border-amber-400 dark:text-amber-300' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-amber-500 hover:text-amber-600'}`}
+                >
+                  <Star size={20} aria-hidden="true" fill={active ? 'currentColor' : 'none'} />
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              aria-pressed={stars === 0}
+              onClick={() => setStars(0)}
+              className={`min-h-11 rounded-xl border px-3 text-xs font-bold transition-colors ${stars === 0 ? 'border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--link)]' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:border-[var(--primary)] hover:text-[var(--link)]'}`}
+            >
+              {t('بدون', 'None')}
+            </button>
+          </div>
+          <p id={ids.bonusHint} className="text-xs leading-5 text-[var(--text-muted)]">
+            {stars > 0
+              ? t(`كل عضو هياخد ${formatSigned(starsToBonusPoints(stars))} نقطة بونص تلقائيًا لما تسليمه يتعتمد (${number(stars)} نجمة × ${number(POINTS_PER_STAR)}).`, `Each member earns ${new Intl.NumberFormat('en-GB', { signDisplay: 'always' }).format(starsToBonusPoints(stars))} bonus points when their submission is approved (${number(stars)} × ${number(POINTS_PER_STAR)}).`)
+              : t('من غير بونص — العضو هياخد نقاط الاعتماد العادية بس.', 'No bonus — members will only receive the standard approval points.')}
+          </p>
         </div>
 
         {/* الإسناد */}
@@ -408,7 +419,7 @@ export function TaskAssignmentModal({
             {modeOptions.map(({ value, title: optionTitle, hint, Icon }) => (
               <label
                 key={value}
-                className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 transition-colors hover:border-[var(--primary)] has-[:checked]:border-[var(--primary)] has-[:checked]:bg-[var(--primary-soft)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--link)]"
+                className="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 transition-colors hover:border-[var(--accent)] has-[:checked]:border-[var(--accent)] has-[:checked]:bg-[var(--accent-soft)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--link)]"
               >
                 <input
                   type="radio"
@@ -418,9 +429,9 @@ export function TaskAssignmentModal({
                   onChange={() => setMode(value)}
                   className="sr-only"
                 />
-                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--surface-2)] text-[var(--link)]" aria-hidden="true"><Icon size={19} /></span>
-                <span className="grid min-w-0 leading-5">
-                  <span className="text-sm font-black">{optionTitle}</span>
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--surface-2)] text-[var(--accent)]" aria-hidden="true"><Icon size={19} /></span>
+                <span className="grid min-w-0 gap-0.5 leading-5">
+                  <span className="text-[13px] font-black">{optionTitle}</span>
                   <span className="truncate text-xs text-[var(--text-muted)]">{hint}</span>
                 </span>
               </label>
@@ -489,6 +500,27 @@ export function TaskAssignmentModal({
                 })}
               </ul>
             </div>
+          )}
+          {(mode === 'leads' || mode === 'heads') && (
+            groups.isLoading ? (
+              <div className="grid gap-2 rounded-xl border border-[var(--border)] p-3" aria-busy="true">
+                {[0, 1].map((row) => <div key={row} className="h-9 animate-pulse rounded-lg bg-[var(--surface-2)]" />)}
+              </div>
+            ) : groupAudience.length > 0 ? (
+              <div className="grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3">
+                <p className="text-xs font-bold text-[var(--text-muted)]">
+                  {mode === 'leads' ? t('المهمة هتتسند لكل قادة مشاريع الويب دول:', 'This task goes to these web-project leaders:') : t('المهمة هتتسند لكل رؤساء ومراقبي التيمات دول:', 'This task goes to these team heads & monitors:')}
+                </p>
+                <ul className="flex flex-wrap gap-1.5">
+                  {groupAudience.map((member) => (
+                    <li key={member.id} className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-bold">
+                      <span className="grid size-5 place-items-center rounded-full bg-[var(--primary-soft)] text-[10px] font-black text-[var(--link)]" aria-hidden="true">{initialsOf(member.full_name, locale)}</span>
+                      <span className="max-w-40 truncate" title={member.full_name}>{member.full_name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null
           )}
           {errors.assignees && <FieldError id={ids.assigneesError}>{errors.assignees}</FieldError>}
         </fieldset>
