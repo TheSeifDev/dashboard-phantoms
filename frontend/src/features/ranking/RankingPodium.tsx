@@ -3,6 +3,7 @@ import type { Member } from '../../types/db';
 import { formatSigned } from '../../lib/arabic';
 
 import { useLocale } from '../../i18n/useLocale';
+import { MemberAvatar } from '../../components/ui/MemberAvatar';
 export interface RankedMember extends Member {
   totalBonus: number;
   rank: number;
@@ -58,9 +59,7 @@ export function RankingPodium({ topMembers, onSelectMember, onAdjustBonus }: Ran
 
             <div className="rank-avatar-wrap">
               <span className="rank-avatar-glow" aria-hidden="true" />
-              <span className="rank-avatar" aria-hidden="true">
-                {member.full_name ? member.full_name.trim().charAt(0) : <User size={24} />}
-              </span>
+              <MemberAvatar member={member} name={member.full_name} size={128} className="rank-avatar" fallback={<User size={24} />} />
             </div>
 
             <h3 className="rank-name">

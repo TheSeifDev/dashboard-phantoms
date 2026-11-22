@@ -1,7 +1,8 @@
 import { CheckCircle2, GraduationCap, Info, Link2 } from 'lucide-react';
 import type { Member } from '../../types/db';
 import { useLocale } from '../../i18n/useLocale';
-import { hasRequiredMemberInformation, memberSpecializationLabel, safeMemberProfessionalLink } from './member-profile-display';
+import { hasRequiredMemberInformation, memberSpecializationLabel, missingMemberProfileFields, safeMemberProfessionalLink } from './member-profile-display';
+import { MissingProfileFields } from './MissingProfileFields';
 
 export function MemberInformationStatus({ member }: { member: Member }) {
   const { t } = useLocale();
@@ -11,6 +12,17 @@ export function MemberInformationStatus({ member }: { member: Member }) {
     <Icon size={14} aria-hidden="true" />
     {complete ? t('البيانات المطلوبة مكتملة', 'Required information complete') : t('يلزم استكمال البيانات', 'Information required')}
   </span>;
+}
+
+/** Admin-only list of what is still missing, using the shared member labels. */
+export function MemberMissingFields({ member }: { member: Member }) {
+  const { t } = useLocale();
+  const missing = missingMemberProfileFields(member);
+  if (missing.length === 0) return null;
+  return <div className="grid gap-1.5">
+    <p className="text-xs font-semibold text-[var(--text-muted)]">{t('الحقول الناقصة', 'Missing fields')}</p>
+    <MissingProfileFields fields={missing} />
+  </div>;
 }
 
 export function MemberAcademicDetails({ member, showSpecialization = false }: { member: Member; showSpecialization?: boolean }) {
@@ -36,7 +48,7 @@ export function MemberAcademicDetails({ member, showSpecialization = false }: { 
     <div className="flex min-w-0 flex-wrap gap-2">
       {links.map(({ label, url }) => url
         ? <a key={label} href={url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-lg border border-[var(--border)] px-2 text-xs font-bold text-[var(--link)]"><Link2 size={14} aria-hidden="true" /><span className="break-words">{label}</span></a>
-        : <span key={label} className="self-center text-xs text-[var(--text-muted)]">{label}: {t('غير مضاف (اختياري)', 'not provided (optional)')}</span>)}
+        : <span key={label} className="self-center text-xs text-[var(--text-muted)]">{label}: {t('غير مضاف — مطلوب', 'not provided — required')}</span>)}
     </div>
   </div>;
 }

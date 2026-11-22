@@ -26,6 +26,7 @@ import { useMemberDeletionStore } from '../../store/memberDeletion';
 import { MemberDeletionError, type MemberDeletionErrorCode } from './member-delete-errors';
 
 import { hasRequiredMemberInformation, memberSearchText } from './member-profile-display';
+import { MemberProfileReminderAction } from './MemberProfileReminderAction';
 import { useLocale } from '../../i18n/useLocale';
 import { useAuthStore } from '../../store/auth';
 import { useAdminAccess } from '../admin/access/api';
@@ -387,6 +388,7 @@ export default function MembersPage() {
                 <span>{t('الحقول المخصصة', 'Custom fields')}</span>
                 {customFields.length > 0 && <em>{number(customFields.length)}</em>}
               </button>
+              <MemberProfileReminderAction members={query.data ?? []} />
               <MemberExcelActions members={query.data ?? []} customFields={customFields} />
               <Link to="/admin/members/experience" className="member-dir-menu-item">
                 <Eye size={16} aria-hidden="true" />

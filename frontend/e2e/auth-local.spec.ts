@@ -111,7 +111,12 @@ async function installRequestGate(page: Page, metadata: AuthSafetyMetadata): Pro
       || url.origin === API_ORIGIN
       || url.origin === bridge.origin
       || url.origin === 'https://fonts.googleapis.com'
-      || url.origin === 'https://fonts.gstatic.com';
+      || url.origin === 'https://fonts.gstatic.com'
+      // Member avatars are served by GitHub and the dashboard reads contribution
+      // counts for members that linked a handle.
+      || url.origin === 'https://github.com'
+      || url.origin === 'https://avatars.githubusercontent.com'
+      || url.origin === 'https://github-contributions-api.jogruber.de';
     if (!allowed) {
       blocked.push(`${request.method()} ${url.origin}${url.pathname}`);
       await route.abort('blockedbyclient');
@@ -256,6 +261,13 @@ async function enrollFromJoin(
     await page.locator('#join-academic-number').fill(academicNumber);
     await page.locator('#join-academic-group').fill('AUTH-FIXTURE');
     await page.locator('#join-specialization').selectOption('software');
+    await page.locator('#join-linkedin-url').fill(`https://www.linkedin.com/in/auth-fixture-${academicNumber}`);
+    await page.locator('#join-portfolio-url').fill(`https://github.com/auth-fixture-${academicNumber}`);
+    await page.locator('#join-residence').fill('Alexandria');
+    await page.locator('#join-work-conditions').fill('Remote, evenings');
+    await page.locator('#join-bio').fill('Disposable auth fixture member');
+    await page.locator('#join-device').selectOption('لابتوب');
+    await page.locator('#join-gender').selectOption('ذكر');
     await expect(page.locator('#join-university-email')).toHaveValue(`${academicNumber}@batechu.com`);
     await expect(page.locator('#join-university-email')).toHaveJSProperty('readOnly', true);
   }

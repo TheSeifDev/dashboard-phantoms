@@ -3,11 +3,22 @@ import { NavLink } from 'react-router-dom';
 import { useThemeStore } from '../../store/theme';
 import { useNotificationStore } from '../../lib/notifications';
 import { PhantomsLogo } from '../../components/brand/PhantomsLogo';
+import { MemberAvatar } from '../../components/ui/MemberAvatar';
 import { useLocale } from '../../i18n/useLocale';
+import { useAuthStore } from '../../store/auth';
+import { useMemberProfile } from '../members/profile-api';
 
 export function PortalHeader({ onLogout }: { onLogout: () => void }) {
   const { theme, toggle } = useThemeStore();
   const { locale, dir, setLocale, t, number } = useLocale();
+  const member = useAuthStore((s) => s.currentMember);
+  const profile = useMemberProfile();
+  // The linked GitHub picture is authoritative; the cached member row is the fallback.
+  const avatarMember = {
+    full_name: profile.data?.full_name ?? member?.full_name ?? '',
+    portfolio_url: profile.data?.portfolio_url ?? member?.portfolio_url ?? null,
+    custom_fields: member?.custom_fields ?? null,
+  };
   const items = useNotificationStore((s) => s.items);
   const drawerOpen = useNotificationStore((s) => s.drawerOpen);
   const setDrawerOpen = useNotificationStore((s) => s.setDrawerOpen);
@@ -23,6 +34,9 @@ export function PortalHeader({ onLogout }: { onLogout: () => void }) {
         </div>
       </div>
       <div className="flex w-full shrink-0 items-center justify-between gap-1 sm:w-auto sm:gap-2">
+        <NavLink to="/portal/settings" className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-2)] text-sm font-black text-[var(--link)] transition-colors hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2" aria-label={t('صورتي وإعدادات حسابي', 'My picture and account settings')} title={t('صورتي وإعدادات حسابي', 'My picture and account settings')}>
+          <MemberAvatar member={avatarMember} size={96} className="grid size-full place-items-center" />
+        </NavLink>
         <NavLink to="/portal/settings" className={({ isActive }) => `${controlClass} ${isActive ? 'bg-[var(--primary-soft)] text-[var(--primary-ink)]' : ''}`} aria-label={t('الإعدادات وبياناتي', 'Settings and my information')} title={t('الإعدادات وبياناتي', 'Settings and my information')}>
           <Settings2 size={19} aria-hidden="true" />
         </NavLink>

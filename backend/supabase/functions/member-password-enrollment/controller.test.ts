@@ -101,8 +101,9 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
 
 const token = 'phpw_' + 'a'.repeat(64);
 const profile = {
-  fullName: 'Member Test', phone: '+201112223333', residence: '', workConditions: '', bio: '', device: '', gender: '',
-  academicNumber: '001234', academicGroup: 'CSE-1', specialization: 'software', linkedinUrl: '', portfolioUrl: '',
+  fullName: 'Member Test', phone: '+201112223333', residence: 'Alexandria', workConditions: 'Remote', bio: 'Controller fixture', device: 'لابتوب', gender: 'ذكر',
+  academicNumber: '001234', academicGroup: 'CSE-1', specialization: 'software',
+  linkedinUrl: 'https://www.linkedin.com/in/controller-fixture', portfolioUrl: 'https://github.com/controller-fixture',
 };
 const enrollBody = (overrides: Record<string, unknown> = {}) => ({
   action: 'enroll', email: 'member@phantoms-test.example', token,
@@ -139,8 +140,9 @@ test('new join invitation creates only the recipient Auth identity and returns p
   assert.equal(state.calls.some((call) => call.name === 'updateUserById'), false);
   const completion = state.calls.find((call) => call.name === 'member_password_complete_profile');
   assert.deepEqual(completion?.args?.p_profile, {
-    fullName: 'Member Test', phone: '+201112223333', residence: null, workConditions: null, bio: null, device: null, gender: null,
-    academicNumber: '001234', academicGroup: 'CSE-1', specialization: 'software', linkedinUrl: null, portfolioUrl: null,
+    fullName: 'Member Test', phone: '+201112223333', residence: 'Alexandria', workConditions: 'Remote', bio: 'Controller fixture', device: 'لابتوب', gender: 'ذكر',
+    academicNumber: '001234', academicGroup: 'CSE-1', specialization: 'software',
+    linkedinUrl: 'https://www.linkedin.com/in/controller-fixture', portfolioUrl: 'https://github.com/controller-fixture',
   });
   assert.equal(state.reviews.length, 0);
 });

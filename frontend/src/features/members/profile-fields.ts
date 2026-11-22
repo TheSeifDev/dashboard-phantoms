@@ -43,6 +43,28 @@ export const MEMBER_DEVICE_OPTIONS = [
 export const MEMBER_GENDER_OPTIONS = ['ذكر', 'أنثى'] as const;
 export const MEMBER_SPECIALIZATION_OPTIONS = ['software', 'hardware', 'ai'] as const;
 
+/**
+ * Every profile field is mandatory. Members whose stored profile misses any of
+ * them are routed back to Settings and reminded until the profile is complete.
+ */
+export const MEMBER_REQUIRED_PROFILE_FIELDS = [...MEMBER_PROFILE_KEYS] as const;
+
+/** Bilingual labels used by the completion reminder and inline error copy. */
+export const MEMBER_PROFILE_FIELD_LABELS: Record<MemberProfileField, readonly [string, string]> = {
+  fullName: ['الاسم الكامل', 'Full name'],
+  phone: ['رقم WhatsApp', 'WhatsApp phone'],
+  residence: ['محل الإقامة', 'Residence'],
+  workConditions: ['ظروف العمل أو الدراسة', 'Work or study conditions'],
+  bio: ['نبذة أو الدور', 'Bio or role'],
+  device: ['الجهاز المتوفر', 'Available device'],
+  gender: ['الجنس', 'Gender'],
+  academicNumber: ['الرقم الأكاديمي', 'Academic number'],
+  academicGroup: ['المجموعة الأكاديمية', 'Academic group'],
+  specialization: ['التخصص', 'Specialization'],
+  linkedinUrl: ['LinkedIn', 'LinkedIn'],
+  portfolioUrl: ['GitHub / Portfolio / Behance', 'GitHub / Portfolio / Behance'],
+};
+
 // Deliberately reject invisible/control input, including C1 controls.
 // oxlint-disable-next-line no-control-regex
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/;
@@ -108,7 +130,7 @@ function isUnsafePortfolioHostname(hostname: string): boolean {
 }
 
 function canonicalHttpsUrl(value: string, field: MemberProfileField, kind: 'linkedin' | 'portfolio'): MemberProfileValidationResult {
-  if (value === '') return { ok: true, profile: EMPTY_MEMBER_PROFILE };
+  if (value === '') return fail(field, 'REQUIRED', 'This field is required.');
   if (value.length > 2048 || CONTROL_CHARACTERS.test(value)) return fail(field, value.length > 2048 ? 'TOO_LONG' : 'CONTROL_CHARACTERS', 'Use a safe HTTPS link.');
   try {
     const url = new URL(value);
@@ -159,9 +181,9 @@ export function validateMemberProfile(input: unknown): MemberProfileValidationRe
 
   for (const [field, maxLength, required] of [
     ['fullName', 160, true],
-    ['residence', 160, false],
-    ['workConditions', 2000, false],
-    ['bio', 4000, false],
+    ['residence', 160, true],
+    ['workConditions', 2000, true],
+    ['bio', 4000, true],
     ['academicGroup', 80, true],
   ] as const) {
     const result = textField(profile, field, maxLength, required);
@@ -176,8 +198,10 @@ export function validateMemberProfile(input: unknown): MemberProfileValidationRe
     return fail('academicNumber', profile.academicNumber === '' ? 'REQUIRED' : 'INVALID_FORMAT', 'Use 1 to 32 digits.');
   }
   if (!MEMBER_SPECIALIZATION_OPTIONS.includes(profile.specialization as (typeof MEMBER_SPECIALIZATION_OPTIONS)[number])) return fail('specialization', 'INVALID_OPTION', 'Choose software, hardware, or AI.');
-  if (profile.device !== '' && !MEMBER_DEVICE_OPTIONS.includes(profile.device as (typeof MEMBER_DEVICE_OPTIONS)[number])) return fail('device', 'INVALID_OPTION', 'Choose a supported device option.');
-  if (profile.gender !== '' && !MEMBER_GENDER_OPTIONS.includes(profile.gender as (typeof MEMBER_GENDER_OPTIONS)[number])) return fail('gender', 'INVALID_OPTION', 'Choose a supported gender option.');
+  if (profile.device === '') return fail('device', 'REQUIRED', 'This field is required.');
+  if (!MEMBER_DEVICE_OPTIONS.includes(profile.device as (typeof MEMBER_DEVICE_OPTIONS)[number])) return fail('device', 'INVALID_OPTION', 'Choose a supported device option.');
+  if (profile.gender === '') return fail('gender', 'REQUIRED', 'This field is required.');
+  if (!MEMBER_GENDER_OPTIONS.includes(profile.gender as (typeof MEMBER_GENDER_OPTIONS)[number])) return fail('gender', 'INVALID_OPTION', 'Choose a supported gender option.');
 
   const linkedin = canonicalHttpsUrl(profile.linkedinUrl, 'linkedinUrl', 'linkedin');
   if (!linkedin.ok) return linkedin;
@@ -192,4 +216,16 @@ export function validateMemberProfile(input: unknown): MemberProfileValidationRe
       portfolioUrl: portfolio.profile.portfolioUrl,
     },
   };
+}
+
+/**
+ * Fields a member still has to fill in. Empty values are reported first, then
+ * the first structurally invalid value, so the reminder UI can list what is
+ * blocking the workspace without duplicating validator rules.
+ */
+export function missingProfileFields(profile: MemberProfileInput): MemberProfileField[] {
+  const missing = MEMBER_PROFILE_KEYS.filter((field) => String(profile[field] ?? '').trim() === '');
+  const result = validateMemberProfile(profile);
+  if (!result.ok && !missing.includes(result.field)) missing.push(result.field);
+  return missing;
 }

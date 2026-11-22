@@ -11,6 +11,7 @@ import { PhantomLoader } from '../../components/motion/PhantomLoader';
 import { PortalHeader } from '../portal/PortalHeader';
 import { cleanupMemberState } from '../auth/MemberAccessGuard';
 import { MemberProfileFields } from './MemberProfileFields';
+import { MissingProfileFields } from './MissingProfileFields';
 import { validateMemberProfile, type MemberProfileInput } from './profile-fields';
 import { memberProfileKey, MemberProfileApiError, profileToInput, saveMemberProfile, useMemberProfile, type MemberProfileSnapshot } from './profile-api';
 import '../../styles/member-settings.css';
@@ -40,7 +41,7 @@ function SettingsForm({ initial }: { initial: MemberProfileSnapshot }) {
     const valid = validateMemberProfile(profile);
     if (!valid.ok) {
       setInvalidField(valid.field);
-      setError(t('راجع الحقل المحدد. الاسم والرقم الأكاديمي والمجموعة ورقم WhatsApp والتخصص إلزامية، والروابط الاختيارية يجب أن تكون HTTPS صحيحة.', 'Check the highlighted field. Name, academic number, group, WhatsApp phone and specialization are required; optional links must be valid HTTPS URLs.'));
+      setError(t('راجع الحقل المحدد. كل حقول الملف إلزامية: البيانات الأساسية، الروابط المهنية (HTTPS صحيحة)، ومعلوماتك الإضافية.', 'Check the highlighted field. Every profile field is required: core details, professional links (valid HTTPS) and your additional information.'));
       return;
     }
     const device = getDeviceToken();
@@ -68,9 +69,9 @@ function SettingsForm({ initial }: { initial: MemberProfileSnapshot }) {
   };
 
   return <>
-    {!saved.profile_complete && <div className="settings-completion-notice settings-reveal" role="status"><Info size={21} aria-hidden="true" /><div><strong>{t('خطوة واحدة لاستكمال حسابك', 'Complete your member information')}</strong><p>{t('أضفنا بيانات الدراسة والتخصص المطلوبة. أكملها واحفظها لتعود إلى مساحة العمل. حسابك وعضويات التيم محفوظة كما هي.', 'We added required academic and specialization information. Complete and save it to return to your workspace. Your account and team memberships are unchanged.')}</p></div></div>}
+    {!saved.profile_complete && <div className="settings-completion-notice settings-reveal" role="status"><Info size={21} aria-hidden="true" /><div><strong>{t('كل بيانات حسابك إلزامية الآن', 'Every profile field is required now')}</strong><p>{t('أكمل الحقول الناقصة واحفظها لتعود إلى مساحة العمل. لحد ما تكمّلها هيوصلك تذكير باستمرار. حسابك وعضويات التيم محفوظة كما هي.', 'Fill in the missing fields and save to return to your workspace. You keep getting reminders until they are complete. Your account and team memberships are unchanged.')}</p><MissingProfileFields fields={saved.missing_fields} /></div></div>}
     <form ref={formRef} onSubmit={(event) => { void submit(event); }} noValidate aria-busy={saving || undefined} className="settings-form settings-reveal">
-      <div className="settings-section-heading"><span className="settings-section-number" aria-hidden="true">01</span><div><h2>{t('معلوماتك في PHANTOMS', 'Your PHANTOMS information')}</h2><p>{t('الحقول بعلامة * إلزامية. بياناتك لا تغيّر صلاحيات التيم.', 'Fields marked * are required. Your profile does not change team permissions.')}</p></div></div>
+      <div className="settings-section-heading"><span className="settings-section-number" aria-hidden="true">01</span><div><h2>{t('معلوماتك في PHANTOMS', 'Your PHANTOMS information')}</h2><p>{t('كل الحقول إلزامية لاستكمال حسابك. بياناتك لا تغيّر صلاحيات التيم.', 'Every field is required to complete your account. Your profile does not change team permissions.')}</p></div></div>
       <label className="auth-field settings-login-email" htmlFor="settings-email">{t('البريد الإلكتروني المسجل *', 'Registered email address *')}<input id="settings-email" type="email" dir="ltr" readOnly value={saved.email} aria-describedby="settings-email-note" /><span id="settings-email-note" className="settings-hint">{t('بريد تسجيل الدخول ثابت هنا لحماية ربط حسابك. لتغييره تواصل مع الإدارة.', 'Your sign-in email is read-only to protect your account binding. Contact the administrators to change it.')}</span></label>
       {error && <div id="settings-error" className="auth-error" role="alert">{error}</div>}
       <MemberProfileFields idPrefix="settings" profile={profile} disabled={saving} invalidField={invalidField} errorId="settings-error" onChange={(key, value) => { setProfile((current) => ({ ...current, [key]: value })); setInvalidField(null); setError(''); setSuccess(false); }} />

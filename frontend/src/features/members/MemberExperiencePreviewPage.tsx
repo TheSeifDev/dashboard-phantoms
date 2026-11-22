@@ -10,7 +10,12 @@ import '../../styles/member-settings.css';
 
 const demoProfile = (complete = false): MemberProfileInput => ({
   ...EMPTY_MEMBER_PROFILE, fullName: 'PHANTOMS Demo', phone: '+201000000000',
-  ...(complete ? { academicNumber: '003001', academicGroup: 'G-1', specialization: 'software' } : {}),
+  ...(complete ? {
+    academicNumber: '003001', academicGroup: 'G-1', specialization: 'software',
+    residence: 'Cairo', workConditions: 'Remote, evenings', bio: 'Frontend member',
+    device: 'لابتوب', gender: 'ذكر',
+    linkedinUrl: 'https://www.linkedin.com/in/phantoms-demo', portfolioUrl: 'https://github.com/octocat',
+  } : {}),
 });
 
 /** Local form preview only. Deliberately has no auth, profile API or storage imports. */
@@ -51,7 +56,7 @@ export default function MemberExperiencePreviewPage() {
       <form ref={form} onSubmit={submit} noValidate className="settings-form settings-reveal min-w-0">
         <div className="settings-section-heading"><span className="settings-section-number" aria-hidden="true">01</span><div><h2>{t('معلومات العضو — معاينة', 'Member information — preview')}</h2><p>{t('كل البيانات هنا تجريبية. تخصص الملف لا يمنح أي صلاحية أو عضوية فريق.', 'All data here is for demonstration. Profile specialization grants no permissions or team membership.')}</p></div></div>
         <label className="auth-field" htmlFor="preview-email">{t('البريد المسجل (تجريبي) *', 'Registered email (demo) *')}<input id="preview-email" type="email" dir="ltr" readOnly value="preview@example.com" /></label>
-        {feedback === 'invalid' && <div id="preview-error" role="alert" className="auth-error">{t('راجع الحقل المحدد. بيانات الدراسة والاسم وWhatsApp والتخصص مطلوبة؛ الروابط اختيارية ويجب أن تكون HTTPS صحيحة.', 'Check the highlighted field. Academic details, name, WhatsApp and specialization are required; optional links must use valid HTTPS.')}</div>}
+        {feedback === 'invalid' && <div id="preview-error" role="alert" className="auth-error">{t('راجع الحقل المحدد. كل الحقول مطلوبة: البيانات الأساسية، الروابط المهنية (HTTPS صحيحة)، ومعلوماتك الإضافية.', 'Check the highlighted field. Every field is required: core details, professional links (valid HTTPS) and additional information.')}</div>}
         <MemberProfileFields idPrefix="preview" profile={profile} invalidField={invalid} errorId="preview-error" onChange={(key, value) => { setProfile((current) => ({ ...current, [key]: value })); setInvalid(null); setFeedback(null); }} />
         <div className="settings-save-bar"><p>{t('التحقق محلي فقط — لا يوجد حفظ على الخادم.', 'Local validation only — no server save.')}</p><Button type="submit">{t('تجربة التحقق والحفظ محليًا', 'Try validation locally')}</Button></div>
         {feedback === 'validated' && <div className="settings-success" role="status"><Info size={20} aria-hidden="true" /><div><strong>{t('نجح التحقق في المعاينة فقط', 'Preview validation passed')}</strong><p>{t('لم يُحفظ أو يتغير أي عضو حقيقي.', 'No real member was saved or changed.')}</p></div></div>}

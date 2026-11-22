@@ -64,11 +64,10 @@ export function parseMemberProfile(value: unknown, memberId: number, email: stri
   } as MemberProfileSnapshot;
   const derived = profile.academic_number ? `${profile.academic_number}@batechu.com` : null;
   if (profile.university_email !== derived) throw new MemberProfileApiError('SERVER_UNAVAILABLE');
-  // Server completeness covers required fields only. Do not hide legacy rows
-  // with malformed optional fields: members must be able to open and fix them.
-  if (profile.profile_complete && !validateMemberProfile({ ...profileToInput(profile),
-    residence: '', workConditions: '', bio: '', device: '', gender: '', linkedinUrl: '', portfolioUrl: '',
-  }).ok) throw new MemberProfileApiError('SERVER_UNAVAILABLE');
+  // Every profile field is mandatory, so the server only reports completion
+  // once all twelve values validate. Incomplete legacy rows still parse so the
+  // member can open Settings and fix them.
+  if (profile.profile_complete && !validateMemberProfile(profileToInput(profile)).ok) throw new MemberProfileApiError('SERVER_UNAVAILABLE');
   return profile;
 }
 
@@ -78,6 +77,19 @@ function assertOwner(memberId: number, email: string, deviceToken: string): void
     throw new MemberProfileApiError('MEMBER_SESSION_REQUIRED');
   }
 }
+/**
+ * Core identity fields that must be present before the member workspace opens.
+ * The seven newer mandatory fields do not lock the portal: they are collected
+ * through the persistent banner and the recurring completion reminders.
+ */
+export function isMemberCoreProfileComplete(profile: MemberProfileSnapshot): boolean {
+  return profile.full_name.trim() !== ''
+    && (profile.phone ?? '').trim() !== ''
+    && (profile.academic_number ?? '').trim() !== ''
+    && (profile.academic_group ?? '').trim() !== ''
+    && (profile.specialization ?? '').trim() !== '';
+}
+
 export const memberProfileKey = (memberId: number | null, email: string) => ['member-profile-settings', memberId, normalizeAuthEmail(email)] as const;
 
 export async function fetchMemberProfile(memberId: number, email: string, deviceToken: string): Promise<MemberProfileSnapshot> {

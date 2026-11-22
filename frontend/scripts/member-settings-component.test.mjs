@@ -61,7 +61,7 @@ globalThis.fetch = async (input, init = {}) => {
   return control.fetchResponse();
 };
 function snapshot(complete = false, extra = {}) {
-  return { member_id: 42, email: EMAIL, full_name: 'Member', phone: '+201112223333', academic_number: complete ? '00123' : null, academic_group: complete ? 'G-1' : null, specialization: complete ? 'software' : null, university_email: complete ? '00123@batechu.com' : null, linkedin_url: null, portfolio_url: null, residence: null, work_conditions: null, bio: null, device: null, gender: null, profile_complete: complete, missing_fields: complete ? [] : ['academicNumber', 'academicGroup', 'specialization'], ...extra };
+  return { member_id: 42, email: EMAIL, full_name: 'Member', phone: '+201112223333', academic_number: complete ? '00123' : null, academic_group: complete ? 'G-1' : null, specialization: complete ? 'software' : null, university_email: complete ? '00123@batechu.com' : null, linkedin_url: complete ? 'https://www.linkedin.com/in/member' : null, portfolio_url: complete ? 'https://github.com/member' : null, residence: complete ? 'Cairo' : null, work_conditions: complete ? 'Remote' : null, bio: complete ? 'Frontend member' : null, device: complete ? 'لابتوب' : null, gender: complete ? 'ذكر' : null, profile_complete: complete, missing_fields: complete ? [] : ['academicNumber', 'academicGroup', 'specialization', 'residence', 'workConditions', 'bio', 'device', 'gender', 'linkedinUrl', 'portfolioUrl'], ...extra };
 }
 function deferred() { let resolvePromise; const promise = new Promise((r) => { resolvePromise = r; }); return { promise, resolve: resolvePromise }; }
 const memberClient = { rpc: async (name, args) => { control.rpcCalls.push({ name, args }); return control.profileRpc(name, args); }, functions: { invoke: async (name, args) => { control.invokes.push({ name, ...args }); return control.invoke(name, args); } } };
@@ -87,7 +87,7 @@ const mocks = {
   'features/portal/PortalHeader.tsx': { PortalHeader: ({ onLogout }) => el('header', null, el('button', { onClick: onLogout }, 'Sign out')) },
   'features/auth/MemberAccessGuard.tsx': { cleanupMemberState: async () => setMember(null) },
 };
-const actual = new Set(['features/members/profile-fields.ts', 'features/members/MemberProfileFields.tsx', 'features/members/profile-api.ts', 'features/members/MemberSettingsPage.tsx', 'features/members/MemberProfileCompletionGuard.tsx', 'features/auth/member-password.ts', 'features/auth/member-recovery.ts', 'features/auth/member-recovery-api.ts', 'features/auth/MemberRecoveryPage.tsx', 'features/auth/MemberForgotPasswordPage.tsx']);
+const actual = new Set(['features/members/profile-fields.ts', 'features/members/MemberProfileFields.tsx', 'features/members/MissingProfileFields.tsx', 'features/members/profile-api.ts', 'features/members/MemberSettingsPage.tsx', 'features/members/MemberProfileCompletionGuard.tsx', 'features/auth/member-password.ts', 'features/auth/member-recovery.ts', 'features/auth/member-recovery-api.ts', 'features/auth/MemberRecoveryPage.tsx', 'features/auth/MemberForgotPasswordPage.tsx']);
 const modules = new Map();
 function sourcePath(path) { return [path, path + '.ts', path + '.tsx'].find(existsSync) ?? path; }
 function load(path) {
@@ -130,10 +130,22 @@ const text = () => document.body.textContent;
 const query = (id) => document.getElementById(id);
 async function change(id, value) {
   const node = query(id); assert.ok(node, id);
-  await act(async () => { Object.getOwnPropertyDescriptor(node.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype, 'value').set.call(node, value); node.dispatchEvent(new window.Event(node.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); });
+  const prototype = node.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : node.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+  await act(async () => { Object.getOwnPropertyDescriptor(prototype, 'value').set.call(node, value); node.dispatchEvent(new window.Event(node.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); });
 }
 async function submitTwice() { await act(async () => { const form = document.querySelector('form'); assert.ok(form); form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })); form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })); }); }
-async function fillRequired() { await change('settings-academic-number', '٠٠۱۲۳'); await change('settings-academic-group', 'G-1'); await change('settings-specialization', 'software'); }
+async function fillRequired() {
+  await change('settings-academic-number', '٠٠۱۲۳');
+  await change('settings-academic-group', 'G-1');
+  await change('settings-specialization', 'software');
+  await change('settings-residence', 'Cairo');
+  await change('settings-device', 'لابتوب');
+  await change('settings-gender', 'ذكر');
+  await change('settings-work-conditions', 'Remote, evenings');
+  await change('settings-bio', 'Frontend member');
+  await change('settings-linkedin-url', 'https://www.linkedin.com/in/member');
+  await change('settings-portfolio-url', 'https://github.com/member');
+}
 function assertStorage() { assert.equal(localStorage.getItem('admin-session-sentinel'), 'unchanged-admin-session'); assert.equal(sessionStorage.getItem('member-session-sentinel'), 'unchanged-member-session'); assert.equal(localStorage.length, 1); assert.equal(sessionStorage.length, 1); }
 function seedVerifier(verifier = '0123456789abcdef'.repeat(4), createdAt = Date.now()) { localStorage.setItem(VERIFIER_KEY, JSON.stringify({ verifier, createdAt })); }
 function assertStorageWithRecoveryVerifier() { assert.equal(localStorage.getItem('admin-session-sentinel'), 'unchanged-admin-session'); assert.equal(sessionStorage.getItem('member-session-sentinel'), 'unchanged-member-session'); assert.equal(localStorage.getItem(VERIFIER_KEY) !== null, true); assert.equal(localStorage.length, 2); assert.equal(sessionStorage.length, 1); }
@@ -158,11 +170,11 @@ test('cached complete state never bypasses a fresh guard query on mount', async 
   assert.ok(!text().includes('SECRET WORKSPACE'));
   pending.resolve({ data: snapshot(), error: null }); await settle(); assert.ok(text().includes('/portal/settings')); await unmount();
 });
-test('Settings remains open for old members and shows required/read-only/optional fields', async () => {
-  await mount(el(Settings)); assert.ok(text().includes('Complete your member information'));
-  for (const id of ['full-name', 'phone', 'academic-number', 'academic-group', 'specialization']) assert.equal(query('settings-' + id).required, true);
+test('Settings remains open for old members and marks every profile field as required', async () => {
+  await mount(el(Settings)); assert.ok(text().includes('Every profile field is required now'));
+  for (const id of ['full-name', 'phone', 'academic-number', 'academic-group', 'specialization', 'residence', 'device', 'gender', 'work-conditions', 'bio', 'linkedin-url', 'portfolio-url']) assert.equal(query('settings-' + id).required, true, id);
   assert.equal(query('settings-email').readOnly, true); assert.equal(query('settings-email').value, EMAIL); assert.equal(query('settings-university-email').readOnly, true);
-  assert.equal(query('settings-linkedin-url').required, false); assert.equal(query('settings-portfolio-url').required, false); assertStorage(); await unmount();
+  assert.ok(text().includes('Residence')); assertStorage(); await unmount();
 });
 test('Arabic Settings localizes specialization while submitted values stay unchanged', async () => {
   await mount(el(Settings), '/portal/settings', () => { control.lang = 'ar'; }); assert.equal(document.querySelector('.member-settings-page').dir, 'rtl');
@@ -170,7 +182,7 @@ test('Arabic Settings localizes specialization while submitted values stay uncha
 });
 test('Settings required validation blocks transport and focuses invalid field', async () => {
   await mount(el(Settings)); await submitTwice(); assert.equal(control.rpcCalls.filter((call) => call.name === 'member_update_profile_settings').length, 0);
-  assert.equal(query('settings-academic-group').getAttribute('aria-invalid'), 'true'); assert.equal(document.activeElement.id, 'settings-academic-group'); await unmount();
+  assert.equal(query('settings-residence').getAttribute('aria-invalid'), 'true'); assert.equal(document.activeElement.id, 'settings-residence'); await unmount();
 });
 test('Settings normalized derived email, single-flight save and success only after server confirmation', async () => {
   const pending = deferred(); await mount(el(Settings), '/portal/settings', () => { control.profileRpc = (name) => name === 'member_update_profile_settings' ? pending.promise : Promise.resolve({ data: snapshot(), error: null }); });
@@ -186,18 +198,24 @@ test('Settings load failure blocks form and explicit retry recovers', async () =
   await mount(el(Settings), '/portal/settings', () => { control.profileRpc = async () => ({ data: null, error: { message: 'private-error' } }); }); assert.equal(document.querySelector('form'), null); assert.ok(!text().includes('private-error'));
   control.profileRpc = async () => ({ data: snapshot(), error: null }); await act(async () => document.querySelector('main button').click()); await settle(); assert.ok(document.querySelector('form')); await unmount();
 });
-test('profile parser ignores accidental secret columns, derives email, and allows fixing legacy optional fields', () => {
-  const parsed = profileApi.parseMemberProfile(snapshot(true, { device: 'legacy device', gender: 'legacy gender', session_token: 'secret-sentinel' }), 42, EMAIL);
-  assert.equal(parsed.device, 'legacy device'); assert.equal('session_token' in parsed, false);
+test('profile parser ignores accidental secret columns, derives email, and keeps legacy rows editable', () => {
+  const parsed = profileApi.parseMemberProfile(snapshot(false, { device: 'legacy device', gender: 'legacy gender', session_token: 'secret-sentinel' }), 42, EMAIL);
+  assert.equal(parsed.device, 'legacy device'); assert.equal(parsed.profile_complete, false); assert.equal('session_token' in parsed, false);
+  assert.throws(() => profileApi.parseMemberProfile(snapshot(true, { residence: null }), 42, EMAIL), /SERVER_UNAVAILABLE/);
   assert.throws(() => profileApi.parseMemberProfile(snapshot(true, { university_email: '00123@wrong.invalid' }), 42, EMAIL), /SERVER_UNAVAILABLE/);
 });
-test('legacy optional selects retain values visibly until the member explicitly clears or corrects them', async () => {
-  await mount(el(Settings), '/portal/settings', () => { control.profileRpc = async () => ({ data: snapshot(true, { device: 'legacy device', gender: 'legacy gender' }), error: null }); });
+test('legacy select values stay visible and cannot be cleared once the field is mandatory', async () => {
+  await mount(el(Settings), '/portal/settings', () => { control.profileRpc = async () => ({ data: snapshot(false, { device: 'legacy device', gender: 'legacy gender' }), error: null }); });
   assert.equal(query('settings-device').value, 'legacy device'); assert.equal(query('settings-gender').value, 'legacy gender');
-  await change('settings-device', ''); await change('settings-gender', '');
+  await fillRequired();
+  await change('settings-device', '');
+  await submitTwice(); await settle();
+  assert.equal(control.rpcCalls.filter((call) => call.name === 'member_update_profile_settings').length, 0);
+  assert.equal(query('settings-device').getAttribute('aria-invalid'), 'true');
+  await change('settings-device', 'هاتف محمول'); await change('settings-gender', 'أنثى');
   await submitTwice(); await settle();
   const save = control.rpcCalls.find((call) => call.name === 'member_update_profile_settings');
-  assert.equal(save.args.p_profile.device, ''); assert.equal(save.args.p_profile.gender, ''); assertStorage(); await unmount();
+  assert.equal(save.args.p_profile.device, 'هاتف محمول'); assert.equal(save.args.p_profile.gender, 'أنثى'); assertStorage(); await unmount();
 });
 test('profile API rejects owner or device change during a delayed response', async () => {
   for (const changeOwner of [true, false]) {

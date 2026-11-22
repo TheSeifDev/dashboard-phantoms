@@ -1,5 +1,6 @@
 import type { Member } from '../../types/db';
 import { DeviceChips, MemberRowMenu, ReadinessChip, WorkStatusChip } from './MemberCells';
+import { MemberAvatar } from '../../components/ui/MemberAvatar';
 
 import { useLocale } from '../../i18n/useLocale';
 export function MemberTable({
@@ -47,9 +48,7 @@ export function MemberTable({
             >
               <td className="px-4 py-2">
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--surface-2)] text-base font-black text-[var(--link)] group-hover:bg-[var(--surface)]" aria-hidden="true">
-                    {member.full_name.trim().charAt(0) || '؟'}
-                  </span>
+                  <MemberAvatar member={member} name={member.full_name} size={80} className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--surface-2)] text-base font-black text-[var(--link)] group-hover:bg-[var(--surface)]" />
                   <div className="flex min-w-0 flex-col">
                     <span className="truncate text-sm font-bold text-[var(--text)]">{member.full_name}</span>
                     {member.email ? (

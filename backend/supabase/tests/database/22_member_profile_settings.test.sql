@@ -8,7 +8,7 @@ SELECT phantoms_test.create_user('settings_admin');
 SELECT phantoms_test.grant_admin('settings_admin', 'admin', phantoms_test.perms('members'));
 SELECT phantoms_test.bind_device('settings_one');
 SELECT phantoms_test.bind_device('settings_two');
-INSERT INTO phantoms_test.vars(key,value) VALUES ('settings_profile', '{"fullName":"Test Settings One","phone":"+20123456789","academicNumber":"٠٠١۲۳","academicGroup":"Group A","specialization":"software","linkedinUrl":"https://www.linkedin.com/in/member","portfolioUrl":"https://github.com/member","residence":"","workConditions":"","bio":"","device":"","gender":""}');
+INSERT INTO phantoms_test.vars(key,value) VALUES ('settings_profile', '{"fullName":"Test Settings One","phone":"+20123456789","academicNumber":"٠٠١۲۳","academicGroup":"Group A","specialization":"software","linkedinUrl":"https://www.linkedin.com/in/member","portfolioUrl":"https://github.com/member","residence":"Cairo","workConditions":"Remote, evenings","bio":"Backend member","device":"لابتوب","gender":"ذكر"}');
 
 SELECT ok(has_function_privilege('authenticated', 'public.member_get_profile_settings(text)', 'EXECUTE'), 'authenticated member can request own settings');
 SELECT ok(NOT has_function_privilege('anon', 'public.member_get_profile_settings(text)', 'EXECUTE'), 'anonymous settings read denied');
@@ -24,6 +24,8 @@ INSERT INTO phantoms_test.vars(key,value) VALUES ('settings_before', public.memb
 SELECT is((phantoms_test.var('settings_before')::jsonb ->> 'member_id')::bigint, phantoms_test.mid('settings_one'), 'server derives own member ID');
 SELECT is(phantoms_test.var('settings_before')::jsonb ->> 'profile_complete', 'false', 'legacy member is incomplete without disabling identity');
 SELECT ok(phantoms_test.var('settings_before')::jsonb -> 'missing_fields' ? 'academicNumber', 'new academic field explicitly missing');
+SELECT ok(phantoms_test.var('settings_before')::jsonb -> 'missing_fields' ? 'residence', 'residence reported missing for legacy rows');
+SELECT ok(phantoms_test.var('settings_before')::jsonb -> 'missing_fields' ? 'portfolioUrl', 'portfolio link reported missing for legacy rows');
 SELECT is(phantoms_test.var('settings_before')::jsonb ->> 'university_email', NULL::text, 'university email absent until academic number supplied');
 SELECT throws_like($$SELECT public.member_get_profile_settings(phantoms_test.tok('settings_two'))$$, '%DEVICE_REQUIRED%', 'another member device does not select another profile');
 SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"email":"other@example.test"}'::jsonb)$$, '%INVALID_INPUT%', 'caller cannot change canonical Auth email');
@@ -33,6 +35,13 @@ SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.
 SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"academicGroup":""}'::jsonb)$$, '%INVALID_INPUT%', 'academic group required on server');
 SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"specialization":"owner"}'::jsonb)$$, '%INVALID_INPUT%', 'specialization strictly enumerated');
 SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"portfolioUrl":"javascript:alert(1)"}'::jsonb)$$, '%INVALID_INPUT%', 'unsafe optional link rejected');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"residence":""}'::jsonb)$$, '%INVALID_INPUT%', 'residence is mandatory on server');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"workConditions":"   "}'::jsonb)$$, '%INVALID_INPUT%', 'work conditions are mandatory on server');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"bio":""}'::jsonb)$$, '%INVALID_INPUT%', 'bio is mandatory on server');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"device":""}'::jsonb)$$, '%INVALID_INPUT%', 'device is mandatory on server');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"gender":""}'::jsonb)$$, '%INVALID_INPUT%', 'gender is mandatory on server');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"linkedinUrl":""}'::jsonb)$$, '%INVALID_INPUT%', 'LinkedIn link is mandatory on server');
+SELECT throws_like($$SELECT public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb || '{"portfolioUrl":null}'::jsonb)$$, '%INVALID_INPUT%', 'portfolio link is mandatory on server');
 INSERT INTO phantoms_test.vars(key,value) VALUES ('settings_after', public.member_update_profile_settings(phantoms_test.tok('settings_one'), phantoms_test.var('settings_profile')::jsonb)::text);
 SELECT is(phantoms_test.var('settings_after')::jsonb ->> 'full_name', 'Test Settings One', 'save response returns freshly persisted name');
 SELECT is(phantoms_test.var('settings_after')::jsonb ->> 'academic_number', '00123', 'leading zeros and localized digits canonicalized');

@@ -10,7 +10,7 @@
 .settings-profile-mark { width: 64px; height: 64px; display: grid; place-items: center; border: 1px solid var(--border); background: var(--surface-2); border-radius: 18px; color: var(--primary-ink); margin-bottom: 20px; }
 .settings-summary h2 { font-size: 19px; font-weight: 900; line-height: 1.6; overflow-wrap: anywhere; }
 .settings-summary-email { font-size: 11px; line-height: 1.8; color: var(--text-muted); overflow-wrap: anywhere; text-align: start; margin-top: 4px; }
-.settings-status { display: flex; align-items: center; gap: 7px; padding: 10px 12px; margin-top: 20px; border-radius: 10px; color: var(--primary-ink); background: var(--primary-soft); font-size: 11px; font-weight: 800; }
+.settings-status { display: flex; align-items: center; gap: 7px; padding: 10px 12px; margin-top: 20px; border-radius: 10px; color: var(--warning-text); background: var(--warning-soft); font-size: 11px; font-weight: 800; }
 .settings-status.is-complete { color: var(--success-text); background: var(--success-soft); }
 .settings-summary-divider { border-top: 1px solid var(--border); margin-block: 24px; }
 .settings-hint { font-size: 11px; line-height: 1.9; color: var(--text-muted); }
@@ -27,7 +27,7 @@
 .settings-login-email input { overflow: hidden; text-overflow: ellipsis; color: var(--text-muted); background: var(--surface-2); }
 .settings-save-bar { border-top: 1px solid var(--border); padding-top: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .settings-save-bar p { font-size: 11px; color: var(--text-muted); line-height: 1.8; }
-.settings-completion-notice { display: flex; align-items: start; gap: 12px; background: var(--primary-soft); color: var(--primary-ink); border: 1px solid var(--border); padding: 18px 20px; border-radius: 16px; margin-bottom: 20px; }
+.settings-completion-notice { display: flex; align-items: start; gap: 12px; background: var(--warning-soft); color: var(--warning-text); border: 1px solid var(--warning-border); padding: 18px 20px; border-radius: 16px; margin-bottom: 20px; }
 .settings-completion-notice > svg { flex-shrink: 0; margin-top: 2px; }
 .settings-completion-notice strong { font-size: 13px; font-weight: 900; }
 .settings-completion-notice p { font-size: 12px; line-height: 1.9; margin-top: 5px; }

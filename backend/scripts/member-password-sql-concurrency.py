@@ -183,7 +183,7 @@ def run():
                   '{emails[5]}', 'synthetic-review-password', now(), '{{\"provider\":\"email\",\"providers\":[\"email\"]}}', '{{}}', now(), now());""")
         sql(f"""BEGIN; {SERVICE} SELECT public.member_password_complete_profile(
           '{review_invitation_id}', '{review_claim_id}', '{review_user}',
-          '{{\"fullName\":\"Disposable review concurrency\",\"phone\":\"+201112223355\",\"residence\":\"\",\"workConditions\":\"\",\"bio\":\"\",\"device\":\"\",\"gender\":\"\",\"academicNumber\":\"998877\",\"academicGroup\":\"CONC-1\",\"specialization\":\"software\",\"linkedinUrl\":null,\"portfolioUrl\":null}}'::jsonb); COMMIT;""")
+          '{{\"fullName\":\"Disposable review concurrency\",\"phone\":\"+201112223355\",\"residence\":\"Alexandria\",\"workConditions\":\"Remote\",\"bio\":\"Concurrency fixture\",\"device\":\"لابتوب\",\"gender\":\"ذكر\",\"academicNumber\":\"998877\",\"academicGroup\":\"CONC-1\",\"specialization\":\"software\",\"linkedinUrl\":\"https://www.linkedin.com/in/concurrency-fixture\",\"portfolioUrl\":\"https://github.com/concurrency-fixture\"}}'::jsonb); COMMIT;""")
         review_member_id = sql(f"SELECT id FROM public.members WHERE email = '{emails[5]}';").stdout.strip()
         assert review_member_id.isdigit()
         reserve = f"BEGIN; {SERVICE} SELECT public.member_password_reserve('{invitation_hash}', '{emails[1]}'); SELECT pg_sleep(0.2); COMMIT;"

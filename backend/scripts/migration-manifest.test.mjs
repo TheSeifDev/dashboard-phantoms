@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the forward manifest preserves provenance and records the applied Owner erasure migration', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 31);
+  assert.equal(forward.length, 32);
   const appUsage = forward[24];
   assert.equal(appUsage.version, '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
@@ -120,6 +120,15 @@ test('the forward manifest preserves provenance and records the applied Owner er
   assert.equal(storageVectorExclusion.original_source_version, storageVectorExclusion.version);
   assert.equal(storageVectorExclusion.original_source_filename, storageVectorExclusion.canonical_repository_filename);
   assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, storageVectorExclusion.canonical_repository_filename))).digest('hex'), storageVectorExclusion.sha256);
+  const profileMigration = forward[31];
+  assert.equal(profileMigration.version, '20261122010000');
+  assert.equal(profileMigration.name, 'member_profile_all_required');
+  assert.equal(profileMigration.production_status, 'applied');
+  assert.equal(profileMigration.remote_applied_timestamp, '20261122054238');
+  assert.equal(profileMigration.canonical_repository_filename, 'backend/supabase/migrations/20261122010000_member_profile_all_required.sql');
+  assert.equal(profileMigration.original_source_version, profileMigration.version);
+  assert.equal(profileMigration.original_source_filename, profileMigration.canonical_repository_filename);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, profileMigration.canonical_repository_filename))).digest('hex'), profileMigration.sha256);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');
