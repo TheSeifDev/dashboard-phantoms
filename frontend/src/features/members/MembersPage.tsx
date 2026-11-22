@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ChevronLeft, ChevronRight, CircleMinus, Eye, Link2, MoreHorizontal, Settings2, UserCheck, UserPlus, Users, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Eye, Link2, MoreHorizontal, Settings2, UserPlus, X } from 'lucide-react';
 import type { Member, MemberInsert } from '../../types/db';
 import { useMembers, useAddMember, useUpdateMember, useDeleteMember, useMemberTeamDirectory } from './api';
 import { useMemberCustomFields } from './customFieldsApi';
@@ -435,78 +435,6 @@ export default function MembersPage() {
           <div className="member-dir-console-title">
             <h2>{t('لوحة الأعضاء', 'Members console')}</h2>
             <p>{t('ملخص الفريق، طلبات الانضمام، والفلاتر — كله في مكان واحد.', 'Team summary, join requests and filters — all in one place.')}</p>
-          </div>
-          <div className="member-dir-stats" role="group" aria-label={t('ملخص دليل الأعضاء', 'Member directory summary')}>
-            {[
-              {
-                key: 'all',
-                label: t('كل الأعضاء', 'All members'),
-                note: t('السجل الكامل', 'Whole roster'),
-                value: memberMetrics.total,
-                Icon: Users,
-                tone: 'blue',
-                selected: !hasActiveFilters,
-                onClick: () => setFilters({ ...EMPTY_MEMBER_FILTERS, sort: filters.sort }),
-              },
-              {
-                key: 'active',
-                label: t('نشطون', 'Active'),
-                note: t('جاهزون للعمل', 'Ready to work'),
-                value: memberMetrics.active,
-                Icon: UserCheck,
-                tone: 'green',
-                selected: filters.activity === 'ACTIVE',
-                onClick: () => setFilters((current) => ({ ...current, activity: current.activity === 'ACTIVE' ? 'ALL' : 'ACTIVE' })),
-              },
-              {
-                key: 'incomplete',
-                label: t('يلزم استكمال بياناتهم', 'Need information'),
-                note: t('بيانات ناقصة', 'Missing details'),
-                value: memberMetrics.incomplete,
-                Icon: AlertTriangle,
-                tone: 'amber',
-                selected: filters.information === 'MISSING',
-                onClick: () => setFilters((current) => ({ ...current, information: current.information === 'MISSING' ? 'ALL' : 'MISSING' })),
-              },
-              {
-                key: 'inactive',
-                label: t('غير نشطين', 'Inactive'),
-                note: t('خارج الخدمة', 'Out of service'),
-                value: memberMetrics.inactive,
-                Icon: CircleMinus,
-                tone: 'red',
-                selected: filters.activity === 'INACTIVE',
-                onClick: () => setFilters((current) => ({ ...current, activity: current.activity === 'INACTIVE' ? 'ALL' : 'INACTIVE' })),
-              },
-            ].map(({ key, label, note, value, Icon, tone, selected, onClick }) => (
-              <button
-                key={key}
-                type="button"
-                className="member-dir-stat"
-                data-tone={tone}
-                onClick={onClick}
-                disabled={query.data === undefined || query.isError}
-                aria-pressed={selected}
-              >
-                <span className="member-dir-stat-top">
-                  <span className="member-dir-stat-label">{label}</span>
-                  <span className="member-dir-stat-icon" aria-hidden="true"><Icon /></span>
-                </span>
-                <span className="member-dir-stat-figure">
-                  <span className="member-dir-stat-value">{query.data === undefined || query.isError ? '—' : number(value)}</span>
-                  <span className="member-dir-stat-note">{note}</span>
-                </span>
-                <span className="member-dir-stat-meter" aria-hidden="true">
-                  <span
-                    style={{
-                      width: query.data === undefined || query.isError || !memberMetrics.total
-                        ? '0%'
-                        : `${Math.round((value / memberMetrics.total) * 100)}%`,
-                    }}
-                  />
-                </span>
-              </button>
-            ))}
           </div>
         </div>
 
