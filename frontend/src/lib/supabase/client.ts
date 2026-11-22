@@ -1,42 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../../types/db';
+import { supabaseBaseUrl, supabaseDirectUrl } from './endpoints';
+import { createSupabaseFetch } from './transport';
 
 // متغيرات env قد تكون غائبة — نمثلها بأمانة (string | undefined) ثم نفرق
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)
-  ?? 'https://placeholder.supabase.co';
+// العنوان الأساسي بقى بروكسي نفس الدومين (لو متاح) مع رجوع تلقائي للمباشر.
+const supabaseUrl = supabaseBaseUrl;
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)
   ?? 'placeholder-anon-key';
 
-const signInTimeoutMs = 12_000;
-const nativeFetch = globalThis.fetch.bind(globalThis);
-
-const fetchWithSignInTimeout: typeof fetch = async (input, init) => {
-  const requestUrl = input instanceof Request ? input.url : input.toString();
-  let url: URL;
-  try {
-    url = new URL(requestUrl);
-  } catch {
-    return nativeFetch(input, init);
-  }
-
-  const isPasswordSignIn = url.pathname.endsWith('/auth/v1/token')
-    && url.searchParams.get('grant_type') === 'password';
-  if (!isPasswordSignIn) return nativeFetch(input, init);
-
-  const controller = new AbortController();
-  const upstreamSignal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
-  const abortWithUpstream = () => controller.abort(upstreamSignal?.reason);
-  if (upstreamSignal?.aborted) abortWithUpstream();
-  else upstreamSignal?.addEventListener('abort', abortWithUpstream, { once: true });
-
-  const timeoutId = window.setTimeout(() => controller.abort(), signInTimeoutMs);
-  try {
-    return await nativeFetch(input, { ...init, signal: controller.signal });
-  } finally {
-    window.clearTimeout(timeoutId);
-    upstreamSignal?.removeEventListener('abort', abortWithUpstream);
-  }
-};
+const resilientSupabaseFetch = createSupabaseFetch({
+  primaryBase: supabaseBaseUrl,
+  fallbackBase: supabaseDirectUrl,
+});
 
 if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
   // تنبيه واضح للمطور بدل فشل صامت
@@ -48,7 +24,7 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  global: { fetch: fetchWithSignInTimeout },
+  global: { fetch: resilientSupabaseFetch },
   auth: {
     persistSession: true,
     autoRefreshToken: true,

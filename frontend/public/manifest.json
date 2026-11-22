@@ -1,4 +1,5 @@
 {
+  "id": "/?source=pwa",
   "name": "نظام إدارة PHANTOMS",
   "short_name": "PHANTOMS",
   "description": "منصة PHANTOMS لإدارة العمليات والمهام وتكليفات الفريق",
@@ -7,14 +8,21 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "any",
   "background_color": "#0B0B0B",
   "theme_color": "#0B0B0B",
   "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "بوابة الأعضاء", "short_name": "البوابة", "url": "/portal" },
+    { "name": "تسجيل الدخول", "short_name": "دخول", "url": "/login" }
   ]
 }
