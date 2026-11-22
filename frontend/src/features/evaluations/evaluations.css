@@ -799,3 +799,150 @@ html[lang="ar"] .eval-title { letter-spacing: 0; line-height: 1.32; }
   }
   .eval-star-btn:hover { transform: none; }
 }
+
+/* ---------- Evaluation type: stars / minus / strike ---------- */
+.eval-modes { display: grid; gap: 6px; grid-template-columns: 1fr; }
+@media (min-width: 560px) { .eval-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.eval-mode {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  min-height: 62px;
+  padding: 8px;
+  border: 1px solid var(--glass-hairline);
+  border-radius: 12px;
+  background: var(--glass-bg-strong);
+  color: var(--text-secondary);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+.eval-mode b { font-size: 12px; font-weight: 800; }
+.eval-mode small { color: var(--text-muted); font-size: 10px; font-weight: 700; line-height: 1.4; }
+.eval-mode svg { color: currentColor; }
+.eval-mode:hover { border-color: var(--border-strong); color: var(--text); }
+.eval-mode:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.eval-mode--stars[aria-pressed="true"] { border-color: var(--star-line); background: color-mix(in oklab, var(--star) 12%, var(--surface)); color: var(--star-deep); }
+[data-theme="dark"] .eval-mode--stars[aria-pressed="true"] { color: var(--star); }
+.eval-mode--minus[aria-pressed="true"] { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger-text); }
+.eval-mode--strike[aria-pressed="true"] { border-color: var(--danger); background: var(--danger-soft); color: var(--danger-text); }
+.eval-mode[aria-pressed="true"] small { color: currentColor; opacity: .8; }
+
+/* ---------- Minus stars (deduction control under the stars) ---------- */
+.eval-award--minus { border-color: var(--danger-border); background: color-mix(in oklab, var(--danger) 6%, var(--surface)); }
+.eval-award-title--minus svg { color: var(--danger); fill: var(--danger); }
+.eval-award-total--minus { border-color: var(--danger-border); color: var(--danger-text); }
+[data-theme="dark"] .eval-award-total--minus { color: var(--danger-text); }
+.eval-minus-track { gap: 2px; }
+.eval-minus-btn { position: relative; color: var(--border-strong); }
+.eval-minus-btn--on { color: var(--danger); }
+.eval-minus-btn--on svg:first-child { filter: drop-shadow(0 2px 5px rgb(196 22 55 / .28)); }
+.eval-minus-mark {
+  position: absolute;
+  inset-block-end: 4px;
+  inset-inline-end: 4px;
+  width: 15px;
+  height: 15px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: inherit;
+  stroke-width: 3.4;
+}
+[data-theme="dark"] .eval-minus-mark { background: var(--surface-2); }
+.eval-award-readout--minus { color: var(--danger-text); }
+.eval-award-readout--minus svg { color: var(--danger); }
+
+/* ---------- Strikes (warnings) ---------- */
+.eval-award--strike { border-color: var(--danger-border); background: color-mix(in oklab, var(--danger) 7%, var(--surface)); }
+.eval-award-total--strike { border-color: var(--danger-border); color: var(--danger-text); }
+.eval-strike-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.eval-strike-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--glass-hairline);
+  border-radius: 11px;
+  background: var(--glass-bg-strong);
+}
+.eval-strike-name { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--text); font-size: 12px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.eval-strike-count { color: var(--text-muted); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.eval-strike-dots { display: inline-flex; align-items: center; gap: 4px; }
+.eval-strike-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+}
+.eval-strike-dot--on { border-color: var(--danger); background: var(--danger); }
+.eval-strike-dot--next { border-style: dashed; border-color: var(--danger-border); }
+.eval-strike-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--danger-border);
+  border-radius: 999px;
+  background: var(--danger-soft);
+  color: var(--danger-text);
+  font-size: 10.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.eval-strike-pill--full { background: var(--danger); color: var(--on-danger); border-color: transparent; }
+.eval-star-pill--strike { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger-text); }
+.eval-grade--strike { --tone-bg: var(--danger-soft); --tone-line: var(--danger-border); --tone-ink: var(--danger-text); }
+.eval-stat--strike { --tone: var(--danger); }
+
+/* ---------- Strike watch panel ---------- */
+.eval-strikes {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--danger) 5%, var(--surface));
+}
+.eval-strikes-head { display: grid; gap: 4px; }
+.eval-strikes-title { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--text); font-size: 13px; font-weight: 850; }
+.eval-strikes-title svg { color: var(--danger); }
+.eval-strikes-note { margin: 0; color: var(--text-secondary); font-size: 11.5px; font-weight: 650; line-height: 1.7; }
+.eval-strikes-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.eval-strikes-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--glass-hairline);
+  border-radius: 12px;
+  background: var(--glass-bg-strong);
+}
+.eval-strikes-row--limit { border-color: var(--danger-border); background: var(--danger-soft); }
+.eval-strikes-avatar { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.eval-strikes-name { flex: 1 1 120px; min-width: 0; overflow: hidden; color: var(--text); font-size: 12.5px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.eval-strikes-count { color: var(--text-muted); font-size: 11px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.eval-strikes-expel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--on-danger);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 150ms var(--ease-out);
+}
+.eval-strikes-expel:hover { background: var(--danger-hover); transform: translateY(-1px); }
+.eval-strikes-expel:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.eval-strikes-expel:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.eval-strikes-owner-only { color: var(--text-muted); font-size: 10.5px; font-weight: 700; }

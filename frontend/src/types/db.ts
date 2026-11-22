@@ -317,6 +317,8 @@ export type MemberEvaluation = {
   member_id: number;
   title: string;
   grade: MemberEvaluationGrade;
+  /** stars = منح نجوم، minus = خصم نجوم، strike = تحذير (بدون نجوم). */
+  kind?: 'stars' | 'minus' | 'strike';
   points: number;
   feedback: string;
   evaluator_name: string;
@@ -340,6 +342,7 @@ export interface Database {
       members: { Row: Member; Insert: MemberInsert; Update: Partial<MemberInsert>; Relationships: [] };
       member_custom_fields: { Row: MemberCustomField; Insert: MemberCustomFieldInsert; Update: Partial<MemberCustomFieldInsert>; Relationships: [] };
       member_evaluations: { Row: MemberEvaluation; Insert: MemberEvaluationInsert; Update: Partial<MemberEvaluationInsert>; Relationships: [] };
+      member_strikes: { Row: MemberStrike; Insert: Omit<MemberStrike, 'id' | 'created_at'> & { created_at?: string }; Update: Partial<Omit<MemberStrike, 'id' | 'created_at'>>; Relationships: [] };
       tasks: { Row: Task; Insert: TaskInsert; Update: Partial<TaskInsert>; Relationships: [] };
       notes: { Row: Note; Insert: NoteInsert; Update: Partial<NoteInsert>; Relationships: [] };
       announcements: { Row: Announcement; Insert: AnnouncementInsert; Update: Partial<AnnouncementInsert>; Relationships: [] };
@@ -351,6 +354,10 @@ export interface Database {
       member_get_profile_settings: { Args: { p_device_token: string }; Returns: unknown };
       member_update_profile_settings: { Args: { p_device_token: string; p_profile: unknown }; Returns: unknown };
       member_password_self_recovery_access: { Args: Record<string, never>; Returns: boolean };
+      admin_issue_strike: { Args: { p_member_id: number; p_title: string; p_feedback: string; p_author?: string | null }; Returns: { strike_id: number; evaluation_id: number; member_id: number; strikes: number; limit: number; expulsion_required: boolean } };
+      owner_expel_member: { Args: { p_member_id: number; p_reason?: string | null }; Returns: { member_id: number; expelled: boolean; strikes: number; reason: string | null } };
+      member_my_strikes: { Args: Record<string, never>; Returns: { limit: number; strikes: { id: number; reason: string; created_at: string; issued_by_name: string | null }[] } };
+      member_strike_limit: { Args: Record<string, never>; Returns: number };
       team_list_roster: { Args: { p_team_id: string; p_feature: TeamPermission }; Returns: unknown };
       team_list_tasks: { Args: { p_team_id: string }; Returns: unknown };
       team_create_task: { Args: { p_team_id: string; p_title: string; p_description: string | null; p_assigned_to: unknown; p_has_deadline: boolean; p_deadline_date: string | null; p_bonus_points: number }; Returns: number };
@@ -433,3 +440,13 @@ export const TABLES = {
   notes: 'notes',
   announcements: 'announcements',
 } as const;
+/** تحذير مسجّل على عضو؛ الحد ٣ تحذيرات لكل عضو. */
+export type MemberStrike = {
+  id: number;
+  member_id: number;
+  evaluation_id: number | null;
+  reason: string;
+  issued_by: string | null;
+  issued_by_name: string | null;
+  created_at: string;
+};

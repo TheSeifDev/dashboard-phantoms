@@ -285,4 +285,11 @@
   }
   @keyframes app-drawer-in { from { opacity: 0; transform: translateX(var(--drawer-from, 24px)); } to { opacity: 1; transform: none; } }
   @keyframes app-kebab-in { from { transform: translateY(-4px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* Sidebar account card avatar: GitHub photo when linked, initials otherwise. */
+  .app-sidebar-user-avatar-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
+  .app-sidebar-user-avatar-wrap .app-sidebar-user-avatar { overflow: hidden; }
+  .app-sidebar-user-avatar .member-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+  .app-drawer-user-avatar.member-avatar { overflow: hidden; background: var(--crew-2); }
+  .app-drawer-user-avatar .member-avatar-img { width: 100%; height: 100%; object-fit: cover; }
 }

@@ -1,8 +1,9 @@
-import { Check, CheckCheck, ClipboardCheck } from 'lucide-react';
+import { AlertTriangle, Check, CheckCheck, ClipboardCheck } from 'lucide-react';
 import {
   EVALUATION_GRADE_LABELS,
   useMarkEvaluationRead,
   useMemberEvaluations,
+  useMemberMyStrikes,
 } from '../evaluations/api';
 import { getGradeBadgeVariant } from '../evaluations/EvaluationsPage';
 import { EvalStars } from '../evaluations/StarRating';
@@ -33,10 +34,13 @@ export function MemberEvaluations({ memberId }: Props) {
   const { t, dir, number, date } = useLocale();
   const evaluationsQuery = useMemberEvaluations(memberId);
   const markRead = useMarkEvaluationRead();
+  const strikesQuery = useMemberMyStrikes();
 
   const evaluations = evaluationsQuery.data ?? [];
   const unreadCount = evaluations.filter((e) => !e.read_at).length;
-  const starBalance = evaluations.reduce((sum, e) => sum + Math.max(0, e.points), 0);
+  const starBalance = Math.max(0, evaluations.reduce((sum, e) => sum + e.points, 0));
+  const strikeList = strikesQuery.data?.strikes ?? [];
+  const strikeLimit = strikesQuery.data?.limit ?? 3;
 
   const handleMarkRead = async (evaluationId: number, mode: 'native' | 'fallback') => {
     try {
@@ -112,6 +116,36 @@ export function MemberEvaluations({ memberId }: Props) {
         )}
       </div>
 
+      {strikeList.length > 0 && (
+        <div className="eval-strikes" role="status">
+          <div className="eval-strikes-head">
+            <h3 className="eval-strikes-title">
+              <AlertTriangle size={15} aria-hidden="true" />
+              {t('عندك تحذيرات مسجلة', 'You have recorded warnings')}
+            </h3>
+            <p className="eval-strikes-note">
+              {t(
+                `الحد ${number(strikeLimit)} تحذيرات، ولو وصلت للحد الأقصى بيتم طردك من الفريق. فاضل لك ${number(Math.max(0, strikeLimit - strikeList.length))}.`,
+                `The limit is ${number(strikeLimit)} strikes; reaching it means expulsion from the team. You have ${number(Math.max(0, strikeLimit - strikeList.length))} left.`,
+              )}
+            </p>
+          </div>
+          <span className="eval-strike-dots" role="img" aria-label={t(`${strikeList.length} من ${number(strikeLimit)} تحذيرات`, `${strikeList.length} of ${number(strikeLimit)} strikes`)}>
+            {Array.from({ length: strikeLimit }, (_, index) => (
+              <i key={index} className={`eval-strike-dot ${index < strikeList.length ? 'eval-strike-dot--on' : ''}`} aria-hidden="true" />
+            ))}
+          </span>
+          <ul className="eval-strike-list">
+            {strikeList.map((strike) => (
+              <li key={strike.id} className="eval-strike-row">
+                <span className="eval-strike-name" dir="auto">{strike.reason}</span>
+                <span className="eval-strike-count">{formatDate(strike.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {evaluations.length === 0 ? (
         <EmptyState
           title={t('مفيش تقييمات مسجلة لحد دلوقتي', 'No evaluations yet')}
@@ -133,9 +167,16 @@ export function MemberEvaluations({ memberId }: Props) {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     <h3 dir="auto" className="font-black text-[var(--text)]">{ev.title}</h3>
-                    <Badge variant={getGradeBadgeVariant(ev.grade)}>
-                      {t('التقدير: ', 'Grade: ')}{t(EVALUATION_GRADE_LABELS[ev.grade], GRADE_LABELS_ENGLISH[ev.grade])}
-                    </Badge>
+                    {ev.kind === 'strike' ? (
+                      <Badge variant="danger">
+                        <AlertTriangle size={12} aria-hidden="true" />
+                        {t('تحذير رسمي', 'Official warning')}
+                      </Badge>
+                    ) : (
+                      <Badge variant={getGradeBadgeVariant(ev.grade)}>
+                        {t('التقدير: ', 'Grade: ')}{t(EVALUATION_GRADE_LABELS[ev.grade], GRADE_LABELS_ENGLISH[ev.grade])}
+                      </Badge>
+                    )}
                     {ev.points > 0 ? (
                       <span className="eval-star-pill">
                         <EvalStars value={ev.points} size="sm" />

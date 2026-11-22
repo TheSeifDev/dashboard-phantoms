@@ -34,6 +34,8 @@ import { Drawer } from '../ui/Drawer';
 import { PhantomsLogo } from '../brand/PhantomsLogo';
 import type { AdminPermission, AdminPermissions } from '../../types/db';
 import { clearAdminSetupIntent } from '../../features/auth/auth-flow';
+import { useAccountMember } from '../../features/auth/useAccountMember';
+import { MemberAvatar } from '../ui/MemberAvatar';
 import { useLocale } from '../../i18n/useLocale';
 import { toast } from '../../store/toast';
 
@@ -370,6 +372,7 @@ export function AppSidebar({
   const [signingOut, setSigningOut] = useState(false);
   const logoutRail = useRailTooltip();
   const clear = useAuthStore((state) => state.clear);
+  const accountMember = useAccountMember();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const closeRef = useRef(onCloseDrawer);
@@ -492,7 +495,10 @@ export function AppSidebar({
         </nav>
         <div className="app-sidebar-footer">
           <div className="app-sidebar-user" aria-hidden="true">
-            <span className="app-sidebar-user-avatar">{userName.trim().charAt(0).toUpperCase() || 'P'}<i className="app-sidebar-user-status" /></span>
+            <span className="app-sidebar-user-avatar-wrap">
+              <MemberAvatar member={accountMember} name={userName} size={76} className="app-sidebar-user-avatar" />
+              <i className="app-sidebar-user-status" />
+            </span>
             <span className="app-sidebar-user-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('مدير النظام', 'Administrator')}</small></span>
           </div>
           <button
@@ -515,9 +521,7 @@ export function AppSidebar({
 
       <Drawer isOpen={drawerOpen} onClose={onCloseDrawer} title={t('القائمة الرئيسية', 'Main menu')} className="app-sidebar-drawer">
         <div className="app-drawer-user" aria-label={t('المستخدم الحالي', 'Current user')}>
-          <span className="app-drawer-user-avatar" aria-hidden="true">
-            {userName.trim().charAt(0) || 'م'}
-          </span>
+          <MemberAvatar member={accountMember} name={userName} size={88} className="app-drawer-user-avatar" />
           <div className="min-w-0">
             <p className="truncate text-sm font-black app-drawer-user-name">{userName}</p>
             <p className="text-xs font-bold app-drawer-user-role">{t('مدير النظام', 'Administrator')}</p>
