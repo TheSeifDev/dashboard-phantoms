@@ -21,12 +21,12 @@ BEGIN
   WHERE email = 'alice@phantoms-test.example';
 END $$;
 
--- The disposable chain applies all 61 canonical files; historical provenance remains
+-- The disposable chain applies all 62 canonical files; historical provenance remains
 -- anchored to the original 24 initialization migrations.
-SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 61,
-  'local disposable migration history records all 61 canonical files');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261122160000',
-  'local disposable migration history ends at the task audience groups migration');
+SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 62,
+  'local disposable migration history records all 62 canonical files');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261122190000',
+  'local disposable migration history ends at the member team insights migration');
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
            WHERE version <= '20261114164006'), 24,
   'historical migration cohort through 20261114164006 remains exactly 24 migrations');

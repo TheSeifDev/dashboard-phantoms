@@ -10,6 +10,10 @@ import { handleSupabaseError } from '../../lib/errorHandler';
 import { MemberHero } from './MemberHero';
 import '../dashboard/dashboard.css';
 import { MemberHomeCards } from './MemberHomeCards';
+import { MemberMetricsGrid } from './MemberMetricsGrid';
+import { MemberTeamInsights } from './MemberTeamInsights';
+import { useMemberTeamInsights } from './useMemberTeamInsights';
+import { getCairoDate } from '../dashboard/taskContributions';
 import { MemberTasks } from './MemberTasks';
 import { MemberEvaluations } from './MemberEvaluations';
 import { SubmissionModal } from './SubmissionModal';
@@ -45,6 +49,8 @@ export default function MemberPortalPage() {
   const [isTogglingReadiness, setIsTogglingReadiness] = useState(false);
   const [celebration, setCelebration] = useState<SubmissionCelebration | null>(null);
   const bonusQuery = useMemberBonus(member?.id);
+  // نفس استعلام قسم مساهمات الفريق (مفتاح واحد في الكاش) عشان كارت «أعضاء الفريق».
+  const teamInsightsQuery = useMemberTeamInsights(Number(getCairoDate().slice(0, 4)), Boolean(member?.id));
   const bonusInfiniteQuery = useMemberInfiniteBonus(member?.id);
   const { sendTestNotification } = usePWA({
     memberId: member?.id,
@@ -166,6 +172,14 @@ export default function MemberPortalPage() {
               bonusStateLoading={bonusInfiniteQuery.isLoading}
               bonusStateError={bonusInfiniteQuery.isError}
             />
+            <MemberMetricsGrid
+              tasks={myTasks}
+              memberId={member.id}
+              evaluations={myEvaluations}
+              teamSize={teamInsightsQuery.data?.rosterSize ?? null}
+              bonus={bonusQuery.data ?? null}
+              onOpenEvaluations={() => setActiveTab('EVALUATIONS')}
+            />
             <MemberHomeCards
               member={member}
               tasks={myTasks}
@@ -173,6 +187,7 @@ export default function MemberPortalPage() {
               bonus={bonusQuery.data ?? null}
               onOpenTab={setActiveTab}
             />
+            <MemberTeamInsights />
           </>
         )}
 

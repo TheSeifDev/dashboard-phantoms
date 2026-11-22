@@ -388,17 +388,19 @@ export function TaskStreakHeatmap({
               {years.map((item) => <option key={item} value={item}>{new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { useGrouping: false }).format(item)}</option>)}
             </select>
           </label>
-          <label className="dashboard-select-wrap">
-            <span>{t('النطاق', 'Scope')}</span>
-            <select
-              aria-label={t('اختيار عضو لسجل المساهمات', 'Select a member for the contribution history')}
-              value={selectedMemberId ?? ''}
-              onChange={(event) => onMemberChange(event.currentTarget.value ? Number(event.currentTarget.value) : null)}
-            >
-              <option value="">{t('الفريق كله', 'Entire team')}</option>
-              {memberOptions.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
-            </select>
-          </label>
+          {memberOptions.length > 0 && (
+            <label className="dashboard-select-wrap">
+              <span>{t('النطاق', 'Scope')}</span>
+              <select
+                aria-label={t('اختيار عضو لسجل المساهمات', 'Select a member for the contribution history')}
+                value={selectedMemberId ?? ''}
+                onChange={(event) => onMemberChange(event.currentTarget.value ? Number(event.currentTarget.value) : null)}
+              >
+                <option value="">{t('الفريق كله', 'Entire team')}</option>
+                {memberOptions.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
+              </select>
+            </label>
+          )}
           {!compact && (
             <Segmented<HeatmapView>
               label={t('طريقة عرض المساهمات', 'Contribution view')}

@@ -37,3 +37,52 @@
     justify-content: space-between;
   }
 }
+/* رسالة التقييم المكتوب: سطرين تحت شريط التقدم جوه كارت المؤشر. */
+.kpi-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin: 10px 0 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--glass-hairline);
+  border-radius: 12px;
+  background: var(--glass-bg-soft);
+  color: var(--text-2);
+  text-align: start;
+  transition: border-color 0.18s ease, color 0.18s ease;
+}
+.kpi-note:hover {
+  border-color: var(--glass-border);
+  color: var(--text);
+}
+.kpi-note:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.kpi-note > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+.kpi-note-copy {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.kpi-note-title {
+  display: block;
+  font-weight: 800;
+  color: var(--text);
+}
+.kpi-note-link {
+  flex: none;
+  margin-inline-start: auto;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--link);
+  white-space: nowrap;
+}
