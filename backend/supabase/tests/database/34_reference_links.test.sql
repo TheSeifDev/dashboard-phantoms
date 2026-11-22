@@ -6,7 +6,7 @@
 -- ملاحظة: الجدول مقفول على authenticated، فكل قراءة مباشرة بتحصل بعد RESET ROLE.
 BEGIN;
 \ir _helpers.psql
-SELECT plan(35);
+SELECT plan(36);
 -- Fixtures -------------------------------------------------------------------
 DO $$
 DECLARE
@@ -163,18 +163,20 @@ SELECT throws_ok('SELECT public.member_references()', 'P0001',
 RESET ROLE;
 SELECT phantoms_test.clear_auth();
 SELECT phantoms_test.login_as('ref_admin');
-SELECT is(
-  public.admin_save_reference(jsonb_build_object(
-    'id', (SELECT (entry ->> 'id')::bigint FROM jsonb_array_elements(public.admin_list_references() -> 'links') AS entry
-           WHERE entry ->> 'title' = 'React docs'),
-    'title', 'React documentation',
-    'url', 'https://react.dev/reference/react',
-    'category', 'docs',
-    'description', 'المرجع الرسمي'
-  )) ->> 'id',
-  (SELECT entry ->> 'id' FROM jsonb_array_elements(public.admin_list_references() -> 'links') AS entry
-    WHERE entry ->> 'title' = 'React documentation'),
+SELECT lives_ok(
+  $$ SELECT public.admin_save_reference(jsonb_build_object(
+       'id', (SELECT (entry ->> 'id')::bigint FROM jsonb_array_elements(public.admin_list_references() -> 'links') AS entry
+              WHERE entry ->> 'title' = 'React docs'),
+       'title', 'React documentation',
+       'url', 'https://react.dev/reference/react',
+       'category', 'docs',
+       'description', 'المرجع الرسمي'
+     )) $$,
   'an admin can rename and re-scope an existing reference');
+SELECT is(
+  (SELECT count(*)::int FROM jsonb_array_elements(public.admin_list_references() -> 'links') AS entry
+    WHERE entry ->> 'title' = 'React documentation'), 1,
+  'the renamed reference is persisted in the admin list');
 SELECT is(
   public.admin_delete_reference((SELECT (entry ->> 'id')::bigint FROM jsonb_array_elements(public.admin_list_references() -> 'links') AS entry
     WHERE entry ->> 'title' = 'STM32 HAL')),
