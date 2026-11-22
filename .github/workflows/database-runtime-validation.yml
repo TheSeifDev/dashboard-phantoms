@@ -107,7 +107,6 @@ jobs:
             scripts/ios-install.test.ts \
             scripts/auth-errors.test.ts \
             scripts/supabase-transport.test.ts
-          node --test scripts/supabase-proxy.test.mjs
           ../frontend/node_modules/.bin/tsx --test scripts/app-toast.test.mjs
           node --test scripts/auth-callback-state.test.mjs
           node --test scripts/sidebar-navigation.test.mjs

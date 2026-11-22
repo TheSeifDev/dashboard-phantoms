@@ -11,6 +11,10 @@
       "destination": "https://wxwoaputugxwysuhcebv.supabase.co/"
     },
     {
+      "source": "/api/sb/:path*/",
+      "destination": "https://wxwoaputugxwysuhcebv.supabase.co/:path*/"
+    },
+    {
       "source": "/api/sb/:path*",
       "destination": "https://wxwoaputugxwysuhcebv.supabase.co/:path*"
     },
