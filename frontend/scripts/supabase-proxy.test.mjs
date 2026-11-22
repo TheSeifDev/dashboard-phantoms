@@ -74,3 +74,38 @@ test('handler: بيرفض المسار الغلط بـ400', async () => {
 test('config: الدالة بتشتغل على Edge runtime', () => {
   assert.equal(config?.runtime, 'edge');
 });
+
+test('handler: بيرد على preflight بـ204 مع CORS للتطبيق الأصلي', async () => {
+  const originalFetch = globalThis.fetch;
+  let upstreamCalls = 0;
+  globalThis.fetch = async () => { upstreamCalls += 1; return new Response('{}'); };
+  try {
+    const response = await handler(new Request('https://dashboard-phantoms.vercel.app/api/sb/auth/v1/token?grant_type=password', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://localhost',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'apikey,content-type',
+      },
+    }));
+    assert.equal(response.status, 204);
+    assert.equal(response.headers.get('access-control-allow-origin'), '*');
+    assert.equal(response.headers.get('access-control-allow-headers'), 'apikey,content-type');
+    assert.match(response.headers.get('access-control-allow-methods'), /POST/);
+    assert.equal(upstreamCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('handler: الاستجابة العادية بتحمل CORS', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('{"ok":true}', { status: 200, headers: { 'content-type': 'application/json' } });
+  try {
+    const response = await handler(new Request('https://dashboard-phantoms.vercel.app/api/sb/rest/v1/members'));
+    assert.equal(response.headers.get('access-control-allow-origin'), '*');
+    assert.equal(response.status, 200);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

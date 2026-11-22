@@ -44,6 +44,28 @@ const RESPONSE_HEADER_BLOCKLIST = new Set([
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 
+// نفس سياسة CORS اللي Supabase بيبعتها، عشان التطبيق الأصلي (Capacitor)
+// اللي أصله https://localhost يقدر يستخدم البروكسي برضه.
+const ALLOWED_METHOD_LIST = 'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS';
+
+function corsHeaders(request?: Request): Headers {
+  const headers = new Headers({
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': ALLOWED_METHOD_LIST,
+    'access-control-max-age': '86400',
+  });
+  const requested = request?.headers.get('access-control-request-headers');
+  headers.set('access-control-allow-headers', requested && requested.trim() ? requested : 'authorization,apikey,content-type,x-client-info,prefer,accept,accept-profile,content-profile,x-supabase-api-version,range');
+  headers.set('access-control-expose-headers', 'content-range,content-location,x-supabase-api-version');
+  return headers;
+}
+
+function withCors(response: Response, request: Request): Response {
+  const headers = new Headers(response.headers);
+  corsHeaders(request).forEach((value, key) => headers.set(key, value));
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 function forwardRequestHeaders(source: Headers): Headers {
   const headers = new Headers();
   source.forEach((value, key) => {
@@ -96,6 +118,13 @@ export default async function handler(request: Request): Promise<Response> {
     });
   }
 
+  // preflight: بنرد إحنا بدل ما نروح لـ Supabase
+  if (method === 'OPTIONS') {
+    const headers = corsHeaders(request);
+    headers.set('cache-control', 'no-store');
+    return new Response(null, { status: 204, headers });
+  }
+
   const hasBody = method !== 'GET' && method !== 'HEAD';
   try {
     const upstream = await fetch(target, {
@@ -107,19 +136,19 @@ export default async function handler(request: Request): Promise<Response> {
       ...(hasBody ? { duplex: 'half' } : {}),
     } as RequestInit & { duplex?: 'half' });
 
-    return new Response(upstream.body, {
+    return withCors(new Response(upstream.body, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: forwardResponseHeaders(upstream.headers),
-    });
+    }), request);
   } catch (error) {
-    return new Response(JSON.stringify({
+    return withCors(new Response(JSON.stringify({
       message: 'UPSTREAM_UNREACHABLE',
       detail: error instanceof Error ? error.message : String(error),
     }), {
       status: 502,
       headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
-    });
+    }), request);
   }
 }
 
