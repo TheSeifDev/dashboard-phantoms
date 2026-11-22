@@ -12,6 +12,7 @@ import { useAdminAccess } from '../admin/access/api';
 import { useAuthStore } from '../../store/auth';
 import type { AdminPermission } from '../../types/db';
 import { useLocale } from '../../i18n/useLocale';
+import { useCompactViewport } from '../../hooks/useMediaQuery';
 import { DashboardMetricsGrid, type MetricSeries } from './DashboardMetrics';
 import { DashboardWidgets } from './DashboardWidgets';
 import { TaskStreakHeatmap, type PersonInfo } from './TaskStreakHeatmap';
@@ -51,6 +52,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { t, date, locale, number } = useLocale();
   const root = useRef<HTMLDivElement>(null);
+  const compact = useCompactViewport();
   const user = useAuthStore((state) => state.user);
   const accessQuery = useAdminAccess(user?.id ?? null);
   const membersQuery = useMembers();
@@ -123,7 +125,7 @@ export default function DashboardPage() {
     };
   }, [ready, contributionQuery.data]);
 
-  useReveal(root, [Boolean(activity)]);
+  useReveal(root, [Boolean(activity)], !compact);
 
   const toggleGithub = useCallback(() => {
     setGithubEnabled((value) => {
@@ -224,6 +226,7 @@ export default function DashboardPage() {
           github={{ linked: githubLinks.length, connected: github.connected, failed: github.failed, loading: github.loading, enabled: githubEnabled, onToggle: toggleGithub }}
           onOpenDay={setOpenDate}
           isRefreshing={contributionQuery.isPlaceholderData || github.isFetching}
+          compact={compact}
         />
 
         <DashboardWidgets
@@ -234,6 +237,7 @@ export default function DashboardPage() {
           people={people}
           permissions={{ tasks: taskShortcutsAvailable, members: memberShortcutsAvailable, ranking: hasPermission('ranking') }}
           onOpenDay={setOpenDate}
+          compact={compact}
         />
       </div>
       <DayHistoryDrawer

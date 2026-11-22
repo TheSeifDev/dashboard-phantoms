@@ -57,6 +57,8 @@ interface DashboardWidgetsProps {
   people: ReadonlyMap<number, PersonInfo>;
   permissions: DashboardWidgetPermissions;
   onOpenDay: (date: string) => void;
+  /** Phones: fewer animated nodes and no chart/hex entrance animations. */
+  compact?: boolean;
 }
 
 const chartTooltipStyle = {
@@ -126,22 +128,22 @@ function statusTitle(key: string, t: (arabic: string, english: string) => string
 }
 
 /** Honeycomb of the most active people this year; the centre cell is the top contributor. */
-function CrewPulse({ activity, people, onOpenDay }: { activity: TeamActivity; people: ReadonlyMap<number, PersonInfo>; onOpenDay: (date: string) => void }) {
+function CrewPulse({ activity, people, onOpenDay, compact }: { activity: TeamActivity; people: ReadonlyMap<number, PersonInfo>; onOpenDay: (date: string) => void; compact: boolean }) {
   const { t, number, date } = useLocale();
   const root = useRef<HTMLDivElement>(null);
-  const ranked = activity.members.filter((member) => member.score > 0).slice(0, 7);
+  const ranked = activity.members.filter((member) => member.score > 0).slice(0, compact ? 4 : 7);
   const maxScore = Math.max(1, ...ranked.map((member) => member.score));
   const peak = activity.totals.peak;
   useEffect(() => {
     const element = root.current;
-    if (!element || prefersReducedMotion()) return;
+    if (!element || compact || prefersReducedMotion()) return;
     const context = gsap.context(() => {
       gsap.fromTo('.crew-hex', { scale: 0, rotate: -30, opacity: 0 }, { scale: 1, rotate: 0, opacity: 1, duration: 0.7, ease: 'back.out(1.8)', stagger: { each: 0.08, from: 'center' }, clearProps: 'transform,opacity' });
       gsap.to('.crew-hex[data-rank="0"] .crew-hex-ring', { scale: 1.12, opacity: 0.25, duration: 1.4, repeat: -1, yoyo: true, ease: 'sine.inOut' });
       gsap.fromTo('.crew-bar-fill', { scaleX: 0 }, { scaleX: 1, duration: 1, ease: 'power3.out', stagger: 0.08, delay: 0.3 });
     }, element);
     return () => context.revert();
-  }, [ranked.length, activity.year]);
+  }, [ranked.length, activity.year, compact]);
   if (!ranked.length) {
     return <Empty icon={<Radar size={24} />} text={t('النبض هيظهر أول ما الفريق يسلّم مهام أو يربط حسابات GitHub.', 'The pulse appears once the team delivers tasks or links GitHub accounts.')} />;
   }
@@ -189,7 +191,7 @@ function CrewPulse({ activity, people, onOpenDay }: { activity: TeamActivity; pe
   );
 }
 
-export function DashboardWidgets({ metrics, tasks, contributions, activity, people, permissions, onOpenDay }: DashboardWidgetsProps) {
+export function DashboardWidgets({ metrics, tasks, contributions, activity, people, permissions, onOpenDay, compact = false }: DashboardWidgetsProps) {
   const navigate = useNavigate();
   const { locale, t, number, date } = useLocale();
   const reducedMotion = useReducedMotion();
@@ -247,7 +249,7 @@ export function DashboardWidgets({ metrics, tasks, contributions, activity, peop
         icon={<Radar size={18} />}
         tone="violet"
       >
-        <CrewPulse activity={activity} people={people} onOpenDay={onOpenDay} />
+        <CrewPulse activity={activity} people={people} onOpenDay={onOpenDay} compact={compact} />
       </Panel>
 
       <Panel
@@ -279,8 +281,8 @@ export function DashboardWidgets({ metrics, tasks, contributions, activity, peop
                   labelStyle={{ color: 'var(--text)', fontWeight: 700 }}
                   formatter={(value, name) => [number(Number(value)), name === 'github' ? 'GitHub' : t('اعتماد', 'approvals')]}
                 />
-                <Area isAnimationActive={!reducedMotion} animationDuration={1400} type="monotone" dataKey="approvals" stroke="var(--crew-1)" strokeWidth={2.5} fill="url(#approvalTrendFill)" activeDot={{ r: 5, strokeWidth: 0 }} />
-                {hasGithubTrend && <Area isAnimationActive={!reducedMotion} animationDuration={1600} type="monotone" dataKey="github" stroke="var(--crew-3)" strokeWidth={2} fill="url(#githubTrendFill)" activeDot={{ r: 4, strokeWidth: 0 }} />}
+                <Area isAnimationActive={!reducedMotion && !compact} animationDuration={1400} type="monotone" dataKey="approvals" stroke="var(--crew-1)" strokeWidth={2.5} fill="url(#approvalTrendFill)" activeDot={{ r: 5, strokeWidth: 0 }} />
+                {hasGithubTrend && <Area isAnimationActive={!reducedMotion && !compact} animationDuration={1600} type="monotone" dataKey="github" stroke="var(--crew-3)" strokeWidth={2} fill="url(#githubTrendFill)" activeDot={{ r: 4, strokeWidth: 0 }} />}
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -302,7 +304,7 @@ export function DashboardWidgets({ metrics, tasks, contributions, activity, peop
             <div className="dashboard-status-ring" aria-label={t('توزيع حالات التكليفات الحالية', 'Distribution of current task assignment statuses')}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie isAnimationActive={!reducedMotion} animationDuration={1200} data={nonEmptySlices} dataKey="value" nameKey="key" innerRadius="72%" outerRadius="96%" paddingAngle={4} cornerRadius={8} stroke="none">
+                  <Pie isAnimationActive={!reducedMotion && !compact} animationDuration={1200} data={nonEmptySlices} dataKey="value" nameKey="key" innerRadius="72%" outerRadius="96%" paddingAngle={4} cornerRadius={8} stroke="none">
                     {nonEmptySlices.map((slice) => <Cell key={slice.key} fill={slice.color} />)}
                   </Pie>
                   <Tooltip contentStyle={chartTooltipStyle} formatter={(value, name) => [number(Number(value)), statusTitle(String(name), t)]} />
@@ -345,7 +347,7 @@ export function DashboardWidgets({ metrics, tasks, contributions, activity, peop
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} dy={8} />
                 <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <Tooltip cursor={{ fill: 'var(--glass-bg-soft)' }} contentStyle={chartTooltipStyle} formatter={(value) => [number(Number(value)), t('أعضاء', 'members')]} />
-                <Bar isAnimationActive={!reducedMotion} animationDuration={1100} dataKey="count" radius={[10, 10, 4, 4]} barSize={34}>
+                <Bar isAnimationActive={!reducedMotion && !compact} animationDuration={1100} dataKey="count" radius={[10, 10, 4, 4]} barSize={34}>
                   {deviceData.map((item) => <Cell key={item.name} fill={item.fill} />)}
                 </Bar>
               </BarChart>
@@ -484,7 +486,7 @@ export function DashboardWidgets({ metrics, tasks, contributions, activity, peop
                 />
                 <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                 <Tooltip contentStyle={chartTooltipStyle} formatter={(value) => [number(Number(value)), t('نقاط', 'points')]} />
-                <Area isAnimationActive={!reducedMotion} animationDuration={1300} type="monotone" dataKey="bonus" stroke="var(--chart-cyan)" strokeWidth={2.4} fill="url(#bonusTrendFill)" activeDot={{ r: 4, strokeWidth: 0 }} />
+                <Area isAnimationActive={!reducedMotion && !compact} animationDuration={1300} type="monotone" dataKey="bonus" stroke="var(--chart-cyan)" strokeWidth={2.4} fill="url(#bonusTrendFill)" activeDot={{ r: 4, strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

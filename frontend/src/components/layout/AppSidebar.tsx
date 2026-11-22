@@ -49,7 +49,7 @@ const EN: Record<string, string> = {
   'تقارير المشروعات': 'Reports', 'الموارد': 'Resources',
 };
 
-interface SidebarLink {
+export interface SidebarLink {
   to: string;
   label: string;
   icon: typeof Users;
@@ -58,12 +58,12 @@ interface SidebarLink {
   permission?: AdminPermission;
 }
 
-interface SidebarGroup {
+export interface SidebarGroup {
   title: string;
   items: SidebarLink[];
 }
 
-const GROUPS: SidebarGroup[] = [
+export const GROUPS: SidebarGroup[] = [
   {
     title: 'نظرة عامة',
     items: [
@@ -193,12 +193,14 @@ function SidebarLinks({
   collapsed = false,
   isOwner,
   permissions,
+  groups = GROUPS,
 }: {
   onNavigate?: () => void;
   railTips?: boolean;
   collapsed?: boolean;
   isOwner: boolean;
   permissions: Partial<AdminPermissions>;
+  groups?: SidebarGroup[];
 }) {
   const { t } = useLocale();
   const rail = useRailTooltip();
@@ -210,7 +212,7 @@ function SidebarLinks({
   const canSee = (item: SidebarLink) =>
     (!item.ownerOnly || isOwner) &&
     (!item.permission || isOwner || permissions[item.permission] === true);
-  const visibleGroups = GROUPS
+  const visibleGroups = groups
     .map((group) => ({ ...group, items: group.items.filter(canSee) }))
     .filter((group) => group.items.length > 0);
   const activeGroup = visibleGroups.find((group) =>
@@ -360,12 +362,18 @@ export function AppSidebar({
   permissions,
   drawerOpen,
   onCloseDrawer,
+  groups = GROUPS,
+  guest = false,
+  brandTo = '/admin',
 }: {
   userName: string;
   isOwner: boolean;
   permissions: Partial<AdminPermissions>;
   drawerOpen: boolean;
   onCloseDrawer: () => void;
+  groups?: SidebarGroup[];
+  guest?: boolean;
+  brandTo?: string;
 }) {
   const { t, dir } = useLocale();
   const [collapsed, setCollapsed] = useState(readSidebarCollapsed);
@@ -472,7 +480,7 @@ export function AppSidebar({
     <>
       <aside ref={asideRef} className="app-sidebar" data-collapsed={collapsed} aria-label={t('الشريط الجانبي', 'Sidebar')}>
         <div className="app-sidebar-header">
-          <NavLink to="/admin" className="app-sidebar-brand" aria-label={t('PHANTOMS — الرئيسية', 'PHANTOMS — Home')}>
+          <NavLink to={brandTo} className="app-sidebar-brand" aria-label={t('PHANTOMS — الرئيسية', 'PHANTOMS — Home')}>
             <span className="app-sidebar-logo-orb"><PhantomsLogo size="md" symbolOnly themeMode="dark" className="app-sidebar-logo" /></span>
             <span className="app-sidebar-brand-copy" aria-hidden="true"><strong>PHANTOMS</strong><small>{t('مساحة الفريق', 'Team workspace')}</small></span>
             <span className="sr-only"><span>PHANTOMS</span></span>
@@ -491,30 +499,45 @@ export function AppSidebar({
         </div>
         <nav ref={navRef} id="desktop-sidebar-navigation" aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-sidebar-nav">
           <span ref={indicatorRef} className="app-sidebar-indicator" aria-hidden="true" />
-          <SidebarLinks railTips collapsed={collapsed} isOwner={isOwner} permissions={permissions} />
+          <SidebarLinks railTips collapsed={collapsed} isOwner={isOwner} permissions={permissions} groups={groups} />
         </nav>
         <div className="app-sidebar-footer">
-          <div className="app-sidebar-user" aria-hidden="true">
-            <span className="app-sidebar-user-avatar-wrap">
-              <MemberAvatar member={accountMember} name={userName} size={76} className="app-sidebar-user-avatar" />
-              <i className="app-sidebar-user-status" />
-            </span>
-            <span className="app-sidebar-user-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('مدير النظام', 'Administrator')}</small></span>
-          </div>
-          <button
-            type="button"
-            onClick={() => void logout()}
-            title={t('سجّل الخروج', 'Sign out')}
-            aria-label={t('سجّل الخروج', 'Sign out')}
-            data-tip={t('سجّل الخروج', 'Sign out')}
-            {...logoutRail.events(t('سجّل الخروج', 'Sign out'))}
-            disabled={signingOut}
-            aria-busy={signingOut || undefined}
-            className="app-sidebar-item app-sidebar-tip app-sidebar-logout"
-          >
-            <LogOut size={20} aria-hidden="true" />
-            <span className="app-sidebar-item-label">{t('سجّل الخروج', 'Sign out')}</span>
-          </button>
+          {guest ? (
+            <div className="app-sidebar-guest-actions">
+              <NavLink to="/login" className="app-sidebar-item app-sidebar-guest-cta" onClick={() => onCloseDrawer()}>
+                <CircleUserRound size={20} aria-hidden="true" />
+                <span className="app-sidebar-item-label">{t('دخول بوابة الأعضاء', 'Member sign in')}</span>
+              </NavLink>
+              <NavLink to="/admin/login" className="app-sidebar-item" onClick={() => onCloseDrawer()}>
+                <ShieldCheck size={20} aria-hidden="true" />
+                <span className="app-sidebar-item-label">{t('دخول الإدارة', 'Admin sign in')}</span>
+              </NavLink>
+            </div>
+          ) : (
+            <>
+              <div className="app-sidebar-user" aria-hidden="true">
+                <span className="app-sidebar-user-avatar-wrap">
+                  <MemberAvatar member={accountMember} name={userName} size={76} className="app-sidebar-user-avatar" />
+                  <i className="app-sidebar-user-status" />
+                </span>
+                <span className="app-sidebar-user-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('مدير النظام', 'Administrator')}</small></span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void logout()}
+                title={t('سجّل الخروج', 'Sign out')}
+                aria-label={t('سجّل الخروج', 'Sign out')}
+                data-tip={t('سجّل الخروج', 'Sign out')}
+                {...logoutRail.events(t('سجّل الخروج', 'Sign out'))}
+                disabled={signingOut}
+                aria-busy={signingOut || undefined}
+                className="app-sidebar-item app-sidebar-tip app-sidebar-logout"
+              >
+                <LogOut size={20} aria-hidden="true" />
+                <span className="app-sidebar-item-label">{t('سجّل الخروج', 'Sign out')}</span>
+              </button>
+            </>
+          )}
         </div>
       </aside>
       {logoutRail.tooltip}
@@ -528,17 +551,30 @@ export function AppSidebar({
           </div>
         </div>
         <nav aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-drawer-nav flex flex-col gap-4 py-4">
-          <SidebarLinks onNavigate={onCloseDrawer} isOwner={isOwner} permissions={permissions} />
-          <button
-            type="button"
-            onClick={() => void logout()}
-            disabled={signingOut}
-            aria-busy={signingOut || undefined}
-            className="app-sidebar-item app-sidebar-logout"
-          >
-            <LogOut size={20} aria-hidden="true" />
-            <span className="app-sidebar-item-label">{t('سجّل الخروج', 'Sign out')}</span>
-          </button>
+          <SidebarLinks onNavigate={onCloseDrawer} isOwner={isOwner} permissions={permissions} groups={groups} />
+          {guest ? (
+            <>
+              <NavLink to="/login" className="app-sidebar-item app-sidebar-guest-cta" onClick={onCloseDrawer}>
+                <CircleUserRound size={20} aria-hidden="true" />
+                <span className="app-sidebar-item-label">{t('دخول بوابة الأعضاء', 'Member sign in')}</span>
+              </NavLink>
+              <NavLink to="/admin/login" className="app-sidebar-item" onClick={onCloseDrawer}>
+                <ShieldCheck size={20} aria-hidden="true" />
+                <span className="app-sidebar-item-label">{t('دخول الإدارة', 'Admin sign in')}</span>
+              </NavLink>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void logout()}
+              disabled={signingOut}
+              aria-busy={signingOut || undefined}
+              className="app-sidebar-item app-sidebar-logout"
+            >
+              <LogOut size={20} aria-hidden="true" />
+              <span className="app-sidebar-item-label">{t('سجّل الخروج', 'Sign out')}</span>
+            </button>
+          )}
           <span className="sr-only">{userName}</span>
         </nav>
       </Drawer>

@@ -47,10 +47,10 @@ export function AnimatedNumber({
  * Staggered entrance for [data-reveal] descendants. Elements already on screen animate
  * immediately; the rest rise in as they scroll into view. Content stays visible without JS.
  */
-export function useReveal(scope: RefObject<HTMLElement | null>, deps: unknown[] = []) {
+export function useReveal(scope: RefObject<HTMLElement | null>, deps: unknown[] = [], enabled = true) {
   useEffect(() => {
     const root = scope.current;
-    if (!root || prefersReducedMotion()) return;
+    if (!enabled || !root || prefersReducedMotion()) return;
     const targets = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
     if (!targets.length) return;
     const context = gsap.context(() => {
@@ -78,5 +78,5 @@ export function useReveal(scope: RefObject<HTMLElement | null>, deps: unknown[] 
     }, 4000);
     return () => { window.clearTimeout(timer); context.revert(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, enabled]);
 }

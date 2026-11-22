@@ -194,3 +194,36 @@
 ::view-transition-old(root),
 ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 ::view-transition-new(root) { z-index: 2; }
+
+/* Guest header action: sign-in CTA that matches the workspace tool sizing. */
+.workspace-login-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--crimson);
+  border-radius: 999px;
+  background: var(--crimson);
+  color: #FFFFFF;
+  font-size: 12.5px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+
+.workspace-login-cta:hover {
+  background: var(--deep-red);
+  border-color: var(--deep-red);
+  color: #FFFFFF;
+}
+
+.workspace-login-cta:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 599px) {
+  .workspace-login-cta span { display: none; }
+  .workspace-login-cta { padding: 0 12px; }
+}
