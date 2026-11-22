@@ -12,7 +12,8 @@ import '../dashboard/dashboard.css';
 import { MemberHomeCards } from './MemberHomeCards';
 import { MemberMetricsGrid } from './MemberMetricsGrid';
 import { MemberTeamInsights } from './MemberTeamInsights';
-import { useMemberTeamInsights } from './useMemberTeamInsights';
+import { MemberDaySummary } from './MemberDaySummary';
+import { useMemberTeamActivity } from './useMemberTeamActivity';
 import { getCairoDate } from '../dashboard/taskContributions';
 import { MemberTasks } from './MemberTasks';
 import { MemberEvaluations } from './MemberEvaluations';
@@ -49,8 +50,10 @@ export default function MemberPortalPage() {
   const [isTogglingReadiness, setIsTogglingReadiness] = useState(false);
   const [celebration, setCelebration] = useState<SubmissionCelebration | null>(null);
   const bonusQuery = useMemberBonus(member?.id);
-  // نفس استعلام قسم مساهمات الفريق (مفتاح واحد في الكاش) عشان كارت «أعضاء الفريق».
-  const teamInsightsQuery = useMemberTeamInsights(Number(getCairoDate().slice(0, 4)), Boolean(member?.id));
+  // نفس استعلام قسم مساهمات الفريق (مفتاح واحد في الكاش) عشان كارت «أعضاء الفريق»
+  // وهيكس الهيرو وخريطة المساهمات — كلهم بيقروا من نفس الأرقام.
+  const teamActivity = useMemberTeamActivity(Number(getCairoDate().slice(0, 4)), Boolean(member?.id));
+  const [openDay, setOpenDay] = useState<string | null>(null);
   const bonusInfiniteQuery = useMemberInfiniteBonus(member?.id);
   const { sendTestNotification } = usePWA({
     memberId: member?.id,
@@ -171,12 +174,14 @@ export default function MemberPortalPage() {
               bonusError={bonusQuery.isError}
               bonusStateLoading={bonusInfiniteQuery.isLoading}
               bonusStateError={bonusInfiniteQuery.isError}
+              todayActivity={teamActivity.today}
+              onOpenToday={setOpenDay}
             />
             <MemberMetricsGrid
               tasks={myTasks}
               memberId={member.id}
               evaluations={myEvaluations}
-              teamSize={teamInsightsQuery.data?.rosterSize ?? null}
+              teamSize={teamActivity.query.data?.rosterSize ?? null}
               bonus={bonusQuery.data ?? null}
               onOpenEvaluations={() => setActiveTab('EVALUATIONS')}
             />
@@ -187,7 +192,7 @@ export default function MemberPortalPage() {
               bonus={bonusQuery.data ?? null}
               onOpenTab={setActiveTab}
             />
-            <MemberTeamInsights />
+            <MemberTeamInsights onOpenDay={setOpenDay} />
           </>
         )}
 
@@ -210,6 +215,15 @@ export default function MemberPortalPage() {
 
         {activeTab === 'ANNOUNCEMENTS' && <MemberAnnouncements memberId={member.id} />}
       </div>
+      {openDay ? (
+        <MemberDaySummary
+          date={openDay}
+          approvals={teamActivity.activity?.byDate.get(openDay)?.approvals ?? 0}
+          shares={teamActivity.activity?.byDate.get(openDay)?.githubBy ?? []}
+          people={teamActivity.people}
+          onClose={() => setOpenDay(null)}
+        />
+      ) : null}
       <SubmissionModal
         task={selectedTask}
         url={submissionUrl}
