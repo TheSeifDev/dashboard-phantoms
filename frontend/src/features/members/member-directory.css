@@ -17,6 +17,8 @@
 /* ------------------------------------------------------------------ */
 .member-dir-hero {
   position: relative;
+  /* Keep the hero (and its overflow menu) painted above the cards that follow it. */
+  z-index: 4;
   display: grid;
   gap: 20px;
   padding: 24px 26px;
@@ -119,17 +121,19 @@ html[lang="ar"] .member-dir-title { letter-spacing: 0; line-height: 1.3; }
   position: absolute;
   inset-inline-end: 0;
   top: calc(100% + 8px);
-  z-index: 30;
+  z-index: 60;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Opaque surface: the menu must never let the cards below bleed through it. */
+  background: var(--surface);
   display: grid;
   gap: 2px;
   width: max(264px, 100%);
   padding: 8px;
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  background: var(--glass-bg-strong);
   box-shadow: var(--glass-inset), var(--shadow-md);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   animation: member-dir-menu-in 170ms var(--ease-out);
 }
 @keyframes member-dir-menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
@@ -179,112 +183,6 @@ html[lang="ar"] .member-dir-title { letter-spacing: 0; line-height: 1.3; }
 @media (min-width: 1024px) {
   .member-dir-hero { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
   .member-dir-actions { justify-content: flex-end; }
-}
-
-/* ------------------------------------------------------------------ */
-/* Summary tiles                                                       */
-/* ------------------------------------------------------------------ */
-.member-dir-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-@media (min-width: 900px) {
-  .member-dir-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-.member-dir-stat {
-  --tone: var(--chart-blue);
-  position: relative;
-  display: grid;
-  gap: 7px;
-  min-width: 0;
-  padding: 13px 15px 14px;
-  overflow: hidden;
-  border: 1px solid var(--glass-hairline);
-  border-radius: var(--radius-lg);
-  background: var(--glass-bg-soft);
-  color: var(--text);
-  text-align: start;
-  cursor: pointer;
-  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-}
-.member-dir-stat-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
-.member-dir-stat-figure { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.member-dir-stat-meter {
-  display: block;
-  height: 3px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--tone) 16%, transparent);
-}
-.member-dir-stat-meter > span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--tone);
-  transition: width 420ms var(--ease-out);
-}
-.member-dir-stat::before {
-  content: "";
-  position: absolute;
-  inset-inline-end: -40px;
-  top: -50px;
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  background: none;
-  opacity: 0;
-  transition: opacity 200ms ease;
-  pointer-events: none;
-}
-.member-dir-stat:hover { border-color: color-mix(in oklab, var(--tone) 34%, var(--glass-hairline)); transform: translateY(-1px); }
-.member-dir-stat:hover::before { opacity: 0.7; }
-.member-dir-stat[aria-pressed="true"] {
-  border-color: color-mix(in oklab, var(--tone) 48%, transparent);
-  background: color-mix(in oklab, var(--tone) 10%, var(--glass-bg-soft));
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tone) 26%, transparent);
-}
-.member-dir-stat[aria-pressed="true"]::before { opacity: 1; }
-.member-dir-stat[data-tone="green"] { --tone: var(--success); }
-.member-dir-stat[data-tone="amber"] { --tone: var(--chart-amber); }
-.member-dir-stat[data-tone="red"] { --tone: var(--crew-4); }
-.member-dir-stat-label {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 11.5px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.member-dir-stat-icon {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 9px;
-  border: 1px solid color-mix(in oklab, var(--tone) 24%, var(--glass-hairline));
-  background: color-mix(in oklab, var(--tone) 12%, transparent);
-  color: var(--tone);
-}
-.member-dir-stat-icon svg { width: 14px; height: 14px; }
-.member-dir-stat-value {
-  font-family: var(--font-display);
-  font-size: 27px;
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.member-dir-stat-note {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* ------------------------------------------------------------------ */
@@ -387,7 +285,6 @@ html[lang="ar"] .member-dir-title { letter-spacing: 0; line-height: 1.3; }
   font-weight: 800;
 }
 .member-dir-button:focus-visible,
-.member-dir-stat:focus-visible,
 .member-dir-chip:focus-visible,
 .member-dir-tag button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
@@ -920,16 +817,6 @@ html[lang="ar"] .member-dir-title { letter-spacing: 0; line-height: 1.3; }
   .member-dir-menu-trigger { width: 44px; padding: 0; justify-content: center; }
   .member-dir-menu-trigger span { display: none; }
   .member-dir-menu-panel { width: min(260px, calc(100vw - 44px)); }
-  .member-dir-stat { padding: 12px 13px 13px; }
-  .member-dir-stat-top { align-items: flex-start; }
-  .member-dir-stat-label {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    white-space: normal;
-    line-height: 1.35;
-  }
-  .member-dir-stat-value { font-size: 23px; }
   .member-dir-review { padding: 12px; }
   .member-dir-review-hint { display: none; }
   .member-dir-review-refresh span { display: none; }
@@ -942,6 +829,8 @@ html[lang="ar"] .member-dir-title { letter-spacing: 0; line-height: 1.3; }
 /* Members console: summary + join queue + filters in one block        */
 /* ------------------------------------------------------------------ */
 .member-dir-console {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 12px;
   padding: 16px 16px 14px;
@@ -965,19 +854,6 @@ html[lang="ar"] .member-dir-title { letter-spacing: 0; line-height: 1.3; }
 }
 html[lang="ar"] .member-dir-console-title h2 { letter-spacing: 0; }
 .member-dir-console-title p { margin: 0; color: var(--text-muted); font-size: 12px; font-weight: 550; line-height: 1.6; }
-.member-dir-console .member-dir-stats { width: 100%; gap: 8px; }
-@media (min-width: 760px) {
-  .member-dir-console .member-dir-stats { width: auto; flex: 1 1 460px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-.member-dir-console .member-dir-stat {
-  gap: 5px;
-  padding: 10px 12px 11px;
-  border-radius: 12px;
-  background: var(--glass-bg-soft);
-}
-.member-dir-console .member-dir-stat-value { font-size: 21px; }
-.member-dir-console .member-dir-stat-icon { width: 24px; height: 24px; border-radius: 8px; }
-.member-dir-console .member-dir-stat-icon svg { width: 13px; height: 13px; }
 
 /* Flatten the nested cards so the console reads as one surface. */
 .member-dir-console > .member-dir-review,
