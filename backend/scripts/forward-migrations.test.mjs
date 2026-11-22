@@ -32,7 +32,7 @@ const appliedOwnerErasureFiles = [
   '20261121143800_owner_member_erasure_realtime_schema_lock_exclusion.sql',
   '20261121144600_owner_member_erasure_storage_vector_index_lock_exclusion.sql',
 ];
-const profileForwardFiles = ['20261122010000_member_profile_all_required.sql'];
+const profileForwardFiles = ['20261122010000_member_profile_all_required.sql', '20261122070000_owner_member_identity.sql'];
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'phantoms-forward-inventory-'));

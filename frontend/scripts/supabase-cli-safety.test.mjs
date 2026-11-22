@@ -36,7 +36,7 @@ test('local inventory retains thirty-two applied forwards including exact app-us
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
-  assert.equal(applied, 32);
+  assert.equal(applied, 33);
   const appUsage = entries.find((entry) => entry.version === '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
   assert.equal(appUsage.production_status, 'applied');

@@ -162,7 +162,11 @@ RESET ROLE;
 
 SELECT phantoms_test.login_as('linked');
 SELECT ok(public.is_admin(), 'the linked fixture starts as a global Admin');
-SELECT ok(public.get_member_password_access() IS NULL, 'Admin/Member overlap suppresses Member access before demotion');
+SELECT is(
+  public.get_member_password_access() ->> 'member_id',
+  phantoms_test.mid('linked')::TEXT,
+  'Admin/Member overlap uses Member access through its explicit binding before demotion'
+);
 RESET ROLE;
 
 -- Owner demotion and strict result object -----------------------------------
