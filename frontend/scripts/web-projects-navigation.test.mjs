@@ -36,7 +36,8 @@ test('every admin and member Web Projects route is in the page manifest', () => 
 test('admin routes use the dedicated permission and member routes use the existing member guard', () => {
   assert.match(router, /path: 'web-projects',[\s\S]*?AdminSection permission="web_projects"/);
   assert.match(router, /path: 'web-projects\/projects\/:projectId',[\s\S]*?AdminSection permission="web_projects"/);
-  assert.match(router, /path: '\/portal\/projects',[\s\S]*?ProtectedMemberRoute/);
+  // /portal/projects lives inside the guarded portal shell, so the guard wraps the parent route.
+  assert.match(router, /path: '\/portal',[\s\S]*?ProtectedMemberRoute[\s\S]*?path: 'projects'/);
   assert.match(router, /path: '\/portal\/projects\/:projectId',[\s\S]*?ProtectedMemberRoute/);
   assert.doesNotMatch(router, /path:\s*['"]teams\/web-projects/);
 });
