@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ChevronLeft, ChevronRight, CircleMinus, Eye, Link2, MoreHorizontal, Settings2, UserCheck, UserPlus, Users, X } from 'lucide-react';
 import type { Member, MemberInsert } from '../../types/db';
-import { useMembers, useAddMember, useUpdateMember, useDeleteMember } from './api';
+import { useMembers, useAddMember, useUpdateMember, useDeleteMember, useMemberTeamDirectory } from './api';
 import { useMemberCustomFields } from './customFieldsApi';
 import { useNotes } from '../notes/api';
 import { Button } from '../../components/ui/Button';
@@ -30,7 +30,7 @@ import { MemberProfileReminderAction } from './MemberProfileReminderAction';
 import { useLocale } from '../../i18n/useLocale';
 import { useAuthStore } from '../../store/auth';
 import { useAdminAccess } from '../admin/access/api';
-import { useOwnerAppUsage } from '../app-usage/api';
+import { useOwnerAppUsageDirectory } from '../app-usage/api';
 import type { AppUsageDisplay } from '../app-usage/MemberAppUsageDetails';
 import './member-directory.css';
 const emptyMember: MemberInsert = {
@@ -134,7 +134,9 @@ export default function MembersPage() {
     filters.device !== 'ALL' ||
     filters.alexandria !== 'ALL' ||
     filters.activity !== 'ALL' ||
-    filters.information !== 'ALL';
+    filters.information !== 'ALL' ||
+    filters.team !== 'ALL' ||
+    filters.app !== 'ALL';
 
   const workConditions = useMemo(
     () => [
@@ -158,6 +160,32 @@ export default function MembersPage() {
     };
   }, [query.data]);
 
+  const teamDirectory = useMemberTeamDirectory();
+  const teams = teamDirectory.data?.teams ?? [];
+  const teamsByMember = teamDirectory.data?.byMember ?? {};
+
+  const allMemberIds = useMemo(() => (query.data ?? []).map((member) => member.id), [query.data]);
+  const appDirectory = useOwnerAppUsageDirectory(ownerId, isOwner, allMemberIds);
+  const installedIds = useMemo(() => new Set(appDirectory.data.map((row) => row.member_id)), [appDirectory.data]);
+  const appUsageReady = isOwner && !appDirectory.isError && !appDirectory.isLoading;
+
+  const teamNames = useMemo(() => Object.fromEntries(teams.map((team) => [team.slug, team.name])), [teams]);
+
+  const teamOptions = useMemo(
+    () => teams.map((team) => ({
+      value: team.slug,
+      label: team.name,
+      count: (query.data ?? []).filter((member) => (teamsByMember[member.id] ?? []).includes(team.slug)).length,
+    })),
+    [teams, teamsByMember, query.data],
+  );
+
+  const appCounts = useMemo(() => {
+    const total = allMemberIds.length;
+    const installed = appUsageReady ? allMemberIds.filter((id) => installedIds.has(id)).length : 0;
+    return { installed, missing: Math.max(0, total - installed) };
+  }, [allMemberIds, appUsageReady, installedIds]);
+
   const visibleMembers = useMemo(
     () => {
       const filtered = (query.data ?? []).filter((member) => {
@@ -175,7 +203,11 @@ export default function MembersPage() {
         const informationComplete = hasRequiredMemberInformation(member);
         const matchesInformation = filters.information === 'ALL' ||
           (filters.information === 'COMPLETE' ? informationComplete : !informationComplete);
-        return matchesText && matchesWorkConditions && matchesDevice && matchesAlexandria && matchesActivity && matchesInformation;
+        const matchesTeam = filters.team === 'ALL' || (teamsByMember[member.id] ?? []).includes(filters.team);
+        const matchesApp = filters.app === 'ALL' || !appUsageReady
+          ? true
+          : filters.app === 'INSTALLED' ? installedIds.has(member.id) : !installedIds.has(member.id);
+        return matchesText && matchesWorkConditions && matchesDevice && matchesAlexandria && matchesActivity && matchesInformation && matchesTeam && matchesApp;
       });
       const byName = (left: Member, right: Member) => left.full_name.localeCompare(right.full_name, 'ar');
       switch (filters.sort) {
@@ -192,7 +224,7 @@ export default function MembersPage() {
           return [...filtered].sort(byName);
       }
     },
-    [filters, query.data, pendingDeleteMap],
+    [filters, query.data, pendingDeleteMap, teamsByMember, appUsageReady, installedIds],
   );
 
   // العودة لأول صفحة عند تغير الفلاتر أو البيانات أو حجم الصفحة
@@ -213,10 +245,9 @@ export default function MembersPage() {
   const rangeStart = visibleMembers.length ? safePage * pageSize + 1 : 0;
   const rangeEnd = Math.min(visibleMembers.length, safePage * pageSize + pageSize);
   const usageIds = [...pageMembers.map((member) => member.id), ...(drawerMember ? [drawerMember.id] : [])];
-  const usageQuery = useOwnerAppUsage(ownerId, isOwner, usageIds);
-  const usageStatus = usageQuery.isError ? 'unavailable' : usageQuery.isPending || !usageQuery.isFetchedAfterMount ? 'checking' : 'ready';
+  const usageStatus = appDirectory.isError ? 'unavailable' : appDirectory.isLoading ? 'checking' : 'ready';
   const appUsage: Record<number, AppUsageDisplay> | undefined = isOwner
-    ? Object.fromEntries(usageIds.map((id) => [id, { status: usageStatus, usage: usageStatus === 'ready' ? usageQuery.data?.find((row) => row.member_id === id) : undefined }]))
+    ? Object.fromEntries(usageIds.map((id) => [id, { status: usageStatus, usage: usageStatus === 'ready' ? appDirectory.data.find((row) => row.member_id === id) : undefined }]))
     : undefined;
   const deletionIssueCopy = deletionIssue ? memberDeletionIssueCopy(deletionIssue.code, t) : null;
 
@@ -399,78 +430,108 @@ export default function MembersPage() {
         </div>
       </header>
 
-      <div className="member-dir-stats" aria-label={t('ملخص دليل الأعضاء', 'Member directory summary')}>
-        {[
-          {
-            key: 'all',
-            label: t('كل الأعضاء', 'All members'),
-            note: t('السجل الكامل', 'Whole roster'),
-            value: memberMetrics.total,
-            Icon: Users,
-            tone: 'blue',
-            selected: !hasActiveFilters,
-            onClick: () => setFilters({ ...EMPTY_MEMBER_FILTERS, sort: filters.sort }),
-          },
-          {
-            key: 'active',
-            label: t('نشطون', 'Active'),
-            note: t('جاهزون للعمل', 'Ready to work'),
-            value: memberMetrics.active,
-            Icon: UserCheck,
-            tone: 'green',
-            selected: filters.activity === 'ACTIVE',
-            onClick: () => setFilters((current) => ({ ...current, activity: current.activity === 'ACTIVE' ? 'ALL' : 'ACTIVE' })),
-          },
-          {
-            key: 'incomplete',
-            label: t('يلزم استكمال بياناتهم', 'Need information'),
-            note: t('بيانات ناقصة', 'Missing details'),
-            value: memberMetrics.incomplete,
-            Icon: AlertTriangle,
-            tone: 'amber',
-            selected: filters.information === 'MISSING',
-            onClick: () => setFilters((current) => ({ ...current, information: current.information === 'MISSING' ? 'ALL' : 'MISSING' })),
-          },
-          {
-            key: 'inactive',
-            label: t('غير نشطين', 'Inactive'),
-            note: t('خارج الخدمة', 'Out of service'),
-            value: memberMetrics.inactive,
-            Icon: CircleMinus,
-            tone: 'red',
-            selected: filters.activity === 'INACTIVE',
-            onClick: () => setFilters((current) => ({ ...current, activity: current.activity === 'INACTIVE' ? 'ALL' : 'INACTIVE' })),
-          },
-        ].map(({ key, label, note, value, Icon, tone, selected, onClick }) => (
-          <button
-            key={key}
-            type="button"
-            className="member-dir-stat"
-            data-tone={tone}
-            onClick={onClick}
-            disabled={query.data === undefined || query.isError}
-            aria-pressed={selected}
-          >
-            <span className="member-dir-stat-top">
-              <span className="member-dir-stat-label">{label}</span>
-              <span className="member-dir-stat-icon" aria-hidden="true"><Icon /></span>
-            </span>
-            <span className="member-dir-stat-figure">
-              <span className="member-dir-stat-value">{query.data === undefined || query.isError ? '—' : number(value)}</span>
-              <span className="member-dir-stat-note">{note}</span>
-            </span>
-            <span className="member-dir-stat-meter" aria-hidden="true">
-              <span
-                style={{
-                  width: query.data === undefined || query.isError || !memberMetrics.total
-                    ? '0%'
-                    : `${Math.round((value / memberMetrics.total) * 100)}%`,
-                }}
-              />
-            </span>
-          </button>
-        ))}
-      </div>
+      <section className="member-dir-console glass-card" aria-label={t('لوحة التحكم في الأعضاء', 'Members control panel')}>
+        <div className="member-dir-console-head">
+          <div className="member-dir-console-title">
+            <h2>{t('لوحة الأعضاء', 'Members console')}</h2>
+            <p>{t('ملخص الفريق، طلبات الانضمام، والفلاتر — كله في مكان واحد.', 'Team summary, join requests and filters — all in one place.')}</p>
+          </div>
+          <div className="member-dir-stats" role="group" aria-label={t('ملخص دليل الأعضاء', 'Member directory summary')}>
+            {[
+              {
+                key: 'all',
+                label: t('كل الأعضاء', 'All members'),
+                note: t('السجل الكامل', 'Whole roster'),
+                value: memberMetrics.total,
+                Icon: Users,
+                tone: 'blue',
+                selected: !hasActiveFilters,
+                onClick: () => setFilters({ ...EMPTY_MEMBER_FILTERS, sort: filters.sort }),
+              },
+              {
+                key: 'active',
+                label: t('نشطون', 'Active'),
+                note: t('جاهزون للعمل', 'Ready to work'),
+                value: memberMetrics.active,
+                Icon: UserCheck,
+                tone: 'green',
+                selected: filters.activity === 'ACTIVE',
+                onClick: () => setFilters((current) => ({ ...current, activity: current.activity === 'ACTIVE' ? 'ALL' : 'ACTIVE' })),
+              },
+              {
+                key: 'incomplete',
+                label: t('يلزم استكمال بياناتهم', 'Need information'),
+                note: t('بيانات ناقصة', 'Missing details'),
+                value: memberMetrics.incomplete,
+                Icon: AlertTriangle,
+                tone: 'amber',
+                selected: filters.information === 'MISSING',
+                onClick: () => setFilters((current) => ({ ...current, information: current.information === 'MISSING' ? 'ALL' : 'MISSING' })),
+              },
+              {
+                key: 'inactive',
+                label: t('غير نشطين', 'Inactive'),
+                note: t('خارج الخدمة', 'Out of service'),
+                value: memberMetrics.inactive,
+                Icon: CircleMinus,
+                tone: 'red',
+                selected: filters.activity === 'INACTIVE',
+                onClick: () => setFilters((current) => ({ ...current, activity: current.activity === 'INACTIVE' ? 'ALL' : 'INACTIVE' })),
+              },
+            ].map(({ key, label, note, value, Icon, tone, selected, onClick }) => (
+              <button
+                key={key}
+                type="button"
+                className="member-dir-stat"
+                data-tone={tone}
+                onClick={onClick}
+                disabled={query.data === undefined || query.isError}
+                aria-pressed={selected}
+              >
+                <span className="member-dir-stat-top">
+                  <span className="member-dir-stat-label">{label}</span>
+                  <span className="member-dir-stat-icon" aria-hidden="true"><Icon /></span>
+                </span>
+                <span className="member-dir-stat-figure">
+                  <span className="member-dir-stat-value">{query.data === undefined || query.isError ? '—' : number(value)}</span>
+                  <span className="member-dir-stat-note">{note}</span>
+                </span>
+                <span className="member-dir-stat-meter" aria-hidden="true">
+                  <span
+                    style={{
+                      width: query.data === undefined || query.isError || !memberMetrics.total
+                        ? '0%'
+                        : `${Math.round((value / memberMetrics.total) * 100)}%`,
+                    }}
+                  />
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <MemberJoinReviewQueue />
+
+        {isOwner && appDirectory.isError && (
+          <div className="member-dir-console-note" role="status">
+            <p className="min-w-0 flex-1">
+              {t('مؤشر استخدام التطبيق غير متاح حاليًا. لا يعني هذا أن الأعضاء لم يستخدموه؛ يلزم تفعيل schema الجديدة أو إعادة المحاولة.', 'App-use evidence is currently unavailable. This does not mean members have not used it; the new schema must be enabled or the request retried.')}
+            </p>
+            <Button variant="secondary" onClick={() => appDirectory.refetch()}>{t('إعادة المحاولة', 'Retry')}</Button>
+          </div>
+        )}
+
+        <MemberToolbar
+          workConditions={workConditions}
+          value={filters}
+          onChange={setFilters}
+          resultCount={visibleMembers.length}
+          totalCount={query.data?.length ?? 0}
+          teamOptions={teamOptions}
+          showAppFilter={isOwner}
+          appCounts={appCounts}
+        />
+      </section>
 
       {deletionIssue && deletionIssueCopy && (
         <section className="member-dir-notice" role="alert" aria-live="assertive" aria-atomic="true">
@@ -509,25 +570,6 @@ export default function MembersPage() {
         </section>
       )}
 
-      <MemberJoinReviewQueue />
-
-      {isOwner && usageQuery.isError && (
-        <div className="member-dir-notice" role="status">
-          <p className="min-w-0 flex-1">
-            {t('مؤشر استخدام التطبيق غير متاح حاليًا. لا يعني هذا أن الأعضاء لم يستخدموه؛ يلزم تفعيل schema الجديدة أو إعادة المحاولة.', 'App-use evidence is currently unavailable. This does not mean members have not used it; the new schema must be enabled or the request retried.')}
-          </p>
-          <Button variant="secondary" onClick={() => { void usageQuery.refetch(); }}>{t('إعادة المحاولة', 'Retry')}</Button>
-        </div>
-      )}
-
-      <MemberToolbar
-        workConditions={workConditions}
-        value={filters}
-        onChange={setFilters}
-        resultCount={visibleMembers.length}
-        totalCount={query.data?.length ?? 0}
-      />
-
       <div className="min-w-0 w-full">
         {query.isLoading ? (
           <div className="py-6">
@@ -548,6 +590,8 @@ export default function MembersPage() {
               members={pageMembers}
               customFields={customFields}
               appUsage={appUsage}
+              teamsByMember={teamsByMember}
+              teamNames={teamNames}
               isOwner={isOwner}
               currentOwnerUserId={ownerId}
               onView={setDrawerMember}

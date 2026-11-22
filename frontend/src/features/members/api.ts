@@ -293,3 +293,45 @@ export const updateMemberReadiness = async (memberId: number, canGo: boolean): P
   if (error) throw toAppError(error, 'معرفناش نحدّث حالة الاستعداد.');
   return data === true;
 };
+
+/** ------------------------------------------------------------------
+ * دليل التيمات الداخلية (Software / AI / Hardware) لصفحة الأعضاء.
+ * القراءة مسموحة للإدارة عبر RLS: teams لأي admin، وteam_memberships
+ * لمن عنده صلاحية members. الفشل لا يوقف الصفحة — الفلتر يختفي فقط.
+ * ------------------------------------------------------------------ */
+export interface MemberTeamDirectory {
+  teams: Array<{ slug: string; name: string }>;
+  /** member_id → أكواد التيمات النشطة */
+  byMember: Record<number, string[]>;
+  /** member_id → team slug → status (active/pending/suspended) */
+  statusByMember: Record<number, Record<string, string>>;
+}
+
+export const useMemberTeamDirectory = (enabled = true) => {
+  return useQuery({
+    queryKey: ['member-team-directory'],
+    enabled,
+    staleTime: 60_000,
+    retry: false,
+    queryFn: async (): Promise<MemberTeamDirectory> => {
+      const [teamsResult, membershipsResult] = await Promise.all([
+        supabase.from('teams').select('id, slug, name, is_active').eq('is_active', true).order('name'),
+        supabase.from('team_memberships').select('member_id, team_id, status'),
+      ]);
+      if (teamsResult.error) throw toAppError(teamsResult.error, 'معرفناش نحمّل التيمات الداخلية.');
+      if (membershipsResult.error) throw toAppError(membershipsResult.error, 'معرفناش نحمّل عضويات التيمات.');
+      const teams = (teamsResult.data ?? []).map((row) => ({ id: String(row.id), slug: row.slug, name: row.name }));
+      const slugById = new Map(teams.map((team) => [team.id, team.slug]));
+      const byMember: Record<number, string[]> = {};
+      const statusByMember: Record<number, Record<string, string>> = {};
+      for (const row of membershipsResult.data ?? []) {
+        const slug = slugById.get(String(row.team_id));
+        if (!slug) continue;
+        const memberId = Number(row.member_id);
+        statusByMember[memberId] = { ...statusByMember[memberId], [slug]: row.status };
+        if (row.status === 'active') byMember[memberId] = [...(byMember[memberId] ?? []), slug];
+      }
+      return { teams: teams.map(({ slug, name }) => ({ slug, name })), byMember, statusByMember };
+    },
+  });
+};

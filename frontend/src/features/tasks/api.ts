@@ -53,6 +53,28 @@ export const useMemberTasks = (memberId: number | undefined) => {
   });
 };
 
+export type TaskAudienceGroups = { leads: number[]; heads: number[] };
+
+/**
+ * مجموعات الإسناد الجماعي: قادة مشاريع الويب + رؤساء/مراقبي التيمات.
+ * الخادم يرجع معرّفات الأعضاء النشطين فقط (SECURITY DEFINER)، والواجهة بتطابقها مع قائمة الأعضاء.
+ */
+export const useTaskAudienceGroups = (enabled = true) => {
+  return useQuery({
+    queryKey: ['task-audience-groups'],
+    enabled,
+    staleTime: 60_000,
+    queryFn: async (): Promise<TaskAudienceGroups> => {
+      const { data, error } = await supabase.rpc('admin_task_audience_groups');
+      if (error) throw toAppError(error, 'معرفناش نحمّل مجموعات الإسناد.');
+      const payload = (data ?? {}) as { leads?: unknown; heads?: unknown };
+      const ids = (value: unknown): number[] =>
+        Array.isArray(value) ? value.map(Number).filter((id) => Number.isInteger(id) && id > 0) : [];
+      return { leads: ids(payload.leads), heads: ids(payload.heads) };
+    },
+  });
+};
+
 export const useCreateTask = () => {
   const qc = useQueryClient();
   return useMutation({
