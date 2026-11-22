@@ -549,7 +549,9 @@ test.describe('disposable local Auth', () => {
         }
       });
 
-      expect(gates.flatMap((gate) => gate.blocked)).toEqual([]);
+      const blockedRequests = gates.flatMap((gate) => gate.blocked);
+      if (blockedRequests.length) console.error(`[auth-e2e] blocked requests: ${blockedRequests.join(', ')}`);
+      expect(blockedRequests).toEqual([]);
       expect(metadata.noMemberOtpCalls).toBe(true);
       expect(metadata.noBrowserSignup).toBe(true);
     } finally {
