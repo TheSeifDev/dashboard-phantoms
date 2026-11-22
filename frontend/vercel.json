@@ -7,6 +7,14 @@
   },
   "rewrites": [
     {
+      "source": "/api/sb",
+      "destination": "https://wxwoaputugxwysuhcebv.supabase.co/"
+    },
+    {
+      "source": "/api/sb/:path*",
+      "destination": "https://wxwoaputugxwysuhcebv.supabase.co/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
