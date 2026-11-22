@@ -1,6 +1,9 @@
 -- 26 — Owner member identity: the platform owner (a global Admin account) can use
 -- the Member portal through an explicit member binding, provision that identity
 -- idempotently, and store a full member profile (including the GitHub link).
+--
+-- All direct table reads happen as the fixture owner (postgres); authenticated
+-- blocks only call the RPCs and stash their results in phantoms_test.vars.
 BEGIN;
 \ir _helpers.psql
 
@@ -42,10 +45,25 @@ SELECT ok(
 );
 RESET ROLE;
 
--- Owner: first call creates the member identity ------------------------------
+-- Owner session: every RPC result is captured, never read from tables --------
 SELECT phantoms_test.login_as('owner');
 INSERT INTO phantoms_test.vars(key, value)
 VALUES ('owner-identity', public.ensure_owner_member_identity()::TEXT);
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('owner-access', public.get_member_password_access()::TEXT);
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('owner-bound', public.bind_member_device_session('owner@phantoms-test.example', 'owner-device-token-0123456789abcdef')::TEXT);
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('owner-settings', (public.member_get_profile_settings('owner-device-token-0123456789abcdef') IS NOT NULL)::TEXT);
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('owner-profile', (public.member_update_profile_settings(
+    'owner-device-token-0123456789abcdef',
+    '{"fullName":"Seif Owner","phone":"01012345678","residence":"Cairo","workConditions":"Full time on PHANTOMS","bio":"Owner and maintainer","device":"لابتوب","gender":"ذكر","academicNumber":"12345678","academicGroup":"G1","specialization":"software","linkedinUrl":"https://www.linkedin.com/in/seif","portfolioUrl":"https://github.com/TheSeifDev"}'::JSONB
+  ) IS NOT NULL)::TEXT);
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('owner-again', public.ensure_owner_member_identity()::TEXT);
+RESET ROLE;
+
 SELECT is(
   (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(phantoms_test.var('owner-identity')::JSONB) AS keys(k)),
   ARRAY['created', 'email', 'member_id']::TEXT[],
@@ -89,24 +107,24 @@ SELECT ok(
   'the owner binding is password-ready'
 );
 SELECT is(
-  public.get_member_password_access() ->> 'member_id',
+  phantoms_test.var('owner-access')::JSONB ->> 'member_id',
   phantoms_test.var('owner-identity')::JSONB ->> 'member_id',
   'the owner can read Member portal access through the binding'
 );
 SELECT is(
-  public.get_member_password_access() ->> 'active',
+  phantoms_test.var('owner-access')::JSONB ->> 'active',
   'true',
   'the owner Member access reports active=true'
 );
 
 -- Idempotency ---------------------------------------------------------------
 SELECT is(
-  public.ensure_owner_member_identity() ->> 'created',
+  phantoms_test.var('owner-again')::JSONB ->> 'created',
   'false',
   'a repeated call reports created=false'
 );
 SELECT is(
-  public.ensure_owner_member_identity() ->> 'member_id',
+  phantoms_test.var('owner-again')::JSONB ->> 'member_id',
   phantoms_test.var('owner-identity')::JSONB ->> 'member_id',
   'a repeated call returns the same member id'
 );
@@ -122,21 +140,9 @@ SELECT is(
 );
 
 -- Owner profile: device session, read, then a full profile save --------------
-SELECT ok(
-  public.bind_member_device_session('owner@phantoms-test.example', 'owner-device-token-0123456789abcdef'),
-  'the owner can bind a member device session'
-);
-SELECT ok(
-  public.member_get_profile_settings('owner-device-token-0123456789abcdef') IS NOT NULL,
-  'the owner can read the member profile settings payload'
-);
-SELECT ok(
-  public.member_update_profile_settings(
-    'owner-device-token-0123456789abcdef',
-    '{"fullName":"Seif Owner","phone":"01012345678","residence":"Cairo","workConditions":"Full time on PHANTOMS","bio":"Owner and maintainer","device":"لابتوب","gender":"ذكر","academicNumber":"12345678","academicGroup":"G1","specialization":"software","linkedinUrl":"https://www.linkedin.com/in/seif","portfolioUrl":"https://github.com/TheSeifDev"}'::JSONB
-  ) IS NOT NULL,
-  'the owner can save a complete member profile'
-);
+SELECT is(phantoms_test.var('owner-bound'), 'true', 'the owner can bind a member device session');
+SELECT is(phantoms_test.var('owner-settings'), 'true', 'the owner can read the member profile settings payload');
+SELECT is(phantoms_test.var('owner-profile'), 'true', 'the owner can save a complete member profile');
 SELECT is(
   (SELECT full_name FROM public.members WHERE pg_catalog.lower(email) = 'owner@phantoms-test.example'),
   'Seif Owner',
@@ -149,6 +155,7 @@ SELECT is(
 );
 
 -- A mismatched JWT email is rejected ---------------------------------------
+SELECT phantoms_test.login_as('owner');
 DO $$
 BEGIN
   PERFORM set_config(
@@ -171,6 +178,10 @@ INSERT INTO public.admin_accounts (user_id, role) VALUES (phantoms_test.uid('own
 SELECT phantoms_test.login_as('owner2');
 INSERT INTO phantoms_test.vars(key, value)
 VALUES ('owner2-identity', public.ensure_owner_member_identity()::TEXT);
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('owner2-access', public.get_member_password_access()::TEXT);
+RESET ROLE;
+
 SELECT is(
   phantoms_test.var('owner2-identity')::JSONB ->> 'created',
   'false',
@@ -192,11 +203,10 @@ SELECT is(
   'linking creates the Auth binding for the existing member row'
 );
 SELECT is(
-  public.get_member_password_access() ->> 'member_id',
+  phantoms_test.var('owner2-access')::JSONB ->> 'member_id',
   phantoms_test.mid('owner2_row')::TEXT,
   'the linked owner reads Member access for the existing member id'
 );
-RESET ROLE;
 
 SELECT * FROM finish();
 ROLLBACK;
