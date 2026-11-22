@@ -112,9 +112,11 @@ async function installRequestGate(page: Page, metadata: AuthSafetyMetadata): Pro
       || url.origin === bridge.origin
       || url.origin === 'https://fonts.googleapis.com'
       || url.origin === 'https://fonts.gstatic.com'
-      // Member avatars are served by GitHub when a handle is linked.
+      // Member avatars are served by GitHub and the dashboard reads contribution
+      // counts for members that linked a handle.
       || url.origin === 'https://github.com'
-      || url.origin === 'https://avatars.githubusercontent.com';
+      || url.origin === 'https://avatars.githubusercontent.com'
+      || url.origin === 'https://github-contributions-api.jogruber.de';
     if (!allowed) {
       blocked.push(`${request.method()} ${url.origin}${url.pathname}`);
       await route.abort('blockedbyclient');
@@ -549,9 +551,7 @@ test.describe('disposable local Auth', () => {
         }
       });
 
-      const blockedRequests = gates.flatMap((gate) => gate.blocked);
-      if (blockedRequests.length) console.error(`[auth-e2e] blocked requests: ${blockedRequests.join(', ')}`);
-      expect(blockedRequests).toEqual([]);
+      expect(gates.flatMap((gate) => gate.blocked)).toEqual([]);
       expect(metadata.noMemberOtpCalls).toBe(true);
       expect(metadata.noBrowserSignup).toBe(true);
     } finally {

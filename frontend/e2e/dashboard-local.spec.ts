@@ -65,7 +65,8 @@ function requestIsAllowed(url: URL): boolean {
   return url.origin === 'https://fonts.googleapis.com'
     || url.origin === 'https://fonts.gstatic.com'
     || url.origin === 'https://github.com'
-    || url.origin === 'https://avatars.githubusercontent.com';
+    || url.origin === 'https://avatars.githubusercontent.com'
+    || url.origin === 'https://github-contributions-api.jogruber.de';
 }
 
 async function installRequestGate(page: Page): Promise<{ blocked: string[]; pushRequests: string[]; setResource403: (resource: 'members' | 'tasks' | 'notes', value: boolean) => void; setTaskInsertFailure: (title: string | null) => void; getResource403Count: (resource: 'members' | 'tasks' | 'notes') => number }> {
