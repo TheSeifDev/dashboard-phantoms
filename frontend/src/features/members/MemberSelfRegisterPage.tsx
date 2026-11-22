@@ -29,7 +29,7 @@ const MEMBER_ERROR_ENGLISH: Record<string, string> = {
   MEMBER_PENDING_REVIEW: 'Your details were received and your account is awaiting admin review and activation. You cannot sign in before activation.',
   MEMBER_DISABLED: 'This membership is not active right now. Contact the team administrator.',
   MEMBER_NOT_FOUND: 'We could not find the requested membership.',
-  IDENTITY_CONFLICT: 'We could not verify that this sign-in identity belongs to the membership. Contact the team administrator.',
+  IDENTITY_CONFLICT: 'This email already belongs to a registered account. Sign in or use “Forgot password”; if it is an old account without a membership, contact the team administrator.',
   PASSWORD_ALREADY_SET: 'A password has already been set for this account. Contact the team administrator.',
   PASSWORD_MISMATCH: 'The passwords do not match.',
   WEAK_PASSWORD: 'Password must be at least 12 characters, no more than 72 UTF-8 bytes, and contain an English letter and a number.',
@@ -79,6 +79,7 @@ export default function MemberSelfRegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const [fieldError, setFieldError] = useState<'email' | 'password' | 'confirm' | 'invitation' | MemberProfileField | null>(null);
   const [completion, setCompletion] = useState<'pending_review' | 'password_updated' | 'enrollment_ready' | null>(null);
   const capturedRef = useRef(false);
@@ -120,7 +121,10 @@ export default function MemberSelfRegisterPage() {
   const updateProfile = (key: MemberProfileField, value: string) => {
     setProfile((current) => ({ ...current, [key]: value }));
     setFieldError(null);
-    if (error) setError('');
+    if (error) {
+      setError('');
+      setErrorCode('');
+    }
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -133,6 +137,7 @@ export default function MemberSelfRegisterPage() {
     const submittedProfile = { ...profile };
     const attempt = (async () => {
       setError('');
+      setErrorCode('');
       setFieldError(null);
       if (!cleanEmail || !isValidEmail(cleanEmail)) {
         setFieldError('email');
@@ -190,6 +195,7 @@ export default function MemberSelfRegisterPage() {
         if (liveRef.current) {
           const code = cause instanceof MemberPasswordApiError ? cause.code : 'SERVER_UNAVAILABLE';
           setError(memberUiError(code, t));
+          setErrorCode(code);
         }
       } finally {
         if (liveRef.current) setSubmitting(false);
@@ -240,7 +246,17 @@ export default function MemberSelfRegisterPage() {
         </div>
       )}
     >
-      {error && <div id="join-form-error" className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
+      {error && (
+        <div id="join-form-error" className="auth-error" role="alert">
+          <AlertCircle size={18} aria-hidden="true" />
+          <span>
+            {error}
+            {errorCode === 'IDENTITY_CONFLICT' && (
+              <> <Link className="auth-inline-link" to="/login">{t('تسجيل الدخول', 'Sign in')}</Link></>
+            )}
+          </span>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="auth-form" noValidate aria-busy={submitting || undefined}>
         <label className="auth-field" htmlFor="join-email">{t('بريدك الإلكتروني للتسجيل', 'Email address for registration')}
           <span className="auth-input-wrap"><Mail size={17} aria-hidden="true" /><input id="join-email" type="email" dir="ltr" autoCapitalize="none" spellCheck={false} autoComplete="email" required maxLength={254} placeholder="name@example.com" value={email} disabled={submitting} onChange={(event) => { setEmail(event.target.value); setFieldError(null); if (error) setError(''); }} aria-invalid={fieldError === 'email' || undefined} aria-describedby={fieldError === 'email' ? 'join-form-error' : undefined} /></span>
