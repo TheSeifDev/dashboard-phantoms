@@ -71,7 +71,7 @@ const chartTooltipStyle = {
   padding: '8px 12px',
 };
 
-function Panel({
+export function Panel({
   title,
   subtitle,
   icon,
@@ -111,7 +111,7 @@ function Panel({
   );
 }
 
-function Empty({ icon, text }: { icon: ReactNode; text: string }) {
+export function Empty({ icon, text }: { icon: ReactNode; text: string }) {
   return <div className="dashboard-empty"><span className="dashboard-empty-orb" aria-hidden="true">{icon}</span><span>{text}</span></div>;
 }
 
@@ -128,7 +128,7 @@ function statusTitle(key: string, t: (arabic: string, english: string) => string
 }
 
 /** Honeycomb of the most active people this year; the centre cell is the top contributor. */
-function CrewPulse({ activity, people, onOpenDay, compact }: { activity: TeamActivity; people: ReadonlyMap<number, PersonInfo>; onOpenDay: (date: string) => void; compact: boolean }) {
+export function CrewPulse({ activity, people, onOpenDay, compact }: { activity: TeamActivity; people: ReadonlyMap<number, PersonInfo>; onOpenDay: (date: string) => void; compact: boolean }) {
   const { t, number, date } = useLocale();
   const root = useRef<HTMLDivElement>(null);
   const ranked = activity.members.filter((member) => member.score > 0).slice(0, compact ? 4 : 7);
@@ -191,9 +191,20 @@ function CrewPulse({ activity, people, onOpenDay, compact }: { activity: TeamAct
   );
 }
 
-export function DashboardWidgets({ metrics, tasks, contributions, activity, people, permissions, onOpenDay, compact = false }: DashboardWidgetsProps) {
-  const navigate = useNavigate();
-  const { locale, t, number, date } = useLocale();
+/**
+ * Monthly approvals (+ GitHub when linked) for a year. Shared by the admin
+ * dashboard and the member portal so both render the exact same panel.
+ */
+export function ContributionTrendPanel({
+  contributions,
+  activity,
+  compact = false,
+}: {
+  contributions: TaskContributions;
+  activity: TeamActivity;
+  compact?: boolean;
+}) {
+  const { t, number, locale } = useLocale();
   const reducedMotion = useReducedMotion();
   const monthlyApprovals = useMemo(
     () => buildMonthlyApprovalTrend(contributions.year, contributions.days, contributions.today, contributionCoverageDate(contributions.history_complete_since)).map((item) => {
@@ -210,8 +221,54 @@ export function DashboardWidgets({ metrics, tasks, contributions, activity, peop
     }),
     [contributions.year, contributions.days, contributions.today, contributions.history_complete_since, activity.byDate, locale],
   );
-  const totalMonthlyApprovals = monthlyApprovals.reduce((sum, item) => sum + (item.approvals ?? 0) + item.github, 0);
+  const total = monthlyApprovals.reduce((sum, item) => sum + (item.approvals ?? 0) + item.github, 0);
   const hasGithubTrend = monthlyApprovals.some((item) => item.github > 0);
+  return (
+    <Panel
+      className="bento-trend"
+      title={t('اتجاه المساهمات', 'Contribution trend')}
+      subtitle={t('اعتمادات المهام وGitHub شهريًا · الفراغات تاريخ غير مكتمل', 'Monthly task approvals and GitHub · gaps mean incomplete history')}
+      icon={<BarChart3 size={18} />}
+      tone="blue"
+    >
+      {total > 0 ? (
+        <div className="dashboard-chart dashboard-trend-chart" dir="ltr" aria-label={t('المساهمات كل شهر', 'Contributions per month')}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={monthlyApprovals} margin={{ top: 12, right: 8, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="approvalTrendFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--crew-1)" stopOpacity={0.34} />
+                  <stop offset="100%" stopColor="var(--crew-1)" stopOpacity={0.02} />
+                </linearGradient>
+                <linearGradient id="githubTrendFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--crew-3)" stopOpacity={0.28} />
+                  <stop offset="100%" stopColor="var(--crew-3)" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="var(--glass-hairline)" strokeDasharray="3 6" vertical={false} />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} dy={8} />
+              <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+              <Tooltip
+                contentStyle={chartTooltipStyle}
+                labelStyle={{ color: 'var(--text)', fontWeight: 700 }}
+                formatter={(value, name) => [number(Number(value)), name === 'github' ? 'GitHub' : t('اعتماد', 'approvals')]}
+              />
+              <Area isAnimationActive={!reducedMotion && !compact} animationDuration={1400} type="monotone" dataKey="approvals" stroke="var(--crew-1)" strokeWidth={2.5} fill="url(#approvalTrendFill)" activeDot={{ r: 5, strokeWidth: 0 }} />
+              {hasGithubTrend && <Area isAnimationActive={!reducedMotion && !compact} animationDuration={1600} type="monotone" dataKey="github" stroke="var(--crew-3)" strokeWidth={2} fill="url(#githubTrendFill)" activeDot={{ r: 4, strokeWidth: 0 }} />}
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <Empty icon={<BarChart3 size={24} />} text={t('لا توجد اعتمادات مرصودة لهذا النطاق. التاريخ قبل بدء السجل قد يكون غير مكتمل.', 'No approvals observed for this scope. History before tracking began may be incomplete.')} />
+      )}
+    </Panel>
+  );
+}
+
+export function DashboardWidgets({ metrics, tasks, contributions, activity, people, permissions, onOpenDay, compact = false }: DashboardWidgetsProps) {
+  const navigate = useNavigate();
+  const { t, number, date } = useLocale();
+  const reducedMotion = useReducedMotion();
   const taskSlices = [
     { key: 'approved', value: metrics.approvedTasks, color: 'var(--success)' },
     { key: 'inProgress', value: metrics.inProgress, color: 'var(--chart-blue)' },
@@ -252,44 +309,7 @@ export function DashboardWidgets({ metrics, tasks, contributions, activity, peop
         <CrewPulse activity={activity} people={people} onOpenDay={onOpenDay} compact={compact} />
       </Panel>
 
-      <Panel
-        className="bento-trend"
-        title={t('اتجاه المساهمات', 'Contribution trend')}
-        subtitle={t('اعتمادات المهام وGitHub شهريًا · الفراغات تاريخ غير مكتمل', 'Monthly task approvals and GitHub · gaps mean incomplete history')}
-        icon={<BarChart3 size={18} />}
-        tone="blue"
-      >
-        {totalMonthlyApprovals > 0 ? (
-          <div className="dashboard-chart dashboard-trend-chart" dir="ltr" aria-label={t('المساهمات كل شهر', 'Contributions per month')}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyApprovals} margin={{ top: 12, right: 8, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="approvalTrendFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--crew-1)" stopOpacity={0.34} />
-                    <stop offset="100%" stopColor="var(--crew-1)" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="githubTrendFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--crew-3)" stopOpacity={0.28} />
-                    <stop offset="100%" stopColor="var(--crew-3)" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--glass-hairline)" strokeDasharray="3 6" vertical={false} />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} dy={8} />
-                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-                <Tooltip
-                  contentStyle={chartTooltipStyle}
-                  labelStyle={{ color: 'var(--text)', fontWeight: 700 }}
-                  formatter={(value, name) => [number(Number(value)), name === 'github' ? 'GitHub' : t('اعتماد', 'approvals')]}
-                />
-                <Area isAnimationActive={!reducedMotion && !compact} animationDuration={1400} type="monotone" dataKey="approvals" stroke="var(--crew-1)" strokeWidth={2.5} fill="url(#approvalTrendFill)" activeDot={{ r: 5, strokeWidth: 0 }} />
-                {hasGithubTrend && <Area isAnimationActive={!reducedMotion && !compact} animationDuration={1600} type="monotone" dataKey="github" stroke="var(--crew-3)" strokeWidth={2} fill="url(#githubTrendFill)" activeDot={{ r: 4, strokeWidth: 0 }} />}
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <Empty icon={<BarChart3 size={24} />} text={t('لا توجد اعتمادات مرصودة لهذا النطاق. التاريخ قبل بدء السجل قد يكون غير مكتمل.', 'No approvals observed for this scope. History before tracking began may be incomplete.')} />
-        )}
-      </Panel>
+      <ContributionTrendPanel contributions={contributions} activity={activity} compact={compact} />
 
       <Panel
         className="bento-status"

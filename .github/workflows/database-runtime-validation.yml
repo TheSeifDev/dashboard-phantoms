@@ -127,6 +127,7 @@ jobs:
             scripts/member-projections.test.ts \
             scripts/dashboard-state.test.ts \
             scripts/task-contributions.test.ts \
+            scripts/member-insights.test.ts \
             scripts/task-contribution-invalidation.test.ts \
             scripts/task-assignment-audience.test.ts \
             scripts/redesign-locale.test.ts \

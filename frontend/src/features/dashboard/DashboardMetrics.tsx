@@ -12,9 +12,9 @@ export interface MetricSeries {
   submissions: number[];
 }
 
-type Tone = 'blue' | 'violet' | 'green' | 'amber';
+export type Tone = 'blue' | 'violet' | 'green' | 'amber';
 
-function Sparkline({ values, tone }: { values: number[]; tone: Tone }) {
+export function Sparkline({ values, tone }: { values: number[]; tone: Tone }) {
   const gradient = useId().replace(/:/g, '');
   const line = useRef<SVGPathElement>(null);
   const area = useRef<SVGPathElement>(null);
