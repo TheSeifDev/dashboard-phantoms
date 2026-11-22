@@ -40,7 +40,7 @@ export default class AuthSafeReporter {
   }
 
   onTestEnd(test, result) {
-    if (result?.error?.message) console.error(`[auth-e2e-diag] ${String(result.error.message).split('\n').slice(0, 3).join(' | ').slice(0, 600)}`);
+    if (result?.error?.message) console.error(`[auth-e2e-diag] ${String(result.error.message).split('\n').slice(0, 16).join(' | ').slice(0, 3000)}`);
     this.tests.push({ name: sanitizeAuthLabel(test?.title), status: safeStatus(result?.status) });
     for (const step of Array.isArray(result?.steps) ? result.steps : []) {
       if (step?.category !== 'test.step') continue;
