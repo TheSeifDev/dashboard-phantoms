@@ -110,6 +110,7 @@ SELECT ok(
   (SELECT bool_and(entry ? 'github_handle')
      FROM jsonb_array_elements(public.get_member_team_insights(EXTRACT(YEAR FROM (timezone('Africa/Cairo', now()))::date)::INTEGER) -> 'members') AS entry),
   'ranked members carry their GitHub handle field');
+RESET ROLE;
 SELECT is(
   public.member_github_handle('{"GitHub": "https://github.com/Seif-Dev"}'::JSONB, NULL),
   'Seif-Dev',
@@ -126,6 +127,7 @@ SELECT is(
   public.member_github_handle('{}'::JSONB, 'https://gitlab.com/whatever'),
   NULL::TEXT,
   'non-GitHub profile links are ignored');
+SELECT phantoms_test.login_as('member_user');
 SELECT throws_ok(
   'SELECT public.get_member_team_insights(1999)',
   'P0001',
