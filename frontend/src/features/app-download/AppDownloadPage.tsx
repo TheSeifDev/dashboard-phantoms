@@ -3,7 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import { ArrowUpRight, Check, Download, ExternalLink, Loader2, Share, ShieldCheck, Smartphone, X } from 'lucide-react';
+import { ArrowUpRight, Check, Download, ExternalLink, Loader2, RefreshCw, Share, ShieldCheck, Smartphone, X } from 'lucide-react';
 import { BrandLockup } from '../../components/brand/BrandLockup';
 import { useReducedMotion } from '../../components/motion/useReducedMotion';
 import { useLocale } from '../../i18n/useLocale';
@@ -515,6 +515,18 @@ export default function AppDownloadPage() {
                   {isIOSPlatform
                     ? t('التطبيق بيفضل محدّث تلقائياً من نفس الرابط، وبياناتك وجلسة الدخول بتتحفظ على جهازك.', 'The app stays up to date from the same link, and your session is kept on your device.')
                     : t('المتصفح يعالج الملف؛ لا نسجّل نقرة التنزيل كتثبيت ناجح.', 'The browser handles the file; a download click is never recorded as a successful install.')}
+                </span>
+              </div>
+              <div
+                className="mt-3 flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs font-semibold leading-5 text-[var(--soft-grey)]"
+                data-testid="auto-update-note"
+              >
+                <RefreshCw size={16} className="mt-0.5 shrink-0 text-[var(--emerald)]" aria-hidden="true" />
+                <span>
+                  {t(
+                    'من نسخة 1.2.0 التطبيق بيحمّل آخر نسخة من السيرفر كل مرة تفتحه — مش هتحتاج تنزّل الـ APK تاني. لو فيه تحديث مهم هيظهرلك زر «تحديث الآن» جوه التطبيق.',
+                    'From version 1.2.0 the app loads the latest build from the server every time it opens — no more re-downloading the APK. When a critical update ships, an in-app “Update now” button appears.'
+                  )}
                 </span>
               </div>
             </aside>

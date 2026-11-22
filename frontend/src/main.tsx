@@ -6,6 +6,7 @@ import { router } from './router';
 import { ToastViewport } from './components/ui/Toast';
 import { AmbientBackdrop } from './components/motion/AmbientBackdrop';
 import { MotionLayer } from './components/motion/MotionLayer';
+import { UpdateBanner } from './features/app-update/UpdateBanner';
 import { useThemeStore, parseTheme } from './store/theme';
 import { registerSW } from 'virtual:pwa-register';
 import { initCapacitorNativeBridge, isRunningInNativeApk } from './lib/capacitor';
@@ -44,6 +45,7 @@ createRoot(document.getElementById('root')!).render(
       <AmbientBackdrop />
       <MotionLayer />
       <RouterProvider router={router} />
+      <UpdateBanner />
       <ToastViewport />
     </QueryClientProvider>
   </StrictMode>
