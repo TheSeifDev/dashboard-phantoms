@@ -1,16 +1,8 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { flushSync } from 'react-dom';
-import {
-  ClipboardCheck,
-  FolderKanban,
-  LayoutDashboard,
-  ListChecks,
-  Megaphone,
-  Network,
-  Settings,
-} from 'lucide-react';
-import { AppSidebar, useSidebarDrawer, type SidebarGroup } from '../../components/layout/AppSidebar';
+import { AppSidebar, useSidebarDrawer } from '../../components/layout/AppSidebar';
+import { MEMBER_WORKSPACE_GROUPS } from '../../components/layout/workspace-groups';
 import { MemberHeader, type ThemeOrigin } from './MemberHeader';
 import { useAuthStore, getDeviceToken } from '../../store/auth';
 import { useThemeStore } from '../../store/theme';
@@ -55,30 +47,7 @@ export default function MemberPortalLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roles.isLead, roles.total, teams.data, t]);
 
-  const groups = useMemo<SidebarGroup[]>(() => [
-    {
-      title: 'نظرة عامة',
-      items: [{ to: '/portal', label: 'الرئيسية', icon: LayoutDashboard, end: true }],
-    },
-    {
-      title: 'شغلي',
-      items: [
-        { to: '/portal?tab=TASKS', label: 'مهامي', icon: ListChecks, matchSearch: true },
-        { to: '/portal?tab=EVALUATIONS', label: 'تقييماتي', icon: ClipboardCheck, matchSearch: true },
-        { to: '/portal?tab=ANNOUNCEMENTS', label: 'الإعلانات', icon: Megaphone, matchSearch: true },
-        { to: '/portal/team', label: 'الفريق الداخلي', icon: Network },
-      ],
-    },
-    {
-      title: 'مشروعات الويب',
-      items: [{ to: '/portal/projects', label: 'مساحات المشروعات', icon: FolderKanban }],
-    },
-    {
-      title: 'الحساب',
-      items: [{ to: '/portal/settings', label: 'الحساب والإعدادات', icon: Settings }],
-    },
-  ], []);
-
+  const groups = MEMBER_WORKSPACE_GROUPS;
   const normalizedPath = pathname.replace(/\/+$/, '') || '/';
   const isHome = normalizedPath === '/portal' && !search;
 

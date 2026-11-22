@@ -1,14 +1,60 @@
-import { Laptop, MapPin, Bell, BellRing, Download, CheckCircle2, Gift } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import type { Member } from '../../types/db';
+import { useMemo, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  ArrowUpLeft,
+  ArrowUpRight,
+  Bell,
+  BellRing,
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  Gift,
+  Laptop,
+  MapPin,
+  Smartphone,
+} from 'lucide-react';
+import type { Member, MemberEvaluation, Task } from '../../types/db';
 import { usePWA } from '../../hooks/usePWA';
 import { formatSigned } from '../../lib/arabic';
 import { useLocale } from '../../i18n/useLocale';
 import { isRunningInNativeApk } from '../../lib/capacitor';
+import { isOverdue } from '../../lib/dateUtils';
+import { PhantomsSymbol } from '../../components/brand/PhantomsLogo';
 import { MemberAvatar } from '../../components/ui/MemberAvatar';
+import { HeroHexCluster } from '../dashboard/HeroHexCluster';
+import { GithubMark } from '../dashboard/GithubMark';
+import { resolveGithubHandle } from '../dashboard/github';
 
+const ACTIONABLE = new Set(['pending', 'in_progress', 'revision_requested']);
+
+function greeting(t: (arabic: string, english: string) => string): string {
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Africa/Cairo' }).format(new Date()));
+  if (hour < 5) return t('سهرانين؟ أهلًا بيك', 'Burning the midnight oil');
+  if (hour < 12) return t('صباح الخير', 'Good morning');
+  if (hour < 18) return t('يومك سعيد', 'Good afternoon');
+  return t('مساء الخير', 'Good evening');
+}
+
+function QuickAction({ label, icon, onClick, to, tone = 'neutral' }: { label: string; icon: ReactNode; onClick?: () => void; to?: string; tone?: 'primary' | 'neutral' }) {
+  const { dir } = useLocale();
+  const Arrow = dir === 'rtl' ? ArrowUpLeft : ArrowUpRight;
+  const className = `dashboard-quick-action dashboard-quick-action-${tone} ${tone === 'primary' ? 'btn-shine' : ''}`;
+  const inner = (
+    <>
+      <span className="dashboard-quick-action-icon" aria-hidden="true">{icon}</span>
+      <span>{label}</span>
+      <Arrow size={14} aria-hidden="true" />
+    </>
+  );
+  if (to) return <Link to={to} className={className}>{inner}</Link>;
+  return <button type="button" className={className} onClick={onClick}>{inner}</button>;
+}
+
+/** هيرو العضو بنفس شكل هيرو لوحة الإدارة: عنوان + شيبس حالة + إجراءات سريعة + الهيكس. */
 export function MemberHero({
   member,
+  tasks,
+  evaluations,
   onToggleField,
   isUpdating,
   totalBonus,
@@ -19,6 +65,8 @@ export function MemberHero({
   bonusStateError = false,
 }: {
   member: Member;
+  tasks: Task[];
+  evaluations: MemberEvaluation[];
   onToggleField: () => void;
   isUpdating: boolean;
   totalBonus?: number | null;
@@ -32,119 +80,129 @@ export function MemberHero({
     memberId: member.id,
     memberEmail: member.email,
   });
-  const { t, dir } = useLocale();
+  const { t, dir, number, date } = useLocale();
+  const navigate = useNavigate();
+  const memberId = String(member.id);
+  const statusOf = (task: Task) => task.tracking?.[memberId]?.status ?? 'pending';
+  const underReview = tasks.filter((task) => statusOf(task) === 'under_review').length;
+  const approved = tasks.filter((task) => statusOf(task) === 'approved').length;
+  const open = tasks.filter((task) => ACTIONABLE.has(statusOf(task))).length;
+  const overdue = tasks.filter((task) => ACTIONABLE.has(statusOf(task)) && task.has_deadline && isOverdue(task.deadline_date)).length;
+  const unreadEvaluations = evaluations.filter((item) => !item.read_at).length;
+  const githubHandle = resolveGithubHandle({ portfolio_url: member.portfolio_url ?? null, custom_fields: member.custom_fields ?? undefined });
+  const bonusText = bonusError || bonusStateError
+    ? t('غير متاح', 'Unavailable')
+    : bonusInfinite
+      ? '∞'
+      : typeof totalBonus === 'number'
+        ? formatSigned(totalBonus)
+        : '—';
+  const today = useMemo(() => new Date().toISOString(), []);
 
   return (
-    <section
-      dir={dir}
-      className="grid gap-5 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-6"
-      aria-labelledby="member-name"
-    >
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
-        <div className="flex min-w-0 items-start gap-4">
+    <header className="dashboard-hero glass-card" dir={dir} data-reveal aria-labelledby="member-name">
+      <div className="dashboard-hero-copy">
+        <div className="dashboard-hero-brand">
+          <span className="dashboard-brand-mark" aria-hidden="true"><PhantomsSymbol size="sm" /></span>
+          <p className="dashboard-eyebrow">
+            <span className="live-dot" aria-hidden="true" />
+            {greeting(t)} · {t('بوابة العضو', 'MEMBER PORTAL')}
+          </p>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-3">
           <MemberAvatar
             member={member}
             name={member.full_name}
             size={112}
-            className="grid size-14 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-xl font-black text-[var(--text)]"
+            className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-[var(--glass-hairline)] bg-[var(--glass-bg-soft)] text-lg font-black text-[var(--text)] sm:size-14"
           />
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 id="member-name" dir="auto" className="text-xl font-black sm:text-2xl">
-                {member.full_name}
-              </h1>
-            </div>
-            <p className="mt-1 text-sm leading-6 text-[var(--text-2)]">
-              <span dir="auto">{member.bio || t('عضو شاطر ومبدع في الفريق', 'A valued and creative team member')}</span>
-            </p>
-            <p className="mt-1 break-all text-sm text-[var(--text-muted)]" dir="ltr">
-              {member.email}
+            <h1 id="member-name" dir="auto" className="dashboard-hero-title truncate">{member.full_name}</h1>
+            <p className="dashboard-hero-subtitle" dir="auto">
+              {member.bio || t('عضو شاطر ومبدع في الفريق', 'A valued and creative team member')}
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {!isRunningInNativeApk() && (
-            <Link
-              to="/download"
-              className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-xs font-bold text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
-            >
-              <Download size={14} aria-hidden="true" /> {t('تنزيل APK لأندرويد', 'Download Android APK')}
-            </Link>
-          )}
+        <ul className="dashboard-hero-chips" aria-label={t('حالتك اليوم', 'Your status today')}>
+          <li data-tone="amber"><Clock3 size={14} aria-hidden="true" />{t(`${number(underReview)} تحت المراجعة`, `${number(underReview)} under review`)}</li>
+          <li data-tone="red"><CalendarClock size={14} aria-hidden="true" />{t(`${number(overdue)} متأخرة`, `${number(overdue)} overdue`)}</li>
+          <li data-tone="violet">
+            <Gift size={14} aria-hidden="true" />
+            {bonusLoading || bonusStateLoading
+              ? t('بنحمّل النقاط', 'Loading points')
+              : `${t('نقاطي', 'Points')}: ${bonusText}`}
+          </li>
+          <li>
+            {githubHandle ? <GithubMark size={14} /> : <Laptop size={14} aria-hidden="true" />}
+            {githubHandle ? t('GitHub مربوط', 'GitHub linked') : t(`${member.device || t('مش متحدد', 'No device')}`, `${member.device || 'No device'}`)}
+          </li>
+        </ul>
 
+        <div className="dashboard-page-tools">
+          <time className="dashboard-today" dateTime={today}>{date(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</time>
+          <nav className="dashboard-quick-actions portal-hero-actions" aria-label={t('إجراءات سريعة', 'Quick actions')}>
+            <QuickAction tone="primary" label={t('مهامي', 'My tasks')} icon={<CheckCircle2 size={16} />} to="/portal?tab=TASKS" />
+            <QuickAction label={t('تقييماتي', 'My evaluations')} icon={<Clock3 size={16} />} to="/portal?tab=EVALUATIONS" />
+            <QuickAction
+              label={isSubscribed ? t('الإشعارات شغالة', 'Notifications on') : t('شغّل الإشعارات', 'Enable notifications')}
+              icon={isSubscribed ? <BellRing size={16} /> : <Bell size={16} />}
+              onClick={subscribeToPush}
+            />
+            {!isRunningInNativeApk() && (
+              <QuickAction label={t('تطبيق الموبايل', 'Mobile app')} icon={<Smartphone size={16} />} to="/download" />
+            )}
+          </nav>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={subscribeToPush}
-            className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-3 text-xs font-bold transition-colors ${
-              isSubscribed
-                ? 'bg-[var(--success-soft)] text-[var(--success-text)] hover:bg-[var(--success-soft)] dark:text-[var(--success-text)]'
-                : 'border border-[var(--border)] bg-[var(--bg)] text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'
-            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2`}
-            aria-pressed={isSubscribed}
+            onClick={onToggleField}
+            disabled={isUpdating}
+            aria-pressed={member.can_go_alexandria}
+            aria-busy={isUpdating}
+            className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--glass-hairline)] bg-[var(--glass-bg-soft)] px-3 text-xs font-bold text-[var(--text-secondary)] transition-colors hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
           >
-            {isSubscribed ? <CheckCircle2 size={14} /> : <Bell size={14} />}
-            {isSubscribed ? t('الإشعارات شغالة', 'Notifications enabled') : t('شغّل الإشعارات', 'Enable notifications')}
+            <MapPin size={14} aria-hidden="true" />
+            {t('جاهزية النزول', 'Field availability')}
+            <span aria-live="polite" className="text-[var(--text)]">
+              {isUpdating ? t('جارٍ التحديث…', 'Updating…') : member.can_go_alexandria ? t('جاهز', 'Available') : t('مش جاهز', 'Unavailable')}
+            </span>
           </button>
-
           <button
             type="button"
-            onClick={() => {
-              void sendTestNotification();
-            }}
-            className="flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-xs font-bold text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+            onClick={() => { void sendTestNotification(); }}
+            className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--glass-hairline)] bg-[var(--glass-bg-soft)] px-3 text-xs font-bold text-[var(--text-secondary)] transition-colors hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
           >
             <BellRing size={14} aria-hidden="true" />
-            <span>{t('جرّب الإشعار', 'Test notification')}</span>
+            {t('جرّب الإشعار', 'Test notification')}
           </button>
-        </div>
-      </div>
-      <div className="grid gap-2 border-t border-[var(--border)] pt-4 sm:grid-cols-3">
-        <div className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm dark:border-amber-900 dark:bg-amber-950/30">
-          <span className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-200">
-            <Gift size={18} aria-hidden="true" />
-            {t('رصيد البونص', 'Bonus balance')}
-          </span>
-          {bonusLoading || bonusStateLoading ? (
-            <span
-              className="h-5 w-10 animate-pulse rounded bg-amber-200/60 dark:bg-amber-900/60"
-              aria-label={t('بنحمّل الرصيد', 'Loading balance')}
-              role="status"
-            />
-          ) : (
-            <strong aria-label={bonusError || bonusStateError ? t('تعذّر تحميل بيانات البونص', 'Bonus balance unavailable') : undefined} className="text-base font-black tabular-nums text-amber-900 dark:text-amber-100">
-              {bonusError || bonusStateError ? t('غير متاح', 'Unavailable') : bonusInfinite ? '∞' : typeof totalBonus === 'number' ? formatSigned(totalBonus) : '—'}
-            </strong>
+          {unreadEvaluations > 0 && (
+            <button
+              type="button"
+              onClick={() => navigate('/portal?tab=EVALUATIONS')}
+              className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--glass-hairline)] bg-[var(--glass-bg-soft)] px-3 text-xs font-bold text-[var(--text-secondary)] transition-colors hover:text-[var(--text)]"
+            >
+              {t(`${number(unreadEvaluations)} تقييم جديد`, `${number(unreadEvaluations)} new evaluation`)}
+            </button>
           )}
         </div>
-        <ReadinessInfo icon={<Laptop size={18} />} label={t('الجهاز المتاح', 'Available device')} value={member.device || t('مش متحدد', 'Not specified')} />
-        <button
-          type="button"
-          onClick={onToggleField}
-          disabled={isUpdating}
-          aria-pressed={member.can_go_alexandria}
-          aria-busy={isUpdating}
-          className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-start text-sm font-bold transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
-        >
-          <span className="flex items-center gap-2">
-            <MapPin size={18} aria-hidden="true" />
-            {t('جاهزية النزول', 'Field availability')}
-          </span>
-          <span aria-live="polite">{isUpdating ? t('جارٍ التحديث…', 'Updating…') : member.can_go_alexandria ? t('جاهز', 'Available') : t('مش جاهز', 'Unavailable')}</span>
-        </button>
       </div>
-    </section>
-  );
-}
 
-function ReadinessInfo({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm">
-      <span className="flex items-center gap-2 text-[var(--text-muted)]">
-        {icon}
-        {label}
-      </span>
-      <strong dir="auto">{value}</strong>
-    </div>
+      <button
+        type="button"
+        className="dashboard-hero-visual"
+        onClick={() => navigate('/portal?tab=TASKS')}
+        aria-label={t('افتح مهامي', 'Open my tasks')}
+      >
+        <HeroHexCluster
+          heat={Math.max(1, Math.min(4, approved))}
+          value={number(open)}
+          caption={t('مهام شغالة', 'active tasks')}
+        />
+      </button>
+    </header>
   );
 }

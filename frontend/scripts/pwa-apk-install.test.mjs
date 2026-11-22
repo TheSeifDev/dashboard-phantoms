@@ -33,7 +33,7 @@ const mocks = {
       sendTestNotification: () => undefined,
     }),
   },
-  'i18n/useLocale.ts': { useLocale: () => ({ dir: 'ltr', t: (_arabic, english) => english }) },
+  'i18n/useLocale.ts': { useLocale: () => ({ dir: 'ltr', t: (_arabic, english) => english, number: (value) => String(value), date: (value) => String(value) }) },
   'lib/arabic.ts': { formatSigned: (value) => String(value) },
   'lib/capacitor.ts': { isRunningInNativeApk: () => native },
   'types/db.ts': {},
@@ -70,6 +70,7 @@ function load(path) {
     if (specifier === 'lucide-react') return iconModule;
     if (specifier === 'react-router-dom') return {
       Link: ({ children, to, ...props }) => React.createElement('a', { ...props, href: typeof to === 'string' ? to : to?.pathname }, children),
+      useNavigate: () => () => undefined,
     };
     if (specifier === '@capacitor/core') return { Capacitor: { getPlatform: () => 'web', isNativePlatform: () => false } };
     return require(specifier);
@@ -149,10 +150,12 @@ test('mounted member hero presents the APK route CTA and hides it in the native 
     root = createRoot(document.getElementById('root'));
     await act(async () => root.render(React.createElement(memberHero.MemberHero, {
       member,
+      tasks: [],
+      evaluations: [],
       onToggleField: () => undefined,
       isUpdating: false,
     })));
-    const apkLink = [...document.querySelectorAll('a')].find((link) => link.textContent.includes('Download Android APK'));
+    const apkLink = [...document.querySelectorAll('a')].find((link) => link.getAttribute('href') === '/download');
     assert.ok(apkLink);
     assert.equal(apkLink.getAttribute('href'), '/download');
     assert.equal(document.body.textContent.includes('Install app'), false);
@@ -160,10 +163,12 @@ test('mounted member hero presents the APK route CTA and hides it in the native 
     native = true;
     await act(async () => root.render(React.createElement(memberHero.MemberHero, {
       member,
+      tasks: [],
+      evaluations: [],
       onToggleField: () => undefined,
       isUpdating: false,
     })));
-    assert.equal([...document.querySelectorAll('a')].some((link) => link.textContent.includes('Download Android APK')), false);
+    assert.equal([...document.querySelectorAll('a')].some((link) => link.getAttribute('href') === '/download'), false);
   } finally {
     await unmount(dom, root);
   }

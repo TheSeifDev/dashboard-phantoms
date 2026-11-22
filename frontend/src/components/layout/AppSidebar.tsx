@@ -414,7 +414,7 @@ export function AppSidebar({
   const accountMember = useAccountMember();
   const memberAvatar = avatarMember === undefined ? accountMember : avatarMember;
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const closeRef = useRef(onCloseDrawer);
   closeRef.current = onCloseDrawer;
   const asideRef = useRef<HTMLElement>(null);
@@ -473,7 +473,7 @@ export function AppSidebar({
       resize?.disconnect();
       if (animated) gsap.killTweensOf(indicator);
     };
-  }, [pathname, collapsed]);
+  }, [pathname, search, collapsed]);
 
   // Entrance: the rail fades in and links cascade once per mount.
   useEffect(() => {
