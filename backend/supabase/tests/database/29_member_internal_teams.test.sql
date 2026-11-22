@@ -16,7 +16,7 @@ BEGIN
   INSERT INTO public.team_memberships (team_id, member_id, status)
   SELECT t.id, phantoms_test.mid('alice'), 'pending' FROM public.teams AS t WHERE t.slug = 'ai';
   INSERT INTO public.team_memberships (team_id, member_id, status)
-  SELECT t.id, phantoms_test.mid('alice'), 'rejected' FROM public.teams AS t WHERE t.slug = 'hardware';
+  SELECT t.id, phantoms_test.mid('alice'), 'removed' FROM public.teams AS t WHERE t.slug = 'hardware';
   INSERT INTO public.team_memberships (team_id, member_id, status)
   SELECT t.id, phantoms_test.mid('bob'), 'active' FROM public.teams AS t WHERE t.slug = 'software';
   -- A suspended team must never leak into a member's chips.
@@ -56,7 +56,7 @@ SELECT phantoms_test.login_as('alice');
 SELECT is(
   (SELECT count(*)::int FROM public.member_internal_teams()),
   2,
-  'alice sees exactly her approved/pending teams (rejected and inactive ones are excluded)');
+  'alice sees exactly her approved/pending teams (removed and inactive ones are excluded)');
 SELECT is(
   (SELECT pg_catalog.array_agg(slug ORDER BY slug)::text FROM public.member_internal_teams()),
   '{ai,software}',
