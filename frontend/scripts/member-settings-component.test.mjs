@@ -196,7 +196,7 @@ test('Settings duplicate academic number preserves typed fields and shows no fal
 });
 test('Settings load failure blocks form and explicit retry recovers', async () => {
   await mount(el(Settings), '/portal/settings', () => { control.profileRpc = async () => ({ data: null, error: { message: 'private-error' } }); }); assert.equal(document.querySelector('form'), null); assert.ok(!text().includes('private-error'));
-  control.profileRpc = async () => ({ data: snapshot(), error: null }); await act(async () => document.querySelector('main button').click()); await settle(); assert.ok(document.querySelector('form')); await unmount();
+  control.profileRpc = async () => ({ data: snapshot(), error: null }); await act(async () => document.querySelector('.member-settings-main button').click()); await settle(); assert.ok(document.querySelector('form')); await unmount();
 });
 test('profile parser ignores accidental secret columns, derives email, and keeps legacy rows editable', () => {
   const parsed = profileApi.parseMemberProfile(snapshot(false, { device: 'legacy device', gender: 'legacy gender', session_token: 'secret-sentinel' }), 42, EMAIL);
