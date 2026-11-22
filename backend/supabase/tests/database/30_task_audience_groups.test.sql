@@ -4,7 +4,7 @@
 -- ومراقبي التيمات النشطة فقط، وبتستبعد الأعضاء غير النشطين.
 BEGIN;
 \ir _helpers.psql
-SELECT plan(10);
+SELECT plan(11);
 
 -- Fixtures -------------------------------------------------------------------
 DO $$
@@ -22,12 +22,25 @@ BEGIN
 
   UPDATE public.members SET work_status = 'inactive' WHERE id = phantoms_test.mid('lead_inactive');
 
-  INSERT INTO public.web_projects (slug, name, owner_member_id, lead_member_id, status)
-  VALUES ('live-project', 'Live Project', phantoms_test.mid('owner_member'), phantoms_test.mid('lead_a'), 'active');
-  INSERT INTO public.web_projects (slug, name, owner_member_id, lead_member_id, status)
-  VALUES ('archived-project', 'Archived Project', phantoms_test.mid('owner_member'), phantoms_test.mid('lead_archived'), 'archived');
-  INSERT INTO public.web_projects (slug, name, owner_member_id, lead_member_id, status)
-  VALUES ('inactive-lead-project', 'Inactive Lead Project', phantoms_test.mid('owner_member'), phantoms_test.mid('lead_inactive'), 'planning');
+  -- المشروع لازم يتعمل الأول من غير قائد، وبعدين العضوية، وبعدها يتحدد القائد
+  -- (trigger web_projects_invariant_guard بيرفض قائد من غير عضوية lead).
+  INSERT INTO public.web_projects (slug, name, owner_member_id, status)
+  VALUES ('live-project', 'Live Project', phantoms_test.mid('owner_member'), 'planning');
+  INSERT INTO public.web_projects (slug, name, owner_member_id, status)
+  VALUES ('archived-project', 'Archived Project', phantoms_test.mid('owner_member'), 'archived');
+  INSERT INTO public.web_projects (slug, name, owner_member_id, status)
+  VALUES ('inactive-lead-project', 'Inactive Lead Project', phantoms_test.mid('owner_member'), 'planning');
+
+  INSERT INTO public.web_project_members (project_id, member_id, role, status)
+  SELECT p.id, phantoms_test.mid('lead_a'), 'lead', 'pending' FROM public.web_projects AS p WHERE p.slug = 'live-project';
+  INSERT INTO public.web_project_members (project_id, member_id, role, status)
+  SELECT p.id, phantoms_test.mid('lead_archived'), 'lead', 'pending' FROM public.web_projects AS p WHERE p.slug = 'archived-project';
+  INSERT INTO public.web_project_members (project_id, member_id, role, status)
+  SELECT p.id, phantoms_test.mid('lead_inactive'), 'lead', 'pending' FROM public.web_projects AS p WHERE p.slug = 'inactive-lead-project';
+
+  UPDATE public.web_projects SET lead_member_id = phantoms_test.mid('lead_a') WHERE slug = 'live-project';
+  UPDATE public.web_projects SET lead_member_id = phantoms_test.mid('lead_archived') WHERE slug = 'archived-project';
+  UPDATE public.web_projects SET lead_member_id = phantoms_test.mid('lead_inactive') WHERE slug = 'inactive-lead-project';
 
   INSERT INTO public.team_admin_assignments (team_id, user_id, role)
   SELECT t.id, phantoms_test.uid('head_user'), 'head' FROM public.teams AS t WHERE t.slug = 'ai';
@@ -55,12 +68,13 @@ SELECT ok(
             AND proconfig::text LIKE '%search_path=%'),
   'admin_task_audience_groups pins its own search_path');
 
--- anon cannot execute at all.
-SELECT throws_ok(
-  'SELECT public.admin_task_audience_groups()',
-  '42501',
-  NULL,
-  'anon has no EXECUTE grant on the audience RPC');
+-- Privileges: anon مقفول، authenticated مسموح (الحماية جوه الدالة).
+SELECT ok(
+  NOT has_function_privilege('anon', 'public.admin_task_audience_groups()', 'EXECUTE'),
+  'anonymous role cannot execute admin_task_audience_groups');
+SELECT ok(
+  has_function_privilege('authenticated', 'public.admin_task_audience_groups()', 'EXECUTE'),
+  'authenticated role can execute admin_task_audience_groups');
 
 -- A signed-in member with no admin seat is rejected by the guard.
 RESET ROLE;
