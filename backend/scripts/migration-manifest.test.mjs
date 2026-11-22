@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the forward manifest preserves provenance and records the applied Owner erasure migration', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 31);
+  assert.equal(forward.length, 32);
   const appUsage = forward[24];
   assert.equal(appUsage.version, '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
@@ -120,6 +120,15 @@ test('the forward manifest preserves provenance and records the applied Owner er
   assert.equal(storageVectorExclusion.original_source_version, storageVectorExclusion.version);
   assert.equal(storageVectorExclusion.original_source_filename, storageVectorExclusion.canonical_repository_filename);
   assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, storageVectorExclusion.canonical_repository_filename))).digest('hex'), storageVectorExclusion.sha256);
+  const pendingProfileMigration = forward[31];
+  assert.equal(pendingProfileMigration.version, '20261122010000');
+  assert.equal(pendingProfileMigration.name, 'member_profile_all_required');
+  assert.equal(pendingProfileMigration.production_status, 'not_applied');
+  assert.equal(pendingProfileMigration.remote_applied_timestamp, null);
+  assert.equal(pendingProfileMigration.canonical_repository_filename, 'backend/supabase/migrations/20261122010000_member_profile_all_required.sql');
+  assert.equal(pendingProfileMigration.original_source_version, pendingProfileMigration.version);
+  assert.equal(pendingProfileMigration.original_source_filename, pendingProfileMigration.canonical_repository_filename);
+  assert.equal(createHash('sha256').update(readFileSync(join(repositoryRoot, pendingProfileMigration.canonical_repository_filename))).digest('hex'), pendingProfileMigration.sha256);
   const [entry] = forward;
   assert.equal(entry.version, '20261116100646');
   assert.equal(entry.production_status, 'applied');
