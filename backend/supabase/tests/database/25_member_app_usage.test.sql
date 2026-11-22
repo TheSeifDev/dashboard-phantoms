@@ -30,11 +30,11 @@ BEGIN
   ]) AS n;
 END $$;
 
--- Canonical migration inventory is now 24 historical + 33 forward files.
-SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 58,
-  'local disposable migration history records all 58 canonical files');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261122105000',
-  'local disposable migration history ends at the owner member identity migration');
+-- Canonical migration inventory is now 24 historical + 36 forward files.
+SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 60,
+  'local disposable migration history records all 60 canonical files');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261122154000',
+  'local disposable migration history ends at the member internal teams status filter migration');
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
            WHERE version <= '20261114164006'), 24,
   'historical migration cohort remains exactly 24 migrations');
