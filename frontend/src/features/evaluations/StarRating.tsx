@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { Star } from 'lucide-react';
+import { Minus, Star } from 'lucide-react';
 import { useLocale } from '../../i18n/useLocale';
 
 const MAX_STARS = 5;
@@ -128,6 +128,80 @@ export function EvalStarInput({ value, onChange, label, describedBy }: InputProp
       >
         {t('بدون نجوم', 'No stars')}
       </button>
+    </div>
+  );
+}
+
+/**
+ * اختيار خصم النجوم (نجوم بالسالب): ١ إلى ٥ نجوم تُخصم من رصيد العضو.
+ * نفس سلوك النجوم الذهبية في الكيبورد، لكن الأيقونة نجمة عليها علامة سالب.
+ */
+export function EvalMinusInput({ value, onChange, label, describedBy }: InputProps) {
+  const { t, number, dir } = useLocale();
+  const [preview, setPreview] = useState(0);
+  const groupRef = useRef<HTMLDivElement>(null);
+  const id = useId();
+  const active = preview || value;
+
+  const focusStar = (index: number) => {
+    const buttons = groupRef.current?.querySelectorAll<HTMLButtonElement>('.eval-minus-btn');
+    buttons?.[index]?.focus();
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const forward = dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+    const backward = dir === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+    let next: number | null = null;
+    if (event.key === forward || event.key === 'ArrowDown') next = Math.min(MAX_STARS, (value || 0) + 1);
+    else if (event.key === backward || event.key === 'ArrowUp') next = Math.max(1, (value || 1) - 1);
+    else if (event.key === 'Home') next = 1;
+    else if (event.key === 'End') next = MAX_STARS;
+    if (next === null) return;
+    event.preventDefault();
+    onChange(next);
+    setPreview(0);
+    focusStar(next - 1);
+  };
+
+  return (
+    <div className="eval-star-input">
+      <div
+        ref={groupRef}
+        className="eval-star-track eval-minus-track"
+        role="radiogroup"
+        aria-label={label}
+        aria-describedby={describedBy}
+        onKeyDown={handleKeyDown}
+        onMouseLeave={() => setPreview(0)}
+      >
+        {Array.from({ length: MAX_STARS }, (_, index) => {
+          const starNumber = index + 1;
+          const on = starNumber <= active;
+          const checked = starNumber === value;
+          return (
+            <button
+              key={starNumber}
+              type="button"
+              role="radio"
+              id={`${id}-minus-${starNumber}`}
+              aria-checked={checked}
+              tabIndex={checked || (value === 0 && starNumber === 1) ? 0 : -1}
+              aria-label={t(`خصم ${number(starNumber)} نجمة`, `Deduct ${number(starNumber)} star${starNumber > 1 ? 's' : ''}`)}
+              className={`eval-star-btn eval-minus-btn ${on ? 'eval-minus-btn--on' : ''}`}
+              onMouseEnter={() => setPreview(starNumber)}
+              onFocus={() => setPreview(starNumber)}
+              onBlur={() => setPreview(0)}
+              onClick={() => {
+                onChange(starNumber);
+                setPreview(0);
+              }}
+            >
+              <Star aria-hidden="true" />
+              <Minus className="eval-minus-mark" aria-hidden="true" />
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

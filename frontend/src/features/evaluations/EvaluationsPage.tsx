@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   CheckCheck,
   Clock,
   Eye,
+  Minus,
   Plus,
   RotateCcw,
   Search,
+  ShieldAlert,
   Sparkles,
   Star,
   Trash2,
@@ -15,11 +18,16 @@ import {
 import { useMembers } from '../members/api';
 import {
   EVALUATION_GRADE_LABELS,
+  STRIKE_LIMIT,
   useAdminEvaluations,
   useDeleteEvaluation,
+  useExpelMember,
+  useMemberStrikes,
 } from './api';
 import type { EvaluationGrade, MemberEvaluation } from './api';
 import type { Member } from '../../types/db';
+import { useAdminAccess } from '../admin/access/api';
+import { useAuthStore } from '../../store/auth';
 import { EvaluationCreateModal } from './EvaluationCreateModal';
 import { EvalStars } from './StarRating';
 import { Button } from '../../components/ui/Button';
@@ -68,10 +76,16 @@ export default function EvaluationsPage() {
   const evaluationsQuery = useAdminEvaluations();
   const membersQuery = useMembers();
   const deleteEval = useDeleteEvaluation();
+  const strikesQuery = useMemberStrikes();
+  const expelMember = useExpelMember();
+  const ownerId = useAuthStore((state) => state.user?.id ?? null);
+  const access = useAdminAccess(ownerId);
+  const isOwner = Boolean(ownerId) && access.data?.is_owner === true;
 
   const [createOpen, setCreateOpen] = useState(false);
   const [preselectedMemberId, setPreselectedMemberId] = useState<number | null>(null);
   const [evalToDelete, setEvalToDelete] = useState<MemberEvaluation | null>(null);
+  const [memberToExpel, setMemberToExpel] = useState<Member | null>(null);
   const [search, setSearch] = useState('');
   const [memberFilter, setMemberFilter] = useState<string>('ALL');
   const [gradeFilter, setGradeFilter] = useState<string>('ALL');
@@ -79,6 +93,22 @@ export default function EvaluationsPage() {
 
   const members = membersQuery.data ?? [];
   const evaluations = evaluationsQuery.data ?? [];
+  const strikes = strikesQuery.data ?? [];
+
+  /** عدد التحذيرات لكل عضو — الحد ٣، والتالت معناه طرد. */
+  const strikesByMember = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const strike of strikes) map[strike.member_id] = (map[strike.member_id] ?? 0) + 1;
+    return map;
+  }, [strikes]);
+
+  /** الأعضاء اللي عليهم تحذيرات، مرتبين بالأقرب للحد. */
+  const strikeWatch = useMemo(() => {
+    return members
+      .filter((member) => (strikesByMember[member.id] ?? 0) > 0)
+      .map((member) => ({ member, strikes: strikesByMember[member.id] ?? 0 }))
+      .sort((a, b) => b.strikes - a.strikes);
+  }, [members, strikesByMember]);
 
   const memberNameMap = useMemo(() => {
     const map: Record<number, string> = {};
@@ -97,7 +127,8 @@ export default function EvaluationsPage() {
     const map: Record<number, { stars: number; count: number }> = {};
     for (const evaluation of evaluations) {
       const entry = map[evaluation.member_id] ?? { stars: 0, count: 0 };
-      entry.stars += Math.max(0, evaluation.points);
+      // الرصيد = مجموع كل الحركات (نجوم ممنوحة − نجوم مخصومة).
+      entry.stars += evaluation.points;
       entry.count += 1;
       map[evaluation.member_id] = entry;
     }
@@ -125,8 +156,10 @@ export default function EvaluationsPage() {
       averageStars,
       topMemberId: topMember ? Number(topMember[0]) : null,
       topMemberStars: topMember ? topMember[1].stars : 0,
+      strikes: strikes.length,
+      membersAtLimit: Object.values(strikesByMember).filter((count) => count >= STRIKE_LIMIT).length,
     };
-  }, [evaluations, starsByMember]);
+  }, [evaluations, starsByMember, strikes, strikesByMember]);
 
   const readCounts = useMemo(() => {
     let read = 0;
@@ -186,6 +219,25 @@ export default function EvaluationsPage() {
       return date(iso, { dateStyle: 'medium', timeStyle: 'short' });
     } catch {
       return iso;
+    }
+  };
+
+  const handleConfirmExpel = async () => {
+    if (!memberToExpel) return;
+    try {
+      await expelMember.mutateAsync({
+        memberId: memberToExpel.id,
+        reason: t('الوصول للحد الأقصى من التحذيرات (٣ تحذيرات).', 'Reached the maximum number of strikes (3).'),
+      });
+      toast.success(
+        t(
+          `تم طرد ${memberToExpel.full_name} من الفريق بالكامل وإلغاء وصوله للبوابة.`,
+          `${memberToExpel.full_name} was expelled from the team and their portal access was revoked.`,
+        ),
+      );
+      setMemberToExpel(null);
+    } catch (cause) {
+      toast.error(handleSupabaseError(cause).message);
     }
   };
 
@@ -327,7 +379,85 @@ export default function EvaluationsPage() {
           </span>
           <span className="eval-stat-meter" aria-hidden="true"><span style={{ width: `${stats.total ? (stats.unread / stats.total) * 100 : 0}%` }} /></span>
         </div>
+
+        <div className="eval-stat eval-stat--strike" role="listitem">
+          <div className="eval-stat-top">
+            <span className="eval-stat-label">{t('التحذيرات المسجّلة', 'Recorded strikes')}</span>
+            <span className="eval-stat-icon" aria-hidden="true"><AlertTriangle size={14} /></span>
+          </div>
+          <div className="eval-stat-figure">
+            <span className="eval-stat-value">{number(stats.strikes)}</span>
+            <span className="eval-stat-unit">{t('تحذير', 'strikes')}</span>
+          </div>
+          <span className="eval-stat-note">
+            {stats.membersAtLimit > 0
+              ? t(`${number(stats.membersAtLimit)} عضو وصل الحد — لازم طرد`, `${number(stats.membersAtLimit)} member(s) at the limit — expel`)
+              : t(`الحد ${number(STRIKE_LIMIT)} تحذيرات لكل عضو`, `Limit ${number(STRIKE_LIMIT)} strikes per member`)}
+          </span>
+          <span className="eval-stat-meter" aria-hidden="true"><span style={{ width: `${strikeWatch.length ? Math.min(100, (stats.membersAtLimit / Math.max(1, strikeWatch.length)) * 100) : 0}%` }} /></span>
+        </div>
       </div>
+
+      {strikeWatch.length > 0 && (
+        <section className="eval-strikes" aria-labelledby="eval-strikes-heading">
+          <div className="eval-strikes-head">
+            <h2 className="eval-strikes-title" id="eval-strikes-heading">
+              <ShieldAlert size={16} aria-hidden="true" />
+              {t('سجل التحذيرات', 'Strike watch')}
+            </h2>
+            <p className="eval-strikes-note">
+              {t(
+                `كل عضو عنده ${number(STRIKE_LIMIT)} تحذيرات بس. التحذير التالت معناه إن المالك يطرده من الفريق نهائياً.`,
+                `Every member gets ${number(STRIKE_LIMIT)} strikes only. The third one means the owner expels them from the team.`,
+              )}
+            </p>
+          </div>
+          <ul className="eval-strikes-list">
+            {strikeWatch.map(({ member, strikes: count }) => {
+              const atLimit = count >= STRIKE_LIMIT;
+              return (
+                <li key={member.id} className={`eval-strikes-row ${atLimit ? 'eval-strikes-row--limit' : ''}`}>
+                  <MemberAvatar member={member} name={member.full_name} className="eval-strikes-avatar" fallback="ع" />
+                  <span className="eval-strikes-name">{member.full_name}</span>
+                  <span
+                    className="eval-strike-dots"
+                    role="img"
+                    aria-label={t(`${count} من ${STRIKE_LIMIT} تحذيرات`, `${count} of ${STRIKE_LIMIT} strikes`)}
+                  >
+                    {Array.from({ length: STRIKE_LIMIT }, (_, index) => (
+                      <i
+                        key={index}
+                        className={`eval-strike-dot ${index < count ? 'eval-strike-dot--on' : ''}`}
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </span>
+                  <span className="eval-strikes-count">
+                    {atLimit
+                      ? t('وصل الحد الأقصى', 'At the limit')
+                      : t(`فاضل ${number(STRIKE_LIMIT - count)}`, `${number(STRIKE_LIMIT - count)} left`)}
+                  </span>
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      className="eval-strikes-expel"
+                      onClick={() => setMemberToExpel(member)}
+                      disabled={expelMember.isPending}
+                    >
+                      <ShieldAlert size={13} aria-hidden="true" />
+                      {t('طرد من الفريق', 'Expel from team')}
+                    </button>
+                  ) : (
+                    <span className="eval-strikes-owner-only">
+                      {t('الطرد للمالك فقط', 'Expulsion is owner-only')}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <section className="eval-toolbar" aria-label={t('البحث والتصفية', 'Search and filters')}>
         <div className="eval-toolbar-row">
@@ -410,7 +540,14 @@ export default function EvaluationsPage() {
                     <div className="eval-identity">
                       <h2 className="eval-name">
                         {memberName}
-                        <span className={`eval-grade eval-grade--${evaluation.grade}`}>{getGradeLabel(evaluation.grade, t)}</span>
+                        {evaluation.kind === 'strike' ? (
+                          <span className="eval-grade eval-grade--strike">
+                            <AlertTriangle size={11} aria-hidden="true" />
+                            {t('تحذير', 'Warning')}
+                          </span>
+                        ) : (
+                          <span className={`eval-grade eval-grade--${evaluation.grade}`}>{getGradeLabel(evaluation.grade, t)}</span>
+                        )}
                       </h2>
                       <p className="eval-meta">
                         <span>{evaluation.title}</span>
@@ -421,7 +558,12 @@ export default function EvaluationsPage() {
                       </p>
                     </div>
                     <div className="eval-score">
-                      {stars > 0 ? (
+                      {evaluation.kind === 'strike' ? (
+                        <span className="eval-star-pill eval-star-pill--strike">
+                          <AlertTriangle size={11} aria-hidden="true" />
+                          {t('تحذير رسمي', 'Official warning')}
+                        </span>
+                      ) : stars > 0 ? (
                         <>
                           <EvalStars value={stars} />
                           <span className="eval-star-pill">
@@ -431,6 +573,7 @@ export default function EvaluationsPage() {
                         </>
                       ) : evaluation.points < 0 ? (
                         <span className="eval-star-pill eval-star-pill--minus">
+                          <Minus size={11} aria-hidden="true" />
                           {t(`${number(evaluation.points)} نقطة خصم`, `${number(evaluation.points)} points`)}
                         </span>
                       ) : (
@@ -498,6 +641,7 @@ export default function EvaluationsPage() {
         members={members}
         preselectedMemberId={preselectedMemberId}
         starsByMember={starsByMember}
+        strikesByMember={strikesByMember}
         onClose={() => setCreateOpen(false)}
       />
 
@@ -511,6 +655,21 @@ export default function EvaluationsPage() {
         confirmLabel={t('حذف التقييم', 'Delete evaluation')}
         isPending={deleteEval.isPending}
         pendingLabel={t('جارٍ الحذف…', 'Deleting…')}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(memberToExpel)}
+        onClose={() => setMemberToExpel(null)}
+        onConfirm={() => { void handleConfirmExpel(); }}
+        title={t('تأكيد طرد العضو من الفريق', 'Confirm member expulsion')}
+        itemName={memberToExpel?.full_name}
+        description={t(
+          'هيتم إيقاف العضو، وإزالته من كل الفرق، وإلغاء ربط الدخول والجلسات — مش هيقدر يدخل بوابة الأعضاء تاني. الخطوة دي مش سهلة الرجوع.',
+          'The member will be deactivated, removed from every team, and their sign-in binding and sessions revoked — they will not be able to enter the member portal again. This is not easily reversible.',
+        )}
+        confirmLabel={t('طرد نهائي', 'Expel permanently')}
+        isPending={expelMember.isPending}
+        pendingLabel={t('جارٍ الطرد…', 'Expelling…')}
       />
     </section>
   );

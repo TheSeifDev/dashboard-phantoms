@@ -25,6 +25,35 @@ export const EVALUATION_GRADE_LABELS: Record<EvaluationGrade, string> = {
   warning: 'لفت نظر',
 };
 
+/**
+ * نوع الحركة: منح نجوم، خصم نجوم، أو تحذير (strike).
+ * التحذير بياخد grade = warning و points = 0، وبيتحسب في جدول member_strikes.
+ */
+export type EvaluationKind = 'stars' | 'minus' | 'strike';
+
+export const EVALUATION_KIND_LABELS: Record<EvaluationKind, string> = {
+  stars: 'نجوم',
+  minus: 'خصم نجوم',
+  strike: 'تحذير',
+};
+
+export const STRIKE_LIMIT = 3;
+
+/** التقدير بقى مش اختياري: بيتحسب تلقائياً من عدد النجوم. */
+export function gradeFromStars(stars: number): EvaluationGrade {
+  if (stars >= 5) return 'excellent';
+  if (stars >= 4) return 'very_good';
+  if (stars >= 3) return 'good';
+  if (stars >= 1) return 'needs_improvement';
+  return 'warning';
+}
+
+function normalizeKind(value: unknown, points: number, grade: EvaluationGrade): EvaluationKind {
+  if (value === 'strike' || value === 'minus' || value === 'stars') return value;
+  if (grade === 'warning' && points === 0) return 'strike';
+  return points < 0 ? 'minus' : 'stars';
+}
+
 export interface MemberEvaluation {
   id: number;
   created_at: string;
@@ -37,6 +66,7 @@ export interface MemberEvaluation {
   bonus_note_id: number | null;
   viewed_at: string | null;
   read_at: string | null;
+  kind: EvaluationKind;
   mode: 'native' | 'fallback';
 }
 
@@ -44,7 +74,7 @@ export interface CreateEvaluationInput {
   memberIds: number[];
   memberNamesMap: Record<number, string>;
   title: string;
-  grade: EvaluationGrade;
+  kind: EvaluationKind;
   points: number;
   feedback: string;
   evaluatorName: string;
@@ -54,6 +84,7 @@ interface FallbackEvalContent {
   __phantoms_eval?: boolean;
   member_id: number;
   grade: EvaluationGrade;
+  kind?: EvaluationKind;
   points: number;
   feedback: string;
   evaluator_name: string;
@@ -101,6 +132,7 @@ function parseFallbackTaskRow(task: Task): MemberEvaluation | null {
     bonus_note_id: typeof parsed.bonus_note_id === 'number' ? parsed.bonus_note_id : null,
     viewed_at: isViewed ? updatedAt || task.created_at : null,
     read_at: isRead ? updatedAt || task.created_at : null,
+    kind: normalizeKind(parsed.kind, Number(parsed.points ?? 0), normalizeGrade(parsed.grade)),
     mode: 'fallback',
   };
 }
@@ -115,18 +147,21 @@ async function fetchAdminEvaluations(): Promise<MemberEvaluation[]> {
 
   if (!nativeRes.error && Array.isArray(nativeRes.data)) {
     for (const row of nativeRes.data as Array<Record<string, unknown>>) {
+      const points = Number(row.points ?? 0);
+      const grade = normalizeGrade(row.grade);
       results.push({
         id: Number(row.id),
         created_at: String(row.created_at),
         member_id: Number(row.member_id),
         title: String(row.title ?? ''),
-        grade: normalizeGrade(row.grade),
-        points: Number(row.points ?? 0),
+        grade,
+        points,
         feedback: String(row.feedback ?? ''),
         evaluator_name: String(row.evaluator_name ?? 'إدارة PHANTOMS'),
         bonus_note_id: typeof row.bonus_note_id === 'number' ? row.bonus_note_id : null,
         viewed_at: typeof row.viewed_at === 'string' ? row.viewed_at : null,
         read_at: typeof row.read_at === 'string' ? row.read_at : null,
+        kind: normalizeKind(row.kind, points, grade),
         mode: 'native',
       });
     }
@@ -218,6 +253,14 @@ export function useCreateEvaluations() {
       const cleanTitle = input.title.trim();
       const cleanFeedback = input.feedback.trim();
       const cleanEvaluator = input.evaluatorName.trim() || 'إدارة PHANTOMS';
+      const kind: EvaluationKind = input.kind;
+      // التحذير مالوش نجوم ولا خصم؛ النجوم بتتحسب من العدد، والخصم بالسالب.
+      const points = kind === 'strike' ? 0 : kind === 'minus' ? -Math.abs(input.points) : Math.abs(input.points);
+      const grade: EvaluationGrade = kind === 'strike'
+        ? 'warning'
+        : kind === 'minus'
+          ? 'needs_improvement'
+          : gradeFromStars(points);
       let createdCount = 0;
 
       for (const memberId of input.memberIds) {
@@ -226,8 +269,8 @@ export function useCreateEvaluations() {
           memberId,
           memberName,
           cleanTitle,
-          input.grade,
-          input.points,
+          grade,
+          points,
           cleanFeedback,
           cleanEvaluator,
         );
@@ -237,8 +280,9 @@ export function useCreateEvaluations() {
           .insert({
             member_id: memberId,
             title: cleanTitle,
-            grade: input.grade,
-            points: input.points,
+            grade,
+            kind,
+            points,
             feedback: cleanFeedback,
             evaluator_name: cleanEvaluator,
             bonus_note_id: bonusNoteId,
@@ -253,8 +297,9 @@ export function useCreateEvaluations() {
           const contentPayload: FallbackEvalContent = {
             __phantoms_eval: true,
             member_id: memberId,
-            grade: input.grade,
-            points: input.points,
+            grade,
+            kind,
+            points,
             feedback: cleanFeedback,
             evaluator_name: cleanEvaluator,
             bonus_note_id: bonusNoteId,
@@ -366,6 +411,7 @@ export function useMemberEvaluations(memberId: number | null | undefined) {
             bonus_note_id: null,
             viewed_at: typeof row.viewed_at === 'string' ? row.viewed_at : null,
             read_at: typeof row.read_at === 'string' ? row.read_at : null,
+            kind: normalizeKind(row.kind, Number(row.points ?? 0), normalizeGrade(row.grade)),
             mode: 'native',
           });
         }
@@ -442,6 +488,140 @@ export function useMarkEvaluationRead() {
     onSettled: (_data, _err, vars) => {
       void qc.invalidateQueries({ queryKey: ['member_portal_evaluations', vars.memberId] });
       void qc.invalidateQueries({ queryKey: EVALUATIONS_QUERY_KEY });
+    },
+  });
+}
+
+// =====================================================
+// التحذيرات (Strikes) والطرد من الفريق
+// =====================================================
+
+export const MEMBER_STRIKES_QUERY_KEY = ['member_strikes'] as const;
+
+export interface MemberStrike {
+  id: number;
+  member_id: number;
+  evaluation_id: number | null;
+  reason: string;
+  issued_by: string | null;
+  issued_by_name: string | null;
+  created_at: string;
+}
+
+export interface IssueStrikeResult {
+  strike_id: number;
+  evaluation_id: number;
+  member_id: number;
+  strikes: number;
+  limit: number;
+  expulsion_required: boolean;
+}
+
+export interface IssueStrikeInput {
+  memberId: number;
+  title: string;
+  feedback: string;
+  author: string;
+}
+
+function invalidateEvaluationViews(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: EVALUATIONS_QUERY_KEY });
+  void qc.invalidateQueries({ queryKey: MEMBER_STRIKES_QUERY_KEY });
+  void qc.invalidateQueries({ queryKey: ['members'] });
+  void qc.invalidateQueries({ queryKey: ['notes'] });
+  void qc.invalidateQueries({ queryKey: ['ranking'] });
+  void qc.invalidateQueries({ queryKey: ['member-bonus'] });
+  void qc.invalidateQueries({ queryKey: ['member_portal_evaluations'] });
+  void qc.invalidateQueries({ queryKey: ['member_portal_strikes'] });
+}
+
+/** كل التحذيرات المسجّلة (للإدارة فقط، محمية بـ RLS). */
+export function useMemberStrikes() {
+  return useQuery({
+    queryKey: MEMBER_STRIKES_QUERY_KEY,
+    queryFn: async (): Promise<MemberStrike[]> => {
+      const { data, error } = await supabase
+        .from('member_strikes')
+        .select('id, member_id, evaluation_id, reason, issued_by, issued_by_name, created_at')
+        .order('created_at', { ascending: false });
+      if (error) {
+        if (isMissingRelationError(error, 'member_strikes')) return [];
+        throw toAppError(error, 'معرفناش نحمّل سجل التحذيرات.');
+      }
+      return (data ?? []).map((row) => ({
+        id: Number((row as Record<string, unknown>).id),
+        member_id: Number((row as Record<string, unknown>).member_id),
+        evaluation_id:
+          typeof (row as Record<string, unknown>).evaluation_id === 'number'
+            ? ((row as Record<string, unknown>).evaluation_id as number)
+            : null,
+        reason: String((row as Record<string, unknown>).reason ?? ''),
+        issued_by:
+          typeof (row as Record<string, unknown>).issued_by === 'string'
+            ? ((row as Record<string, unknown>).issued_by as string)
+            : null,
+        issued_by_name:
+          typeof (row as Record<string, unknown>).issued_by_name === 'string'
+            ? ((row as Record<string, unknown>).issued_by_name as string)
+            : null,
+        created_at: String((row as Record<string, unknown>).created_at ?? ''),
+      }));
+    },
+  });
+}
+
+/** إصدار تحذير لعضو واحد؛ بيرجع عدد التحذيرات الحالي وهل لازم طرد. */
+export function useIssueStrike() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: IssueStrikeInput): Promise<IssueStrikeResult> => {
+      const { data, error } = await (supabase as any).rpc('admin_issue_strike', {
+        p_member_id: input.memberId,
+        p_title: input.title,
+        p_feedback: input.feedback,
+        p_author: input.author,
+      });
+      if (error) throw error;
+      return data as IssueStrikeResult;
+    },
+    onSettled: () => invalidateEvaluationViews(qc),
+  });
+}
+
+/** طرد العضو من الفريق بالكامل — للمالك فقط. */
+export function useExpelMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ memberId, reason }: { memberId: number; reason: string }) => {
+      const { data, error } = await (supabase as any).rpc('owner_expel_member', {
+        p_member_id: memberId,
+        p_reason: reason,
+      });
+      if (error) throw error;
+      return data as { member_id: number; expelled: boolean; strikes: number; reason: string | null };
+    },
+    onSettled: () => invalidateEvaluationViews(qc),
+  });
+}
+
+export interface MemberMyStrikes {
+  limit: number;
+  strikes: { id: number; reason: string; created_at: string; issued_by_name: string | null }[];
+}
+
+/** تحذيرات العضو نفسه (من بوابته) — الحد الافتراضي ٣. */
+export function useMemberMyStrikes(enabled = true) {
+  return useQuery({
+    queryKey: ['member_portal_strikes'],
+    enabled,
+    queryFn: async (): Promise<MemberMyStrikes> => {
+      const { data, error } = await (memberSupabase as any).rpc('member_my_strikes');
+      if (error) return { limit: STRIKE_LIMIT, strikes: [] };
+      const payload = (data ?? {}) as Partial<MemberMyStrikes>;
+      return {
+        limit: typeof payload.limit === 'number' ? payload.limit : STRIKE_LIMIT,
+        strikes: Array.isArray(payload.strikes) ? payload.strikes : [],
+      };
     },
   });
 }

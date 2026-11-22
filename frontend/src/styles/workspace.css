@@ -130,7 +130,9 @@
   .cmdk-panel { position: relative; display: flex; width: min(640px, 100%); max-height: min(560px, 76vh); flex-direction: column; overflow: hidden; border: 1px solid var(--glass-border); border-radius: 24px; background: var(--glass-bg-strong); color: var(--text); box-shadow: var(--glass-inset), 0 40px 90px -30px rgb(5 8 20 / .55); -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%); transform-origin: top center; }
   .cmdk-panel::before { content: ""; position: absolute; inset: 0 0 auto; height: 1px; background: var(--glass-hairline); opacity: 1; }
   .cmdk-search { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--glass-hairline); color: var(--text-muted); }
-  .cmdk-search input { flex: 1; min-width: 0; min-height: 32px; border: 0; background: transparent; color: var(--text); font-size: 16px; outline: none; }
+  .cmdk-search:focus-within { background: color-mix(in srgb, var(--text) 5%, transparent); }
+  .cmdk-search input { flex: 1; min-width: 0; min-height: 32px; border: 0; background: transparent; color: var(--text); font-size: 16px; outline: none; box-shadow: none; }
+  .cmdk-search input:focus, .cmdk-search input:focus-visible { outline: none; box-shadow: none; }
   .cmdk-list { flex: 1; overflow-y: auto; margin: 0; padding: 8px; list-style: none; scrollbar-width: thin; }
   .cmdk-list ul { margin: 0; padding: 0; list-style: none; }
   .cmdk-group + .cmdk-group { margin-top: 6px; }

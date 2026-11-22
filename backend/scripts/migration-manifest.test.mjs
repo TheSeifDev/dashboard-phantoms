@@ -58,7 +58,7 @@ test('the repository preserves exactly 24 initialization migrations plus registe
 test('the forward manifest preserves provenance and records the applied Owner erasure migration', () => {
   const forward = JSON.parse(readFileSync(forwardManifestPath, 'utf8'));
   assert.equal(currentManifest.length, EXPECTED_MIGRATION_COUNT);
-  assert.equal(forward.length, 33);
+  assert.equal(forward.length, 34);
   const appUsage = forward[24];
   assert.equal(appUsage.version, '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');

@@ -35,6 +35,8 @@ async function harness() {
     ['lib/supabase/client.js', 'exports.supabase = { auth: { signOut: async () => { globalThis.__sidebarCalls.push("signOut"); if (globalThis.__sidebarFailure === "throw") throw new Error("private error detail"); return { error: globalThis.__sidebarFailure === "error" ? new Error("private error detail") : null }; } } };\n'],
     ['store/toast.js', 'exports.toast = { error: (message) => { globalThis.__sidebarCalls.push("logoutError"); globalThis.__sidebarErrorMessage = message; } };\n'],
     ['features/auth/auth-flow.js', 'exports.clearAdminSetupIntent = () => globalThis.__sidebarCalls.push("clearSetupIntent");\n'],
+    ['features/auth/useAccountMember.js', 'exports.useAccountMember = () => null;\n'],
+    ['components/ui/MemberAvatar.js', 'exports.MemberAvatar = () => null;\n'],
   ]) {
     const destination = join(root, 'src', path);
     await mkdir(dirname(destination), { recursive: true });
