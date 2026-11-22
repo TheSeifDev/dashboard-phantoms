@@ -256,6 +256,13 @@ async function enrollFromJoin(
     await page.locator('#join-academic-number').fill(academicNumber);
     await page.locator('#join-academic-group').fill('AUTH-FIXTURE');
     await page.locator('#join-specialization').selectOption('software');
+    await page.locator('#join-linkedin-url').fill(`https://www.linkedin.com/in/auth-fixture-${academicNumber}`);
+    await page.locator('#join-portfolio-url').fill(`https://github.com/auth-fixture-${academicNumber}`);
+    await page.locator('#join-residence').fill('Alexandria');
+    await page.locator('#join-work-conditions').fill('Remote, evenings');
+    await page.locator('#join-bio').fill('Disposable auth fixture member');
+    await page.locator('#join-device').selectOption('لابتوب');
+    await page.locator('#join-gender').selectOption('ذكر');
     await expect(page.locator('#join-university-email')).toHaveValue(`${academicNumber}@batechu.com`);
     await expect(page.locator('#join-university-email')).toHaveJSProperty('readOnly', true);
   }
