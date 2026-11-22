@@ -127,7 +127,7 @@ function installDownloadDomMocks(dom) {
 }
 
 function downloadButton() {
-  return document.querySelector('main button');
+  return document.querySelector('[data-testid="download-apk"]');
 }
 
 function nextTick() {
@@ -208,7 +208,7 @@ test('unmount aborts an in-flight stream and does not emit a false success', asy
   });
   const root = createRoot(document.getElementById('root'));
   await act(async () => root.render(React.createElement(feature.default)));
-  const button = document.querySelector('button[aria-busy]') ?? document.querySelector('button');
+  const button = document.querySelector('[data-testid="download-apk"]');
   assert.ok(button);
   await act(async () => button.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true })));
   assert.equal(toastEvents.some((event) => event.method === 'loading'), true);

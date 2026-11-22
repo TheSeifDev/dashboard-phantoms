@@ -8,8 +8,8 @@ import { useLocale } from '../../i18n/useLocale';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore, getAdminRemember, setAdminRemember } from '../../store/auth';
 import { supabase, syncAdminSessionStorage } from '../../lib/supabase/client';
-import { toAppError } from '../../lib/supabase/errors';
 import { isValidEmail } from '../../lib/validators';
+import { authFailureMessage, classifyAuthFailure } from './auth-errors';
 import { adminAccessKey, useAdminAccess } from '../admin/access/api';
 import type { AdminAccess } from '../../types/db';
 import { clearAdminSetupIntent } from './auth-flow';
@@ -93,20 +93,11 @@ export default function AdminLoginPage() {
         password,
       });
       if (loginError) {
-        const errorCode = loginError.code?.toLowerCase();
-        const errorMessage = loginError.message.toLowerCase();
-        if (
-          errorCode === 'invalid_credentials'
-          || (loginError.status === 400 && errorMessage.includes('invalid login credentials'))
-        ) {
-          setError(t('بيانات الدخول مش صحيحة. اتأكد من البريد وكلمة المرور.', 'The sign-in details are incorrect. Check your email and password.'));
-        } else if (errorCode === 'email_not_confirmed') {
-          setError(t('أكد البريد الإلكتروني المرتبط بالحساب الأول، وبعدها جرّب تسجيل الدخول.', 'Confirm the email address linked to this account, then try signing in again.'));
-        } else if (errorCode === 'invalid_api_key' || errorMessage.includes('invalid api key')) {
-          setError(t('إعداد اتصال Supabase غير صحيح. راجع إعدادات VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY.', 'The Supabase connection is misconfigured. Check the application environment settings.'));
-        } else {
-          setError(toAppError(loginError, t('معرفناش نتصل بالخادم. حاول تاني بعد شوية.', 'Could not connect to the server. Please try again shortly.')).message);
-        }
+        const failure = classifyAuthFailure(loginError);
+        const invalidCredentialsCopy = t('بيانات الدخول مش صحيحة. اتأكد من البريد وكلمة المرور.', 'The sign-in details are incorrect. Check your email and password.');
+        setError(failure.kind === 'INVALID_CREDENTIALS'
+          ? invalidCredentialsCopy
+          : authFailureMessage(failure, t, 'معرفناش نتصل بالخادم. حاول تاني بعد شوية.'));
       } else if (data.session) {
         const { data: accessData, error: accessError } = await supabase.rpc('get_admin_access');
         const destination = accessError ? null : managerDestination(accessData);

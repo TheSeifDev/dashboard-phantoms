@@ -3,13 +3,21 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import { ArrowUpRight, Check, Download, ExternalLink, Loader2, ShieldCheck, Smartphone, X } from 'lucide-react';
+import { ArrowUpRight, Check, Download, ExternalLink, Loader2, Share, ShieldCheck, Smartphone, X } from 'lucide-react';
 import { BrandLockup } from '../../components/brand/BrandLockup';
 import { useReducedMotion } from '../../components/motion/useReducedMotion';
 import { useLocale } from '../../i18n/useLocale';
 import { isRunningInNativeApk } from '../../lib/capacitor';
 import { Capacitor } from '@capacitor/core';
 import { toast } from '../../store/toast';
+import {
+  IOS_INSTALL_STEPS,
+  detectInstallPlatform,
+  isIOSDevice,
+  isIOSSafari,
+  isIOSStandalone,
+} from './ios-install';
+import type { InstallPlatform } from './ios-install';
 
 export const APK_DOWNLOAD_URL = 'https://github.com/TheSeifDev/dashboard-phantoms/releases/download/latest-apk/phantoms-app.apk';
 export const APK_RELEASE_URL = 'https://github.com/TheSeifDev/dashboard-phantoms/releases/tag/latest-apk';
@@ -94,6 +102,22 @@ export function isAppDownloadBannerEligible(
     && isAndroidBrowser(options);
 }
 
+// المنصة اللي المفروض يظهر لها تنبيه التثبيت: أندرويد (APK) أو iOS (PWA).
+// بيرجع null لو الجهاز مش محتاج تنبيه أو التطبيق مفتوح أصلاً كتطبيق مثبّت.
+export function resolveAppInstallBannerPlatform(
+  pathname: string,
+  options: AndroidBrowserOptions = {},
+): 'android' | 'ios' | null {
+  if (isDownloadBannerBlockedPath(pathname)) return null;
+  if (hasAuthCallbackMaterial(options.search, options.hash)) return null;
+  if (isAppDownloadBannerEligible(pathname, options)) return 'android';
+  const userAgent = options.userAgent ?? (typeof navigator === 'undefined' ? '' : navigator.userAgent);
+  const native = options.native ?? isNativePlatform();
+  const standalone = options.standalone ?? isStandaloneDisplayMode();
+  if (native || standalone) return null;
+  return isIOSDevice({ userAgent, standalone }) ? 'ios' : null;
+}
+
 export function isBannerDismissedWithinCooldown(rawValue: string | null, now = Date.now()): boolean {
   if (!rawValue) return false;
   const dismissedAt = Number(rawValue);
@@ -175,10 +199,26 @@ export default function AppDownloadPage() {
   const [progress, setProgress] = useState<number | null>(null);
   const [needsDirectDownload, setNeedsDirectDownload] = useState(false);
   const [isAndroid, setIsAndroid] = useState(() => isAndroidBrowser());
+  const [platform, setPlatform] = useState<InstallPlatform>(() => {
+    if (typeof window !== 'undefined') {
+      const requested = new URLSearchParams(window.location.search).get('platform');
+      if (requested === 'ios') return 'ios';
+      if (requested === 'android') return 'android';
+    }
+    return detectInstallPlatform();
+  });
+  const isIOSPlatform = platform === 'ios';
 
   useEffect(() => {
     mountedRef.current = true;
     setIsAndroid(isAndroidBrowser());
+    setPlatform((current) => {
+      if (typeof window === 'undefined') return current;
+      const requested = new URLSearchParams(window.location.search).get('platform');
+      if (requested === 'ios' || requested === 'android') return requested;
+      const detected = detectInstallPlatform();
+      return detected === 'desktop' ? current : detected;
+    });
     return () => {
       mountedRef.current = false;
       abortRef.current?.abort();
@@ -319,7 +359,9 @@ export default function AppDownloadPage() {
   const featureCards = [
     { Icon: ShieldCheck, title: t('ملف رسمي', 'Official file'), body: t('الرابط يقود إلى إصدار PHANTOMS المنشور على GitHub.', 'The link points to the PHANTOMS release published on GitHub.') },
     { Icon: Download, title: t('تقدم صادق', 'Honest progress'), body: t('نقيس البايتات فقط عندما يسمح الخادم بذلك.', 'Bytes are measured only when the server permits it.') },
-    { Icon: Smartphone, title: t('أندرويد فقط', 'Android only'), body: t('لا يوجد APK لنظام iOS؛ استخدم تسجيل الدخول من المتصفح.', 'There is no iOS APK; continue with browser sign-in.') },
+    isIOSPlatform
+      ? { Icon: Smartphone, title: t('iOS من Safari', 'iOS from Safari'), body: t('مفيش APK لـ iOS — التثبيت من «إضافة إلى الشاشة الرئيسية» في Safari.', 'No APK on iOS — install via “Add to Home Screen” in Safari.') }
+      : { Icon: Smartphone, title: t('أندرويد بـ APK', 'Android APK'), body: t('ولأصحاب iPhone و iPad: التثبيت من Safari عبر «إضافة إلى الشاشة الرئيسية».', 'For iPhone and iPad: install from Safari via “Add to Home Screen”.') },
   ];
 
   return (
@@ -338,18 +380,65 @@ export default function AppDownloadPage() {
           <div className="pointer-events-none absolute -bottom-24 -start-16 size-64 rounded-full bg-[var(--emerald)]/10 blur-3xl" aria-hidden="true" />
           <div className="relative grid gap-8 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:gap-12">
             <div className="max-w-2xl">
-              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                <Smartphone size={14} className="text-[var(--emerald)]" aria-hidden="true" />
-                {t('تطبيق PHANTOMS / أندرويد', 'PHANTOMS APP / ANDROID')}
-              </p>
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1" role="tablist" aria-label={t('اختار نظام جهازك', 'Choose your platform')}>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={!isIOSPlatform}
+                    onClick={() => setPlatform('android')}
+                    className={`inline-flex min-h-[36px] items-center rounded-full px-3.5 text-xs font-black transition-colors ${isIOSPlatform ? 'text-[var(--text-muted)] hover:text-[var(--text)]' : 'bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-sm)]'}`}
+                  >
+                    {t('أندرويد', 'Android')}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={isIOSPlatform}
+                    onClick={() => setPlatform('ios')}
+                    className={`inline-flex min-h-[36px] items-center rounded-full px-3.5 text-xs font-black transition-colors ${isIOSPlatform ? 'bg-[var(--surface)] text-[var(--text)] shadow-[var(--shadow-sm)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'}`}
+                  >
+                    {t('آيفون / آيباد', 'iPhone / iPad')}
+                  </button>
+                </div>
+                <p className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  <Smartphone size={14} className="text-[var(--emerald)]" aria-hidden="true" />
+                  {isIOSPlatform ? t('تطبيق PHANTOMS / iOS', 'PHANTOMS APP / iOS') : t('تطبيق PHANTOMS / أندرويد', 'PHANTOMS APP / ANDROID')}
+                </p>
+              </div>
               <h1 className="max-w-xl text-3xl font-black leading-[1.08] tracking-tight text-[var(--text)] sm:text-5xl">
-                {t('مساحة PHANTOMS معك أينما تعمل.', 'PHANTOMS, in your pocket when the work moves.')}
+                {isIOSPlatform
+                  ? t('ثبّت PHANTOMS على iPhone و iPad.', 'Install PHANTOMS on iPhone and iPad.')
+                  : t('مساحة PHANTOMS معك أينما تعمل.', 'PHANTOMS, in your pocket when the work moves.')}
               </h1>
               <p className="mt-5 max-w-xl text-sm font-semibold leading-7 text-[var(--text-muted)] sm:text-base">
-                {t('نزّل أحدث ملف APK الرسمي لأجهزة أندرويد. التثبيت يتم يدوياً على جهازك، ولا يتم تثبيت أي شيء من داخل المتصفح.', 'Download the latest official APK for Android. Installation is completed manually on your device; the browser never installs anything for you.')}
+                {isIOSPlatform
+                  ? t('مفيش ملف APK لنظام iOS. التثبيت بيتم من Safari في 3 خطوات، وبعدها التطبيق يفتح من شاشتك الرئيسية زي أي تطبيق تاني — بنفس حسابك وبياناتك.', 'There is no APK for iOS. Installation happens from Safari in three steps, then the app opens from your home screen like any other app — same account, same data.')
+                  : t('نزّل أحدث ملف APK الرسمي لأجهزة أندرويد. التثبيت يتم يدوياً على جهازك، ولا يتم تثبيت أي شيء من داخل المتصفح.', 'Download the latest official APK for Android. Installation is completed manually on your device; the browser never installs anything for you.')}
               </p>
+              {isIOSPlatform && (
+                <div className="mt-7 grid gap-3">
+                  <a href="#ios-install-steps" className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--crimson)] px-5 text-sm font-black text-white shadow-[0_10px_30px_rgba(220,20,60,.2)] transition-[transform,background-color] hover:-translate-y-0.5 hover:bg-[var(--primary-hover)]">
+                    <Share size={18} aria-hidden="true" />
+                    {t('خطوات التثبيت على iOS', 'iOS installation steps')}
+                  </a>
+                  <p className="text-xs font-semibold leading-5 text-[var(--text-muted)]">
+                    {isIOSSafari()
+                      ? t('أنت فاتح من Safari — تقدر تثبّت دلوقتي من زر المشاركة.', 'You are in Safari — install right now from the Share button.')
+                      : t('لو فاتح من Chrome أو متصفح تاني على iOS، انسخ الرابط وافتحه في Safari الأول.', 'If you are in Chrome or another browser on iOS, copy this link and open it in Safari first.')}
+                  </p>
+                  {isIOSStandalone() && (
+                    <p className="inline-flex items-start gap-2 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-3 text-xs font-bold leading-5 text-[var(--text)]">
+                      <Check size={16} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" aria-hidden="true" />
+                      {t('التطبيق مثبّت على جهازك بالفعل.', 'The app is already installed on this device.')}
+                    </p>
+                  )}
+                </div>
+              )}
+              {!isIOSPlatform && (
+                <>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <button type="button" onClick={needsDirectDownload ? onDirectDownload : onDownloadClick} disabled={isDownloading || isNativePlatform()} aria-busy={isDownloading || undefined} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--crimson)] px-5 text-sm font-black text-white shadow-[0_10px_30px_rgba(220,20,60,.2)] transition-[transform,background-color] hover:bg-[var(--primary-hover)] hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0">
+                <button type="button" data-testid="download-apk" onClick={needsDirectDownload ? onDirectDownload : onDownloadClick} disabled={isDownloading || isNativePlatform()} aria-busy={isDownloading || undefined} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--crimson)] px-5 text-sm font-black text-white shadow-[0_10px_30px_rgba(220,20,60,.2)] transition-[transform,background-color] hover:bg-[var(--primary-hover)] hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0">
                   {isDownloading ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}
                   {isDownloading
                     ? progress === null ? t('جارٍ التحضير…', 'Preparing…') : t(`جارٍ التنزيل ${progress}%`, `Downloading ${progress}%`)
@@ -387,27 +476,46 @@ export default function AppDownloadPage() {
               <p className="mt-3 text-xs font-semibold leading-5 text-[var(--text-muted)]" role="status" aria-live="polite">
                 {isDownloading
                   ? progress === null ? t('يتم تجهيز التنزيل. قد يظهر شريط غير محدد إذا لم يرسل الخادم حجم الملف.', 'Preparing the download. The bar stays indeterminate when the server does not expose a file size.') : t('التقدم مبني على البايتات المقروءة فعلياً.', 'Progress is based on bytes actually read.')
-                  : isAndroid ? t('متاح لمتصفح أندرويد. لا يوجد APK لنظام iOS.', 'Available for Android browsers. There is no iOS APK.') : t('هذا الملف لأجهزة أندرويد فقط. افتح الصفحة على جهاز أندرويد للتثبيت.', 'This package is for Android only. Open this page on an Android device to install it.')}
+                  : isAndroid ? t('متاح لمتصفح أندرويد. لا يوجد APK لنظام iOS.', 'Available for Android browsers. There is no iOS APK.') : t('هذا الملف لأجهزة أندرويد. أصحاب iPhone و iPad يفتحون تبويب iOS بالأعلى للتثبيت من Safari.', 'This package is for Android. iPhone and iPad users can switch to the iOS tab above to install from Safari.')}
               </p>
               {needsDirectDownload && <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">{t('اضغط التنزيل المباشر ليفتح المتصفح الملف الرسمي. تابِع التقدم من إشعارات جهازك؛ لا نعلن اكتماله هنا.', 'Press Direct download to open the official file in your browser. Follow progress in your device notifications; completion is not reported here.')}</p>}
+                </>
+              )}
             </div>
 
             <aside className="rounded-3xl border border-[var(--border)] bg-[var(--graphite-950)] p-5 text-[var(--editorial-white)] shadow-[var(--shadow-lg)] sm:p-6" aria-label={t('معلومات التثبيت', 'Installation details')}>
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--soft-grey)]">PHANTOMS APK</p>
-                  <p className="mt-1 text-xl font-black">{t('تثبيت يدوي واضح', 'Manual install, clearly explained')}</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--soft-grey)]">{isIOSPlatform ? 'PHANTOMS iOS' : 'PHANTOMS APK'}</p>
+                  <p className="mt-1 text-xl font-black">{isIOSPlatform ? t('تثبيت من Safari', 'Install from Safari') : t('تثبيت يدوي واضح', 'Manual install, clearly explained')}</p>
                 </div>
                 <ShieldCheck size={24} className="shrink-0 text-[var(--emerald)]" aria-hidden="true" />
               </div>
-              <ol className="grid gap-4 text-sm font-semibold leading-6 text-[var(--soft-grey)]">
-                <li className="flex gap-3"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--crimson)] text-xs font-black text-white">1</span><span>{t('ابدأ التنزيل من الزر أعلاه.', 'Start the download with the button above.')}</span></li>
-                <li className="flex gap-3"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--crimson)] text-xs font-black text-white">2</span><span>{t('افتح الملف من إشعار المتصفح أو مجلد التنزيلات.', 'Open the file from the browser notification or Downloads.')}</span></li>
-                <li className="flex gap-3"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--crimson)] text-xs font-black text-white">3</span><span>{t('اتبع شاشة أندرويد لإكمال التثبيت يدوياً.', 'Follow Android’s screen to complete the manual install.')}</span></li>
+              <ol id="ios-install-steps" className="grid list-none gap-4 text-sm font-semibold leading-6 text-[var(--soft-grey)]">
+                {(isIOSPlatform
+                  ? IOS_INSTALL_STEPS.map((step) => ({ title: t(step.title.ar, step.title.en), body: t(step.body.ar, step.body.en) }))
+                  : [
+                    { title: t('ابدأ التنزيل من الزر أعلاه.', 'Start the download with the button above.'), body: '' },
+                    { title: t('افتح الملف من إشعار المتصفح أو مجلد التنزيلات.', 'Open the file from the browser notification or Downloads.'), body: '' },
+                    { title: t('اتبع شاشة أندرويد لإكمال التثبيت يدوياً.', 'Follow Android’s screen to complete the manual install.'), body: '' },
+                  ]
+                ).map((step, index) => (
+                  <li key={step.title} className="flex gap-3">
+                    <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--crimson)] text-xs font-black text-white">{index + 1}</span>
+                    <span>
+                      {step.title}
+                      {step.body ? <span className="mt-1 block text-xs font-semibold leading-5 text-[var(--soft-grey)]/80">{step.body}</span> : null}
+                    </span>
+                  </li>
+                ))}
               </ol>
               <div className="mt-6 flex items-start gap-2 border-t border-white/10 pt-4 text-xs font-semibold leading-5 text-[var(--soft-grey)]">
                 <Check size={16} className="mt-0.5 shrink-0 text-[var(--emerald)]" aria-hidden="true" />
-                <span>{t('المتصفح يعالج الملف؛ لا نسجّل نقرة التنزيل كتثبيت ناجح.', 'The browser handles the file; a download click is never recorded as a successful install.')}</span>
+                <span>
+                  {isIOSPlatform
+                    ? t('التطبيق بيفضل محدّث تلقائياً من نفس الرابط، وبياناتك وجلسة الدخول بتتحفظ على جهازك.', 'The app stays up to date from the same link, and your session is kept on your device.')
+                    : t('المتصفح يعالج الملف؛ لا نسجّل نقرة التنزيل كتثبيت ناجح.', 'The browser handles the file; a download click is never recorded as a successful install.')}
+                </span>
               </div>
             </aside>
           </div>

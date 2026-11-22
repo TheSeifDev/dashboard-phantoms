@@ -16,6 +16,9 @@ import { fetchMemberByEmail, bindMemberDeviceSession } from '../members/api';
 import { isValidEmail } from '../../lib/validators';
 import { generateMemberDeviceToken, memberAuthErrorMessage, normalizeAuthEmail } from './member-password';
 import { ensureOwnerMemberIdentity, getMemberPasswordAccess, isMemberPendingReview } from './member-password-access';
+import { authFailureMessage, classifyAuthFailure } from './auth-errors';
+import type { AuthFailureKind } from './auth-errors';
+import { isTransportFailure } from '../../lib/supabase/transport';
 
 class MemberLoginError extends Error {
   readonly code: string;
@@ -27,7 +30,18 @@ class MemberLoginError extends Error {
   }
 }
 
+const AUTH_FAILURE_PREFIX = 'AUTH:';
+
+function authCodeFor(error: unknown): string {
+  const failure = classifyAuthFailure(error);
+  return `${AUTH_FAILURE_PREFIX}${failure.kind}`;
+}
+
 function loginErrorMessage(code: string, t: (arabic: string, english: string) => string): string {
+  if (code.startsWith(AUTH_FAILURE_PREFIX)) {
+    const kind = code.slice(AUTH_FAILURE_PREFIX.length) as AuthFailureKind;
+    return authFailureMessage({ kind, status: null, message: '' }, t);
+  }
   if (code === 'MEMBER_PENDING_REVIEW') return t(memberAuthErrorMessage(code), 'Your details were received. Your account is awaiting admin review and activation; you cannot sign in before then.');
   if (code === 'MEMBER_DISABLED') return t(memberAuthErrorMessage(code), 'This membership is not active right now. Contact the team administrator.');
   if (code === 'IDENTITY_CONFLICT' || code === 'MEMBER_NOT_FOUND') return t('الحساب غير مرتبط بعضوية PHANTOMS مفعّلة.', 'This account is not linked to an active PHANTOMS membership.');
@@ -106,7 +120,8 @@ export default function LoginPage() {
           email: cleanEmail,
           password: submittedPassword,
         });
-        if (signInError || !data.user) throw new MemberLoginError('INVALID_CREDENTIALS');
+        if (signInError) throw new MemberLoginError(authCodeFor(signInError));
+        if (!data.user) throw new MemberLoginError(`${AUTH_FAILURE_PREFIX}INVALID_CREDENTIALS`);
 
         const authEmail = normalizeAuthEmail(data.user.email ?? '');
         if (!data.user.id || !authEmail || authEmail !== cleanEmail) {
@@ -154,7 +169,11 @@ export default function LoginPage() {
       } catch (cause) {
         await localMemberAuthCleanup(logoutMember);
         if (liveRef.current) {
-          const code = cause instanceof MemberLoginError ? cause.code : 'SERVER_UNAVAILABLE';
+          const code = cause instanceof MemberLoginError
+            ? cause.code
+            : isTransportFailure(cause)
+              ? authCodeFor(cause)
+              : 'SERVER_UNAVAILABLE';
           setError(loginErrorMessage(code, t));
         }
       } finally {
@@ -177,7 +196,7 @@ export default function LoginPage() {
         <div className="grid gap-2 text-center text-sm text-[var(--text-2)]">
           <Link className="auth-inline-link justify-center" to="/forgot-password">{t('نسيت كلمة المرور؟', 'Forgot your password?')}</Link>
           <Link className="auth-inline-link justify-center" to="/join">{t('لديك دعوة؟ إنشاء كلمة مرور', 'Have an invitation? Set a password')}</Link>
-          <Link className="auth-inline-link justify-center" to="/download">{t('تحميل تطبيق PHANTOMS لأندرويد', 'Download PHANTOMS for Android')}</Link>
+          <Link className="auth-inline-link justify-center" to="/download">{t('تطبيق PHANTOMS للموبايل (أندرويد و iOS)', 'Get the PHANTOMS app (Android and iOS)')}</Link>
         </div>
       )}
     >
