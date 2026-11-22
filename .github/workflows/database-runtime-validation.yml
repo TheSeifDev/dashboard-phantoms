@@ -106,7 +106,8 @@ jobs:
           ../frontend/node_modules/.bin/tsx --test \
             scripts/ios-install.test.ts \
             scripts/auth-errors.test.ts \
-            scripts/supabase-transport.test.ts
+            scripts/supabase-transport.test.ts \
+            scripts/app-update.test.ts
           ../frontend/node_modules/.bin/tsx --test scripts/app-toast.test.mjs
           node --test scripts/auth-callback-state.test.mjs
           node --test scripts/sidebar-navigation.test.mjs
@@ -169,6 +170,8 @@ jobs:
           test -f dist/sw.js
           test -f dist/manifest.json
           test -f dist/branding/phantoms-mark.png
+          test -f dist/version.json
+          test -f dist/offline.html
 
   disposable-supabase:
     name: Fresh Supabase PG17, pgTAP, dashboard, Auth, and live HTTP

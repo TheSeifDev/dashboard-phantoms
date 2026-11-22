@@ -3,7 +3,13 @@
   "appName": "PHANTOMS",
   "webDir": "dist",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "url": "https://dashboard-phantoms.vercel.app",
+    "errorPath": "offline.html",
+    "allowNavigation": [
+      "dashboard-phantoms.vercel.app",
+      "github.com"
+    ]
   },
   "android": {
     "backgroundColor": "#0B0B0B",
