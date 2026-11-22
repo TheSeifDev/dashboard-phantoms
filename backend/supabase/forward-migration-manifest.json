@@ -398,5 +398,15 @@
     "remote_applied_timestamp": "20261122204519",
     "original_source_version": "20261122203000",
     "original_source_filename": "backend/supabase/migrations/20261122203000_member_password_join_identity_adoption.sql"
+  },
+  {
+    "version": "20261122223000",
+    "name": "meetings_attendance",
+    "canonical_repository_filename": "backend/supabase/migrations/20261122223000_meetings_attendance.sql",
+    "sha256": "de6ad44fb5b5bf0da4774a86375fadbb572e2e1c64c825a73f4d108e6d1f6292",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261122223029",
+    "original_source_version": "20261122223000",
+    "original_source_filename": "backend/supabase/migrations/20261122223000_meetings_attendance.sql"
   }
 ]
