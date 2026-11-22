@@ -4,7 +4,7 @@
 -- الجدول نفسه)، وبتجمع عدد الناس في اليوم (crew) وبتستبعد أحداث الإلغاء.
 BEGIN;
 \ir _helpers.psql
-SELECT plan(15);
+SELECT plan(23);
 
 -- Fixtures -------------------------------------------------------------------
 DO $$
@@ -24,6 +24,9 @@ BEGIN
     (990002, phantoms_test.mid('member_b'), 'approved', now() - interval '2 days', phantoms_test.uid('member_user'), 'live_transition'),
     (990003, phantoms_test.mid('member_a'), 'approved', now() - interval '9 days', phantoms_test.uid('member_user'), 'live_transition'),
     (990004, phantoms_test.mid('member_c'), 'reversed', now() - interval '2 days', phantoms_test.uid('member_user'), 'live_transition');
+  -- A github.com portfolio link is what the member heatmap reads (same rule as the admin dashboard).
+  UPDATE public.members SET portfolio_url = 'https://github.com/seif-dev'
+  WHERE id = phantoms_test.mid('member_a');
 END $$;
 
 -- Function posture -----------------------------------------------------------
@@ -98,6 +101,42 @@ SELECT cmp_ok(
   '>=',
   3,
   'the roster size covers the active members');
+SELECT is(
+  jsonb_typeof(public.get_member_team_insights(EXTRACT(YEAR FROM (timezone('Africa/Cairo', now()))::date)::INTEGER) -> 'roster'),
+  'array',
+  'the payload exposes a roster array for linked GitHub accounts');
+SELECT ok(
+  (SELECT COALESCE(bool_and(entry ? 'github_handle' AND entry ? 'full_name' AND entry ? 'member_id'), TRUE)
+     FROM jsonb_array_elements(public.get_member_team_insights(EXTRACT(YEAR FROM (timezone('Africa/Cairo', now()))::date)::INTEGER) -> 'roster') AS entry),
+  'every roster entry carries a member id, a name and a GitHub handle');
+SELECT ok(
+  (SELECT COALESCE(bool_and(entry ? 'github_handle'), TRUE)
+     FROM jsonb_array_elements(public.get_member_team_insights(EXTRACT(YEAR FROM (timezone('Africa/Cairo', now()))::date)::INTEGER) -> 'members') AS entry),
+  'ranked members carry their GitHub handle field');
+SELECT is(
+  (SELECT entry ->> 'github_handle'
+     FROM jsonb_array_elements(public.get_member_team_insights(EXTRACT(YEAR FROM (timezone('Africa/Cairo', now()))::date)::INTEGER) -> 'roster') AS entry
+    WHERE (entry ->> 'member_id')::BIGINT = phantoms_test.mid('member_a')),
+  'seif-dev',
+  'a linked member exposes the GitHub handle from the portfolio link');
+RESET ROLE;
+SELECT is(
+  public.member_github_handle('{"GitHub": "https://github.com/Seif-Dev"}'::JSONB, NULL),
+  'Seif-Dev',
+  'a GitHub custom field wins over the portfolio link');
+SELECT is(
+  public.member_github_handle('{"GitHub": "not a handle"}'::JSONB, 'https://github.com/karim-dev'),
+  'karim-dev',
+  'an invalid custom field falls back to the github.com portfolio link');
+SELECT is(
+  public.member_github_handle('{"جيت هاب": "@nour-dev"}'::JSONB, NULL),
+  'nour-dev',
+  'the Arabic custom field label is recognised and @ is stripped');
+SELECT is(
+  public.member_github_handle('{}'::JSONB, 'https://gitlab.com/whatever'),
+  NULL::TEXT,
+  'non-GitHub profile links are ignored');
+SELECT phantoms_test.login_as('member_user');
 SELECT throws_ok(
   'SELECT public.get_member_team_insights(1999)',
   'P0001',

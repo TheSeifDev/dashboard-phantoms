@@ -1,4 +1,4 @@
-/* The member home shows six KPIs, so a 3-up grid stays even (the admin one runs 4-up). */
+/* The member home keeps three KPIs (evaluations, tasks, overdue), so a 3-up grid stays even. */
 .dashboard-root .kpi-grid--trio {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -11,19 +11,6 @@
   .dashboard-root .kpi-grid--trio {
     grid-template-columns: minmax(0, 1fr);
   }
-}
-/* Full-width profile row under the KPI grid, matching the glass panels above it. */
-.portal-settings-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 14px;
-  padding: 14px 18px;
-  border-radius: var(--radius-xl);
-}
-.portal-settings-row:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
 }
 /* Four quick actions read better as a 2×2 pad on phones than four full-width rows. */
 @container dash (max-width: 560px) {

@@ -33,7 +33,7 @@ const appliedOwnerErasureFiles = [
   '20261121144600_owner_member_erasure_storage_vector_index_lock_exclusion.sql',
 ];
 const profileForwardFiles = ['20261122010000_member_profile_all_required.sql', '20261122070000_owner_member_identity.sql', '20261122105000_evaluation_strikes.sql'];
-const portalForwardFiles = ['20261122150000_member_internal_teams.sql', '20261122154000_member_internal_teams_status_filter.sql', '20261122160000_task_audience_groups.sql', '20261122190000_member_team_insights.sql'];
+const portalForwardFiles = ['20261122150000_member_internal_teams.sql', '20261122154000_member_internal_teams_status_filter.sql', '20261122160000_task_audience_groups.sql', '20261122190000_member_team_insights.sql', '20261122201000_member_insights_github.sql'];
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'phantoms-forward-inventory-'));

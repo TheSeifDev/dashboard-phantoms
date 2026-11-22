@@ -378,5 +378,15 @@
     "remote_applied_timestamp": "20261122193554",
     "original_source_version": "20261122190000",
     "original_source_filename": "backend/supabase/migrations/20261122190000_member_team_insights.sql"
+  },
+  {
+    "version": "20261122201000",
+    "name": "member_insights_github",
+    "canonical_repository_filename": "backend/supabase/migrations/20261122201000_member_insights_github.sql",
+    "sha256": "27d17f22ca0d21a08f410b7b940882f2dd0d8facfd4d51eaa9d96cb6758deea2",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261122201331",
+    "original_source_version": "20261122201000",
+    "original_source_filename": "backend/supabase/migrations/20261122201000_member_insights_github.sql"
   }
 ]
