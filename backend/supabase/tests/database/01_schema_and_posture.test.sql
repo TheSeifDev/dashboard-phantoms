@@ -26,7 +26,7 @@ SELECT tables_are('public', ARRAY[
   'admin_accounts', 'admin_emails', 'announcements', 'member_custom_fields',
   'member_app_usage', 'member_device_sessions', 'member_evaluations', 'member_infinite_bonus_events',
   'member_password_audit', 'member_password_invitations', 'member_password_rate_limits',
-  'member_password_recovery_sessions',
+  'member_password_recovery_sessions', 'member_strikes',
   'member_auth_bindings', 'member_registration_invites', 'members', 'notes',
   'owner_member_erasure_operations', 'owner_member_erasure_storage_objects', 'tasks',
   'task_contribution_events', 'task_contribution_ledger_config', 'whatsapp_settings',

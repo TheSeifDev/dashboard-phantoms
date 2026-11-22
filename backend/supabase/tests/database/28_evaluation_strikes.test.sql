@@ -19,6 +19,9 @@ BEGIN
   UPDATE public.members
   SET work_status = 'active'
   WHERE email IN ('alice@phantoms-test.example', 'carol@phantoms-test.example');
+  UPDATE public.members
+  SET work_status = 'inactive'
+  WHERE email = 'bob@phantoms-test.example';
   PERFORM phantoms_test.bind_device('carol');
   INSERT INTO public.team_memberships (team_id, member_id, status)
   SELECT t.id, phantoms_test.mid('carol'), 'active'

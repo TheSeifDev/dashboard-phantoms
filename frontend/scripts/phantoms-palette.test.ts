@@ -85,11 +85,11 @@ test('canonical brand roots and ink theme anchors match the glass SaaS direction
   assert.equal(color('success'), '#10b981');
 });
 test('Crimson and Emerald retain their semantic families; links, info and the honeycomb ramp stay in the indigo/blue family', () => {
-  const crimson = ['primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'accent-pink', 'accent-pink-soft', 'sidebar-focus-ring', 'crew-4'];
+  const crimson = ['primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'accent-pink', 'accent-pink-soft', 'crew-4'];
   const emerald = ['success', 'success-hover', 'success-soft', 'success-border', 'success-text'];
   const indigo = ['link', 'accent', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text'];
   const blue = ['heat-1', 'heat-2', 'heat-3', 'heat-4', 'crew-1', 'chart-blue'];
-  const neutral = ['chart-slate', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-muted'];
+  const neutral = ['chart-slate', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-muted', 'focus-ring', 'sidebar-focus-ring'];
   for (const theme of [light, dark]) {
     assertFamily(theme, crimson, 'crimson', 18);
     assertFamily(theme, emerald, 'emerald', 16);

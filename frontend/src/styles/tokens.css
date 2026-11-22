@@ -100,7 +100,7 @@
   --border-subtle: #E8EBF2;
   --border-strong: #BFC6D6;
   --border-focus: #C41637;
-  --focus-ring: #5A6478;
+  --focus-ring: #79818F;
   /* Glass layers */
   --glass-bg: rgb(255 255 255 / 0.6);
   --glass-bg-strong: rgb(255 255 255 / 0.86);
@@ -133,7 +133,7 @@
   --sidebar-border: #DDE2EC;
   --sidebar-control-bg: #F6F7FB;
   --sidebar-logout-color: #A1102F;
-  --sidebar-focus-ring: #5A6478;
+  --sidebar-focus-ring: #79818F;
   /* Type */
   --font-arabic: "IBM Plex Sans Arabic", "Inter", system-ui, sans-serif;
   --font-english: "Inter", "IBM Plex Sans Arabic", system-ui, sans-serif;
@@ -248,7 +248,7 @@
   --border-subtle: #1C202B;
   --border-strong: #3A4152;
   --border-focus: #FF7A92;
-  --focus-ring: #9AA6BD;
+  --focus-ring: #79818F;
   --glass-bg: rgb(22 26 37 / 0.56);
   --glass-bg-strong: rgb(17 20 29 / 0.88);
   --glass-bg-soft: rgb(255 255 255 / 0.035);
@@ -277,7 +277,7 @@
   --sidebar-border: #232836;
   --sidebar-control-bg: #161A24;
   --sidebar-logout-color: #FF8AA0;
-  --sidebar-focus-ring: #9AA6BD;
+  --sidebar-focus-ring: #79818F;
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-sm: 0 2px 6px rgb(0 0 0 / 0.35);
   --shadow-md: 0 12px 28px -10px rgb(0 0 0 / 0.55);
