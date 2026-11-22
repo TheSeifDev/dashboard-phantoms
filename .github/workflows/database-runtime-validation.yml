@@ -91,7 +91,7 @@ jobs:
             ../backend/scripts/migration-manifest.test.mjs
           node --test scripts/supabase-cli-safety.test.mjs
           node --test scripts/auth-e2e-safety.test.mjs scripts/auth-fixture-lifecycle.test.mjs
-          node --test scripts/member-password-real-safety.test.mjs
+          node --test scripts/member-password-real-safety.test.mjs scripts/owner-member-identity.test.mjs
 
       - name: Run password, mock, controller, mounted Member, and Admin callback suites
         run: |

@@ -15,7 +15,7 @@ import { memberSupabase } from '../../lib/supabase/member-client';
 import { fetchMemberByEmail, bindMemberDeviceSession } from '../members/api';
 import { isValidEmail } from '../../lib/validators';
 import { generateMemberDeviceToken, memberAuthErrorMessage, normalizeAuthEmail } from './member-password';
-import { getMemberPasswordAccess, isMemberPendingReview } from './member-password-access';
+import { ensureOwnerMemberIdentity, getMemberPasswordAccess, isMemberPendingReview } from './member-password-access';
 
 class MemberLoginError extends Error {
   readonly code: string;
@@ -113,7 +113,13 @@ export default function LoginPage() {
           throw new MemberLoginError('IDENTITY_CONFLICT');
         }
 
-        const access = await getMemberPasswordAccess();
+        let access = await getMemberPasswordAccess();
+        if (!access) {
+          // The platform owner signs in with an Admin account; give it a member
+          // identity on first use so the portal, profile and contributions work.
+          const ownerIdentity = await ensureOwnerMemberIdentity();
+          if (ownerIdentity) access = await getMemberPasswordAccess();
+        }
         if (!access) {
           if (await isMemberPendingReview()) throw new MemberLoginError('MEMBER_PENDING_REVIEW');
           throw new MemberLoginError('MEMBER_NOT_FOUND');
