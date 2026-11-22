@@ -25,6 +25,8 @@ const AdminSetPasswordPage = lazy(() => import('../features/auth/AdminSetPasswor
 const AdminRecoveryCallbackPage = lazy(() => import('../features/auth/AdminSetPasswordPage').then((module) => ({ default: module.AdminRecoveryCallbackPage })));
 const AdminForgotPasswordPage = lazy(() => import('../features/auth/AdminForgotPasswordPage'));
 const MemberPortalPage = lazy(() => import('../features/portal/MemberPortalPage'));
+const MemberPortalLayout = lazy(() => import('../features/portal/MemberPortalLayout'));
+const MemberTeamPage = lazy(() => import('../features/portal/MemberTeamPage'));
 const MemberWebProjectsPage = lazy(() => import('../features/web-projects/MemberWebProjectsPage'));
 const ProjectWorkspacePage = lazy(() => import('../features/web-projects/ProjectWorkspacePage'));
 const MemberSelfRegisterPage = lazy(() => import('../features/members/MemberSelfRegisterPage'));
@@ -217,15 +219,12 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
   },
   {
     path: '/portal',
-    element: (
-      <ProtectedMemberRoute>
-      <Page><MemberPortalPage /></Page>
-      </ProtectedMemberRoute>
-    ),
-  },
-  {
-    path: '/portal/projects',
-    element: <ProtectedMemberRoute><Page><MemberWebProjectsPage /></Page></ProtectedMemberRoute>,
+    element: <ProtectedMemberRoute><Page><MemberPortalLayout /></Page></ProtectedMemberRoute>,
+    children: [
+      { index: true, element: <Page><MemberPortalPage /></Page> },
+      { path: 'team', element: <Page><MemberTeamPage /></Page> },
+      { path: 'projects', element: <Page><MemberWebProjectsPage /></Page> },
+    ],
   },
   {
     path: '/portal/projects/:projectId',

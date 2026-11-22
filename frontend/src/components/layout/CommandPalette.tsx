@@ -40,6 +40,13 @@ const ICONS: Record<string, Icon> = {
   '/admin/web-projects/tasks': ListTodo,
   '/admin/web-projects/reports': FileChartColumn,
   '/admin/web-projects/resources': Library,
+  '/portal': LayoutDashboard,
+  '/portal?tab=TASKS': ListChecks,
+  '/portal?tab=EVALUATIONS': ClipboardCheck,
+  '/portal?tab=ANNOUNCEMENTS': Megaphone,
+  '/portal/team': Network,
+  '/portal/projects': FolderKanban,
+  '/portal/settings': ShieldCheck,
 };
 
 /** Spotlight-style launcher: every permitted page plus quick workspace actions, fully keyboard driven. */
@@ -56,7 +63,7 @@ export function CommandPalette({ open, onClose, pages, isDark, onToggleTheme }: 
   const returnFocus = useRef<HTMLElement | null>(null);
 
   const commands = useMemo<Command[]>(() => [
-    ...pages.map((page) => ({ id: page.path, group: 'pages' as const, label: t(page.ar, page.en), hint: page.path.replace('/admin', '') || '/', icon: ICONS[page.path] ?? CircleDot, run: () => navigate(page.path) })),
+    ...pages.map((page) => ({ id: page.path, group: 'pages' as const, label: t(page.ar, page.en), hint: page.path.replace('/admin', '').replace('/portal', '') || '/', icon: ICONS[page.path] ?? CircleDot, run: () => navigate(page.path) })),
     { id: 'theme', group: 'actions', label: isDark ? t('شغّل الوضع الفاتح', 'Use light theme') : t('شغّل الوضع الداكن', 'Use dark theme'), hint: t('المظهر', 'Appearance'), icon: isDark ? Sun : Moon, run: onToggleTheme },
     { id: 'language', group: 'actions', label: locale === 'ar' ? 'Switch to English' : 'التبديل للعربية', hint: t('اللغة', 'Language'), icon: Languages, run: () => setLocale(locale === 'ar' ? 'en' : 'ar') },
   ], [pages, t, isDark, locale, navigate, onToggleTheme, setLocale]);

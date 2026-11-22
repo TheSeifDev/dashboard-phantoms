@@ -5,6 +5,7 @@ import { usePWA } from '../../hooks/usePWA';
 import { formatSigned } from '../../lib/arabic';
 import { useLocale } from '../../i18n/useLocale';
 import { isRunningInNativeApk } from '../../lib/capacitor';
+import { MemberAvatar } from '../../components/ui/MemberAvatar';
 
 export function MemberHero({
   member,
@@ -41,9 +42,12 @@ export function MemberHero({
     >
       <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="flex min-w-0 items-start gap-4">
-          <span aria-hidden="true" className="grid size-14 shrink-0 place-items-center rounded-2xl bg-[var(--primary)] text-xl font-black text-white">
-            {member.full_name.charAt(0)}
-          </span>
+          <MemberAvatar
+            member={member}
+            name={member.full_name}
+            size={112}
+            className="grid size-14 shrink-0 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-xl font-black text-[var(--text)]"
+          />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 id="member-name" dir="auto" className="text-xl font-black sm:text-2xl">
@@ -63,7 +67,7 @@ export function MemberHero({
           {!isRunningInNativeApk() && (
             <Link
               to="/download"
-              className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--primary-soft)] px-3 text-xs font-bold text-[var(--link)] transition-colors hover:bg-[var(--primary)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+              className="flex min-h-11 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-xs font-bold text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
             >
               <Download size={14} aria-hidden="true" /> {t('تنزيل APK لأندرويد', 'Download Android APK')}
             </Link>
@@ -75,7 +79,7 @@ export function MemberHero({
             className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-3 text-xs font-bold transition-colors ${
               isSubscribed
                 ? 'bg-[var(--success-soft)] text-[var(--success-text)] hover:bg-[var(--success-soft)] dark:text-[var(--success-text)]'
-                : 'bg-[var(--primary-soft)] text-[var(--link)] hover:bg-[var(--primary)] hover:text-white'
+                : 'border border-[var(--border)] bg-[var(--bg)] text-[var(--text-2)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'
             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2`}
             aria-pressed={isSubscribed}
           >

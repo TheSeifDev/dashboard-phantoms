@@ -9,12 +9,14 @@ import {
   Cog,
   Users,
   ListChecks,
+  FolderKanban,
 } from 'lucide-react';
 import AnnouncementsAPI from '../../lib/api/announcements';
 import type { Member, MemberEvaluation, Task } from '../../types/db';
 import { isOverdue } from '../../lib/dateUtils';
 import { useLocale } from '../../i18n/useLocale';
 import { useMemberTeams } from './useMemberTeams';
+import { useMemberProjectRoles } from './useMemberProjectRoles';
 import { hasRequiredMemberInformation, missingMemberProfileFields } from '../members/member-profile-display';
 import type { NotificationTargetTab } from '../../lib/notifications';
 
@@ -41,7 +43,7 @@ function HomeCard({ icon, title, value, hint, action, tone = 'neutral', loading 
   return (
     <article className="flex min-w-0 flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4">
       <div className="flex items-start gap-2.5">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--link)]" aria-hidden="true">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]" aria-hidden="true">
           {icon}
         </span>
         <h3 className="pt-1.5 text-sm font-black leading-tight text-[var(--text-muted)]">{title}</h3>
@@ -93,6 +95,7 @@ export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }
   const { t, number, date } = useLocale();
   const memberId = String(member.id);
   const teamsQuery = useMemberTeams(member.id);
+  const projectRoles = useMemberProjectRoles(member.id);
 
   const announcementsQuery = useQuery({
     queryKey: ['member-announcements-home', member.id],
@@ -130,11 +133,17 @@ export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }
         <HomeCard
           icon={<ClipboardCheck size={18} />}
           title={t('تقييماتي وملاحظات الأداء', 'My evaluations')}
-          value={unreadEvaluations.length > 0 ? t(`${number(unreadEvaluations.length)} جديد`, `${number(unreadEvaluations.length)} new`) : number(evaluations.length)}
+          value={
+            unreadEvaluations.length > 0
+              ? t(`${number(unreadEvaluations.length)} جديد`, `${number(unreadEvaluations.length)} new`)
+              : evaluations.length > 0
+                ? number(evaluations.length)
+                : t('لسه مفيش', 'None yet')
+          }
           hint={
             latestEvaluation
               ? `${latestEvaluation.title} · ${date(latestEvaluation.created_at)}`
-              : t('لسه مفيش تقييمات — أول ما تتقيّم هتلاقيها هنا.', 'No evaluations yet.')
+              : t('أول ما تتقيّم هتلاقيها هنا.', 'They will show up here once you are evaluated.')
           }
           action={{ label: t('افتح التقييمات', 'Open evaluations'), onClick: () => onOpenTab('EVALUATIONS') }}
           tone={unreadEvaluations.length > 0 ? 'accent' : 'neutral'}
@@ -144,7 +153,11 @@ export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }
         <HomeCard
           icon={<ListChecks size={18} />}
           title={t('مهامي ونقاطي', 'My tasks and points')}
-          value={t(`${number(openTasks.length)} مهمة شغالة`, `${number(openTasks.length)} active`)}
+          value={
+            openTasks.length > 0
+              ? t(`${number(openTasks.length)} مهمة شغالة`, `${number(openTasks.length)} active`)
+              : t('مفيش مهام شغالة', 'No active tasks')
+          }
           hint={t(
             `نقاطي: ${bonus === null ? '—' : number(bonus)} · مستنية المراجعة: ${number(underReview.length)} · اتعتمدت: ${number(approved.length)}`,
             `Points: ${bonus === null ? '—' : number(bonus)} · Awaiting review: ${number(underReview.length)} · Approved: ${number(approved.length)}`,
@@ -172,7 +185,13 @@ export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }
         <HomeCard
           icon={<BellRing size={18} />}
           title={t('الإعلانات', 'Announcements')}
-          value={unreadAnnouncements.length > 0 ? t(`${number(unreadAnnouncements.length)} غير مقروء`, `${number(unreadAnnouncements.length)} unread`) : number(announcements.length)}
+          value={
+            unreadAnnouncements.length > 0
+              ? t(`${number(unreadAnnouncements.length)} غير مقروء`, `${number(unreadAnnouncements.length)} unread`)
+              : announcements.length > 0
+                ? number(announcements.length)
+                : t('مفيش جديد', 'Nothing new')
+          }
           hint={latestAnnouncement ? latestAnnouncement.title : t('مفيش إعلانات جديدة.', 'No new announcements.')}
           action={{ label: t('افتح الإعلانات', 'Open announcements'), onClick: () => onOpenTab('ANNOUNCEMENTS') }}
           tone={unreadAnnouncements.length > 0 ? 'accent' : 'neutral'}
@@ -194,23 +213,65 @@ export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }
               ? t('في عضوية مستنية موافقة الإدارة.', 'A membership is awaiting approval.')
               : t('AI · Software · Hardware', 'AI · Software · Hardware')
           }
+          action={{ label: t('افتح الفريق', 'Open team'), to: '/portal/team' }}
           tone={activeTeams.length > 0 ? 'accent' : 'neutral'}
           loading={teamsQuery.isLoading}
         />
 
         <HomeCard
-          icon={<Cog size={18} />}
-          title={t('الحساب والإعدادات', 'Account and settings')}
-          value={profileReady ? t('مكتمل', 'Complete') : t(`ناقص ${number(missingFields)}`, `${number(missingFields)} missing`)}
-          hint={
-            profileReady
-              ? t('بياناتك كاملة — تقدر تعدّل أي وقت.', 'Your profile is complete.')
-              : t('كمّل بياناتك عشان تظهر في الفريق وتستلم المهام.', 'Complete your profile to appear in the team.')
+          icon={<FolderKanban size={18} />}
+          title={t('مشروعات الويب', 'Web projects')}
+          value={
+            projectRoles.isLoading
+              ? '…'
+              : projectRoles.total === 0
+                ? t('مفيش مشروعات', 'No projects')
+                : projectRoles.isLead
+                  ? t(`قائد ${number(projectRoles.ledProjects.length)} · عضو ${number(projectRoles.memberProjects.length)}`, `Lead ${number(projectRoles.ledProjects.length)} · member ${number(projectRoles.memberProjects.length)}`)
+                  : t(`عضو في ${number(projectRoles.memberProjects.length)} مشروع`, `Member of ${number(projectRoles.memberProjects.length)}`)
           }
-          action={{ label: t('افتح الإعدادات', 'Open settings'), to: '/portal/settings' }}
-          tone={profileReady ? 'success' : 'warn'}
+          hint={
+            projectRoles.isLead
+              ? t('كقائد عندك نفس صلاحيات المالك جوه مساحة المشروع.', 'As lead you get owner-level access inside the project workspace.')
+              : t('مهامك وتسليماتك وتقاريرك في مساحة المشروع.', 'Your tasks, deliverables and reports live in the project workspace.')
+          }
+          action={{ label: t('افتح مشروعات الويب', 'Open web projects'), to: '/portal/projects' }}
+          tone={projectRoles.isLead ? 'accent' : 'neutral'}
+          loading={projectRoles.isLoading}
         />
+
       </div>
+
+      {/* Full-width row: keeps the 3-up grid even and turns the profile nudge into a CTA. */}
+      <Link
+        to="/portal/settings"
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors hover:border-[var(--border-strong,var(--border))] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
+      >
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]" aria-hidden="true">
+          <Cog size={18} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-black">{t('الحساب والإعدادات', 'Account and settings')}</span>
+          <span className="mt-0.5 block text-xs leading-relaxed text-[var(--text-muted)]">
+            {profileReady
+              ? t('بياناتك كاملة — تقدر تعدّل أي وقت.', 'Your profile is complete.')
+              : t('كمّل بياناتك عشان تظهر في الفريق وتستلم المهام.', 'Complete your profile to appear in the team.')}
+          </span>
+        </span>
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-black ${
+            profileReady
+              ? 'border-[var(--success-border,var(--border))] text-[var(--success-text)]'
+              : 'border-[var(--warn-border,var(--border))] text-[var(--warn-text,var(--text))]'
+          }`}
+        >
+          {profileReady ? t('مكتمل', 'Complete') : t(`ناقص ${number(missingFields)}`, `${number(missingFields)} missing`)}
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-black text-[var(--link)]">
+          {t('افتح الإعدادات', 'Open settings')}
+          <ArrowUpRight size={13} aria-hidden="true" />
+        </span>
+      </Link>
     </section>
   );
 }
