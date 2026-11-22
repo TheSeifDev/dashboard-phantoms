@@ -400,7 +400,8 @@ test.describe('disposable local Auth', () => {
         await enrollFromJoin(page, existingMemberEmail, existingInvite.token, EXISTING_MEMBER_PASSWORD, { fullName: 'Disposable existing password member' });
         await loginMember(page, existingMemberEmail, EXISTING_MEMBER_PASSWORD);
         await expect(page).toHaveURL(/\/portal$/);
-        await expect(page.getByText(/Disposable existing password member/i)).toBeVisible();
+        // The portal shell also shows the name in the sidebar account card, so target the page heading.
+        await expect(page.getByRole('heading', { name: /Disposable existing password member/i })).toBeVisible();
         const beforeLogout = await memberStorageMetadata(page);
         await logoutMember(page);
         const afterLogout = await memberStorageMetadata(page);
@@ -450,7 +451,7 @@ test.describe('disposable local Auth', () => {
         expect(after.count).toBe(1);
         await loginMember(page, firstTimeMemberEmail, FIRST_TIME_MEMBER_PASSWORD);
         await expect(page).toHaveURL(/\/portal$/);
-        await expect(page.getByText(/Disposable first-time password member/i)).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Disposable first-time password member/i })).toBeVisible();
       });
 
       await test.step('new self-service join waits for Admin review and never opens the portal', async () => {
