@@ -1654,9 +1654,8 @@ html[lang="ar"] .dashboard-hero-title { letter-spacing: 0; line-height: 1.25; }
    The desktop dashboard paints a full year of cells, a 3D scene and layered glass.
    On phones we keep the same information but drop the expensive paint work. */
 @media (max-width: 767px) {
-  /* Off-screen panels skip layout + paint until they scroll in. */
-  .dashboard-root > * { content-visibility: auto; contain-intrinsic-size: auto 520px; }
-  .dashboard-heatmap-panel { contain-intrinsic-size: auto 640px; }
+  /* No content-visibility here: off-screen subtrees report zero sizes, which
+     breaks charts that measure their own boxes (and the dashboard E2E). */
   /* Backdrop blur is the single most expensive effect on low-end GPUs. */
   .dashboard-root .glass-card,
   .dashboard-root .glass-card::before,
