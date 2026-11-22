@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
+  CalendarCheck2,
   ChartGantt,
   ChevronDown,
   CircleUserRound,
@@ -86,6 +87,7 @@ export const GROUPS: SidebarGroup[] = [
     items: [
       { to: '/admin/tasks', label: 'المهام', icon: ListChecks, permission: 'tasks' },
       { to: '/admin/members', label: 'الأعضاء', icon: Users, permission: 'members' },
+      { to: '/admin/meetings', label: 'الاجتماعات والحضور', icon: CalendarCheck2, permission: 'members' },
       {
         to: '/admin/teams',
         label: 'الفرق الداخلية',

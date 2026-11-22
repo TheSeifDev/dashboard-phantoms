@@ -1,4 +1,4 @@
-import { ClipboardCheck, FolderKanban, LayoutDashboard, ListChecks, Megaphone, Network, Settings, Smartphone } from 'lucide-react';
+import { CalendarCheck2, ClipboardCheck, FolderKanban, LayoutDashboard, ListChecks, Megaphone, Network, Settings, Smartphone } from 'lucide-react';
 import type { SidebarGroup } from './AppSidebar';
 
 /**
@@ -18,6 +18,7 @@ export const MEMBER_WORKSPACE_GROUPS: SidebarGroup[] = [
     items: [
       { to: '/portal?tab=TASKS', label: 'مهامي', icon: ListChecks, matchSearch: true },
       { to: '/portal?tab=EVALUATIONS', label: 'تقييماتي', icon: ClipboardCheck, matchSearch: true },
+      { to: '/portal/meetings', label: 'اجتماعاتي', icon: CalendarCheck2 },
       { to: '/portal?tab=ANNOUNCEMENTS', label: 'الإعلانات', icon: Megaphone, matchSearch: true },
       { to: '/portal/team', label: 'الفريق الداخلي', icon: Network },
     ],
