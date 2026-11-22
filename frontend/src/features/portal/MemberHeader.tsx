@@ -53,6 +53,13 @@ export function MemberHeader({ path, search, isDark, drawerOpen = false, member,
   });
 
   const unreadEvaluations = (evaluations.data ?? []).filter((row) => !row.read_at).length;
+  // الإعلانات بقت جزء من مركز الإشعارات: آخر 3 إعلانات غير مقروءة (أو الأحدث لو كلها مقروءة).
+  const announcementList = announcements.data ?? [];
+  const latestAnnouncements = (
+    announcementList.filter((row) => !row.is_read && !row.is_dismissed).length > 0
+      ? announcementList.filter((row) => !row.is_read && !row.is_dismissed)
+      : announcementList
+  ).slice(0, 3);
   const unreadAnnouncements = (announcements.data ?? []).filter((row) => !row.is_read && !row.is_dismissed).length;
   const unreadTotal = unreadEvaluations + unreadAnnouncements;
 
@@ -157,8 +164,22 @@ export function MemberHeader({ path, search, isDark, drawerOpen = false, member,
               <Link to="/portal?tab=EVALUATIONS" onClick={() => setNotificationsOpen(false)}>
                 {t('تقييماتي', 'My evaluations')} · {number(unreadEvaluations)}
               </Link>
+              {latestAnnouncements.length > 0 && (
+                <ul className="notification-announcements" aria-label={t('أحدث الإعلانات', 'Latest announcements')}>
+                  {latestAnnouncements.map((row) => (
+                    <li key={row.id}>
+                      <Link to="/portal?tab=ANNOUNCEMENTS" onClick={() => setNotificationsOpen(false)}>
+                        <span className="notification-announcement-title" dir="auto">{row.title}</span>
+                        <span className="notification-announcement-meta">
+                          {new Date(row.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <Link to="/portal?tab=ANNOUNCEMENTS" onClick={() => setNotificationsOpen(false)}>
-                {t('الإعلانات', 'Announcements')} · {number(unreadAnnouncements)}
+                {t('كل الإعلانات', 'All announcements')} · {number(unreadAnnouncements)}
               </Link>
             </section>
           )}

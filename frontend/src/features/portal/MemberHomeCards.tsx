@@ -1,23 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  BellRing,
-  ClipboardCheck,
-  Cog,
-  Users,
-  ListChecks,
-  FolderKanban,
-} from 'lucide-react';
-import AnnouncementsAPI from '../../lib/api/announcements';
+import { AlertTriangle, ArrowUpRight, ClipboardCheck, ListChecks } from 'lucide-react';
 import type { Member, MemberEvaluation, Task } from '../../types/db';
 import { isOverdue } from '../../lib/dateUtils';
 import { useLocale } from '../../i18n/useLocale';
-import { useMemberTeams } from './useMemberTeams';
-import { useMemberProjectRoles } from './useMemberProjectRoles';
-import { hasRequiredMemberInformation, missingMemberProfileFields } from '../members/member-profile-display';
 import type { NotificationTargetTab } from '../../lib/notifications';
 import './portal-home.css';
 
@@ -93,22 +79,14 @@ interface MemberHomeCardsProps {
 
 const ACTIONABLE = new Set(['pending', 'in_progress', 'revision_requested']);
 
-/** لوحة "الرئيسية" للعضو: كل اللي محتاج يعرفه في نظرة واحدة قبل ما ينزل يشتغل. */
+/**
+ * «نظرة سريعة» على الرئيسية: التقييمات والمهام والمتأخرات بس.
+ * الإعلانات بقت مع الإشعارات في الهيدر، والفريق الداخلي ومشروعات الويب
+ * والإعدادات ليها مداخل في السايدبار.
+ */
 export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }: MemberHomeCardsProps) {
   const { t, number, date } = useLocale();
   const memberId = String(member.id);
-  const teamsQuery = useMemberTeams(member.id);
-  const projectRoles = useMemberProjectRoles(member.id);
-
-  const announcementsQuery = useQuery({
-    queryKey: ['member-announcements-home', member.id],
-    staleTime: 60_000,
-    queryFn: () => AnnouncementsAPI.getMemberAnnouncements(member.id),
-  });
-
-  const announcements = announcementsQuery.data ?? [];
-  const unreadAnnouncements = announcements.filter((item) => !item.is_read && !item.is_dismissed);
-  const latestAnnouncement = announcements[0] ?? null;
 
   const statusOf = (task: Task) => task.tracking?.[memberId]?.status ?? 'pending';
   const openTasks = tasks.filter((task) => ACTIONABLE.has(statusOf(task)));
@@ -118,10 +96,6 @@ export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }
 
   const unreadEvaluations = evaluations.filter((item) => !item.read_at);
   const latestEvaluation = evaluations[0] ?? null;
-  const teams = teamsQuery.data ?? [];
-  const activeTeams = teams.filter((team) => team.status === 'approved' || team.status === 'active');
-  const profileReady = hasRequiredMemberInformation(member);
-  const missingFields = profileReady ? 0 : missingMemberProfileFields(member).length;
 
   return (
     <section aria-label={t('ملخص حسابك', 'Your account summary')} className="grid gap-3">
@@ -184,97 +158,7 @@ export function MemberHomeCards({ member, tasks, evaluations, bonus, onOpenTab }
           action={overdue.length > 0 ? { label: t('شوف المتأخر', 'See overdue'), onClick: () => onOpenTab('TASKS') } : undefined}
           tone={overdue.length > 0 ? 'warn' : 'success'}
         />
-
-        <HomeCard
-          icon={<BellRing size={18} />}
-          title={t('الإعلانات', 'Announcements')}
-          value={
-            unreadAnnouncements.length > 0
-              ? t(`${number(unreadAnnouncements.length)} غير مقروء`, `${number(unreadAnnouncements.length)} unread`)
-              : announcements.length > 0
-                ? number(announcements.length)
-                : t('مفيش جديد', 'Nothing new')
-          }
-          hint={latestAnnouncement ? latestAnnouncement.title : t('مفيش إعلانات جديدة.', 'No new announcements.')}
-          action={{ label: t('افتح الإعلانات', 'Open announcements'), onClick: () => onOpenTab('ANNOUNCEMENTS') }}
-          tone={unreadAnnouncements.length > 0 ? 'accent' : 'neutral'}
-          loading={announcementsQuery.isLoading}
-        />
-
-        <HomeCard
-          icon={<Users size={18} />}
-          title={t('الفريق الداخلي', 'My internal team')}
-          value={
-            teamsQuery.isLoading
-              ? '…'
-              : activeTeams.length > 0
-                ? activeTeams.map((team) => team.name).join(' · ')
-                : t('مش متوزع', 'Unassigned')
-          }
-          hint={
-            teams.length > activeTeams.length && activeTeams.length >= 0
-              ? t('في عضوية مستنية موافقة الإدارة.', 'A membership is awaiting approval.')
-              : t('AI · Software · Hardware', 'AI · Software · Hardware')
-          }
-          action={{ label: t('افتح الفريق', 'Open team'), to: '/portal/team' }}
-          tone={activeTeams.length > 0 ? 'accent' : 'neutral'}
-          loading={teamsQuery.isLoading}
-        />
-
-        <HomeCard
-          icon={<FolderKanban size={18} />}
-          title={t('مشروعات الويب', 'Web projects')}
-          value={
-            projectRoles.isLoading
-              ? '…'
-              : projectRoles.total === 0
-                ? t('مفيش مشروعات', 'No projects')
-                : projectRoles.isLead
-                  ? t(`قائد ${number(projectRoles.ledProjects.length)} · عضو ${number(projectRoles.memberProjects.length)}`, `Lead ${number(projectRoles.ledProjects.length)} · member ${number(projectRoles.memberProjects.length)}`)
-                  : t(`عضو في ${number(projectRoles.memberProjects.length)} مشروع`, `Member of ${number(projectRoles.memberProjects.length)}`)
-          }
-          hint={
-            projectRoles.isLead
-              ? t('كقائد عندك نفس صلاحيات المالك جوه مساحة المشروع.', 'As lead you get owner-level access inside the project workspace.')
-              : t('مهامك وتسليماتك وتقاريرك في مساحة المشروع.', 'Your tasks, deliverables and reports live in the project workspace.')
-          }
-          action={{ label: t('افتح مشروعات الويب', 'Open web projects'), to: '/portal/projects' }}
-          tone={projectRoles.isLead ? 'accent' : 'neutral'}
-          loading={projectRoles.isLoading}
-        />
-
       </div>
-
-      {/* Full-width row: keeps the 3-up grid even and turns the profile nudge into a CTA. */}
-      <Link
-        to="/portal/settings"
-        className="portal-settings-row glass-card transition-colors hover:bg-[var(--surface-2)]"
-      >
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)]" aria-hidden="true">
-          <Cog size={18} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-black">{t('الحساب والإعدادات', 'Account and settings')}</span>
-          <span className="mt-0.5 block text-xs leading-relaxed text-[var(--text-muted)]">
-            {profileReady
-              ? t('بياناتك كاملة — تقدر تعدّل أي وقت.', 'Your profile is complete.')
-              : t('كمّل بياناتك عشان تظهر في الفريق وتستلم المهام.', 'Complete your profile to appear in the team.')}
-          </span>
-        </span>
-        <span
-          className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-black ${
-            profileReady
-              ? 'border-[var(--success-border,var(--border))] text-[var(--success-text)]'
-              : 'border-[var(--warn-border,var(--border))] text-[var(--warn-text,var(--text))]'
-          }`}
-        >
-          {profileReady ? t('مكتمل', 'Complete') : t(`ناقص ${number(missingFields)}`, `${number(missingFields)} missing`)}
-        </span>
-        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-black text-[var(--link)]">
-          {t('افتح الإعدادات', 'Open settings')}
-          <ArrowUpRight size={13} aria-hidden="true" />
-        </span>
-      </Link>
     </section>
   );
 }

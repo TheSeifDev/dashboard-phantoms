@@ -22,8 +22,12 @@ function payload(overrides: Record<string, unknown> = {}) {
     ],
     total_approvals: 3,
     members: [
-      { member_id: 7, full_name: 'سيف', approved: 2, active_days: 2, last_approved_on: '2026-03-08' },
-      { member_id: 9, full_name: 'نور', approved: 1, active_days: 1, last_approved_on: '2026-03-04' },
+      { member_id: 7, full_name: 'سيف', approved: 2, active_days: 2, last_approved_on: '2026-03-08', github_handle: 'seif-dev' },
+      { member_id: 9, full_name: 'نور', approved: 1, active_days: 1, last_approved_on: '2026-03-04', github_handle: null },
+    ],
+    roster: [
+      { member_id: 7, full_name: 'سيف', github_handle: 'seif-dev' },
+      { member_id: 11, full_name: 'كريم', github_handle: 'karim-dev' },
     ],
     roster_size: 12,
     ...overrides,
@@ -40,6 +44,9 @@ test('accepts the documented member insight payload', () => {
   ]);
   assert.equal(parsed.rosterSize, 12);
   assert.equal(parsed.people.length, 2);
+  assert.equal(parsed.people[0]?.githubHandle, 'seif-dev');
+  assert.equal(parsed.people[1]?.githubHandle, null);
+  assert.deepEqual(parsed.roster.map((entry) => entry.githubHandle), ['seif-dev', 'karim-dev']);
   assert.equal(parsed.days[0]?.crew, 2);
 });
 
@@ -60,14 +67,29 @@ test('rejects payloads that break the contract', () => {
     'duplicate days are rejected',
   );
   assert.equal(
-    parseMemberTeamInsights(payload({ members: [{ member_id: 7, full_name: '', approved: 3, active_days: 2, last_approved_on: null }] }), YEAR),
+    parseMemberTeamInsights(payload({ members: [{ member_id: 7, full_name: '', approved: 3, active_days: 2, last_approved_on: null, github_handle: null }] }), YEAR),
     null,
     'a nameless member is rejected',
   );
   assert.equal(
-    parseMemberTeamInsights(payload({ members: [{ member_id: 7, full_name: 'سيف', approved: 1, active_days: 1, last_approved_on: null }] }), YEAR),
+    parseMemberTeamInsights(payload({ members: [{ member_id: 7, full_name: 'سيف', approved: 1, active_days: 1, last_approved_on: null, github_handle: null }] }), YEAR),
     null,
     'member approvals must add up to the total',
+  );
+  assert.equal(
+    parseMemberTeamInsights(payload({ roster: [{ member_id: 7, full_name: 'سيف', github_handle: 'not a handle' }] }), YEAR),
+    null,
+    'an invalid GitHub handle is rejected',
+  );
+  assert.equal(
+    parseMemberTeamInsights(payload({ roster: [{ member_id: 7, full_name: 'سيف', github_handle: 'Seif-Dev' }, { member_id: 8, full_name: 'كريم', github_handle: 'seif-dev' }] }), YEAR),
+    null,
+    'duplicate handles are rejected',
+  );
+  assert.equal(
+    parseMemberTeamInsights(payload({ members: [{ member_id: 7, full_name: 'سيف', approved: 3, active_days: 2, last_approved_on: null }] }), YEAR),
+    null,
+    'a member row without github_handle is rejected',
   );
 });
 
@@ -116,4 +138,24 @@ test('requests the member RPC and surfaces failures', async () => {
     requestMemberTeamInsights({ rpc: () => Promise.resolve({ data: payload({ total_approvals: 99 }), error: null }) }, YEAR),
     /invalid response/,
   );
+});
+test('merges GitHub calendars into the shared activity model', () => {
+  const parsed = parseMemberTeamInsights(payload(), YEAR) as MemberTeamInsights;
+  const calendars = new Map([
+    ['seif-dev', { handle: 'seif-dev', year: YEAR, days: { '2026-03-04': 2, '2026-03-05': 4 }, total: 6 }],
+  ]);
+  const activity = buildMemberTeamActivity(parsed, { calendars, enabled: true });
+  assert.equal(activity.totals.github, 6);
+  assert.equal(activity.totals.total, 9);
+  assert.equal(activity.totals.activeDays, 3);
+  assert.equal(activity.byDate.get('2026-03-04')?.github, 2);
+  assert.equal(activity.byDate.get('2026-03-04')?.total, 4);
+  const seif = activity.members.find((member) => member.memberId === 7);
+  assert.equal(seif?.handle, 'seif-dev');
+  assert.equal(seif?.github, 6);
+  assert.equal(seif?.score, 16);
+  assert.equal(activity.byDate.get('2026-03-05')?.githubBy[0]?.handle, 'seif-dev');
+  const ledgerOnly = buildMemberTeamActivity(parsed, { calendars, enabled: false });
+  assert.equal(ledgerOnly.totals.github, 0);
+  assert.equal(ledgerOnly.totals.total, 3);
 });

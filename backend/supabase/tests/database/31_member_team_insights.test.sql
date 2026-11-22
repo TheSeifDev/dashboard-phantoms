@@ -4,7 +4,7 @@
 -- الجدول نفسه)، وبتجمع عدد الناس في اليوم (crew) وبتستبعد أحداث الإلغاء.
 BEGIN;
 \ir _helpers.psql
-SELECT plan(15);
+SELECT plan(22);
 
 -- Fixtures -------------------------------------------------------------------
 DO $$
@@ -98,6 +98,34 @@ SELECT cmp_ok(
   '>=',
   3,
   'the roster size covers the active members');
+SELECT is(
+  jsonb_typeof(public.get_member_team_insights(EXTRACT(YEAR FROM (timezone('Africa/Cairo', now()))::date)::INTEGER) -> 'roster'),
+  'array',
+  'the payload exposes a roster array for linked GitHub accounts');
+SELECT ok(
+  (SELECT bool_and(entry ? 'github_handle' AND entry ? 'full_name' AND entry ? 'member_id')
+     FROM jsonb_array_elements(public.get_member_team_insights(EXTRACT(YEAR FROM (timezone('Africa/Cairo', now()))::date)::INTEGER) -> 'roster') AS entry),
+  'every roster entry carries a member id, a name and a GitHub handle');
+SELECT ok(
+  (SELECT bool_and(entry ? 'github_handle')
+     FROM jsonb_array_elements(public.get_member_team_insights(EXTRACT(YEAR FROM (timezone('Africa/Cairo', now()))::date)::INTEGER) -> 'members') AS entry),
+  'ranked members carry their GitHub handle field');
+SELECT is(
+  public.member_github_handle('{"GitHub": "https://github.com/Seif-Dev"}'::JSONB, NULL),
+  'Seif-Dev',
+  'a GitHub custom field wins over the portfolio link');
+SELECT is(
+  public.member_github_handle('{"GitHub": "not a handle"}'::JSONB, 'https://github.com/karim-dev'),
+  'karim-dev',
+  'an invalid custom field falls back to the github.com portfolio link');
+SELECT is(
+  public.member_github_handle('{"جيت هاب": "@nour-dev"}'::JSONB, NULL),
+  'nour-dev',
+  'the Arabic custom field label is recognised and @ is stripped');
+SELECT is(
+  public.member_github_handle('{}'::JSONB, 'https://gitlab.com/whatever'),
+  NULL::TEXT,
+  'non-GitHub profile links are ignored');
 SELECT throws_ok(
   'SELECT public.get_member_team_insights(1999)',
   'P0001',

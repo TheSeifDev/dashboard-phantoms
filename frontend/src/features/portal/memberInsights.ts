@@ -5,9 +5,11 @@ import {
   type RpcResult,
   type TaskContributions,
 } from '../dashboard/taskContributions';
+import type { GithubCalendar } from '../dashboard/github';
 import {
   crewHotThreshold,
   crewTier,
+  type GithubDayShare,
   type MemberActivity,
   type TeamActivity,
   type TeamDay,
@@ -24,12 +26,22 @@ export interface MemberInsightPerson {
   approved: number;
   activeDays: number;
   lastApprovedOn: string | null;
+  /** Handle from the member's GitHub custom field or a github.com portfolio link. */
+  githubHandle: string | null;
+}
+
+/** A member who linked GitHub: enough to fetch the public calendar and show an avatar. */
+export interface MemberInsightRosterEntry {
+  memberId: number;
+  fullName: string;
+  githubHandle: string;
 }
 
 export interface MemberTeamInsights {
   contributions: TaskContributions;
   days: MemberInsightDay[];
   people: MemberInsightPerson[];
+  roster: MemberInsightRosterEntry[];
   rosterSize: number;
 }
 
@@ -48,10 +60,13 @@ const ROOT_KEYS = [
   'days',
   'total_approvals',
   'members',
+  'roster',
   'roster_size',
 ] as const;
 const DAY_KEYS = ['date', 'count', 'crew'] as const;
-const PERSON_KEYS = ['member_id', 'full_name', 'approved', 'active_days', 'last_approved_on'] as const;
+const PERSON_KEYS = ['member_id', 'full_name', 'approved', 'active_days', 'last_approved_on', 'github_handle'] as const;
+const ROSTER_KEYS = ['member_id', 'full_name', 'github_handle'] as const;
+const HANDLE_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37})$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -63,6 +78,10 @@ function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): b
 
 function isCount(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+function isOptionalHandle(value: unknown): value is string | null {
+  return value === null || (typeof value === 'string' && HANDLE_PATTERN.test(value));
 }
 
 /**
@@ -80,6 +99,7 @@ export function parseMemberTeamInsights(value: unknown, expectedYear: number): M
   if (!isCount(value.total_approvals) || !isCount(value.roster_size)) return null;
   if (!Array.isArray(value.days) || value.days.length > 366) return null;
   if (!Array.isArray(value.members)) return null;
+  if (!Array.isArray(value.roster) || value.roster.length > 500) return null;
 
   const today = value.today;
   const seen = new Set<string>();
@@ -110,6 +130,7 @@ export function parseMemberTeamInsights(value: unknown, expectedYear: number): M
     if (raw.active_days > raw.approved) return null;
     const last = raw.last_approved_on;
     if (!(last === null || (isIsoDate(last) && last <= today))) return null;
+    if (!isOptionalHandle(raw.github_handle)) return null;
     seenMembers.add(memberId);
     people.push({
       memberId,
@@ -117,10 +138,25 @@ export function parseMemberTeamInsights(value: unknown, expectedYear: number): M
       approved: raw.approved,
       activeDays: raw.active_days,
       lastApprovedOn: last,
+      githubHandle: raw.github_handle,
     });
   }
   const memberSum = people.reduce((total, person) => total + person.approved, 0);
   if (memberSum !== value.total_approvals) return null;
+
+  const roster: MemberInsightRosterEntry[] = [];
+  const seenHandles = new Set<string>();
+  for (const raw of value.roster) {
+    if (!isRecord(raw) || !hasOnlyKeys(raw, ROSTER_KEYS)) return null;
+    const memberId = raw.member_id;
+    if (typeof memberId !== 'number' || !Number.isSafeInteger(memberId) || memberId < 1) return null;
+    if (typeof raw.full_name !== 'string' || raw.full_name.trim().length === 0) return null;
+    if (typeof raw.github_handle !== 'string' || !HANDLE_PATTERN.test(raw.github_handle)) return null;
+    const key = raw.github_handle.toLowerCase();
+    if (seenHandles.has(key)) return null;
+    seenHandles.add(key);
+    roster.push({ memberId, fullName: raw.full_name, githubHandle: raw.github_handle });
+  }
 
   return {
     contributions: {
@@ -134,6 +170,7 @@ export function parseMemberTeamInsights(value: unknown, expectedYear: number): M
     },
     days,
     people,
+    roster,
     rosterSize: value.roster_size,
   };
 }
@@ -155,46 +192,132 @@ export async function requestMemberTeamInsights(
   return parsed;
 }
 
+export interface MemberGithubMerge {
+  /** Public calendars keyed by lowercase handle, fetched in the browser. */
+  calendars: ReadonlyMap<string, GithubCalendar>;
+  enabled: boolean;
+}
+
 /**
  * Shapes the member payload into the same TeamActivity model the admin widgets
- * consume, so the pulse and trend panels stay byte-for-byte identical.
+ * consume. Approvals come from the RPC ledger; GitHub volume is merged here
+ * exactly like the admin dashboard (calendar days added to the cell volume and
+ * to the crew count), so the heatmap, pulse and trend stay identical.
  */
-export function buildMemberTeamActivity(insights: MemberTeamInsights): TeamActivity {
-  const { contributions, days, people, rosterSize } = insights;
+export function buildMemberTeamActivity(insights: MemberTeamInsights, github?: MemberGithubMerge): TeamActivity {
+  const { contributions, days, people, roster, rosterSize } = insights;
   const year = contributions.year;
-  const hot = crewHotThreshold(rosterSize);
+  const today = contributions.today;
   const byDate = new Map<string, TeamDay>();
+  const day = (date: string): TeamDay => {
+    let entry = byDate.get(date);
+    if (!entry) {
+      entry = { date, approvals: 0, github: 0, total: 0, githubBy: [], deliveries: [], contributorIds: [], crewSize: 0, crew: 0 };
+      byDate.set(date, entry);
+    }
+    return entry;
+  };
+  const inYear = (date: string) => Number(date.slice(0, 4)) === year && date <= today;
+
+  for (const entry of days) {
+    if (entry.count <= 0 || !inYear(entry.date)) continue;
+    const teamDay = day(entry.date);
+    teamDay.approvals = entry.count;
+    teamDay.crewSize = Math.max(teamDay.crewSize, entry.crew);
+  }
+
+  const names = new Map<number, string>();
+  for (const person of people) names.set(person.memberId, person.fullName);
+  for (const person of roster) if (!names.has(person.memberId)) names.set(person.memberId, person.fullName);
+  const stats = new Map<number, MemberActivity>();
+  const stat = (memberId: number): MemberActivity => {
+    let entry = stats.get(memberId);
+    if (!entry) {
+      entry = {
+        memberId,
+        name: names.get(memberId) ?? `#${memberId}`,
+        handle: null,
+        approved: 0,
+        submitted: 0,
+        github: 0,
+        activeDays: 0,
+        score: 0,
+      };
+      stats.set(memberId, entry);
+    }
+    return entry;
+  };
+  const githubDaysByMember = new Map<number, Set<string>>();
+
+  if (github?.enabled) {
+    for (const person of roster) {
+      const calendar = github.calendars.get(person.githubHandle.toLowerCase());
+      if (!calendar || calendar.year !== year) continue;
+      const memberStat = stat(person.memberId);
+      memberStat.handle = person.githubHandle;
+      for (const [date, count] of Object.entries(calendar.days)) {
+        if (count <= 0 || !inYear(date)) continue;
+        const teamDay = day(date);
+        teamDay.github += count;
+        teamDay.githubBy.push({ memberId: person.memberId, handle: person.githubHandle, count });
+        memberStat.github += count;
+        let set = githubDaysByMember.get(person.memberId);
+        if (!set) {
+          set = new Set();
+          githubDaysByMember.set(person.memberId, set);
+        }
+        set.add(date);
+      }
+    }
+  }
+
+  for (const person of people) {
+    const memberStat = stat(person.memberId);
+    memberStat.approved = person.approved;
+    if (!memberStat.handle && person.githubHandle) memberStat.handle = person.githubHandle;
+    memberStat.activeDays = Math.max(person.activeDays, githubDaysByMember.get(person.memberId)?.size ?? 0);
+  }
+  for (const [memberId, dates] of githubDaysByMember) {
+    const memberStat = stat(memberId);
+    memberStat.activeDays = Math.max(memberStat.activeDays, dates.size);
+  }
+
+  const rosterActive = new Set<number>();
+  for (const [memberId, memberStat] of stats) {
+    if (memberStat.approved > 0 || memberStat.github > 0) rosterActive.add(memberId);
+  }
+  const hot = crewHotThreshold(Math.max(rosterSize, rosterActive.size));
+
+  let approvals = 0;
+  let githubTotal = 0;
+  let activeDays = 0;
   let crewDays = 0;
   let peak: TeamDay | null = null;
-  for (const entry of days) {
-    if (entry.count <= 0) continue;
-    const teamDay: TeamDay = {
-      date: entry.date,
-      approvals: entry.count,
-      github: 0,
-      total: entry.count,
-      githubBy: [],
-      deliveries: [],
-      contributorIds: [],
-      crewSize: entry.crew,
-      crew: crewTier(entry.crew, hot),
-    };
-    byDate.set(entry.date, teamDay);
-    if (entry.crew >= 2) crewDays += 1;
-    if (!peak || teamDay.total > peak.total) peak = teamDay;
+  for (const entry of byDate.values()) {
+    entry.total = entry.approvals + entry.github;
+    const contributors = new Set<number>();
+    for (const share of entry.githubBy) contributors.add(share.memberId);
+    entry.contributorIds = [...contributors];
+    const approvalCrew = entry.approvals > 0 ? 1 : 0;
+    // The RPC already counted distinct approvers for the day; GitHub adds people who only committed.
+    entry.crewSize = Math.max(entry.crewSize, approvalCrew, contributors.size);
+    entry.crew = crewTier(entry.total > 0 ? Math.max(1, entry.crewSize) : 0, hot);
+    entry.githubBy.sort((a, b) => b.count - a.count);
+    approvals += entry.approvals;
+    githubTotal += entry.github;
+    if (entry.total > 0) activeDays += 1;
+    if (entry.crewSize >= 2) crewDays += 1;
+    if (!peak || entry.total > peak.total || (entry.total === peak.total && entry.crewSize > peak.crewSize)) {
+      peak = entry.total > 0 ? entry : peak;
+    }
   }
-  const members: MemberActivity[] = people.map((person) => ({
-    memberId: person.memberId,
-    name: person.fullName,
-    handle: null,
-    approved: person.approved,
-    submitted: 0,
-    github: 0,
-    activeDays: person.activeDays,
-    score: person.approved * 5,
-  })).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+
+  for (const memberStat of stats.values()) {
+    memberStat.score = memberStat.approved * 5 + memberStat.submitted * 2 + memberStat.github;
+  }
 
   const mergedDays = [...byDate.values()]
+    .filter((entry) => entry.total > 0)
     .map((entry) => ({ date: entry.date, count: entry.total }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -203,15 +326,20 @@ export function buildMemberTeamActivity(insights: MemberTeamInsights): TeamActiv
     byDate,
     mergedDays,
     totals: {
-      approvals: contributions.total_approvals,
-      github: 0,
-      total: contributions.total_approvals,
+      approvals,
+      github: githubTotal,
+      total: approvals + githubTotal,
       deliveries: 0,
-      activeDays: byDate.size,
+      activeDays,
       crewDays,
       peak,
     },
-    members,
+    members: [...stats.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)),
     crewScale: { roster: rosterSize, hot },
   };
+}
+
+/** GitHub shares of one day, used by the member-safe day summary. */
+export function githubSharesOf(activity: TeamActivity, date: string): GithubDayShare[] {
+  return activity.byDate.get(date)?.githubBy ?? [];
 }
