@@ -414,12 +414,17 @@ async function enrollRequest(email, token, password, confirmPassword = password,
   if (typeof email === 'string') rememberRateKey('member-password:email:', email.trim().toLowerCase());
   if (typeof token === 'string') rememberRateKey('member-password:token:', token);
   const body = { action: 'enroll', email, token, password, confirmPassword };
-  if (!fixture.resetTokens.has(token)) body.profile = {
-    fullName: 'Self Service HTTP Member', phone: '+201100000001', residence: 'Alexandria',
-    workConditions: 'Remote', bio: 'Owned disposable fixture', device: 'لابتوب', gender: 'ذكر',
-    academicNumber: String(BigInt('0x' + createHash('sha256').update(String(email)).digest('hex').slice(0, 20))),
-    academicGroup: 'HTTP-FIXTURE', specialization: 'software', linkedinUrl: '', portfolioUrl: '',
-  };
+  if (!fixture.resetTokens.has(token)) {
+    const suffix = createHash('sha256').update(String(email)).digest('hex').slice(0, 12);
+    body.profile = {
+      fullName: 'Self Service HTTP Member', phone: '+201100000001', residence: 'Alexandria',
+      workConditions: 'Remote', bio: 'Owned disposable fixture', device: 'لابتوب', gender: 'ذكر',
+      academicNumber: String(BigInt('0x' + createHash('sha256').update(String(email)).digest('hex').slice(0, 20))),
+      academicGroup: 'HTTP-FIXTURE', specialization: 'software',
+      linkedinUrl: `https://www.linkedin.com/in/real-http-${suffix}`,
+      portfolioUrl: `https://github.com/real-http-${suffix}`,
+    };
+  }
   if (extra) Object.assign(body, extra);
   const response = await bounded(fetch(`${API_ORIGIN}${FUNCTION_PATH}`, {
     method: 'POST', headers: { 'content-type': 'application/json', Origin: PREVIEW_ORIGIN }, body: JSON.stringify(body), signal,
