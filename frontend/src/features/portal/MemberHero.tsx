@@ -63,6 +63,8 @@ export function MemberHero({
   bonusError = false,
   bonusStateLoading = false,
   bonusStateError = false,
+  todayActivity = null,
+  onOpenToday,
 }: {
   member: Member;
   tasks: Task[];
@@ -75,6 +77,9 @@ export function MemberHero({
   bonusError?: boolean;
   bonusStateLoading?: boolean;
   bonusStateError?: boolean;
+  /** اعتمادات الفريق النهارده — نفس أرقام لوحة الإدارة (اعتمادات + GitHub). */
+  todayActivity?: { date: string; total: number; crew: number } | null;
+  onOpenToday?: (date: string) => void;
 }) {
   const { isSubscribed, subscribeToPush, sendTestNotification } = usePWA({
     memberId: member.id,
@@ -85,8 +90,6 @@ export function MemberHero({
   const memberId = String(member.id);
   const statusOf = (task: Task) => task.tracking?.[memberId]?.status ?? 'pending';
   const underReview = tasks.filter((task) => statusOf(task) === 'under_review').length;
-  const approved = tasks.filter((task) => statusOf(task) === 'approved').length;
-  const open = tasks.filter((task) => ACTIONABLE.has(statusOf(task))).length;
   const overdue = tasks.filter((task) => ACTIONABLE.has(statusOf(task)) && task.has_deadline && isOverdue(task.deadline_date)).length;
   const unreadEvaluations = evaluations.filter((item) => !item.read_at).length;
   const githubHandle = resolveGithubHandle({ portfolio_url: member.portfolio_url ?? null, custom_fields: member.custom_fields ?? undefined });
@@ -194,13 +197,17 @@ export function MemberHero({
       <button
         type="button"
         className="dashboard-hero-visual"
-        onClick={() => navigate('/portal?tab=TASKS')}
-        aria-label={t('افتح مهامي', 'Open my tasks')}
+        onClick={() => {
+          if (todayActivity && onOpenToday) onOpenToday(todayActivity.date);
+          else navigate('/portal?tab=TASKS');
+        }}
+        aria-label={t('افتح مساهمات النهارده', 'Open today’s contributions')}
       >
+        {/* نفس معنى الهيكس في لوحة الإدارة: مساهمات الفريق النهارده + عدد الناس النشطين. */}
         <HeroHexCluster
-          heat={Math.max(1, Math.min(4, approved))}
-          value={number(open)}
-          caption={t('مهام شغالة', 'active tasks')}
+          heat={Math.max(1, Math.min(4, todayActivity?.crew ?? 0))}
+          value={number(todayActivity?.total ?? 0)}
+          caption={t('النهارده', 'today')}
         />
       </button>
     </header>
