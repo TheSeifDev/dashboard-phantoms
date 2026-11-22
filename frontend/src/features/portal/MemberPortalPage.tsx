@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { Bell, CheckSquare, ClipboardCheck, Layers } from 'lucide-react';
-import { getDeviceToken, useAuthStore } from '../../store/auth';
-import { memberSupabase } from '../../lib/supabase/member-client';
+import { Navigate, useSearchParams } from 'react-router-dom';
+import { useAuthStore } from '../../store/auth';
 import { useMemberTasks, useUpdateTaskStatus } from '../tasks/api';
-import { logoutMemberDevice, updateMemberReadiness } from '../members/api';
+import { updateMemberReadiness } from '../members/api';
 import type { Task } from '../../types/db';
-import { PortalHeader } from './PortalHeader';
 import { toast } from '../../store/toast';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { MemberHero } from './MemberHero';
@@ -17,7 +14,6 @@ import { MemberEvaluations } from './MemberEvaluations';
 import { SubmissionModal } from './SubmissionModal';
 import MemberAnnouncements from './announcements/MemberAnnouncements';
 import { SubmissionSuccessModal, type SubmissionCelebration } from './SubmissionSuccessModal';
-import { logoutMemberWithCleanup } from './member-logout';
 import { useMemberBonus, useMemberInfiniteBonus } from './useMemberBonus';
 import { useMemberEvaluations } from '../evaluations/api';
 import { taskBonus } from '../tasks/taskMeta';
@@ -30,14 +26,17 @@ import { useLocale } from '../../i18n/useLocale';
 type PortalTab = NotificationTargetTab;
 
 export default function MemberPortalPage() {
-  const { t, dir, number } = useLocale();
+  const { t } = useLocale();
   const member = useAuthStore((state) => state.currentMember);
-  const logoutMember = useAuthStore((state) => state.logoutMember);
-  const navigate = useNavigate();
   const tasksQuery = useMemberTasks(member?.id);
   const evaluationsQuery = useMemberEvaluations(member?.id);
   const updateTask = useUpdateTaskStatus();
-  const [activeTab, setActiveTab] = useState<PortalTab>('ALL');
+  const [params, setParams] = useSearchParams();
+  const requestedTab = (params.get('tab') ?? 'ALL').toUpperCase() as PortalTab;
+  const activeTab: PortalTab = (['ALL', 'TASKS', 'EVALUATIONS', 'ANNOUNCEMENTS'] as PortalTab[]).includes(requestedTab) ? requestedTab : 'ALL';
+  const setActiveTab = (next: PortalTab) => {
+    setParams(next === 'ALL' ? {} : { tab: next }, { replace: false });
+  };
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [submissionUrl, setSubmissionUrl] = useState('');
   const [submissionNote, setSubmissionNote] = useState('');
@@ -66,24 +65,6 @@ export default function MemberPortalPage() {
 
   const myTasks = tasksQuery.data ?? [];
   const myEvaluations = evaluationsQuery.data ?? [];
-  const unreadEvaluationsCount = myEvaluations.filter((e) => !e.read_at).length;
-
-  const logout = async () => {
-    const deviceToken = getDeviceToken();
-    await logoutMemberWithCleanup({
-      deviceLogout: deviceToken ? () => logoutMemberDevice(member.id, deviceToken) : undefined,
-      localSignOut: async () => {
-        const { error } = await memberSupabase.auth.signOut({ scope: 'local' });
-        if (error) throw error;
-      },
-      clearMemberState: logoutMember,
-      navigateToLogin: () => navigate('/login'),
-      onDeviceLogoutFailure: () =>
-        toast.error(t('حصلت مشكلة وإحنا بنسجّل خروج الجهاز، لكن تم تنظيف الجلسة المحلية.', 'There was a problem signing this device out, but local session data was cleared.')),
-      onLocalSignOutFailure: () =>
-        toast.error(t('حصلت مشكلة في إنهاء جلسة العضو، لكن تم تنظيف بيانات التطبيق.', 'There was a problem ending the member session, but local app data was cleared.')),
-    });
-  };
 
   const startTask = async (task: Task) => {
     try {
@@ -156,21 +137,8 @@ export default function MemberPortalPage() {
     setSubmissionUrl(task.tracking?.[memberId]?.submission_url ?? '');
   };
 
-  const tabs: Array<{ key: PortalTab; label: string; icon: typeof Layers; badge?: number }> = [
-    { key: 'ALL', label: t('كل الأقسام', 'Overview'), icon: Layers },
-    { key: 'TASKS', label: t('المهام', 'Tasks'), icon: CheckSquare, badge: myTasks.length || undefined },
-    {
-      key: 'EVALUATIONS',
-      label: t('التقييمات', 'Evaluations'),
-      icon: ClipboardCheck,
-      badge: unreadEvaluationsCount || undefined,
-    },
-    { key: 'ANNOUNCEMENTS', label: t('الإعلانات', 'Announcements'), icon: Bell },
-  ];
-
   return (
-    <div className="min-h-dvh bg-[var(--bg)] text-[var(--text)]" dir={dir}>
-      <PortalHeader onLogout={logout} />
+    <>
       <WhatsAppNotificationCenter
         memberId={member.id}
         tasks={myTasks}
@@ -180,75 +148,32 @@ export default function MemberPortalPage() {
           void sendTestNotification();
         }}
       />
-      <main className="mx-auto grid w-full max-w-[var(--content-max)] gap-6 px-4 pb-8 pt-5 sm:px-6 sm:pt-7">
+      <div className="grid gap-5">
         <ProfileReminderBanner />
-        <MemberHero
-          member={member}
-          onToggleField={toggleFieldReadiness}
-          isUpdating={isTogglingReadiness}
-          totalBonus={bonusQuery.data ?? null}
-          bonusInfinite={bonusInfiniteQuery.data === true}
-          bonusLoading={bonusQuery.isLoading}
-          bonusError={bonusQuery.isError}
-          bonusStateLoading={bonusInfiniteQuery.isLoading}
-          bonusStateError={bonusInfiniteQuery.isError}
-        />
-
         {activeTab === 'ALL' && (
-          <MemberHomeCards
-            member={member}
-            tasks={myTasks}
-            evaluations={myEvaluations}
-            bonus={bonusQuery.data ?? null}
-            onOpenTab={setActiveTab}
-          />
+          <>
+            <MemberHero
+              member={member}
+              onToggleField={toggleFieldReadiness}
+              isUpdating={isTogglingReadiness}
+              totalBonus={bonusQuery.data ?? null}
+              bonusInfinite={bonusInfiniteQuery.data === true}
+              bonusLoading={bonusQuery.isLoading}
+              bonusError={bonusQuery.isError}
+              bonusStateLoading={bonusInfiniteQuery.isLoading}
+              bonusStateError={bonusInfiniteQuery.isError}
+            />
+            <MemberHomeCards
+              member={member}
+              tasks={myTasks}
+              evaluations={myEvaluations}
+              bonus={bonusQuery.data ?? null}
+              onOpenTab={setActiveTab}
+            />
+          </>
         )}
 
-        <nav
-          aria-label={t('أقسام بوابة العضو', 'Member portal sections')}
-          className="grid grid-cols-2 gap-1.5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-sm)] sm:grid-cols-5"
-        >
-          {tabs.map(({ key, label, icon: Icon, badge }) => {
-            const active = activeTab === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setActiveTab(key)}
-                aria-current={active ? 'page' : undefined}
-                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 ${
-                  active
-                    ? 'bg-[var(--primary)] text-white shadow-[var(--shadow-sm)]'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'
-                }`}
-              >
-                <Icon size={16} aria-hidden="true" />
-                <span>{label}</span>
-                {typeof badge === 'number' && badge > 0 && (
-                  <span
-                    aria-hidden="true"
-                    className={`rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
-                      active
-                        ? 'bg-white/20 text-white'
-                        : 'bg-[var(--primary-soft)] text-[var(--link)]'
-                    }`}
-                  >
-                    {number(badge)}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          <Link
-            to="/portal/projects"
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
-          >
-            <Layers size={16} aria-hidden="true" />
-            <span>{t('مشروعات الويب', 'Web Projects')}</span>
-          </Link>
-        </nav>
-
-        {(activeTab === 'ALL' || activeTab === 'TASKS') && (
+        {activeTab === 'TASKS' && (
           <MemberTasks
             tasks={myTasks}
             memberId={memberId}
@@ -263,14 +188,10 @@ export default function MemberPortalPage() {
           />
         )}
 
-        {(activeTab === 'ALL' || activeTab === 'EVALUATIONS') && (
-          <MemberEvaluations memberId={member.id} />
-        )}
+        {activeTab === 'EVALUATIONS' && <MemberEvaluations memberId={member.id} />}
 
-        {(activeTab === 'ALL' || activeTab === 'ANNOUNCEMENTS') && (
-          <MemberAnnouncements memberId={member.id} />
-        )}
-      </main>
+        {activeTab === 'ANNOUNCEMENTS' && <MemberAnnouncements memberId={member.id} />}
+      </div>
       <SubmissionModal
         task={selectedTask}
         url={submissionUrl}
@@ -294,6 +215,6 @@ export default function MemberPortalPage() {
         }
         onClose={() => setCelebration(null)}
       />
-    </div>
+    </>
   );
 }

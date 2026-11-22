@@ -32,7 +32,7 @@ import { useAuthStore } from '../../store/auth';
 import { supabase } from '../../lib/supabase/client';
 import { Drawer } from '../ui/Drawer';
 import { PhantomsLogo } from '../brand/PhantomsLogo';
-import type { AdminPermission, AdminPermissions } from '../../types/db';
+import type { AdminPermission, AdminPermissions, Member } from '../../types/db';
 import { clearAdminSetupIntent } from '../../features/auth/auth-flow';
 import { useAccountMember } from '../../features/auth/useAccountMember';
 import { MemberAvatar } from '../ui/MemberAvatar';
@@ -47,6 +47,9 @@ const EN: Record<string, string> = {
   'مشروعات الويب': 'Web Projects', 'ملخص المشروعات': 'Overview', 'الأفكار': 'Ideas', 'المشروعات': 'Projects',
   'المخطط الزمني': 'Timeline', 'لوحات أجايل': 'Agile boards', 'مهام المشروعات': 'Project tasks',
   'تقارير المشروعات': 'Reports', 'الموارد': 'Resources',
+  'شغلي': 'My work', 'مهامي': 'My tasks', 'تقييماتي': 'My evaluations',
+  'الفريق الداخلي': 'Internal team', 'مساحات المشروعات': 'Project workspaces',
+  'الحساب والإعدادات': 'Account & settings', 'بوابة العضو': 'Member portal',
 };
 
 export interface SidebarLink {
@@ -56,6 +59,8 @@ export interface SidebarLink {
   end?: boolean;
   ownerOnly?: boolean;
   permission?: AdminPermission;
+  /** Match the query string too (sections that live on `?tab=` of one route). */
+  matchSearch?: boolean;
 }
 
 export interface SidebarGroup {
@@ -205,20 +210,31 @@ function SidebarLinks({
   const { t } = useLocale();
   const rail = useRailTooltip();
   const id = useId();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   // One group open at a time: opening another closes the previous one instead of
   // growing the rail past the viewport and forcing a scroll.
-  const [openGroup, setOpenGroup] = useState<string | null>('العمليات');
+  // Admin starts on "العمليات"; other shells (member portal) start on their first group.
+  const [openGroup, setOpenGroup] = useState<string | null>(() => (
+    groups.some((group) => group.title === 'العمليات')
+      ? 'العمليات'
+      : groups.find((group) => group.title !== 'نظرة عامة')?.title ?? null
+  ));
   const canSee = (item: SidebarLink) =>
     (!item.ownerOnly || isOwner) &&
     (!item.permission || isOwner || permissions[item.permission] === true);
   const visibleGroups = groups
     .map((group) => ({ ...group, items: group.items.filter(canSee) }))
     .filter((group) => group.items.length > 0);
+  /** Search-aware match so `?tab=` sections keep their own active pill. */
+  const isItemActive = (item: SidebarLink) => {
+    const [itemPath, itemSearch = ''] = item.to.split('?');
+    if (item.matchSearch) {
+      return pathname === itemPath && search.replace(/^\?/, '') === itemSearch;
+    }
+    return pathname === item.to || (!item.end && pathname.startsWith(`${item.to}/`));
+  };
   const activeGroup = visibleGroups.find((group) =>
-    group.title !== 'نظرة عامة' && group.items.some((item) =>
-      pathname === item.to || (!item.end && pathname.startsWith(`${item.to}/`)),
-    ),
+    group.title !== 'نظرة عامة' && group.items.some(isItemActive),
   )?.title;
 
   useEffect(() => {
@@ -233,7 +249,9 @@ function SidebarLinks({
         const homeGroup = group.title === 'نظرة عامة';
         const expanded = homeGroup || collapsed || openGroup === group.title;
         const groupId = `${id}-section-${index}`;
-        const links = group.items.map(({ to, label: itemLabel, icon: Icon, end }) => (
+        const links = group.items.map((item) => {
+          const { to, label: itemLabel, icon: Icon, end } = item;
+          return (
           <li key={to}>
             <NavLink
               to={to}
@@ -244,7 +262,7 @@ function SidebarLinks({
               data-tip={railTips ? label(itemLabel) : undefined}
               {...(railTips ? rail.events(label(itemLabel)) : {})}
               className={({ isActive }) =>
-                `app-sidebar-item${isActive ? ' is-active' : ''}${railTips ? ' app-sidebar-tip' : ''
+                `app-sidebar-item${(item.matchSearch ? isItemActive(item) : isActive) ? ' is-active' : ''}${railTips ? ' app-sidebar-tip' : ''
                 }`
               }
             >
@@ -252,7 +270,8 @@ function SidebarLinks({
               <span className="app-sidebar-item-label">{label(itemLabel)}</span>
             </NavLink>
           </li>
-        ));
+          );
+        });
         return (
           <section className={`app-sidebar-section${homeGroup ? ' is-home' : ''}`} key={group.title}>
             {!homeGroup && (
@@ -365,6 +384,11 @@ export function AppSidebar({
   groups = GROUPS,
   guest = false,
   brandTo = '/admin',
+  roleLabel,
+  onSignOut,
+  signOutTo = '/admin/login',
+  avatarMember,
+  brandSubtitle,
 }: {
   userName: string;
   isOwner: boolean;
@@ -374,6 +398,13 @@ export function AppSidebar({
   groups?: SidebarGroup[];
   guest?: boolean;
   brandTo?: string;
+  /** Overrides the footer role line (member portal shows the member's own role). */
+  roleLabel?: string;
+  /** Member sessions sign out of their own client instead of the admin one. */
+  onSignOut?: () => Promise<void>;
+  signOutTo?: string;
+  avatarMember?: Member | null;
+  brandSubtitle?: string;
 }) {
   const { t, dir } = useLocale();
   const [collapsed, setCollapsed] = useState(readSidebarCollapsed);
@@ -381,6 +412,7 @@ export function AppSidebar({
   const logoutRail = useRailTooltip();
   const clear = useAuthStore((state) => state.clear);
   const accountMember = useAccountMember();
+  const memberAvatar = avatarMember === undefined ? accountMember : avatarMember;
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const closeRef = useRef(onCloseDrawer);
@@ -466,12 +498,17 @@ export function AppSidebar({
     logoutRail.hide();
     const failure = t('تعذّر تسجيل الخروج. جرّب تاني.', 'Could not sign out. Please try again.');
     try {
+      if (onSignOut) {
+        await onSignOut();
+        onCloseDrawer();
+        return;
+      }
       const { error } = await supabase.auth.signOut();
       if (error) { toast.error(failure); return; }
       clear();
       clearAdminSetupIntent();
       onCloseDrawer();
-      navigate('/admin/login');
+      navigate(signOutTo);
     } catch { toast.error(failure); }
     finally { setSigningOut(false); }
   };
@@ -482,7 +519,7 @@ export function AppSidebar({
         <div className="app-sidebar-header">
           <NavLink to={brandTo} className="app-sidebar-brand" aria-label={t('PHANTOMS — الرئيسية', 'PHANTOMS — Home')}>
             <span className="app-sidebar-logo-orb"><PhantomsLogo size="md" symbolOnly themeMode="dark" className="app-sidebar-logo" /></span>
-            <span className="app-sidebar-brand-copy" aria-hidden="true"><strong>PHANTOMS</strong><small>{t('مساحة الفريق', 'Team workspace')}</small></span>
+            <span className="app-sidebar-brand-copy" aria-hidden="true"><strong>PHANTOMS</strong><small>{brandSubtitle ?? t('مساحة الفريق', 'Team workspace')}</small></span>
             <span className="sr-only"><span>PHANTOMS</span></span>
           </NavLink>
           <button
@@ -517,10 +554,10 @@ export function AppSidebar({
             <>
               <div className="app-sidebar-user" aria-hidden="true">
                 <span className="app-sidebar-user-avatar-wrap">
-                  <MemberAvatar member={accountMember} name={userName} size={76} className="app-sidebar-user-avatar" />
+                  <MemberAvatar member={memberAvatar} name={userName} size={76} className="app-sidebar-user-avatar" />
                   <i className="app-sidebar-user-status" />
                 </span>
-                <span className="app-sidebar-user-copy"><strong dir="auto">{userName}</strong><small>{isOwner ? t('مالك الفريق', 'Team owner') : t('مدير النظام', 'Administrator')}</small></span>
+                <span className="app-sidebar-user-copy"><strong dir="auto">{userName}</strong><small>{roleLabel ?? (isOwner ? t('مالك الفريق', 'Team owner') : t('مدير النظام', 'Administrator'))}</small></span>
               </div>
               <button
                 type="button"
@@ -544,10 +581,10 @@ export function AppSidebar({
 
       <Drawer isOpen={drawerOpen} onClose={onCloseDrawer} title={t('القائمة الرئيسية', 'Main menu')} className="app-sidebar-drawer">
         <div className="app-drawer-user" aria-label={t('المستخدم الحالي', 'Current user')}>
-          <MemberAvatar member={accountMember} name={userName} size={88} className="app-drawer-user-avatar" />
+          <MemberAvatar member={memberAvatar} name={userName} size={88} className="app-drawer-user-avatar" />
           <div className="min-w-0">
             <p className="truncate text-sm font-black app-drawer-user-name">{userName}</p>
-            <p className="text-xs font-bold app-drawer-user-role">{t('مدير النظام', 'Administrator')}</p>
+            <p className="text-xs font-bold app-drawer-user-role">{roleLabel ?? t('مدير النظام', 'Administrator')}</p>
           </div>
         </div>
         <nav aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-drawer-nav flex flex-col gap-4 py-4">
