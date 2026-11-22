@@ -52,15 +52,6 @@ VALUES ('owner-identity', public.ensure_owner_member_identity()::TEXT);
 INSERT INTO phantoms_test.vars(key, value)
 VALUES ('owner-access', public.get_member_password_access()::TEXT);
 INSERT INTO phantoms_test.vars(key, value)
-VALUES ('owner-bound', public.bind_member_device_session('owner@phantoms-test.example', 'owner-device-token-0123456789abcdef')::TEXT);
-INSERT INTO phantoms_test.vars(key, value)
-VALUES ('owner-settings', (public.member_get_profile_settings('owner-device-token-0123456789abcdef') IS NOT NULL)::TEXT);
-INSERT INTO phantoms_test.vars(key, value)
-VALUES ('owner-profile', (public.member_update_profile_settings(
-    'owner-device-token-0123456789abcdef',
-    '{"fullName":"Seif Owner","phone":"01012345678","residence":"Cairo","workConditions":"Full time on PHANTOMS","bio":"Owner and maintainer","device":"لابتوب","gender":"ذكر","academicNumber":"12345678","academicGroup":"G1","specialization":"software","linkedinUrl":"https://www.linkedin.com/in/seif","portfolioUrl":"https://github.com/TheSeifDev"}'::JSONB
-  ) IS NOT NULL)::TEXT);
-INSERT INTO phantoms_test.vars(key, value)
 VALUES ('owner-again', public.ensure_owner_member_identity()::TEXT);
 RESET ROLE;
 
@@ -140,6 +131,18 @@ SELECT is(
 );
 
 -- Owner profile: device session, read, then a full profile save --------------
+SELECT phantoms_test.login_as('owner');
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('owner-bound', public.bind_member_device_session('owner@phantoms-test.example', 'owner-device-token-0123456789abcdef')::TEXT);
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('owner-settings', (public.member_get_profile_settings('owner-device-token-0123456789abcdef') IS NOT NULL)::TEXT);
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('owner-profile', (public.member_update_profile_settings(
+    'owner-device-token-0123456789abcdef',
+    '{"fullName":"Seif Owner","phone":"01012345678","residence":"Cairo","workConditions":"Full time on PHANTOMS","bio":"Owner and maintainer","device":"لابتوب","gender":"ذكر","academicNumber":"12345678","academicGroup":"G1","specialization":"software","linkedinUrl":"https://www.linkedin.com/in/seif","portfolioUrl":"https://github.com/TheSeifDev"}'::JSONB
+  ) IS NOT NULL)::TEXT);
+RESET ROLE;
+
 SELECT is(phantoms_test.var('owner-bound'), 'true', 'the owner can bind a member device session');
 SELECT is(phantoms_test.var('owner-settings'), 'true', 'the owner can read the member profile settings payload');
 SELECT is(phantoms_test.var('owner-profile'), 'true', 'the owner can save a complete member profile');
@@ -157,12 +160,16 @@ SELECT is(
 -- A mismatched JWT email is rejected ---------------------------------------
 SELECT phantoms_test.login_as('owner');
 DO $$
+DECLARE v_claims TEXT;
 BEGIN
-  PERFORM set_config(
-    'request.jwt.claims',
-    pg_catalog.jsonb_set(current_setting('request.jwt.claims')::JSONB, '{email}', '"someone-else@phantoms-test.example"')::TEXT,
-    true
-  );
+  -- auth.jwt() prefers the singular claim setting, so both copies must change.
+  v_claims := pg_catalog.jsonb_set(
+    COALESCE(NULLIF(current_setting('request.jwt.claim', true), ''), current_setting('request.jwt.claims'))::JSONB,
+    '{email}',
+    '"someone-else@phantoms-test.example"'
+  )::TEXT;
+  PERFORM set_config('request.jwt.claim', v_claims, true);
+  PERFORM set_config('request.jwt.claims', v_claims, true);
 END $$;
 SELECT throws_like(
   $$SELECT public.ensure_owner_member_identity()$$,
