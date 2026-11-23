@@ -44,6 +44,7 @@ import { toast } from '../../store/toast';
 
 const EN: Record<string, string> = {
   'نظرة عامة': 'Overview', 'العمليات': 'Operations', 'التواصل': 'Communication', 'الحساب': 'Account', 'إدارة النظام': 'Administration',
+  'الحساب والإدارة': 'Account & administration',
   'الرئيسية': 'Dashboard', 'المهام': 'Tasks', 'الأعضاء': 'Members', 'التقييمات': 'Evaluations', 'ترتيب الفريق': 'Leaderboard',
   'الملاحظات': 'Notes', 'الإعلانات': 'Announcements', 'إرسال المهام عبر واتساب': 'WhatsApp assignments', 'المساعد الذكي': 'AI assistant',
   'بوابة الأعضاء': 'Member portal', 'إدارة المشرفين': 'Administrators', 'الفرق الداخلية': 'Internal teams',
@@ -144,10 +145,11 @@ export const GROUPS: SidebarGroup[] = [
       },
     ],
   },
-  { title: 'الحساب', items: [{ to: '/portal', label: 'بوابة الأعضاء', icon: CircleUserRound }] },
   {
-    title: 'إدارة النظام',
+    // الحساب وإدارة المشرفين في قائمة واحدة بدل قائمتين.
+    title: 'الحساب والإدارة',
     items: [
+      { to: '/portal', label: 'بوابة الأعضاء', icon: CircleUserRound },
       {
         to: '/admin/admins',
         label: 'إدارة المشرفين',

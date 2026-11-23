@@ -50,6 +50,14 @@
   --chart-slate: #64708A;
   --chart-violet: #8B5CF6;
   --chart-amber: #F59E0B;
+  /* Team ledger charts: lime signal + neutral bars */
+  --chart-lime: #4FBF2A;
+  --chart-lime-soft: #EAF9E0;
+  --chart-lime-ink: #14350A;
+  --chart-lime-text: #1E6A0B;
+  --chart-bar: #DDE3EE;
+  --chart-bar-hover: #C7D0E0;
+  --chart-track: #EDF0F7;
   /* Contribution honeycomb: empty cell, intensity ramp and per-crew hue (1, 2, 3, 4+ people) */
   --heat-0: #E3E7F0;
   --heat-1: #C9D8FF;
@@ -201,6 +209,13 @@
   --chart-slate: #8A93A8;
   --chart-violet: #A78BFA;
   --chart-amber: #FBBF24;
+  --chart-lime: #8AF54F;
+  --chart-lime-soft: #1C2A15;
+  --chart-lime-ink: #0A1406;
+  --chart-lime-text: #B7FF8A;
+  --chart-bar: #232834;
+  --chart-bar-hover: #2F3644;
+  --chart-track: #1A1F29;
   --heat-0: #191D28;
   --heat-1: #1D3270;
   --heat-2: #2848B0;

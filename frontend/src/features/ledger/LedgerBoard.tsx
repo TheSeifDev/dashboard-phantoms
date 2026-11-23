@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -24,6 +24,8 @@ import { toast } from '../../store/toast';
 import { DecideModal } from './DecideModal';
 import { DueModal } from './DueModal';
 import { EntryModal, type EntryMemberOption } from './EntryModal';
+import { LedgerInsights } from './LedgerInsights';
+import { useLedgerEnter, useLedgerRows } from './animations';
 import {
   useAdminLedger,
   useDecideLedgerPayment,
@@ -64,6 +66,8 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
   const [dueModal, setDueModal] = useState<{ due: LedgerDue | null; memberId?: number } | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<LedgerEntry | null>(null);
   const [deleteDue, setDeleteDue] = useState<LedgerDue | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const payload = ledger.data;
   const memberOptions = useMemo<EntryMemberOption[]>(() => {
     if (members && members.length > 0) return members;
@@ -135,14 +139,16 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
     { key: 'members', label: t('الأعضاء', 'Members'), count: payload?.members.length ?? 0 },
     { key: 'dues', label: t('الالتزامات', 'Dues'), count: payload?.dues.length ?? 0 },
   ];
+  useLedgerEnter(boardRef, [Boolean(payload)]);
+  useLedgerRows(panelRef, `${tab}:${query}:${teamId}:${entries.length}`);
   if (ledger.isPending) return <CardSkeletons count={3} />;
   if (ledger.isError) {
     return <ErrorState message={t('معرفناش نحمّل خزنة التيم.', 'Could not load the team ledger.')} onRetry={() => { void ledger.refetch(); }} />;
   }
   if (!payload || !summary) return null;
   return (
-    <div className="ldg-board" dir={dir}>
-      <div className="ldg-actions">
+    <div className="ldg-board" dir={dir} ref={boardRef}>
+      <div className="ldg-actions" data-ldg-enter>
         <Button icon={<ArrowDownLeft size={17} aria-hidden="true" />} onClick={() => setEntryModal('payment')}>
           {t('دفعة', 'Payment')}
         </Button>
@@ -156,7 +162,7 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
           {t('التزام', 'Due')}
         </Button>
       </div>
-      <section className="ldg-hero" aria-label={t('ملخص الخزنة', 'Ledger summary')}>
+      <section className="ldg-hero" aria-label={t('ملخص الخزنة', 'Ledger summary')} data-ldg-enter>
         <div className="ldg-hero-main">
           <span className="ldg-hero-label"><Wallet size={15} aria-hidden="true" /> {t('المبلغ المتاح حاليًا', 'Available balance')}</span>
           <strong className="ldg-hero-value">{money(summary.balance)}</strong>
@@ -168,7 +174,7 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
           <div><span>{t('إجمالي الخصومات', 'Total deductions')}</span><strong>{money(summary.withdrawals)}</strong></div>
         </div>
       </section>
-      <section className="ldg-metrics" aria-label={t('مؤشرات الخزنة', 'Ledger metrics')}>
+      <section className="ldg-metrics" aria-label={t('مؤشرات الخزنة', 'Ledger metrics')} data-ldg-enter>
         <article className="ldg-metric">
           <span>{t('المستحق على الأعضاء', 'Outstanding dues')}<Target size={15} aria-hidden="true" /></span>
           <strong>{money(summary.outstanding)}</strong>
@@ -190,8 +196,15 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
           <small>{t('التزامات مسددة', 'dues settled')}</small>
         </article>
       </section>
+      <LedgerInsights
+        entries={entries}
+        paidTotal={summary.collected}
+        remainingTotal={summary.outstanding}
+        expectedTotal={summary.expected}
+        variant="admin"
+      />
       {pending.length > 0 && (
-        <section className="ldg-pending" aria-label={t('دفعات مستنية التأكيد', 'Pending payments')}>
+        <section className="ldg-pending" aria-label={t('دفعات مستنية التأكيد', 'Pending payments')} data-ldg-enter>
           <header className="ldg-pending-head">
             <span><Clock3 size={16} aria-hidden="true" /> {t('مستنية تأكيدك', 'Waiting for your confirmation')}</span>
             <small>{number(pending.length)}</small>
@@ -213,7 +226,7 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
           </div>
         </section>
       )}
-      <section className="ldg-panel" aria-label={t('حركات الخزنة', 'Ledger entries')}>
+      <section className="ldg-panel" aria-label={t('حركات الخزنة', 'Ledger entries')} ref={panelRef} data-ldg-enter>
         <div className="ldg-toolbar">
           <div className="ldg-search">
             <Search size={16} aria-hidden="true" />
