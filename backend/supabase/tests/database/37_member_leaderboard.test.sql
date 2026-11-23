@@ -86,7 +86,7 @@ SELECT is(
   'the payload lists one row per active member');
 SELECT is(
   public.get_member_leaderboard(phantoms_test.mid('lb_a'), phantoms_test.tok('lb_a')) #>> '{rows,0,full_name}',
-  'lb_c',
+  'Test lb_c',
   'unlimited bonus always ranks first');
 SELECT is(
   (public.get_member_leaderboard(phantoms_test.mid('lb_a'), phantoms_test.tok('lb_a')) #>> '{rows,0,bonus_infinite}')::BOOLEAN,
@@ -94,7 +94,7 @@ SELECT is(
   'the first row exposes the unlimited bonus flag');
 SELECT is(
   public.get_member_leaderboard(phantoms_test.mid('lb_a'), phantoms_test.tok('lb_a')) #>> '{rows,2,full_name}',
-  'lb_a',
+  'Test lb_a',
   'bonus then completion_rank decide the remaining order');
 SELECT is(
   (public.get_member_leaderboard(phantoms_test.mid('lb_a'), phantoms_test.tok('lb_a')) #>> '{me,rank}')::INT,
