@@ -52,8 +52,10 @@ test('member access parser fails closed for incomplete identity records', () => 
     active: true,
     password_ready: true,
   });
-  assert.deepEqual(access, { member_id: 7, email: 'member@example.com', auth_user_id: 'auth-7', active: true, password_ready: true });
+  assert.deepEqual(access, { member_id: 7, email: 'member@example.com', auth_user_id: 'auth-7', active: true, password_ready: true, must_change_password: false });
   assert.equal(parseMemberPasswordAccess({ member_id: 7, email: 'member@example.com', active: true }), null);
+  assert.equal(parseMemberPasswordAccess({ ...access, must_change_password: true })?.must_change_password, true);
+  assert.equal(parseMemberPasswordAccess({ ...access, must_change_password: 'yes' })?.must_change_password, false);
 });
 
 test('member errors use allowlisted generic messages and never expose backend details', () => {
