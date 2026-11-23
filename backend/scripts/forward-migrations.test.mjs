@@ -38,7 +38,7 @@ const meetingForwardFiles = ['20261122223000_meetings_attendance.sql'];
 const referenceForwardFiles = ['20261122234021_reference_links.sql'];
 const ledgerForwardFiles = ['20261123125033_team_ledger.sql', '20261123125104_team_ledger_rpcs.sql', '20261123125124_team_ledger_member_rpcs.sql'];
 const passwordResetForwardFiles = ['20261123130000_member_password_direct_reset.sql', '20261123131000_member_password_self_change_entry.sql', '20261123140000_member_password_direct_reset_audit_action.sql', '20261123150000_member_password_revoke_clears_claim.sql'];
-const rankingForwardFiles = ['20261123223000_member_leaderboard.sql'];
+const rankingForwardFiles = ['20261123223000_member_leaderboard.sql', '20261124020000_member_leaderboard_parity.sql'];
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'phantoms-forward-inventory-'));

@@ -23,6 +23,7 @@ import { Drawer } from '../../components/ui/Drawer';
 import { AnimatedNumber } from '../../components/motion/AnimatedNumber';
 import { gsap, prefersReducedMotion } from '../../components/motion/gsap';
 import { useLocale } from '../../i18n/useLocale';
+import { BONUS_MARKER_GLOBAL, readBonusPoints } from '../notes/noteBonus';
 import { addIsoDays } from './taskContributions';
 import { cairoDayOf, type DayRecords, type TeamDay } from './teamActivity';
 import type { GithubEvent } from './github';
@@ -61,8 +62,7 @@ const GITHUB_ICONS = {
 } as const;
 
 function pointsOf(text: string): number | null {
-  const match = /\[B:([+-]?\d+)\]/.exec(text);
-  return match ? Number.parseInt(match[1], 10) : null;
+  return readBonusPoints(text);
 }
 
 export function DayHistoryDrawer({ date, onClose, day, records, people, githubEnabled, isUntracked, today }: DayHistoryDrawerProps) {
@@ -86,7 +86,7 @@ export function DayHistoryDrawer({ date, onClose, day, records, people, githubEn
       items.push({ kind: 'github', id: `g-${event.id}`, at: event.createdAt, event, memberId: handleToMember.get(event.handle.toLowerCase()) ?? null });
     }
     for (const note of records.notes) {
-      const text = (note.text || '').replace(/\[B:[+-]?\d+\]\s*/g, '').trim();
+      const text = (note.text || '').replace(BONUS_MARKER_GLOBAL, '').trim();
       items.push({ kind: 'note', id: `n-${note.id}`, at: note.created_at, author: note.author || t('الإدارة', 'Admin'), target: note.target_name || t('عضو', 'a member'), text, points: pointsOf(note.text || '') });
     }
     for (const task of records.tasksCreated) items.push({ kind: 'task', id: `t-${task.id}`, at: task.created_at, title: task.title });

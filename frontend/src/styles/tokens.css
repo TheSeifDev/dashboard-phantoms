@@ -188,6 +188,33 @@
   --z-modal: 150;
   --z-bottom-nav: 200;
   --z-toast: 300;
+
+  /* podium slabs (admin ranking 3D steps) */
+  --slab-neutral-face: #DFE4EC;
+  --slab-neutral-top: #F2F5F9;
+  --slab-neutral-side: #C2CAD7;
+  --slab-neutral-ink: #79808F;
+  --slab-neutral-alt-face: #E4E8EF;
+  --slab-neutral-alt-top: #F5F7FB;
+  --slab-neutral-alt-side: #C8D0DC;
+  --slab-neutral-alt-ink: #8A92A1;
+  --slab-gold-face: #EAB244;
+  --slab-gold-top: #F8DA9C;
+  --slab-gold-side: #CB9430;
+  --slab-gold-ink: #4A3405;
+  /* ranking medals — shared by the admin ranking and the portal board */
+  --medal-gold: #E0A426;
+  --medal-gold-soft: rgb(224 164 38 / 0.12);
+  --medal-gold-line: rgb(224 164 38 / 0.34);
+  --medal-gold-ink: #8A5A05;
+  --medal-silver: #A7B0C0;
+  --medal-silver-soft: rgb(167 176 192 / 0.12);
+  --medal-silver-line: rgb(167 176 192 / 0.3);
+  --medal-silver-ink: #59637A;
+  --medal-bronze: #C2703A;
+  --medal-bronze-soft: rgb(194 112 58 / 0.12);
+  --medal-bronze-line: rgb(194 112 58 / 0.32);
+  --medal-bronze-ink: #8A4A1F;
 }
 
 [data-theme="dark"] {
@@ -298,6 +325,34 @@
   --shadow-md: 0 12px 28px -10px rgb(0 0 0 / 0.55);
   --shadow-lg: 0 24px 50px -18px rgb(0 0 0 / 0.65);
   --shadow-xl: 0 40px 90px -30px rgb(0 0 0 / 0.75);
+
+  /* ranking medals */
+  --medal-gold: #F2BC48;
+  --medal-gold-soft: rgb(242 188 72 / 0.12);
+  --medal-gold-line: rgb(242 188 72 / 0.3);
+  --medal-gold-ink: #F2BC48;
+  --medal-silver: #BFC8D8;
+  --medal-silver-soft: rgb(191 200 216 / 0.12);
+  --medal-silver-line: rgb(191 200 216 / 0.26);
+  --medal-silver-ink: #C6CEDD;
+  --medal-bronze: #D98550;
+  --medal-bronze-soft: rgb(217 133 80 / 0.14);
+  --medal-bronze-line: rgb(217 133 80 / 0.3);
+  --medal-bronze-ink: #E39A6A;
+
+  /* podium slabs */
+  --slab-neutral-face: #2B3242;
+  --slab-neutral-top: #3D4657;
+  --slab-neutral-side: #1F2531;
+  --slab-neutral-ink: #B9C2D4;
+  --slab-neutral-alt-face: #262C3A;
+  --slab-neutral-alt-top: #363E4E;
+  --slab-neutral-alt-side: #1B212C;
+  --slab-neutral-alt-ink: #AEB7C7;
+  --slab-gold-face: #E2AC3E;
+  --slab-gold-top: #F5CE84;
+  --slab-gold-side: #BE8B29;
+  --slab-gold-ink: #46320A;
 }
 
 @media (max-width: 767px) {
