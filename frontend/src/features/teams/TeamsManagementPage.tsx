@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { CardSkeletons } from '../../components/ui/Skeleton';
 import { useAuthStore } from '../../store/auth';
 import { toast } from '../../store/toast';
@@ -279,8 +280,8 @@ function TeamCard({ team, candidates, isOwner }: { team: TeamOverview; candidate
         </div>
       </div>
       <div className="teams-card-meta">
-        <span><UsersRound size={15} aria-hidden="true" /><strong>{number(team.member_count)}</strong> {t('عضوية نشطة', 'active memberships')}</span>
-        <span><UserCog size={15} aria-hidden="true" /><strong>{number(assignedSeats)}/{number(ROLES.length)}</strong> {t('مقاعد مُعيّنة', 'seats assigned')}</span>
+        <span className="teams-meta"><UsersRound size={15} aria-hidden="true" /><span className="teams-meta-copy"><strong>{number(team.member_count)}</strong><small>{t('عضوية نشطة', 'active memberships')}</small></span></span>
+        <span className="teams-meta"><UserCog size={15} aria-hidden="true" /><span className="teams-meta-copy"><strong>{number(assignedSeats)}/{number(ROLES.length)}</strong><small>{t('مقاعد مُعيّنة', 'seats assigned')}</small></span></span>
         <span className="teams-card-scope"><ShieldCheck size={14} aria-hidden="true" />{t('صلاحيات هذا الفريق فقط', 'Team-only access')}</span>
       </div>
       {editing && <form onSubmit={(event) => void saveDetails(event)} className="teams-edit-form">
@@ -377,14 +378,15 @@ export default function TeamsManagementPage() {
 
   return (
     <div className="teams-management" dir={dir}>
-      <header className="teams-page-header">
-        <div>
-          <p className="teams-eyebrow"><span />{t('إدارة المؤسسة', 'Organization management')}</p>
-          <h1>{t('إدارة الفرق الداخلية', 'Internal teams')}</h1>
-          <p className="teams-page-description">{t('فرق مستقلة. صلاحيات واضحة. مساحة لكل فريق ليعمل بأفضل صورة.', 'Independent teams. Clear permissions. Space for every team to do its best work.')}</p>
-        </div>
-        <div className="teams-header-actions"><span className="teams-owner-label"><ShieldCheck size={14} aria-hidden="true" />{t('تحكم المالك', 'Owner controls')}</span><Button type="button" icon={<Plus size={17} aria-hidden="true" />} onClick={() => { setCreating(true); nameInput.current?.focus(); }} aria-expanded={creating} aria-controls="teams-create">{t('فريق جديد', 'New team')}</Button></div>
-      </header>
+      <PageHeader
+        icon={<Layers3 size={22} aria-hidden="true" />}
+        title={t('إدارة الفرق الداخلية', 'Internal teams')}
+        description={t('فرق مستقلة وصلاحيات واضحة: عيّن Head وMonitor، أضف الأعضاء، وافتح مساحة كل فريق. كل تعيين هنا يخص هذا الفريق فقط.', 'Independent teams with clear permissions: assign a Head and Monitor, add members, and open each team’s workspace. Every assignment here stays inside that team.')}
+        actions={<>
+          <span className="teams-owner-label"><ShieldCheck size={14} aria-hidden="true" />{t('تحكم المالك', 'Owner controls')}</span>
+          <Button type="button" icon={<Plus size={17} aria-hidden="true" />} onClick={() => { setCreating(true); nameInput.current?.focus(); }} aria-expanded={creating} aria-controls="teams-create">{t('فريق جديد', 'New team')}</Button>
+        </>}
+      />
       <section className="teams-overview" aria-label={t('ملخص الفرق', 'Teams overview')} aria-busy={teams.isPending}>
         {metrics.map(({ label, value, hint, icon: Icon }, index) => <div className="teams-metric" key={label}>
           <div className="teams-metric-label"><span>{label}</span><Icon size={16} strokeWidth={1.6} aria-hidden="true" /></div>
@@ -404,6 +406,7 @@ export default function TeamsManagementPage() {
         </div>
       </details>
       <section className="teams-directory" aria-labelledby="teams-directory-title">
+        <div className="teams-panel">
         <div className="teams-directory-heading"><h2 id="teams-directory-title">{t('فرقك', 'Your teams')}</h2><p aria-live="polite" aria-atomic="true">{teams.data ? t(`عرض ${number(visibleTeams.length)} من ${number(allTeams.length)} فريق`, `Showing ${number(visibleTeams.length)} of ${number(allTeams.length)} teams`) : t('جارٍ تحميل الفرق…', 'Loading teams…')}</p></div>
         {teams.data && teams.data.length > 0 && <div className="teams-toolbar">
           <div className="teams-search"><Search size={17} aria-hidden="true" /><label className="sr-only" htmlFor="teams-search-input">{t('البحث عن فريق', 'Find a team')}</label><input id="teams-search-input" type="search" value={teamFilter} onChange={(event) => setTeamFilter(event.target.value)} placeholder={t('اسم الفريق أو المعرّف أو بريد المسؤول…', 'Team name, slug, or manager email…')} />{teamFilter && <button type="button" onClick={() => setTeamFilter('')} aria-label={t('مسح البحث', 'Clear search')}><X size={16} aria-hidden="true" /></button>}</div>
@@ -417,6 +420,7 @@ export default function TeamsManagementPage() {
         {teams.data?.length === 0 && <div className="teams-directory-empty"><EmptyState title={t('مفيش فرق لسه', 'No teams yet')} description={t('أنشئ أول فريق، ثم عيّن مسؤوليه وأضف أعضاءه.', 'Create your first team, then assign its managers and add members.')} /><Button type="button" icon={<Plus size={16} aria-hidden="true" />} onClick={() => setCreating(true)}>{t('فريق جديد', 'New team')}</Button></div>}
         {teams.data && teams.data.length > 0 && visibleTeams.length === 0 && <div className="teams-no-results"><Search size={25} strokeWidth={1.5} aria-hidden="true" /><p role="status">{t('مافيش فرق مطابقة للبحث والتصفية.', 'No teams match your search and filters.')}</p><p className="teams-help">{t('جرّب اسمًا أو معرّفًا أو بريدًا آخر، أو غيّر حالة الفريق.', 'Try another name, slug, or email, or choose a different team status.')}</p><Button type="button" variant="secondary" onClick={clearFilters}>{t('مسح التصفية', 'Clear filters')}</Button></div>}
         <div className="teams-card-list">{visibleTeams.map((team) => <TeamCard key={team.team_id} team={team} candidates={candidates.data ?? []} isOwner={access.data?.is_owner === true} />)}</div>
+        </div>
       </section>
       <aside className="teams-security-note"><ShieldCheck size={17} aria-hidden="true" /><div><strong>{t('صلاحيات مستقلة، حساب واحد', 'Separate permissions. One account.')}</strong><p>{t('الأعضاء يقدروا ينضموا لأكثر من فريق. Head/Monitor لا يحصل على صلاحيات Admin عامة؛ إزالة تعيينه لا تحذف حسابه أو عضوياته الأخرى. الصلاحيات لا تفتح بيانات قبل اكتمال حماية مسارها في الخادم.', 'Members can belong to multiple teams. Heads/Monitors are not added to admin_accounts. Revoking one team assignment does not delete sign-in or other memberships. A permission will not expose data until that server path is fully scoped.')}</p></div></aside>
     </div>

@@ -189,8 +189,8 @@ exports.ErrorState = function ErrorState({ message, onRetry }) {
 `],
     ['src/components/ui/PageHeader.js', `
 const React = require('react');
-exports.PageHeader = function PageHeader({ title, description, icon }) {
-  return React.createElement('header', null, icon, React.createElement('h1', null, title), description && React.createElement('p', null, description));
+exports.PageHeader = function PageHeader({ title, description, icon, actions }) {
+  return React.createElement('header', null, icon, React.createElement('h1', null, title), description && React.createElement('p', null, description), actions);
 };
 `],
     ['src/components/ui/Skeleton.js', `
