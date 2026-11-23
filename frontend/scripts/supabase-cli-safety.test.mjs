@@ -29,14 +29,14 @@ function runCheck() {
     encoding: 'utf8',
   });
 }
-test('local inventory retains forty-eight applied forwards including exact app-use and Owner-erasure timestamps', () => {
+test('local inventory retains forty-nine applied forwards including exact app-use and Owner-erasure timestamps', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 0);
-  assert.equal(applied, 48);
+  assert.equal(applied, 49);
   const appUsage = entries.find((entry) => entry.version === '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
   assert.equal(appUsage.production_status, 'applied');

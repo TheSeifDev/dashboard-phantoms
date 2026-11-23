@@ -478,5 +478,15 @@
     "remote_applied_timestamp": "20261123150010",
     "original_source_version": "20261123140000",
     "original_source_filename": "backend/supabase/migrations/20261123140000_member_password_direct_reset_audit_action.sql"
+  },
+  {
+    "version": "20261123150000",
+    "name": "member_password_revoke_clears_claim",
+    "canonical_repository_filename": "backend/supabase/migrations/20261123150000_member_password_revoke_clears_claim.sql",
+    "sha256": "8e649b7258145113e904d8c9ed144cc9fe86b8ceee8fb6ecfb19af2bfe79db99",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261123151016",
+    "original_source_version": "20261123150000",
+    "original_source_filename": "backend/supabase/migrations/20261123150000_member_password_revoke_clears_claim.sql"
   }
 ]
