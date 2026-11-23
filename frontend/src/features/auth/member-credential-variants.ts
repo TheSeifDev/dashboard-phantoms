@@ -15,8 +15,21 @@
 
 import { classifyAuthFailure } from './auth-errors';
 
-/** أقصى عدد محاولات لكل تسجيل دخول (الشكل الأصلي + 3 أشكال مُطبّعة). */
-export const MAX_PASSWORD_VARIANTS = 4;
+/** أقصى عدد محاولات لكل تسجيل دخول (الشكل الأصلي + 4 أشكال مُطبّعة). */
+export const MAX_PASSWORD_VARIANTS = 5;
+
+// رموز غير مرئية (اتجاه الكتابة، عرض صفري، علامات لصق من واتساب) وأرقام عربية/فارسية
+// بتدخل من كيبورد عربي أو بالنسخ واللصق وبتخلّي نفس كلمة المرور بايتات مختلفة.
+const INVISIBLE_CHARACTERS = /[\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF]/g;
+const ARABIC_INDIC_DIGITS = /[\u0660-\u0669\u06F0-\u06F9]/g;
+function toAsciiDigit(character: string): string {
+  const code = character.charCodeAt(0);
+  return String(code >= 0x06f0 ? code - 0x06f0 : code - 0x0660);
+}
+/** يشيل الرموز المخفية ويحوّل الأرقام العربية لإنجليزية (يُستخدم كمحاولة أخيرة فقط). */
+export function cleanCredentialText(value: string): string {
+  return normalizeToNfc(value).replace(INVISIBLE_CHARACTERS, '').replace(ARABIC_INDIC_DIGITS, toAsciiDigit).trim();
+}
 
 function normalizeToNfc(value: string): string {
   try {
@@ -43,6 +56,7 @@ export function passwordVariants(raw: string): string[] {
   push(trimmed);
   push(normalizeToNfc(raw));
   push(normalizeToNfc(trimmed));
+  push(cleanCredentialText(raw));
   return variants.slice(0, MAX_PASSWORD_VARIANTS);
 }
 

@@ -67,6 +67,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [credentialHelp, setCredentialHelp] = useState(false);
+  const [attemptedEmail, setAttemptedEmail] = useState('');
   const [remember, setRemember] = useState<boolean>(() => getMemberRemember());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -184,6 +185,7 @@ export default function LoginPage() {
               : 'SERVER_UNAVAILABLE';
           setError(loginErrorMessage(code, t));
           setCredentialHelp(code === `${AUTH_FAILURE_PREFIX}INVALID_CREDENTIALS`);
+          setAttemptedEmail(cleanEmail);
         }
       } finally {
         if (liveRef.current) setLoading(false);
@@ -212,9 +214,16 @@ export default function LoginPage() {
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
       {credentialHelp && (
         <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5 text-xs font-semibold leading-6 text-[var(--text-2)]" role="note">
+          {attemptedEmail && (
+            <p className="mb-2">
+              {t('جرّبنا الدخول بالبريد:', 'We tried to sign in with the email:')}{' '}
+              <bdi dir="ltr" className="font-black text-[var(--text)]" data-testid="login-attempted-email">{attemptedEmail}</bdi>
+              {' '}{t('— تأكد إنه نفس البريد المسجل بالظبط (بدون حرف زيادة أو ناقص).', '— make sure it is exactly the registered address (no extra or missing letters).')}
+            </p>
+          )}
           <p>{t(
-            'لو المتصفح أو الموبايل ملأ كلمة المرور تلقائيًا، امسحها واكتبها بإيدك (وبص عليها بزر العين) لأن كلمة المرور المحفوظة على الجهاز ممكن تكون قديمة. جرّب كمان من غير مسافة في آخر الكلمة.',
-            'If the browser or phone filled the password automatically, clear it and type it yourself (check it with the eye button); a saved password on the device may be out of date. Also make sure there is no space at the end.',
+            'لو المتصفح أو الموبايل ملأ كلمة المرور تلقائيًا، امسحها واكتبها بإيدك (وبص عليها بزر العين) لأن كلمة المرور المحفوظة على الجهاز ممكن تكون قديمة. جرّب كمان من غير مسافة في آخر الكلمة. ولو نسيتها استخدم "نسيت كلمة المرور؟" أو اطلب من الإدارة تعيين كلمة مرور مؤقتة.',
+            'If the browser or phone filled the password automatically, clear it and type it yourself (check it with the eye button); a saved password on the device may be out of date. Also make sure there is no space at the end. If you forgot it, use "Forgot your password?" or ask the admin for a temporary password.',
           )}</p>
           <button
             type="button"

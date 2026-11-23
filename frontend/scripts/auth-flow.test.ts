@@ -49,6 +49,15 @@ test('member auth normalizes email without turning URL callbacks into sessions',
   assert.equal(memberMagicLink.kind, 'invalid');
 });
 
+test('member auth email survives invisible marks, Arabic digits, full-width characters and inner spaces', () => {
+  assert.equal(normalizeAuthEmail('\u200Ejj1502594@gmail.com\u200F'), 'jj1502594@gmail.com');
+  assert.equal(normalizeAuthEmail('\uFEFFMember\u200B@Example.com '), 'member@example.com');
+  assert.equal(normalizeAuthEmail('jj\u0661\u0665\u0660\u0662@gmail.com'), 'jj1502@gmail.com');
+  assert.equal(normalizeAuthEmail('jj\u06F1\u06F5@gmail.com'), 'jj15@gmail.com');
+  assert.equal(normalizeAuthEmail('name\uFF20gmail\uFF0Ecom'), 'name@gmail.com');
+  assert.equal(normalizeAuthEmail('na me @ gmail.com'), 'name@gmail.com');
+  assert.equal(normalizeAuthEmail('plain@phantoms.com'), 'plain@phantoms.com');
+});
 test('invite and recovery callbacks accept PKCE and legacy hash forms only on admin setup routes', () => {
   const invite = inspectAdminCallback('/admin/set-password', '', '#access_token=a&refresh_token=r&type=invite');
   assert.deepEqual(invite.kind === 'callback' ? invite.intent : null, 'invite');

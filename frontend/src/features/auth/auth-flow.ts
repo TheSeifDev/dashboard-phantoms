@@ -109,7 +109,23 @@ export function inspectAdminCallback(
 
 export const isValidMemberOtp = (value: string): boolean => value.length === MEMBER_OTP_LENGTH && /^\d+$/.test(value);
 
-export const normalizeAuthEmail = (value: string): string => value.trim().toLowerCase();
+// البريد بيوصل أحيانًا ومعاه رموز مخفية (علامات اتجاه/عرض صفري من واتساب أو كيبورد عربي)،
+// أو أرقام عربية/فارسية، أو حروف عريضة (＠). ده بيخلّي نفس البريد "مش موجود" عند الخادم.
+const INVISIBLE_EMAIL_CHARACTERS = /[\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF]/g;
+const ARABIC_INDIC_EMAIL_DIGITS = /[\u0660-\u0669\u06F0-\u06F9]/g;
+export const normalizeAuthEmail = (value: string): string => {
+  let text = typeof value === 'string' ? value : '';
+  try {
+    text = text.normalize('NFKC');
+  } catch {
+    // keep the original text when the runtime lacks Unicode normalisation
+  }
+  return text
+    .replace(INVISIBLE_EMAIL_CHARACTERS, '')
+    .replace(ARABIC_INDIC_EMAIL_DIGITS, (digit) => String(digit.charCodeAt(0) >= 0x06f0 ? digit.charCodeAt(0) - 0x06f0 : digit.charCodeAt(0) - 0x0660))
+    .replace(/\s+/g, '')
+    .toLowerCase();
+};
 
 export const safeMemberAuthError = (operation: 'send' | 'verify' | 'member'): string => {
   if (operation === 'send') return 'تعذر إرسال رمز التحقق. تأكد من البريد وحاول مرة أخرى.';
