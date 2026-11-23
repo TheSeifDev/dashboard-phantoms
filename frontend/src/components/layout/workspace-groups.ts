@@ -1,4 +1,4 @@
-import { BookMarked, CalendarCheck2, ClipboardCheck, FolderKanban, LayoutDashboard, ListChecks, Megaphone, Network, Settings, Smartphone } from 'lucide-react';
+import { BookMarked, CalendarCheck2, ClipboardCheck, FolderKanban, LayoutDashboard, ListChecks, Megaphone, Network, Settings, Smartphone, Wallet } from 'lucide-react';
 import type { SidebarGroup } from './AppSidebar';
 
 /**
@@ -20,6 +20,7 @@ export const MEMBER_WORKSPACE_GROUPS: SidebarGroup[] = [
       { to: '/portal?tab=EVALUATIONS', label: 'تقييماتي', icon: ClipboardCheck, matchSearch: true },
       { to: '/portal/meetings', label: 'اجتماعاتي', icon: CalendarCheck2 },
       { to: '/portal/references', label: 'المصادر', icon: BookMarked },
+      { to: '/portal/ledger', label: 'خزنة التيم', icon: Wallet },
       { to: '/portal?tab=ANNOUNCEMENTS', label: 'الإعلانات', icon: Megaphone, matchSearch: true },
       { to: '/portal/team', label: 'الفريق الداخلي', icon: Network },
     ],

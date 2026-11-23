@@ -41,6 +41,9 @@
       "path": "/portal/projects/:projectId"
     },
     {
+      "path": "/portal/ledger"
+    },
+    {
       "path": "/admin/login"
     },
     {
@@ -90,6 +93,9 @@
     },
     {
       "path": "/admin/teams"
+    },
+    {
+      "path": "/admin/ledger"
     },
     {
       "path": "/admin/web-projects"

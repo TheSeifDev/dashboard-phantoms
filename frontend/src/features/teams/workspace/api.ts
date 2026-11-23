@@ -15,7 +15,8 @@ export type TeamWorkspaceSection =
   | 'notes'
   | 'ranking'
   | 'announcements'
-  | 'custom-fields';
+  | 'custom-fields'
+  | 'ledger';
 
 export const teamWorkspaceKey = (
   userId: string,

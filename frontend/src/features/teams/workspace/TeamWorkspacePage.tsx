@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,6 +16,7 @@ import {
   Sun,
   Trash2,
   UsersRound,
+  Wallet,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../../components/ui/Button';
@@ -77,6 +78,8 @@ import {
 } from './api';
 import { workspaceTeamEntries } from '../access';
 
+const LedgerBoard = lazy(() => import('../../ledger/LedgerBoard').then((module) => ({ default: module.LedgerBoard })));
+
 const FEATURE_FOR_SECTION: Record<TeamWorkspaceSection, TeamPermission> = {
   tasks: 'tasks',
   members: 'members',
@@ -84,6 +87,7 @@ const FEATURE_FOR_SECTION: Record<TeamWorkspaceSection, TeamPermission> = {
   ranking: 'ranking',
   announcements: 'announcements',
   'custom-fields': 'members',
+  ledger: 'members',
 };
 const SECTION_DEFS: Array<{ id: TeamWorkspaceSection; titleAr: string; titleEn: string; icon: ReactNode }> = [
   { id: 'tasks', titleAr: 'المهام', titleEn: 'Tasks', icon: <ClipboardList size={17} aria-hidden="true" /> },
@@ -92,6 +96,7 @@ const SECTION_DEFS: Array<{ id: TeamWorkspaceSection; titleAr: string; titleEn: 
   { id: 'ranking', titleAr: 'الترتيب والتقييمات', titleEn: 'Ranking & evaluations', icon: <Award size={17} aria-hidden="true" /> },
   { id: 'announcements', titleAr: 'الإعلانات', titleEn: 'Announcements', icon: <Bell size={17} aria-hidden="true" /> },
   { id: 'custom-fields', titleAr: 'الحقول المخصصة', titleEn: 'Custom fields', icon: <FileText size={17} aria-hidden="true" /> },
+  { id: 'ledger', titleAr: 'الخزنة', titleEn: 'Ledger', icon: <Wallet size={17} aria-hidden="true" /> },
 ];
 const CAPABILITY_DEFS: Array<{ key: TeamPermission; ar: string; en: string }> = [
   { key: 'dashboard', ar: 'لوحة الفريق', en: 'Team dashboard' },
@@ -133,7 +138,8 @@ const PRIORITIES: Array<{ value: AnnouncementPriority; ar: string; en: string }>
 
 function isWorkspaceSection(value: unknown): value is TeamWorkspaceSection {
   return value === 'tasks' || value === 'members' || value === 'notes'
-    || value === 'ranking' || value === 'announcements' || value === 'custom-fields';
+    || value === 'ranking' || value === 'announcements' || value === 'custom-fields'
+    || value === 'ledger';
 }
 
 function memberIsActive(member: { membership_status: TeamMembershipStatus; work_status?: string | null }): boolean {
@@ -640,6 +646,17 @@ function TeamCustomFieldsSection({ userId, teamId }: { userId: string; teamId: s
   </div>;
 }
 
+/** الخزنة داخل مساحة الفريق — نفس لوحة الإدارة بالكامل، محصورة على تيم العضو. */
+function TeamLedgerSection({ teamId }: { teamId: string }) {
+  return (
+    <div className="min-w-0">
+      <Suspense fallback={<CardSkeletons count={2} />}>
+        <LedgerBoard teamId={teamId} />
+      </Suspense>
+    </div>
+  );
+}
+
 function WorkspacePanel({ section, userId, teamId }: { section: TeamWorkspaceSection; userId: string; teamId: string }) {
   switch (section) {
     case 'tasks': return <TeamTasksSection userId={userId} teamId={teamId} />;
@@ -648,6 +665,7 @@ function WorkspacePanel({ section, userId, teamId }: { section: TeamWorkspaceSec
     case 'ranking': return <TeamRankingSection userId={userId} teamId={teamId} />;
     case 'announcements': return <TeamAnnouncementsSection userId={userId} teamId={teamId} />;
     case 'custom-fields': return <TeamCustomFieldsSection userId={userId} teamId={teamId} />;
+    case 'ledger': return <TeamLedgerSection teamId={teamId} />;
   }
 }
 
