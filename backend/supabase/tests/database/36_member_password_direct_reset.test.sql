@@ -123,6 +123,7 @@ SELECT is(public.member_password_clear_must_change(phantoms_test.uid('reset_memb
           'clearing the temporary-password flag reports a change');
 SELECT is((SELECT must_change_password FROM public.member_auth_bindings WHERE member_id = phantoms_test.mid('reset_member')),
           false, 'the member now has a personal password');
+RESET ROLE;
 SELECT phantoms_test.login_as('reset_member');
 SELECT is((public.get_member_password_access() ->> 'must_change_password'), 'false',
           'the access projection reflects the cleared flag');
@@ -143,6 +144,7 @@ SELECT is((public.member_password_abandon_direct_reset(
 SELECT is((SELECT status FROM public.member_password_invitations
            WHERE id = ((SELECT value::jsonb FROM phantoms_test.vars WHERE key = 'abandon_claim') ->> 'invitation_id')::uuid),
           'revoked', 'the abandoned invitation no longer blocks sign-in');
+RESET ROLE;
 SELECT phantoms_test.login_as('reset_member');
 SELECT ok(public.get_member_password_access() IS NOT NULL,
           'a member with no pending claim keeps a working access projection');
