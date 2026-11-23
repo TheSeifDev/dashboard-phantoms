@@ -112,6 +112,7 @@ jobs:
           ../frontend/node_modules/.bin/tsx --test scripts/app-toast.test.mjs
           node --test scripts/auth-callback-state.test.mjs
           node --test scripts/sidebar-navigation.test.mjs
+          node --test scripts/portal-ranking.test.mjs
           node --test scripts/web-projects-navigation.test.mjs
           node --test scripts/web-projects-api.test.mjs
           ../frontend/node_modules/.bin/tsx --test \

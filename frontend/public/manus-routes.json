@@ -44,6 +44,9 @@
       "path": "/portal/ledger"
     },
     {
+      "path": "/portal/ranking"
+    },
+    {
       "path": "/admin/login"
     },
     {

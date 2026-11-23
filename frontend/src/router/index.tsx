@@ -31,6 +31,7 @@ const MemberWebProjectsPage = lazy(() => import('../features/web-projects/Member
 const MemberMeetingsPage = lazy(() => import('../features/meetings/MemberMeetingsPage'));
 const MemberReferencesPage = lazy(() => import('../features/references/MemberReferencesPage'));
 const MemberLedgerPage = lazy(() => import('../features/ledger/MemberLedgerPage'));
+const MemberRankingPage = lazy(() => import('../features/portal/MemberRankingPage'));
 const ProjectWorkspacePage = lazy(() => import('../features/web-projects/ProjectWorkspacePage'));
 const MemberSelfRegisterPage = lazy(() => import('../features/members/MemberSelfRegisterPage'));
 const MemberSettingsPage = lazy(() => import('../features/members/MemberSettingsPage'));
@@ -232,6 +233,7 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
       { path: 'meetings', element: <Page><MemberMeetingsPage /></Page> },
       { path: 'references', element: <Page><MemberReferencesPage /></Page> },
       { path: 'ledger', element: <Page><MemberLedgerPage /></Page> },
+      { path: 'ranking', element: <Page><MemberRankingPage /></Page> },
       { path: 'projects', element: <Page><MemberWebProjectsPage /></Page> },
     ],
   },
