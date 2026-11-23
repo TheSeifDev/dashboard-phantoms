@@ -203,7 +203,7 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--link)]" aria-hidden="true"><ShieldCheck size={20} /></span>
           <div className="min-w-0 text-xs leading-6 text-[var(--text-2)]">
             <p className="font-black text-[var(--text)]">{t('أنت ترسل الرابط فقط — العضو يكتب بياناته وكلمة مروره', 'You only send the link — the member enters their own details and password')}</p>
-            <p>{t('لعضو جديد: لا نطلب بريده هنا؛ يكتبه بنفسه عند التسجيل وتبقى عضويته بانتظار مراجعة الإدارة. الاسم اختياري لتحية واتساب فقط. انسخ الرابط وحده أو انسخ رسالة واتساب وأرسلها بنفسك. ولعضو موجود، اختره لإعداد كلمة مروره أو إعادة تعيينها. لا يُرسل بريد أو واتساب تلقائياً، والرابط يُستخدم مرة واحدة وينتهي في الموعد المحدد.', 'For a new member, do not enter an email here; they provide it during registration and remain pending administrator review. The optional name is used only in the WhatsApp greeting. Copy the link or WhatsApp message and send it yourself. For an existing member, choose them to set or reset their password. Nothing is sent automatically; each link is single-use and expires at the selected time.')}</p>
+            <p>{t('لعضو جديد: لا نطلب بريده هنا؛ يكتبه بنفسه عند التسجيل وتبقى عضويته بانتظار مراجعة الإدارة. الاسم اختياري لتحية واتساب فقط. انسخ الرابط وحده أو انسخ رسالة واتساب وأرسلها بنفسك. ولعضو موجود، اختره لإعداد كلمة مروره لأول مرة فقط؛ إعادة التعيين بقت من كارت العضو بزر المفتاح وتُعيّن 123456789 فوراً. لا يُرسل بريد أو واتساب تلقائياً، والرابط يُستخدم مرة واحدة وينتهي في الموعد المحدد.', 'For a new member, do not enter an email here; they provide it during registration and remain pending administrator review. The optional name is used only in the WhatsApp greeting. Copy the link or WhatsApp message and send it yourself. For an existing member, choose them to set their password for the first time only; resets now run from the member card key button and apply 123456789 immediately. Nothing is sent automatically; each link is single-use and expires at the selected time.')}</p>
           </div>
         </div>
 
@@ -214,7 +214,6 @@ export function MemberInviteModal({ isOpen, onClose }: Props) {
             <select id="member-invite-purpose" value={purpose} onChange={(event) => handlePurposeChange(event.target.value as MemberInvitePurpose)} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-normal text-[var(--text)]">
               <option value="join">{t('عضو جديد — يسجل بياناته بنفسه (بانتظار المراجعة)', 'New member — enters their own details (pending review)')}</option>
               <option value="enroll">{t('عضو موجود — إعداد كلمة المرور لأول مرة', 'Existing member — set a password for the first time')}</option>
-              <option value="reset">{t('عضو موجود — إعادة تعيين كلمة المرور', 'Existing member — reset password')}</option>
             </select>
           </label>
 

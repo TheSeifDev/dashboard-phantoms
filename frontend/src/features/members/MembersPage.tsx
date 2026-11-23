@@ -18,6 +18,7 @@ import { MemberEditor } from './MemberEditor';
 import { MemberCustomFieldsModal } from './MemberCustomFieldsModal';
 import { MemberInviteModal } from './MemberInviteModal';
 import { MemberJoinReviewQueue } from './MemberJoinReviewQueue';
+import { MemberPasswordResetModal } from './MemberPasswordResetModal';
 import { MemberExcelActions } from './MemberExcelActions';
 import { sanitizeText, isValidEmail, isValidEgyptianPhone } from '../../lib/validators';
 import { handleSupabaseError, logError } from '../../lib/errorHandler';
@@ -113,6 +114,7 @@ export default function MembersPage() {
   });
   const [editing, setEditing] = useState<Member | null>(null);
   const [drawerMember, setDrawerMember] = useState<Member | null>(null);
+  const [passwordResetMember, setPasswordResetMember] = useState<Member | null>(null);
   const [form, setForm] = useState<MemberInsert>(emptyMember);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customFieldsModalOpen, setCustomFieldsModalOpen] = useState(false);
@@ -525,6 +527,7 @@ export default function MembersPage() {
               onView={setDrawerMember}
               onEdit={openEdit}
               onDelete={askDelete}
+              onResetPassword={setPasswordResetMember}
             />
 
             <nav className="member-dir-pagination glass-card mt-3" aria-label={t('التنقل بين الصفحات', 'Pagination')}>
@@ -652,6 +655,14 @@ export default function MembersPage() {
         isOpen={inviteModalOpen}
         onClose={() => {
           setInviteModalOpen(false);
+          void query.refetch();
+        }}
+      />
+      <MemberPasswordResetModal
+        isOpen={passwordResetMember !== null}
+        member={passwordResetMember}
+        onClose={() => {
+          setPasswordResetMember(null);
           void query.refetch();
         }}
       />

@@ -65,11 +65,11 @@ test('progress is derived in invoker-security views, not stored as a completion 
 });
 
 test('registered Web Projects migration keeps historical applied provenance', () => {
-  assert.equal(manifest.length, 23);
-  assert.equal(manifest.slice(0, 20).length, 20);
   assert.ok(manifest.every((entry) => entry.production_status === 'applied'));
   assert.ok(webProjects);
-  assert.equal(manifest[20], webProjects);
+  assert.equal(manifest.filter((entry) => entry.version === '20261120223000').length, 1);
+  assert.equal(manifest.find((entry) => entry.version === '20261120223000'), webProjects);
+  assert.ok(manifest.length > 20);
   assert.equal(webProjects.version, '20261120223000');
   assert.equal(webProjects.name, 'web_projects_foundation');
   assert.equal(webProjects.production_status, 'applied');

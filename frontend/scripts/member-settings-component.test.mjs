@@ -47,7 +47,9 @@ function reset() {
   localStorage.setItem('admin-session-sentinel', 'unchanged-admin-session');
   sessionStorage.setItem('member-session-sentinel', 'unchanged-member-session');
   control = { lang: 'en', device: 'mounted-device', state: { currentMember: { id: 42, email: EMAIL, full_name: 'Member', auth_user_id: 'fixture-user' }, user: { id: 'admin-sentinel' }, setMember }, rpcCalls: [], invokes: [], clients: [], fetchCalls: [], recoveryRpcCalls: [], signsOut: 0, mediaReverts: 0 };
-  control.profileRpc = async () => ({ data: snapshot(), error: null });
+  control.profileRpc = async (name) => (name === 'get_member_password_access'
+    ? { data: { member_id: 42, email: EMAIL, auth_user_id: 'fixture-user', active: true, password_ready: true, must_change_password: false }, error: null }
+    : { data: snapshot(), error: null });
   control.invoke = async () => ({ data: { ok: true, membership: 'active' }, error: null });
   control.recoveryRpc = async () => ({ data: true, error: null });
   control.recoveryAuth = async () => ({ data: { session: { user: { id: 'recovery-user' } } }, error: null });
@@ -87,7 +89,7 @@ const mocks = {
   'features/portal/PortalHeader.tsx': { PortalHeader: ({ onLogout }) => el('header', null, el('button', { onClick: onLogout }, 'Sign out')) },
   'features/auth/MemberAccessGuard.tsx': { cleanupMemberState: async () => setMember(null) },
 };
-const actual = new Set(['features/members/profile-fields.ts', 'features/members/MemberProfileFields.tsx', 'features/members/MissingProfileFields.tsx', 'features/members/profile-api.ts', 'features/members/MemberSettingsPage.tsx', 'features/members/MemberProfileCompletionGuard.tsx', 'features/auth/member-password.ts', 'features/auth/member-recovery.ts', 'features/auth/member-recovery-api.ts', 'features/auth/MemberRecoveryPage.tsx', 'features/auth/MemberForgotPasswordPage.tsx']);
+const actual = new Set(['features/members/profile-fields.ts', 'features/members/MemberProfileFields.tsx', 'features/members/MissingProfileFields.tsx', 'features/members/profile-api.ts', 'features/members/MemberSettingsPage.tsx', 'features/members/MemberPasswordCard.tsx', 'features/auth/member-password-access.ts', 'features/auth/member-password-change-api.ts', 'features/members/MemberProfileCompletionGuard.tsx', 'features/auth/member-password.ts', 'features/auth/member-recovery.ts', 'features/auth/member-recovery-api.ts', 'features/auth/MemberRecoveryPage.tsx', 'features/auth/MemberForgotPasswordPage.tsx']);
 const modules = new Map();
 function sourcePath(path) { return [path, path + '.ts', path + '.tsx'].find(existsSync) ?? path; }
 function load(path) {
@@ -333,4 +335,54 @@ test('ambiguous completion transport failure requires review and never offers an
   await mount(el(Recovery), callbackUrl, () => { seedVerifier(); control.invoke = async () => ({ data: null, error: { message: 'private transport error' } }); });
   await change('member-recovery-password', PASSWORD); await change('member-recovery-confirm', PASSWORD); await submitTwice(); await settle();
   assert.equal(document.querySelector('form'), null); assert.ok(text().includes('administrator review')); assert.equal(text().includes('private transport error'), false); assert.equal(control.signsOut, 1); assertStorage(); await unmount(); assert.equal(control.signsOut, 1);
+});
+
+function withPasswordAccess(mustChange) {
+  const base = control.profileRpc;
+  control.profileRpc = async (name, args) => (name === 'get_member_password_access'
+    ? { data: { member_id: 42, email: EMAIL, auth_user_id: 'fixture-user', active: true, password_ready: true, must_change_password: mustChange }, error: null }
+    : base(name, args));
+}
+test('settings exposes self-service password change and flags a temporary password', async () => {
+  await mount(el(Settings), '/portal/settings', () => withPasswordAccess(true));
+  assert.ok(text().includes('Account security and password'));
+  assert.ok(text().includes('signed in with a temporary password'));
+  for (const id of ['member-password-current', 'member-password-new', 'member-password-confirm']) assert.ok(query(id), id);
+  assertStorage(); await unmount();
+});
+test('settings password change refuses a mismatch before any transport call', async () => {
+  await mount(el(Settings), '/portal/settings', () => withPasswordAccess(false));
+  await change('member-password-current', 'Temporary123456');
+  await change('member-password-new', 'PersonalPassword1');
+  await change('member-password-confirm', 'PersonalPassword2');
+  await act(async () => { document.getElementById('member-password-current').closest('form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })); });
+  await settle();
+  assert.equal(control.invokes.length, 0);
+  assert.ok(text().includes('do not match'));
+  await unmount();
+});
+test('settings password change posts the confirmed password and confirms success', async () => {
+  await mount(el(Settings), '/portal/settings', () => withPasswordAccess(true));
+  await change('member-password-current', '123456789');
+  await change('member-password-new', 'PersonalPassword1');
+  await change('member-password-confirm', 'PersonalPassword1');
+  await act(async () => { document.getElementById('member-password-current').closest('form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })); });
+  await settle();
+  assert.equal(control.invokes.length, 1);
+  assert.equal(control.invokes[0].name, 'member-password-enrollment');
+  assert.deepEqual(control.invokes[0].body, { action: 'change_password', currentPassword: '123456789', newPassword: 'PersonalPassword1', confirmPassword: 'PersonalPassword1' });
+  assert.ok(text().includes('Password changed'));
+  assert.equal(query('member-password-current').value, '');
+  await unmount();
+});
+test('settings password change reports an incorrect current password without leaking the endpoint payload', async () => {
+  await mount(el(Settings), '/portal/settings', () => { withPasswordAccess(false); control.invoke = async () => ({ data: { ok: false, code: 'INVALID_CREDENTIALS' }, error: null }); });
+  await change('member-password-current', 'wrong-password');
+  await change('member-password-new', 'PersonalPassword1');
+  await change('member-password-confirm', 'PersonalPassword1');
+  await act(async () => { document.getElementById('member-password-current').closest('form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })); });
+  await settle();
+  assert.ok(text().includes('current password is incorrect'));
+  assert.equal(text().includes('wrong-password'), false);
+  await unmount();
 });

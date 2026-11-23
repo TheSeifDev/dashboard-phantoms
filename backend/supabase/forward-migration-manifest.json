@@ -448,5 +448,25 @@
     "remote_applied_timestamp": "20261123125124",
     "original_source_version": "20261123125124",
     "original_source_filename": "backend/supabase/migrations/20261123125124_team_ledger_member_rpcs.sql"
+  },
+  {
+    "version": "20261123130000",
+    "name": "member_password_direct_reset",
+    "canonical_repository_filename": "backend/supabase/migrations/20261123130000_member_password_direct_reset.sql",
+    "sha256": "f5bb92f6622ddcff6d1f696646e1261ddb5623db155eb0d87405ba46ae9e1432",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261123142539",
+    "original_source_version": "20261123130000",
+    "original_source_filename": "backend/supabase/migrations/20261123130000_member_password_direct_reset.sql"
+  },
+  {
+    "version": "20261123131000",
+    "name": "member_password_self_change_entry",
+    "canonical_repository_filename": "backend/supabase/migrations/20261123131000_member_password_self_change_entry.sql",
+    "sha256": "6bda74814fec020f009ebbab6f881a3afddb554f853c4c0a335d979e2de68f1f",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261123142810",
+    "original_source_version": "20261123131000",
+    "original_source_filename": "backend/supabase/migrations/20261123131000_member_password_self_change_entry.sql"
   }
 ]

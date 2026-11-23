@@ -25,6 +25,7 @@ import { useMemberEvaluations } from '../evaluations/api';
 import { taskBonus } from '../tasks/taskMeta';
 import { WhatsAppNotificationCenter } from './WhatsAppNotificationCenter';
 import { ProfileReminderBanner } from '../members/ProfileReminderBanner';
+import { MemberPasswordBanner } from '../members/MemberPasswordBanner';
 import { usePWA } from '../../hooks/usePWA';
 import type { NotificationTargetTab } from '../../lib/notifications';
 import { useLocale } from '../../i18n/useLocale';
@@ -160,6 +161,7 @@ export default function MemberPortalPage() {
       />
       <div className="dashboard-root">
         <ProfileReminderBanner />
+        <MemberPasswordBanner />
         {activeTab === 'ALL' && (
           <>
             <MemberHero

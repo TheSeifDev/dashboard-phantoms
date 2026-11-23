@@ -283,6 +283,41 @@ export function useApproveMemberJoin() {
   });
 }
 
+export interface MemberPasswordResetResult {
+  memberId: number;
+  email: string;
+  temporaryPassword: string;
+}
+
+/**
+ * Administrators set a working temporary password on the spot instead of
+ * issuing a link the member may never open. The member signs in with it and is
+ * asked to choose a personal password from inside the portal or the app.
+ */
+export function useSetMemberPassword() {
+  const qc = useQueryClient();
+  return useMutation({
+    gcTime: 0,
+    mutationFn: async (memberId: number): Promise<MemberPasswordResetResult> => {
+      if (!Number.isSafeInteger(memberId) || memberId <= 0) throw new MemberInviteApiError('INVALID_INPUT');
+      const { data, error } = await supabase.functions.invoke<{
+        ok?: boolean; memberId?: number; email?: string; temporaryPassword?: string; code?: string;
+      }>('member-password-enrollment', { body: { action: 'set_password', memberId } });
+      if (error) throw new MemberInviteApiError(await readMemberEndpointCode(error));
+      const email = normalizeAuthEmail(typeof data?.email === 'string' ? data.email : '');
+      if (data?.ok !== true || data.memberId !== memberId || !email
+          || typeof data.temporaryPassword !== 'string' || !data.temporaryPassword) {
+        throw new MemberInviteApiError(await readMemberEndpointCode(data));
+      }
+      return { memberId, email, temporaryPassword: data.temporaryPassword };
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: MEMBER_INVITES_KEY });
+      void qc.invalidateQueries({ queryKey: ['members'] });
+    },
+  });
+}
+
 export function useRevokeMemberInvite() {
   const qc = useQueryClient();
   return useMutation({

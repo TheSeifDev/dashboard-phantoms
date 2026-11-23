@@ -94,6 +94,7 @@ export const MEMBER_AUTH_ERROR_MESSAGES: Record<string, string> = {
   MEMBER_DISABLED: 'هذه العضوية غير مفعّلة حالياً. تواصل مع مسؤول الفريق.',
   MEMBER_NOT_FOUND: 'لم نتمكن من العثور على العضوية المطلوبة.',
   IDENTITY_CONFLICT: 'هذا البريد مرتبط بعضوية أو بحساب دخول مسجّل بالفعل. سجّل الدخول أو استخدم «نسيت كلمة المرور»، ولو كان الحساب قديماً بلا عضوية تواصل مع مسؤول الفريق.',
+  INVALID_CREDENTIALS: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
   PASSWORD_ALREADY_SET: 'تم إعداد كلمة مرور لهذا الحساب بالفعل. تواصل مع مسؤول الفريق.',
   PASSWORD_MISMATCH: 'كلمتا المرور غير متطابقتين.',
   WEAK_PASSWORD: 'كلمة المرور يجب أن تكون 12 حرفاً على الأقل، وألا تتجاوز 72 بايتاً بترميز UTF-8، وتحتوي على حرف إنجليزي ورقم.',
@@ -152,6 +153,8 @@ export interface MemberPasswordAccess {
   auth_user_id: string;
   active: boolean;
   password_ready: boolean;
+  /** True while the member still signs in with an administrator-set password. */
+  must_change_password: boolean;
 }
 
 export function parseMemberPasswordAccess(value: unknown): MemberPasswordAccess | null {
@@ -172,5 +175,6 @@ export function parseMemberPasswordAccess(value: unknown): MemberPasswordAccess 
     auth_user_id: candidate.auth_user_id,
     active: candidate.active,
     password_ready: candidate.password_ready,
+    must_change_password: candidate.must_change_password === true,
   };
 }

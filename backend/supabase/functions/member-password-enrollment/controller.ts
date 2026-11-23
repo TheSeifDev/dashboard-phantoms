@@ -26,6 +26,12 @@ export interface ControllerRuntime extends RecoveryRuntime {
   adminDb: RpcClient;
   authAdmin: AuthAdminClient;
   authorizeAdmin(authorization: string): Promise<AdminActor | null>;
+  /**
+   * Proves the member still knows the password they are replacing. Optional so
+   * existing tests can exercise the controller without a live Auth endpoint;
+   * when absent, the self-service change is refused rather than trusted.
+   */
+  verifyMemberPassword?(email: string, password: string): Promise<boolean>;
 }
 
 export interface ControllerOptions {
@@ -39,7 +45,7 @@ const SAFE_CODES = new Set([
   'INVALID_INPUT', 'INVALID_TOKEN', 'WRONG_EMAIL', 'EXPIRED', 'REVOKED', 'ALREADY_USED',
   'MEMBER_DISABLED', 'MEMBER_NOT_FOUND', 'IDENTITY_CONFLICT', 'PASSWORD_ALREADY_SET',
   'PASSWORD_MISMATCH', 'WEAK_PASSWORD', 'RATE_LIMITED', 'SERVER_CONFIG', 'SERVER_UNAVAILABLE',
-  'REVIEW_REQUIRED', 'UNAUTHORIZED',
+  'REVIEW_REQUIRED', 'UNAUTHORIZED', 'INVALID_CREDENTIALS',
 ]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -280,6 +286,60 @@ function validateApproveJoin(body: Record<string, unknown>): { ok: true; memberI
 }
 
 type JoinReviewCursor = { submittedAt: string; memberId: number; invitationId: string };
+/** Temporary password an administrator hands over; the member must replace it. */
+const DEFAULT_TEMPORARY_PASSWORD = '123456789';
+const TEMPORARY_PASSWORD_MIN = 8;
+
+const countUtf8Bytes = (value: string): number => new TextEncoder().encode(value).byteLength;
+
+function validateSetPassword(body: Record<string, unknown>):
+  | { ok: true; memberId: number; password: string }
+  | { ok: false; code: string } {
+  const hasPassword = Object.hasOwn(body, 'password');
+  if (!hasExactKeys(body, hasPassword ? ['action', 'memberId', 'password'] : ['action', 'memberId'])) {
+    return { ok: false, code: 'INVALID_INPUT' };
+  }
+  if (typeof body.memberId !== 'number' || !Number.isSafeInteger(body.memberId) || body.memberId <= 0) {
+    return { ok: false, code: 'INVALID_INPUT' };
+  }
+  const password = hasPassword ? body.password : DEFAULT_TEMPORARY_PASSWORD;
+  if (typeof password !== 'string'
+      || password.length < TEMPORARY_PASSWORD_MIN
+      || password.length > MAX_MEMBER_PASSWORD_CODE_UNITS
+      || countUtf8Bytes(password) > MAX_MEMBER_PASSWORD_BYTES
+      || /[\u0000-\u001f\u007f]/.test(password)) {
+    return { ok: false, code: 'WEAK_PASSWORD' };
+  }
+  return { ok: true, memberId: body.memberId, password };
+}
+
+function validateChangePassword(body: Record<string, unknown>):
+  | { ok: true; currentPassword: string; newPassword: string }
+  | { ok: false; code: string } {
+  if (!hasExactKeys(body, ['action', 'currentPassword', 'newPassword', 'confirmPassword'])) {
+    return { ok: false, code: 'INVALID_INPUT' };
+  }
+  const { currentPassword, newPassword, confirmPassword } = body;
+  if (typeof currentPassword !== 'string' || currentPassword === ''
+      || typeof newPassword !== 'string' || typeof confirmPassword !== 'string'
+      || currentPassword.length > MAX_MEMBER_PASSWORD_CODE_UNITS
+      || countUtf8Bytes(currentPassword) > MAX_MEMBER_PASSWORD_BYTES) {
+    return { ok: false, code: 'INVALID_INPUT' };
+  }
+  if (newPassword !== confirmPassword) return { ok: false, code: 'PASSWORD_MISMATCH' };
+  if (
+    newPassword.length < 12
+    || newPassword.length > MAX_MEMBER_PASSWORD_CODE_UNITS
+    || countUtf8Bytes(newPassword) > MAX_MEMBER_PASSWORD_BYTES
+    || !/[A-Za-z]/.test(newPassword)
+    || !/[0-9]/.test(newPassword)
+  ) {
+    return { ok: false, code: 'WEAK_PASSWORD' };
+  }
+  if (newPassword === currentPassword) return { ok: false, code: 'INVALID_INPUT' };
+  return { ok: true, currentPassword, newPassword };
+}
+
 function validateListJoinReviews(body: Record<string, unknown>):
   | { ok: true; cursor: JoinReviewCursor | null }
   | { ok: false; code: string } {
@@ -502,6 +562,128 @@ async function issue(runtime: ControllerRuntime, body: Record<string, unknown>, 
   return response({ invite: { ...issued.data, token } }, 200, origin);
 }
 
+type DirectResetClaim = {
+  invitation_id: string;
+  claim_id: string;
+  member_id: number;
+  email: string;
+  auth_user_id: string;
+};
+
+function parseDirectResetClaim(value: unknown): DirectResetClaim | null {
+  const record = parseObject(value);
+  if (!record) return null;
+  const { invitation_id: invitationId, claim_id: claimId, member_id: memberId, email, auth_user_id: authUserId } = record;
+  const normalized = normalizeEmail(email);
+  if (typeof invitationId !== 'string' || !UUID_RE.test(invitationId)
+      || typeof claimId !== 'string' || !UUID_RE.test(claimId)
+      || typeof authUserId !== 'string' || !UUID_RE.test(authUserId)
+      || typeof memberId !== 'number' || !Number.isSafeInteger(memberId) || memberId <= 0
+      || !normalized) return null;
+  return { invitation_id: invitationId, claim_id: claimId, member_id: memberId, email: normalized, auth_user_id: authUserId };
+}
+
+/**
+ * Performs the GoTrue write through the prepared claim and closes it. An
+ * explicit rejection releases the claim so the member keeps a usable sign-in;
+ * an ambiguous outcome (thrown transport error) is left for human review.
+ */
+async function applyGuardedPassword(
+  runtime: ControllerRuntime,
+  claim: DirectResetClaim,
+  password: string,
+  actorUserId: string,
+): Promise<{ ok: true } | { ok: false; code: string }> {
+  let write: RpcResult<{ user?: { id?: string } }>;
+  try {
+    write = await runtime.authAdmin.auth.admin.updateUserById(claim.auth_user_id, { password });
+  } catch {
+    return { ok: false, code: 'REVIEW_REQUIRED' };
+  }
+  if (write.error || write.data?.user?.id !== claim.auth_user_id) {
+    await runtime.serviceDb.rpc('member_password_abandon_direct_reset', {
+      p_invitation_id: claim.invitation_id,
+      p_actor_user_id: actorUserId,
+    });
+    return { ok: false, code: 'SERVER_UNAVAILABLE' };
+  }
+  const completed = await runtime.serviceDb.rpc<{ ok?: boolean }>('member_password_complete', {
+    p_invitation_id: claim.invitation_id,
+    p_claim_id: claim.claim_id,
+    p_auth_user_id: claim.auth_user_id,
+  });
+  if (completed.error || completed.data?.ok !== true) return { ok: false, code: 'REVIEW_REQUIRED' };
+  return { ok: true };
+}
+
+/** Administrator sets a working password on the spot (no invitation link). */
+async function setPassword(
+  runtime: ControllerRuntime,
+  body: Record<string, unknown>,
+  actor: AdminActor,
+  origin: string,
+): Promise<Response> {
+  const parsed = validateSetPassword(body);
+  if (!parsed.ok) return errorResponse(parsed.code, statusForCode(parsed.code), origin);
+  const begun = await runtime.serviceDb.rpc<Record<string, unknown>>('member_password_begin_direct_reset', {
+    p_member_id: parsed.memberId,
+    p_actor_user_id: actor.userId,
+    p_reason: 'admin_reset',
+  });
+  if (begun.error || !begun.data) {
+    const code = errorCode(begun.error) ?? 'SERVER_UNAVAILABLE';
+    return errorResponse(SAFE_CODES.has(code) ? code : 'SERVER_UNAVAILABLE', statusForCode(code), origin);
+  }
+  const claim = parseDirectResetClaim(begun.data);
+  if (!claim || claim.member_id !== parsed.memberId) return errorResponse('REVIEW_REQUIRED', 409, origin);
+  const applied = await applyGuardedPassword(runtime, claim, parsed.password, actor.userId);
+  if (!applied.ok) return errorResponse(applied.code, statusForCode(applied.code), origin);
+  return response({
+    ok: true,
+    memberId: claim.member_id,
+    email: claim.email,
+    temporaryPassword: parsed.password,
+    mustChangePassword: true,
+  }, 200, origin);
+}
+
+/** Member replaces their password from inside the portal or the app. */
+async function changePassword(
+  runtime: ControllerRuntime,
+  body: Record<string, unknown>,
+  authorization: string,
+  origin: string,
+): Promise<Response> {
+  const parsed = validateChangePassword(body);
+  if (!parsed.ok) return errorResponse(parsed.code, statusForCode(parsed.code), origin);
+  const member = await runtime.authorizeRecovery?.(authorization);
+  if (!member || !UUID_RE.test(member.userId)) return errorResponse('UNAUTHORIZED', 401, origin);
+  const limited = await rateLimitKey(runtime, `member-password:self:${member.userId}`, 10);
+  if (limited === 'unavailable') return errorResponse('SERVER_UNAVAILABLE', 503, origin);
+  if (limited === 'limited') return errorResponse('RATE_LIMITED', 429, origin);
+  if (!runtime.verifyMemberPassword) return errorResponse('SERVER_CONFIG', 503, origin);
+  let currentPasswordOk = false;
+  try {
+    currentPasswordOk = await runtime.verifyMemberPassword(member.email, parsed.currentPassword);
+  } catch {
+    currentPasswordOk = false;
+  }
+  if (!currentPasswordOk) return errorResponse('INVALID_CREDENTIALS', 400, origin);
+  const begun = await runtime.serviceDb.rpc<Record<string, unknown>>('member_password_begin_self_change', {
+    p_auth_user_id: member.userId,
+  });
+  if (begun.error || !begun.data) {
+    const code = errorCode(begun.error) ?? 'SERVER_UNAVAILABLE';
+    return errorResponse(SAFE_CODES.has(code) ? code : 'SERVER_UNAVAILABLE', statusForCode(code), origin);
+  }
+  const claim = parseDirectResetClaim(begun.data);
+  if (!claim || claim.auth_user_id !== member.userId) return errorResponse('REVIEW_REQUIRED', 409, origin);
+  const applied = await applyGuardedPassword(runtime, claim, parsed.newPassword, member.userId);
+  if (!applied.ok) return errorResponse(applied.code, statusForCode(applied.code), origin);
+  await runtime.serviceDb.rpc('member_password_clear_must_change', { p_auth_user_id: member.userId });
+  return response({ ok: true, mustChangePassword: false }, 200, origin);
+}
+
 async function adminAction(runtime: ControllerRuntime, body: Record<string, unknown>, authorization: string, origin: string): Promise<Response> {
   const actor = await runtime.authorizeAdmin(authorization);
   if (!actor) return errorResponse('UNAUTHORIZED', 401, origin);
@@ -509,6 +691,7 @@ async function adminAction(runtime: ControllerRuntime, body: Record<string, unkn
   if (limited === 'unavailable') return errorResponse('SERVER_UNAVAILABLE', 503, origin);
   if (limited === 'limited') return errorResponse('RATE_LIMITED', 429, origin);
   if (body.action === 'issue') return await issue(runtime, body, actor, origin);
+  if (body.action === 'set_password') return await setPassword(runtime, body, actor, origin);
   if (body.action === 'revoke') {
     const parsed = validateRevoke(body);
     if (!parsed.ok) return errorResponse(parsed.code, statusForCode(parsed.code), origin);
@@ -578,8 +761,13 @@ export function createMemberPasswordEnrollmentController(runtime: ControllerRunt
           options.recoveryRedirectTo ?? `${DEFAULT_ALLOWED_ORIGINS[0]}/member/recovery`);
       }
       if (body.action === 'enroll') return await enroll(runtime, body, req, origin);
+      if (body.action === 'change_password') {
+        if (!authorization) return errorResponse('UNAUTHORIZED', 401, origin);
+        return await changePassword(runtime, body, authorization, origin);
+      }
       if (body.action === 'issue' || body.action === 'revoke' || body.action === 'list'
-          || body.action === 'list_join_reviews' || body.action === 'approve_join') {
+          || body.action === 'list_join_reviews' || body.action === 'approve_join'
+          || body.action === 'set_password') {
         if (!authorization) return errorResponse('UNAUTHORIZED', 401, origin);
         return await adminAction(runtime, body, authorization, origin);
       }
