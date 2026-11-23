@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  cleanCredentialText,
   MAX_PASSWORD_VARIANTS,
   passwordVariants,
   signInWithPasswordVariants,
@@ -98,8 +99,29 @@ test('signInWithPasswordVariants: كلمة مرور غلط فعلًا بترجع
     },
   });
   assert.deepEqual(attempted, passwordVariants(raw));
-  assert.equal(attempted.length, MAX_PASSWORD_VARIANTS);
-  assert.equal(result.attempts, MAX_PASSWORD_VARIANTS);
+  assert.equal(attempted.length, passwordVariants(raw).length);
+  assert.ok(attempted.length > 1 && attempted.length <= MAX_PASSWORD_VARIANTS);
+  assert.equal(result.attempts, attempted.length);
   assert.equal(result.normalized, false);
   assert.deepEqual(result.error, invalidCredentials);
+});
+
+test('passwordVariants: رموز الاتجاه المخفية والأرقام العربية بتتنضف في آخر محاولة', () => {
+  const pasted = '\u200ESecretPassword\u0661\u0662\u0663\u200F';
+  assert.equal(cleanCredentialText(pasted), 'SecretPassword123');
+  const variants = passwordVariants(pasted);
+  assert.equal(variants[0], pasted);
+  assert.ok(variants.includes('SecretPassword123'));
+  assert.ok(variants.length <= MAX_PASSWORD_VARIANTS);
+});
+test('signInWithPasswordVariants: كلمة مرور فيها علامة اتجاه مخفية بتدخل تلقائيًا', async () => {
+  const result = await signInWithPasswordVariants({
+    email: 'member@phantoms.test',
+    password: 'SecretPassword123\u200F',
+    signIn: async ({ password }) => (password === 'SecretPassword123'
+      ? { data: { user: { id: 'user-1' } }, error: null }
+      : { data: null, error: invalidCredentials }),
+  });
+  assert.ok(result.result);
+  assert.equal(result.normalized, true);
 });
