@@ -18,6 +18,7 @@ import { generateMemberDeviceToken, memberAuthErrorMessage, normalizeAuthEmail }
 import { ensureOwnerMemberIdentity, getMemberPasswordAccess, isMemberPendingReview } from './member-password-access';
 import { authFailureMessage, classifyAuthFailure } from './auth-errors';
 import type { AuthFailureKind } from './auth-errors';
+import { signInWithPasswordVariants } from './member-credential-variants';
 import { isTransportFailure } from '../../lib/supabase/transport';
 
 class MemberLoginError extends Error {
@@ -65,6 +66,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [credentialHelp, setCredentialHelp] = useState(false);
   const [remember, setRemember] = useState<boolean>(() => getMemberRemember());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -77,6 +79,7 @@ export default function LoginPage() {
   });
   const liveRef = useRef(true);
   const submitLatchRef = useRef<Promise<void> | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     liveRef.current = true;
@@ -99,6 +102,7 @@ export default function LoginPage() {
       setInfo('');
       setEmailError('');
       setPasswordError('');
+      setCredentialHelp(false);
       if (cleanEmail === 'admin') {
         navigate('/admin/login');
         return;
@@ -116,12 +120,16 @@ export default function LoginPage() {
       try {
         const rememberPreflight = setMemberRemember(submittedRemember);
         if (!rememberPreflight.ok) throw new MemberLoginError('SERVER_UNAVAILABLE');
-        const { data, error: signInError } = await memberSupabase.auth.signInWithPassword({
+        // بنجرّب النص زي ما المستخدم كتبه، وبعدين أشكال مُطبّعة (مسافات طرفية /
+        // NFC) لأن كيبورد الموبايل والملء التلقائي بيغيّروا كلمة المرور أحيانًا.
+        const { result: signInResult, error: signInError } = await signInWithPasswordVariants({
           email: cleanEmail,
           password: submittedPassword,
+          signIn: (credentials) => memberSupabase.auth.signInWithPassword(credentials),
         });
         if (signInError) throw new MemberLoginError(authCodeFor(signInError));
-        if (!data.user) throw new MemberLoginError(`${AUTH_FAILURE_PREFIX}INVALID_CREDENTIALS`);
+        const data = signInResult?.data ?? null;
+        if (!data?.user) throw new MemberLoginError(`${AUTH_FAILURE_PREFIX}INVALID_CREDENTIALS`);
 
         const authEmail = normalizeAuthEmail(data.user.email ?? '');
         if (!data.user.id || !authEmail || authEmail !== cleanEmail) {
@@ -175,6 +183,7 @@ export default function LoginPage() {
               ? authCodeFor(cause)
               : 'SERVER_UNAVAILABLE';
           setError(loginErrorMessage(code, t));
+          setCredentialHelp(code === `${AUTH_FAILURE_PREFIX}INVALID_CREDENTIALS`);
         }
       } finally {
         if (liveRef.current) setLoading(false);
@@ -201,6 +210,26 @@ export default function LoginPage() {
       )}
     >
       {error && <div className="auth-error" role="alert"><AlertCircle size={18} aria-hidden="true" /><span>{error}</span></div>}
+      {credentialHelp && (
+        <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3.5 text-xs font-semibold leading-6 text-[var(--text-2)]" role="note">
+          <p>{t(
+            'لو المتصفح أو الموبايل ملأ كلمة المرور تلقائيًا، امسحها واكتبها بإيدك (وبص عليها بزر العين) لأن كلمة المرور المحفوظة على الجهاز ممكن تكون قديمة. جرّب كمان من غير مسافة في آخر الكلمة.',
+            'If the browser or phone filled the password automatically, clear it and type it yourself (check it with the eye button); a saved password on the device may be out of date. Also make sure there is no space at the end.',
+          )}</p>
+          <button
+            type="button"
+            className="mt-2 font-bold text-[var(--primary-ink)] underline"
+            onClick={() => {
+              setPassword('');
+              setCredentialHelp(false);
+              setShowPassword(true);
+              passwordRef.current?.focus();
+            }}
+          >
+            {t('امسح كلمة المرور واكتبها من جديد', 'Clear the password and type it again')}
+          </button>
+        </div>
+      )}
       {info && (
         <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-soft)] p-3.5 text-xs font-semibold leading-5 text-[var(--text)]" role="status">
           <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-[var(--primary-ink)]" aria-hidden="true" />
@@ -213,7 +242,7 @@ export default function LoginPage() {
         </label>
         {emailError && <p id="member-email-error" className="-mt-3 text-xs font-bold text-[var(--danger-text)]" role="alert">{emailError}</p>}
         <label className="auth-field" htmlFor="member-password">{t('كلمة المرور', 'Password')}
-          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="member-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="current-password" required value={password} disabled={loading} onChange={(event) => { setPassword(event.target.value); setPasswordError(''); if (error) setError(''); }} aria-invalid={Boolean(passwordError) || undefined} aria-describedby={passwordError ? 'member-password-error' : undefined} /><button type="button" className="auth-password-toggle" disabled={loading} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')} aria-pressed={showPassword}>{showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button></span>
+          <span className="auth-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input ref={passwordRef} id="member-password" type={showPassword ? 'text' : 'password'} dir="ltr" autoComplete="current-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="text" required value={password} disabled={loading} onChange={(event) => { setPassword(event.target.value); setPasswordError(''); setCredentialHelp(false); if (error) setError(''); }} aria-invalid={Boolean(passwordError) || undefined} aria-describedby={passwordError ? 'member-password-error' : undefined} /><button type="button" className="auth-password-toggle" disabled={loading} onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')} aria-pressed={showPassword}>{showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button></span>
         </label>
         {passwordError && <p id="member-password-error" className="-mt-3 text-xs font-bold text-[var(--danger-text)]" role="alert">{passwordError}</p>}
         <label className="auth-remember" htmlFor="member-remember">

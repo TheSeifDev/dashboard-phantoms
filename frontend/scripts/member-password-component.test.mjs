@@ -87,6 +87,7 @@ function isPasswordImplementation(path, source = '') {
     || name.includes('password-access')
     || name.includes('lib/supabase/transport')
     || name.includes('auth-errors')
+    || name.includes('member-credential-variants')
     || name.endsWith('memberaccessguard.tsx')
     || name.endsWith('memberinviteapi.ts')
     || source.includes('get_member_password_access')
