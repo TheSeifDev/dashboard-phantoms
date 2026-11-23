@@ -292,6 +292,34 @@ const TEMPORARY_PASSWORD_MIN = 8;
 
 const countUtf8Bytes = (value: string): number => new TextEncoder().encode(value).byteLength;
 
+/**
+ * أشكال كلمة المرور اللي بنتحقق بيها عند تغيير العضو لكلمة مروره.
+ * الأول دايمًا النص زي ما اتكتب، وبعده المسافات الطرفية والـ NFC (كيبورد iOS
+ * بيبعت الحروف المتراكبة بصيغة مختلفة عن أندرويد/الويب).
+ */
+export function passwordVerificationVariants(raw: string): string[] {
+  const variants: string[] = [];
+  const seen = new Set<string>();
+  const push = (value: string) => {
+    if (!value || seen.has(value)) return;
+    seen.add(value);
+    variants.push(value);
+  };
+  const nfc = (value: string) => {
+    try {
+      return typeof value.normalize === 'function' ? value.normalize('NFC') : value;
+    } catch {
+      return value;
+    }
+  };
+  const trimmed = raw.trim();
+  push(raw);
+  push(trimmed);
+  push(nfc(raw));
+  push(nfc(trimmed));
+  return variants.slice(0, 4);
+}
+
 function validateSetPassword(body: Record<string, unknown>):
   | { ok: true; memberId: number; password: string }
   | { ok: false; code: string } {
@@ -663,10 +691,15 @@ async function changePassword(
   if (limited === 'limited') return errorResponse('RATE_LIMITED', 429, origin);
   if (!runtime.verifyMemberPassword) return errorResponse('SERVER_CONFIG', 503, origin);
   let currentPasswordOk = false;
-  try {
-    currentPasswordOk = await runtime.verifyMemberPassword(member.email, parsed.currentPassword);
-  } catch {
-    currentPasswordOk = false;
+  // نفس منطق شاشة الدخول: النص زي ما اتكتب، وبعده أشكال مُطبّعة (مسافات طرفية/NFC)
+  // عشان كيبورد الموبايل ما يمنعش العضو من تغيير كلمة المرور.
+  for (const variant of passwordVerificationVariants(parsed.currentPassword)) {
+    try {
+      currentPasswordOk = await runtime.verifyMemberPassword(member.email, variant);
+    } catch {
+      currentPasswordOk = false;
+    }
+    if (currentPasswordOk) break;
   }
   if (!currentPasswordOk) return errorResponse('INVALID_CREDENTIALS', 400, origin);
   const begun = await runtime.serviceDb.rpc<Record<string, unknown>>('member_password_begin_self_change', {

@@ -106,6 +106,7 @@ jobs:
           ../frontend/node_modules/.bin/tsx --test \
             scripts/ios-install.test.ts \
             scripts/auth-errors.test.ts \
+            scripts/member-credential-variants.test.ts \
             scripts/supabase-transport.test.ts \
             scripts/app-update.test.ts
           ../frontend/node_modules/.bin/tsx --test scripts/app-toast.test.mjs

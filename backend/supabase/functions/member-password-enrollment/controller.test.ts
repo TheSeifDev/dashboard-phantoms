@@ -23,6 +23,8 @@ type State = {
   directReset: { invitation_id: string; claim_id: string; member_id: number; email: string; auth_user_id: string } | null;
   directResetError: string | null;
   verifyPassword: boolean;
+  /** When set, only these exact strings are accepted by the fake Auth endpoint. */
+  acceptedPasswords: string[] | null;
   directComplete: boolean;
   clearedMustChange: boolean;
   abandoned: string[];
@@ -54,6 +56,7 @@ const baseState = (): State => ({
   },
   directResetError: null,
   verifyPassword: true,
+  acceptedPasswords: null,
   directComplete: true,
   clearedMustChange: true,
   abandoned: [],
@@ -141,6 +144,7 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
     },
     async verifyMemberPassword(email, password) {
       state.calls.push({ client: 'auth', name: 'verifyMemberPassword', args: { email, password } });
+      if (state.acceptedPasswords) return state.acceptedPasswords.includes(password);
       return state.verifyPassword;
     },
   };
@@ -1029,4 +1033,57 @@ test('changing a password needs a member session', async () => {
   );
   assert.equal(response.status, 401);
   assert.equal(state.calls.length, 0);
+});
+
+test('a mobile keyboard trailing space still verifies the current password', async () => {
+  const state = baseState();
+  state.acceptedPasswords = ['123456789'];
+  const response = await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request({
+      action: 'change_password',
+      currentPassword: '123456789 ',
+      newPassword: 'PersonalPassword2026',
+      confirmPassword: 'PersonalPassword2026',
+    }, { Authorization: 'Bearer member' }),
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await json(response), { ok: true, mustChangePassword: false });
+  const verifications = state.calls.filter((call) => call.name === 'verifyMemberPassword');
+  assert.deepEqual(verifications.map((call) => call.args?.password), ['123456789 ', '123456789']);
+});
+
+test('an NFD password from an iOS keyboard verifies against the stored NFC form', async () => {
+  const state = baseState();
+  const nfc = 'Caf\u00e9123456789';
+  const nfd = nfc.normalize('NFD');
+  assert.notEqual(nfd, nfc);
+  state.acceptedPasswords = [nfc];
+  const response = await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request({
+      action: 'change_password',
+      currentPassword: nfd,
+      newPassword: 'PersonalPassword2026',
+      confirmPassword: 'PersonalPassword2026',
+    }, { Authorization: 'Bearer member' }),
+  );
+  assert.equal(response.status, 200);
+  const verifications = state.calls.filter((call) => call.name === 'verifyMemberPassword');
+  assert.equal(verifications.at(-1)?.args?.password, nfc);
+});
+
+test('a wrong current password never writes to Auth even after every variant fails', async () => {
+  const state = baseState();
+  state.acceptedPasswords = ['something-else-1'];
+  const response = await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request({
+      action: 'change_password',
+      currentPassword: ' 123456789 ',
+      newPassword: 'PersonalPassword2026',
+      confirmPassword: 'PersonalPassword2026',
+    }, { Authorization: 'Bearer member' }),
+  );
+  assert.equal(response.status, 400);
+  assert.deepEqual(await json(response), { code: 'INVALID_CREDENTIALS' });
+  assert.equal(state.calls.some((call) => call.name === 'member_password_begin_self_change'), false);
+  assert.equal(state.calls.some((call) => call.name === 'updateUserById'), false);
 });

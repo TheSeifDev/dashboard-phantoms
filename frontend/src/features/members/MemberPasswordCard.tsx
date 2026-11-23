@@ -95,15 +95,15 @@ export function MemberPasswordCard() {
       <form onSubmit={(event) => { void submit(event); }} className="grid gap-3" noValidate aria-busy={saving || undefined}>
         <label className="grid gap-1.5 text-xs font-bold text-[var(--text-2)]" htmlFor="member-password-current">
           {t('كلمة المرور الحالية', 'Current password')}
-          <input id="member-password-current" type="password" dir="ltr" autoComplete="current-password" value={currentPassword} onChange={(event) => { setCurrentPassword(event.target.value); setError(''); setSuccess(false); }} className={FIELD_CLASS} disabled={saving} />
+          <input id="member-password-current" type="password" dir="ltr" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="current-password" value={currentPassword} onChange={(event) => { setCurrentPassword(event.target.value); setError(''); setSuccess(false); }} className={FIELD_CLASS} disabled={saving} />
         </label>
         <label className="grid gap-1.5 text-xs font-bold text-[var(--text-2)]" htmlFor="member-password-new">
           {t('كلمة المرور الجديدة', 'New password')}
-          <input id="member-password-new" type="password" dir="ltr" autoComplete="new-password" value={newPassword} onChange={(event) => { setNewPassword(event.target.value); setError(''); setSuccess(false); }} className={FIELD_CLASS} disabled={saving} aria-describedby="member-password-rules" />
+          <input id="member-password-new" type="password" dir="ltr" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="new-password" value={newPassword} onChange={(event) => { setNewPassword(event.target.value); setError(''); setSuccess(false); }} className={FIELD_CLASS} disabled={saving} aria-describedby="member-password-rules" />
         </label>
         <label className="grid gap-1.5 text-xs font-bold text-[var(--text-2)]" htmlFor="member-password-confirm">
           {t('تأكيد كلمة المرور الجديدة', 'Confirm new password')}
-          <input id="member-password-confirm" type="password" dir="ltr" autoComplete="new-password" value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); setError(''); setSuccess(false); }} className={FIELD_CLASS} disabled={saving} />
+          <input id="member-password-confirm" type="password" dir="ltr" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="new-password" value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); setError(''); setSuccess(false); }} className={FIELD_CLASS} disabled={saving} />
         </label>
         <ul id="member-password-rules" className="m-0 grid gap-1 ps-5 text-[11px] font-normal leading-5 text-[var(--text-muted)]">
           {memberPasswordRequirements().map((rule) => <li key={rule}>{rule}</li>)}
