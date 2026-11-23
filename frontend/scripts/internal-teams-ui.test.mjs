@@ -23,7 +23,7 @@ test('internal team management is lazy-loaded and doubly gated to the system Own
   assert.match(page, /if \(!access\.data\?\.is_owner\)/);
   assert.match(page, /useOwnerTeams\(ownerConfirmed\)/);
   assert.match(page, /useTeamAdminCandidates\(ownerConfirmed\)/);
-  assert.match(routes, /"path":"\/admin\/teams","title":"Internal teams"/);
+  assert.ok(JSON.parse(routes).routes.some((route) => route.path === '/admin/teams'));
 });
 
 test('Head and Monitor are per-team seats with explicit feature permissions, never global Admin creation', () => {

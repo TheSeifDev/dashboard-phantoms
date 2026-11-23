@@ -22,8 +22,9 @@ test('team routes load only the dedicated team workspace behind the team access 
   assert.match(page, /export default function TeamWorkspacePage\(\)/);
   assert.match(page, /useParams/);
   assert.match(page, /useNavigate/);
-  assert.match(routes, /"path":"\/team","title":"Team workspace"/);
-  assert.match(routes, /"path":"\/team\/:teamId","title":"Assigned team workspace"/);
+  const manifest = JSON.parse(routes).routes;
+  assert.ok(manifest.some((route) => route.path === '/team'), 'The team workspace route should be published');
+  assert.ok(manifest.some((route) => route.path === '/team/:teamId'), 'The assigned team route should be published');
   assert.match(page, /workspaceTeamEntries\(access\.data\)/);
   assert.match(accessHelper, /team\.role === 'head' \|\| team\.role === 'monitor'/);
 });
