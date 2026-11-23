@@ -5,36 +5,24 @@
  * Flat colours only (no gradients); every token comes from tokens.css.
  */
 .rank-page {
-  --rank-gold: #E0A426;
-  --rank-gold-soft: rgb(224 164 38 / 0.12);
-  --rank-gold-line: rgb(224 164 38 / 0.34);
-  --rank-silver: #A7B0C0;
-  --rank-silver-soft: rgb(167 176 192 / 0.12);
-  --rank-silver-line: rgb(167 176 192 / 0.3);
-  --rank-bronze: #C2703A;
-  --rank-bronze-soft: rgb(194 112 58 / 0.12);
-  --rank-bronze-line: rgb(194 112 58 / 0.32);
-  /* readable ink for text sitting on the soft tone surfaces */
-  --rank-gold-ink: #8A5A05;
-  --rank-silver-ink: #59637A;
-  --rank-bronze-ink: #8A4A1F;
+  --rank-gold: var(--medal-gold);
+  --rank-gold-soft: var(--medal-gold-soft);
+  --rank-gold-line: var(--medal-gold-line);
+  --rank-gold-ink: var(--medal-gold-ink);
+  --rank-silver: var(--medal-silver);
+  --rank-silver-soft: var(--medal-silver-soft);
+  --rank-silver-line: var(--medal-silver-line);
+  --rank-silver-ink: var(--medal-silver-ink);
+  --rank-bronze: var(--medal-bronze);
+  --rank-bronze-soft: var(--medal-bronze-soft);
+  --rank-bronze-line: var(--medal-bronze-line);
+  --rank-bronze-ink: var(--medal-bronze-ink);
   display: grid;
   gap: 14px;
   width: 100%;
   min-width: 0;
   color: var(--text);
 }
-[data-theme="dark"] .rank-page {
-  --rank-gold: #F2BC48;
-  --rank-gold-soft: rgb(242 188 72 / 0.12);
-  --rank-gold-line: rgb(242 188 72 / 0.3);
-  --rank-silver: #BFC8D8;
-  --rank-bronze: #D98550;
-  --rank-gold-ink: #F2BC48;
-  --rank-silver-ink: #C6CEDD;
-  --rank-bronze-ink: #E39A6A;
-}
-
 /* ------------------------------------------------------------------ */
 /* Top bar                                                             */
 /* ------------------------------------------------------------------ */
@@ -178,10 +166,10 @@ html[lang="ar"] .rank-title { letter-spacing: 0; line-height: 1.35; }
   --tone-line: var(--rank-silver-line);
   --tone-ink: var(--rank-silver-ink);
   /* neutral slab */
-  --face: #DFE4EC;
-  --face-top: #F2F5F9;
-  --face-side: #C2CAD7;
-  --num-ink: #79808F;
+  --face: var(--slab-neutral-face);
+  --face-top: var(--slab-neutral-top);
+  --face-side: var(--slab-neutral-side);
+  --num-ink: var(--slab-neutral-ink);
   --block-h: clamp(96px, 15.5vw, 140px);
   --depth: clamp(9px, 1.3vw, 15px);
   display: grid;
@@ -197,10 +185,10 @@ html[lang="ar"] .rank-title { letter-spacing: 0; line-height: 1.35; }
   --tone-line: var(--rank-gold-line);
   --tone-ink: var(--rank-gold-ink);
   /* gold slab */
-  --face: #EAB244;
-  --face-top: #F8DA9C;
-  --face-side: #CB9430;
-  --num-ink: #4A3405;
+  --face: var(--slab-gold-face);
+  --face-top: var(--slab-gold-top);
+  --face-side: var(--slab-gold-side);
+  --num-ink: var(--slab-gold-ink);
   --block-h: clamp(142px, 23vw, 208px);
   --depth: clamp(11px, 1.5vw, 17px);
 }
@@ -209,30 +197,30 @@ html[lang="ar"] .rank-title { letter-spacing: 0; line-height: 1.35; }
   --tone-soft: var(--rank-silver-soft);
   --tone-line: var(--rank-silver-line);
   --tone-ink: var(--rank-silver-ink);
-  --face: #E4E8EF;
-  --face-top: #F5F7FB;
-  --face-side: #C8D0DC;
-  --num-ink: #8A92A1;
+  --face: var(--slab-neutral-alt-face);
+  --face-top: var(--slab-neutral-alt-top);
+  --face-side: var(--slab-neutral-alt-side);
+  --num-ink: var(--slab-neutral-alt-ink);
   --block-h: clamp(80px, 13vw, 118px);
   --depth: clamp(9px, 1.2vw, 14px);
 }
 [data-theme="dark"] .rank-slot--2 {
-  --face: #2B3242;
-  --face-top: #3D4657;
-  --face-side: #1F2531;
-  --num-ink: #B9C2D4;
+  --face: var(--slab-neutral-face);
+  --face-top: var(--slab-neutral-top);
+  --face-side: var(--slab-neutral-side);
+  --num-ink: var(--slab-neutral-ink);
 }
 [data-theme="dark"] .rank-slot--3 {
-  --face: #262C3A;
-  --face-top: #363E4E;
-  --face-side: #1B212C;
-  --num-ink: #AEB7C7;
+  --face: var(--slab-neutral-alt-face);
+  --face-top: var(--slab-neutral-alt-top);
+  --face-side: var(--slab-neutral-alt-side);
+  --num-ink: var(--slab-neutral-alt-ink);
 }
 [data-theme="dark"] .rank-slot--1 {
-  --face: #E2AC3E;
-  --face-top: #F5CE84;
-  --face-side: #BE8B29;
-  --num-ink: #46320A;
+  --face: var(--slab-gold-face);
+  --face-top: var(--slab-gold-top);
+  --face-side: var(--slab-gold-side);
+  --num-ink: var(--slab-gold-ink);
 }
 
 /* contender cluster floating above each step */
@@ -247,7 +235,7 @@ html[lang="ar"] .rank-title { letter-spacing: 0; line-height: 1.35; }
   display: grid;
   place-items: center;
   margin-bottom: 2px;
-  color: var(--rank-gold, #E9B949);
+  color: var(--rank-gold);
   filter: drop-shadow(0 8px 14px rgb(224 164 38 / 0.35));
 }
 .rank-avatar-wrap { position: relative; display: grid; place-items: center; }

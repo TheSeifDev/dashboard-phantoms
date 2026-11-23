@@ -1,13 +1,13 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { Crown, Search, Sparkles, Trophy, Users } from 'lucide-react';
+import { Crown, Info, LogIn, Search, Sparkles, Trophy, Users } from 'lucide-react';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { CardSkeletons } from '../../components/ui/Skeleton';
 import { useLocale } from '../../i18n/useLocale';
 import { useAuthStore } from '../../store/auth';
-import { useMemberLeaderboard, type LeaderboardRow } from './useMemberLeaderboard';
+import { isSessionIssue, useMemberLeaderboard, type LeaderboardRow } from './useMemberLeaderboard';
 import './member-ranking.css';
 
 function motionAllowed() {
@@ -36,6 +36,9 @@ export default function MemberRankingPage() {
   const leaderboard = useMemberLeaderboard(member?.id ?? null);
   const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
+  // الأنيميشن بيشتغل مرة واحدة بس لكل mount، عشان أي refetch أو تغيير
+  // في generated_at ميعملش رجفة للصفحة تاني.
+  const animatedRef = useRef(false);
 
   const rows = leaderboard.data?.rows ?? [];
   const me = leaderboard.data?.me ?? null;
@@ -50,7 +53,8 @@ export default function MemberRankingPage() {
 
   useLayoutEffect(() => {
     const root = rootRef.current;
-    if (!root || !motionAllowed() || rows.length === 0) return;
+    if (!root || animatedRef.current || !motionAllowed() || rows.length === 0) return;
+    animatedRef.current = true;
     const cards = root.querySelectorAll<HTMLElement>('[data-mr-card]');
     const bars = root.querySelectorAll<HTMLElement>('[data-mr-bar]');
     const steps = root.querySelectorAll<HTMLElement>('[data-mr-step]');
@@ -90,7 +94,9 @@ export default function MemberRankingPage() {
     return () => {
       timeline.kill();
     };
-  }, [rows.length, leaderboard.data?.generated_at]);
+  }, [rows.length]);
+
+  const sessionExpired = isSessionIssue(leaderboard.error);
 
   return (
     <div className="mr-page" dir={dir} ref={rootRef}>
@@ -105,7 +111,22 @@ export default function MemberRankingPage() {
 
       {leaderboard.isPending && <CardSkeletons count={3} />}
 
-      {leaderboard.isError && (
+      {leaderboard.isError && sessionExpired && (
+        <div className="mr-session" role="alert">
+          <LogIn size={18} aria-hidden="true" />
+          <div>
+            <p className="mr-session-title">{t('جلسة الجهاز مش صالحة', 'Your device session is no longer valid')}</p>
+            <p className="mr-session-text">
+              {t(
+                'ترتيب الفريق محتاج تحقق من الجهاز. اطلع بره وسجّل دخولك من جديد وهيرجع يشتغل فوراً.',
+                'The team ranking needs a verified device. Sign out and sign back in and it works right away.',
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {leaderboard.isError && !sessionExpired && (
         <ErrorState
           message={t('معرفناش نحمّل ترتيب الفريق.', 'Could not load the team ranking.')}
           onRetry={() => {
@@ -128,8 +149,11 @@ export default function MemberRankingPage() {
               <span className="mr-stat-icon" aria-hidden="true"><Trophy size={16} /></span>
               <p className="mr-stat-label">{t('ترتيبك', 'Your rank')}</p>
               <p className="mr-stat-value">
-                {me ? `#${number(me.rank)}` : '—'}
-                <span className="mr-stat-sub">/ {number(leaderboard.data.roster_size)}</span>
+                {/* dir=ltr عشان علامة # تفضل قبل الرقم في RTL */}
+                <span dir="ltr" className="mr-stat-figure">
+                  {me ? `#${number(me.rank)}` : '—'}
+                  <span className="mr-stat-sub">/ {number(leaderboard.data.roster_size)}</span>
+                </span>
               </p>
             </article>
             <article className="mr-stat" data-mr-card>
@@ -152,9 +176,23 @@ export default function MemberRankingPage() {
             </article>
           </section>
 
+          {me === null && (
+            <div className="mr-notice" role="status">
+              <Info size={16} aria-hidden="true" />
+              <p>
+                {t(
+                  'مش لاقيين سجلك في الترتيب — يعني حسابك مش متفعّل أو لسه مش متسجّل في القائمة. كلّم الأدمن يفعّل حسابك وهتلاقي نفسك هنا.',
+                  'We could not find your record in the ranking — your account may be inactive or missing from the roster. Ask an admin to activate it and you will appear here.',
+                )}
+              </p>
+            </div>
+          )}
+
           <section className="mr-podium-card" aria-label={t('أول ثلاثة', 'Top three')}>
             <div className="mr-podium">
-              {[1, 0, 2].map((index) => {
+              {/* DOM order is 1 · 2 · 3 for screen readers, the visual podium
+                  order (silver · gold · bronze) comes from CSS `order`. */}
+              {[0, 1, 2].map((index) => {
                 const row = podium[index];
                 if (!row) return null;
                 return (
@@ -200,7 +238,13 @@ export default function MemberRankingPage() {
             ) : (
               <ol className="mr-list">
                 {visible.map((row: LeaderboardRow) => (
-                  <li key={row.member_id} className="mr-row" data-mr-row data-me={row.is_me ? 'true' : undefined}>
+                  <li
+                    key={row.member_id}
+                    className="mr-row"
+                    data-mr-row
+                    data-me={row.is_me ? 'true' : undefined}
+                    aria-current={row.is_me ? 'true' : undefined}
+                  >
                     <span className={`mr-rank mr-rank--${row.rank <= 3 ? row.rank : 'rest'}`}>{number(row.rank)}</span>
                     <span className="mr-avatar" aria-hidden="true">{initials(row.full_name)}</span>
                     <span className="mr-identity">

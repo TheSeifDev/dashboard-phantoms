@@ -3,33 +3,20 @@
 .mr-page {
   display: grid;
   gap: 18px;
-  --mr-gold: #E0A426;
-  --mr-gold-soft: rgb(224 164 38 / 0.14);
-  --mr-gold-line: rgb(224 164 38 / 0.36);
-  --mr-gold-ink: #8A5A05;
-  --mr-silver: #A7B0C0;
-  --mr-silver-soft: rgb(167 176 192 / 0.14);
-  --mr-silver-line: rgb(167 176 192 / 0.32);
-  --mr-silver-ink: #59637A;
-  --mr-bronze: #C2703A;
-  --mr-bronze-soft: rgb(194 112 58 / 0.14);
-  --mr-bronze-line: rgb(194 112 58 / 0.34);
-  --mr-bronze-ink: #8A4A1F;
-}
-
-[data-theme='dark'] .mr-page {
-  --mr-gold: #F2BC48;
-  --mr-gold-soft: rgb(242 188 72 / 0.14);
-  --mr-gold-line: rgb(242 188 72 / 0.34);
-  --mr-gold-ink: #F2BC48;
-  --mr-silver: #BFC8D8;
-  --mr-silver-soft: rgb(191 200 216 / 0.12);
-  --mr-silver-line: rgb(191 200 216 / 0.26);
-  --mr-silver-ink: #C6CEDD;
-  --mr-bronze: #D98550;
-  --mr-bronze-soft: rgb(217 133 80 / 0.14);
-  --mr-bronze-line: rgb(217 133 80 / 0.3);
-  --mr-bronze-ink: #E39A6A;
+  /* medal palette comes from tokens.css so the admin ranking and the portal
+     leaderboard can never drift apart */
+  --mr-gold: var(--medal-gold);
+  --mr-gold-soft: var(--medal-gold-soft);
+  --mr-gold-line: var(--medal-gold-line);
+  --mr-gold-ink: var(--medal-gold-ink);
+  --mr-silver: var(--medal-silver);
+  --mr-silver-soft: var(--medal-silver-soft);
+  --mr-silver-line: var(--medal-silver-line);
+  --mr-silver-ink: var(--medal-silver-ink);
+  --mr-bronze: var(--medal-bronze);
+  --mr-bronze-soft: var(--medal-bronze-soft);
+  --mr-bronze-line: var(--medal-bronze-line);
+  --mr-bronze-ink: var(--medal-bronze-ink);
 }
 
 /* ---------- summary stats ---------- */
@@ -94,6 +81,43 @@
   color: var(--text-muted);
 }
 
+.mr-stat-figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+/* ---------- inline notices ---------- */
+.mr-notice,
+.mr-session {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+.mr-notice p,
+.mr-session-text { margin: 0; }
+.mr-session {
+  border-color: var(--mr-gold-line);
+  background: var(--mr-gold-soft);
+  color: var(--mr-gold-ink);
+}
+.mr-session-title {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--mr-gold-ink);
+}
+.mr-notice svg,
+.mr-session svg { flex: 0 0 auto; margin-top: 2px; }
+
 /* ---------- podium ---------- */
 .mr-podium-card {
   border: 1px solid var(--border);
@@ -118,6 +142,11 @@
   gap: 10px;
   min-width: 0;
 }
+
+/* visual podium order: silver · gold · bronze (DOM stays 1 · 2 · 3) */
+.mr-step--2 { order: 1; }
+.mr-step--1 { order: 2; }
+.mr-step--3 { order: 3; }
 
 .mr-step-body {
   display: grid;

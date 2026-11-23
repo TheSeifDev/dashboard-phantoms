@@ -1,6 +1,7 @@
 import type { Member, Task, Note } from '../../types/db';
 import { isOverdue } from '../../lib/dateUtils';
 import { compareMemberBonusRank } from '../ranking/rankingUtils';
+import { readBonusPoints } from '../notes/noteBonus';
 
 export interface ActivityItem {
   id: string;
@@ -43,13 +44,9 @@ export interface DashboardMetrics {
 
 export function calculateBonus(notes: Note[], memberId: number): number {
   return notes.reduce((total, note) => {
-    if (note.target_member_id === memberId) {
-      const match = (note.text || '').match(/\[B:([+-]?\d+)\]/);
-      if (match) {
-        return total + parseInt(match[1], 10);
-      }
-    }
-    return total;
+    if (note.target_member_id !== memberId) return total;
+    // نفس محتسب البونص في كل الصفحات (regex موحّد مع الـ SQL).
+    return total + (readBonusPoints(note.text) ?? 0);
   }, 0);
 }
 
@@ -197,10 +194,7 @@ export function getDashboardMetrics(members: Member[], tasks: Task[], notes: Not
     if (n.date || n.created_at) {
       const d = (n.date || n.created_at).slice(0, 10);
       if (!dateMap[d]) dateMap[d] = 0;
-      const match = (n.text || '').match(/\[B:([+-]?\d+)\]/);
-      if (match) {
-        dateMap[d] += parseInt(match[1], 10);
-      }
+      dateMap[d] += readBonusPoints(n.text) ?? 0;
     }
   });
 
