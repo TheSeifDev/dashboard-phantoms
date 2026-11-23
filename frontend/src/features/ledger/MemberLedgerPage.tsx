@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ArrowDownLeft, CircleDollarSign, HandCoins, Receipt, Target, Wallet } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -9,6 +9,8 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatDate } from '../../lib/dateUtils';
 import { toast } from '../../store/toast';
 import { PayModal } from './PayModal';
+import { LedgerInsights } from './LedgerInsights';
+import { useLedgerEnter } from './animations';
 import { useDeclarePayment, useMemberLedger } from './api';
 import type { LedgerPaymentDraft, MemberLedgerPayload } from './types';
 import { EXPENSE_CATEGORY_LABELS, LEDGER_STATUS_LABELS, money } from './types';
@@ -19,6 +21,7 @@ export default function MemberLedgerPage() {
   const ledger = useMemberLedger(teamId);
   const declare = useDeclarePayment();
   const [payOpen, setPayOpen] = useState(false);
+  const pageRef = useRef<HTMLDivElement>(null);
   const payload: MemberLedgerPayload | undefined = ledger.data;
   const activeTeamId = teamId ?? payload?.team.id ?? null;
   const summary = payload?.summary;
@@ -40,8 +43,9 @@ export default function MemberLedgerPage() {
     ));
     setPayOpen(false);
   };
+  useLedgerEnter(pageRef, [Boolean(payload)]);
   return (
-    <div className="ldg-page" dir={dir}>
+    <div className="ldg-page" dir={dir} ref={pageRef}>
       <PageHeader
         icon={<Wallet size={22} aria-hidden="true" />}
         title={t('خزنة التيم', 'Team ledger')}
@@ -76,7 +80,7 @@ export default function MemberLedgerPage() {
               ))}
             </div>
           )}
-          <section className="ldg-hero" aria-label={t('ملخص الخزنة', 'Ledger summary')}>
+          <section className="ldg-hero" aria-label={t('ملخص الخزنة', 'Ledger summary')} data-ldg-enter>
             <div className="ldg-hero-main">
               <span className="ldg-hero-label"><Wallet size={15} aria-hidden="true" /> {t('المبلغ المتاح حاليًا', 'Available balance')}</span>
               <strong className="ldg-hero-value">{money(summary.balance)}</strong>
@@ -88,7 +92,7 @@ export default function MemberLedgerPage() {
               <div><span>{t('إجمالي الخصومات', 'Total deductions')}</span><strong>{money(summary.withdrawals)}</strong></div>
             </div>
           </section>
-          <section className="ldg-metrics" aria-label={t('حالتي مع الخزنة', 'My ledger status')}>
+          <section className="ldg-metrics" aria-label={t('حالتي مع الخزنة', 'My ledger status')} data-ldg-enter>
             <article className="ldg-metric">
               <span>{t('دفعت', 'I paid')}<ArrowDownLeft size={15} aria-hidden="true" /></span>
               <strong>{money(summary.my_paid)}</strong>
@@ -110,6 +114,18 @@ export default function MemberLedgerPage() {
               <small>{number(summary.expense_count)} {t('مصروف مسجل', 'recorded expenses')}</small>
             </article>
           </section>
+          <LedgerInsights
+            entries={payload.payments.map((payment) => ({
+              amount: payment.amount,
+              kind: 'payment' as const,
+              status: payment.status,
+              occurred_on: payment.occurred_on,
+            }))}
+            paidTotal={summary.my_paid}
+            remainingTotal={summary.my_remaining}
+            expectedTotal={summary.my_expected}
+            variant="member"
+          />
           <div className="ldg-split">
             <section className="ldg-panel" aria-label={t('الفلوس اتصرفت في إيه', 'What the money was spent on')}>
               <header className="ldg-panel-head">
