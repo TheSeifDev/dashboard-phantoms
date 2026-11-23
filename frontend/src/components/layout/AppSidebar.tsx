@@ -28,6 +28,7 @@ import {
   SquareKanban,
   StickyNote,
   Trophy,
+  Wallet,
   Users,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth';
@@ -90,6 +91,7 @@ export const GROUPS: SidebarGroup[] = [
       { to: '/admin/members', label: 'الأعضاء', icon: Users, permission: 'members' },
       { to: '/admin/meetings', label: 'الاجتماعات والحضور', icon: CalendarCheck2, permission: 'members' },
       { to: '/admin/references', label: 'المصادر', icon: BookMarked, permission: 'members' },
+      { to: '/admin/ledger', label: 'الخزنة', icon: Wallet, permission: 'members' },
       {
         to: '/admin/teams',
         label: 'الفرق الداخلية',

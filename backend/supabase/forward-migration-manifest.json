@@ -418,5 +418,35 @@
     "remote_applied_timestamp": "20261122234021",
     "original_source_version": "20261122234021",
     "original_source_filename": "backend/supabase/migrations/20261122234021_reference_links.sql"
+  },
+  {
+    "version": "20261123125033",
+    "name": "team_ledger",
+    "canonical_repository_filename": "backend/supabase/migrations/20261123125033_team_ledger.sql",
+    "sha256": "462252788d015868ba4289e6e6202c1e4823d054b5d55c6d3adc571a6e095ed0",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261123125033",
+    "original_source_version": "20261123125033",
+    "original_source_filename": "backend/supabase/migrations/20261123125033_team_ledger.sql"
+  },
+  {
+    "version": "20261123125104",
+    "name": "team_ledger_rpcs",
+    "canonical_repository_filename": "backend/supabase/migrations/20261123125104_team_ledger_rpcs.sql",
+    "sha256": "1c31ad1179049fac4c8fc158d55c89dd03aaba78fe0d14deaf25e98f14bd5aae",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261123125104",
+    "original_source_version": "20261123125104",
+    "original_source_filename": "backend/supabase/migrations/20261123125104_team_ledger_rpcs.sql"
+  },
+  {
+    "version": "20261123125124",
+    "name": "team_ledger_member_rpcs",
+    "canonical_repository_filename": "backend/supabase/migrations/20261123125124_team_ledger_member_rpcs.sql",
+    "sha256": "7fec3abd77bace1aeba3b8f14e0331f327aee09d16d231b5aa1638d5a620f767",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261123125124",
+    "original_source_version": "20261123125124",
+    "original_source_filename": "backend/supabase/migrations/20261123125124_team_ledger_member_rpcs.sql"
   }
 ]
