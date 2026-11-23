@@ -29,7 +29,7 @@ SELECT phantoms_test.login_as('reset-admin');
 SELECT throws_ok(
   format($$SELECT public.member_password_begin_direct_reset(%s, %L, 'admin_reset')$$,
          phantoms_test.mid('reset_member'), phantoms_test.uid('reset-admin')),
-  'SERVICE_ONLY', 'an authenticated session cannot open a direct reset claim');
+  '42501', NULL, 'an authenticated session cannot open a direct reset claim');
 RESET ROLE;
 SELECT phantoms_test.clear_auth();
 
