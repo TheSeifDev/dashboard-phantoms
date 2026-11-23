@@ -393,14 +393,23 @@ test.describe('disposable local dashboard', () => {
         await existingMember.selectOption(String(firstMember.id));
         await expect(inviteEmail).toHaveAttribute('readonly', '');
         await expect(inviteEmail).toHaveValue(memberEmails[0]);
-        await purpose.selectOption('reset');
-        await expect(existingMember).toBeVisible();
-        await existingMember.selectOption(String(firstMember.id));
-        await expect(inviteEmail).toHaveValue(memberEmails[0]);
+        // Resetting an existing password no longer issues a link: the option is
+        // gone from this dialog and the member card key button applies 123456789.
+        await expect(purpose.locator('option[value="reset"]')).toHaveCount(0);
         await purpose.selectOption('join');
         await expect(inviteEmail).toHaveCount(0);
         await expect(joinOptions).toBeVisible();
         await page.getByRole('button', { name: 'إغلاق', exact: true }).last().click();
+        await page.getByRole('dialog').waitFor({ state: 'detached' });
+        const resetPasswordButton = page.getByRole('button', { name: /إعادة تعيين كلمة المرور/ }).first();
+        await expect(resetPasswordButton).toBeVisible();
+        await resetPasswordButton.click();
+        const resetDialog = page.getByRole('dialog');
+        await expect(resetDialog).toBeVisible();
+        await expect(resetDialog).toContainText('123456789');
+        await expect(resetDialog.getByRole('button', { name: /تعيين كلمة المرور 123456789/ })).toBeVisible();
+        await resetDialog.getByRole('button', { name: 'إلغاء', exact: true }).click();
+        await expect(page.getByRole('dialog')).toHaveCount(0);
         await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' });
         await expect(page.getByTestId('dashboard-metrics')).toBeVisible();
         await page.setViewportSize({ width: 1440, height: 1000 });

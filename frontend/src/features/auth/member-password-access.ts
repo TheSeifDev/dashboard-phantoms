@@ -1,6 +1,18 @@
 import { memberSupabase } from '../../lib/supabase/member-client';
+import { useQuery } from '@tanstack/react-query';
 import { parseMemberPasswordAccess } from './member-password';
 import type { MemberPasswordAccess } from './member-password';
+
+export const MEMBER_PASSWORD_ACCESS_KEY = ['member_password_access'] as const;
+
+/** Shared, cacheable view of the signed-in member's password state. */
+export function useMemberPasswordAccess() {
+  return useQuery({
+    queryKey: MEMBER_PASSWORD_ACCESS_KEY,
+    queryFn: getMemberPasswordAccess,
+    staleTime: 15_000,
+  });
+}
 
 export async function getMemberPasswordAccess(): Promise<MemberPasswordAccess | null> {
   const { data, error } = await memberSupabase.rpc('get_member_password_access');

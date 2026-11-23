@@ -20,6 +20,7 @@ export function MemberCards({
   onView,
   onEdit,
   onDelete,
+  onResetPassword,
 }: {
   members: Member[];
   customFields?: MemberCustomField[];
@@ -33,6 +34,7 @@ export function MemberCards({
   onView: (member: Member) => void;
   onEdit: (member: Member) => void;
   onDelete: (member: Member) => void;
+  onResetPassword?: (member: Member) => void;
 }) {
   const { t } = useLocale();
   const cardFields = customFields.filter((field) => field.show_in_card !== false);
@@ -103,6 +105,17 @@ export function MemberCards({
               <button type="button" className="member-dir-action" onClick={() => onEdit(member)}>
                 <Pencil size={15} aria-hidden="true" /> {t('تعديل', 'Edit')}
               </button>
+              {onResetPassword && (
+                <button
+                  type="button"
+                  className="member-dir-action member-dir-action--icon"
+                  onClick={() => onResetPassword(member)}
+                  aria-label={`${t('إعادة تعيين كلمة المرور', 'Reset password')} ${member.full_name}`}
+                  title={t('إعادة تعيين كلمة المرور إلى 123456789', 'Reset the password to 123456789')}
+                >
+                  <KeyRound size={15} aria-hidden="true" />
+                </button>
+              )}
               <button
                 type="button"
                 className="member-dir-action member-dir-action--icon"
@@ -140,3 +153,4 @@ export function MemberCards({
     </ul>
   );
 }
+import { KeyRound } from 'lucide-react';

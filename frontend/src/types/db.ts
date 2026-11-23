@@ -403,7 +403,7 @@ export interface Database {
       get_member_tasks: { Args: { p_member_id: number; p_device_token: string }; Returns: Task[] };
       get_member_bonus_infinite: { Args: { p_member_id: number; p_device_token: string }; Returns: boolean };
       get_admin_access: { Args: never; Returns: AdminAccess };
-      get_member_password_access: { Args: never; Returns: { member_id: number; email: string; auth_user_id: string; active: boolean; password_ready: boolean } | null };
+      get_member_password_access: { Args: never; Returns: { member_id: number; email: string; auth_user_id: string; active: boolean; password_ready: boolean; must_change_password: boolean } | null };
       get_member_pending_review: { Args: never; Returns: { status: string } | null };
       ensure_owner_member_identity: { Args: never; Returns: { member_id: number; email: string; created: boolean } | null };
       admin_list_accounts: { Args: never; Returns: AdminAccount[] };

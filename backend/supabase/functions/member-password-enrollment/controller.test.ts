@@ -20,6 +20,12 @@ type State = {
   reviews: Array<{ invitation_id: string; claim_id: string }>;
   joinReviews: unknown[];
   approvalResult: 'approved' | 'already_approved' | 'rejected';
+  directReset: { invitation_id: string; claim_id: string; member_id: number; email: string; auth_user_id: string } | null;
+  directResetError: string | null;
+  verifyPassword: boolean;
+  directComplete: boolean;
+  clearedMustChange: boolean;
+  abandoned: string[];
 };
 
 const baseState = (): State => ({
@@ -39,6 +45,18 @@ const baseState = (): State => ({
   reviews: [],
   joinReviews: [],
   approvalResult: 'approved',
+  directReset: {
+    invitation_id: '88888888-8888-4888-8888-888888888888',
+    claim_id: '99999999-9999-4999-8999-999999999999',
+    member_id: 9,
+    email: 'member@phantoms-test.example',
+    auth_user_id: '77777777-7777-4777-8777-777777777777',
+  },
+  directResetError: null,
+  verifyPassword: true,
+  directComplete: true,
+  clearedMustChange: true,
+  abandoned: [],
 });
 
 function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
@@ -75,6 +93,24 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
         : { data: (state.approvalResult === 'already_approved'
           ? { approved: false, status: 'already_approved' }
           : { approved: true, member_id: args?.p_member_id }) as T, error: null };
+      if (rpcName === 'member_password_begin_direct_reset' || rpcName === 'member_password_begin_self_change') {
+        return state.directResetError
+          ? { data: null, error: { message: state.directResetError } }
+          : { data: state.directReset as T, error: null };
+      }
+      if (rpcName === 'member_password_complete') {
+        return state.directComplete
+          ? { data: { ok: true } as T, error: null }
+          : { data: null, error: { message: 'completion unavailable' } };
+      }
+      if (rpcName === 'member_password_abandon_direct_reset') {
+        state.abandoned.push(String(args?.p_invitation_id));
+        return { data: { ok: true, status: 'revoked' } as T, error: null };
+      }
+      if (rpcName === 'member_password_clear_must_change') {
+        state.clearedMustChange = true;
+        return { data: true as T, error: null };
+      }
       return { data: null, error: { message: 'unexpected rpc' } };
     },
   });
@@ -98,6 +134,14 @@ function fakeRuntime(state: State, authorizedAdmin = true): ControllerRuntime {
     },
     async authorizeAdmin(authorization) {
       return authorizedAdmin && authorization === 'Bearer admin' ? { userId: '66666666-6666-4666-8666-666666666666' } : null;
+    },
+    async authorizeRecovery(authorization) {
+      if (!authorizedAdmin || authorization !== 'Bearer member') return null;
+      return { userId: '77777777-7777-4777-8777-777777777777', email: 'member@phantoms-test.example', db: client('member') };
+    },
+    async verifyMemberPassword(email, password) {
+      state.calls.push({ client: 'auth', name: 'verifyMemberPassword', args: { email, password } });
+      return state.verifyPassword;
     },
   };
 }
@@ -839,4 +883,150 @@ test('production CORS preflight reaches the handler before configuration checks 
 
   const config = readFileSync(new URL('../../config.toml', import.meta.url), 'utf8');
   assert.match(config, /\[functions\.member-password-enrollment\]\s*verify_jwt\s*=\s*false/);
+});
+
+test('an administrator sets the default temporary password without issuing a link', async () => {
+  const state = baseState();
+  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request({ action: 'set_password', memberId: 9 }, { Authorization: 'Bearer admin' }),
+  ));
+  assert.deepEqual(result, {
+    ok: true,
+    memberId: 9,
+    email: 'member@phantoms-test.example',
+    temporaryPassword: '123456789',
+    mustChangePassword: true,
+  });
+  const begin = state.calls.find((call) => call.name === 'member_password_begin_direct_reset');
+  assert.equal(begin?.args?.p_reason, 'admin_reset');
+  assert.equal(begin?.args?.p_member_id, 9);
+  assert.equal(begin?.args?.p_actor_user_id, '66666666-6666-4666-8666-666666666666');
+  const update = state.calls.find((call) => call.name === 'updateUserById');
+  assert.equal(update?.args?.userId, '77777777-7777-4777-8777-777777777777');
+  assert.equal(update?.args?.password, '123456789');
+  const complete = state.calls.find((call) => call.name === 'member_password_complete');
+  assert.equal(complete?.args?.p_claim_id, '99999999-9999-4999-8999-999999999999');
+  assert.equal(state.calls.some((call) => call.name === 'member_password_issue_invitation'), false);
+  assert.equal(state.abandoned.length, 0);
+});
+
+test('the administrator may choose the temporary password but never a weak one', async () => {
+  const state = baseState();
+  const okResult = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request({ action: 'set_password', memberId: 9, password: 'Phantoms-Temp-2026' }, { Authorization: 'Bearer admin' }),
+  ));
+  assert.equal(okResult.temporaryPassword, 'Phantoms-Temp-2026');
+
+  const weakState = baseState();
+  const weak = await createMemberPasswordEnrollmentController(fakeRuntime(weakState))(
+    request({ action: 'set_password', memberId: 9, password: 'short' }, { Authorization: 'Bearer admin' }),
+  );
+  assert.equal(weak.status, 400);
+  assert.deepEqual(await json(weak), { code: 'WEAK_PASSWORD' });
+  assert.equal(weakState.calls.some((call) => call.name === 'member_password_begin_direct_reset'), false);
+  assert.equal(weakState.calls.some((call) => call.name === 'updateUserById'), false);
+});
+
+test('setting a password requires an authorised administrator and an eligible member', async () => {
+  const anonymous = baseState();
+  const unauthorized = await createMemberPasswordEnrollmentController(fakeRuntime(anonymous))(
+    request({ action: 'set_password', memberId: 9 }),
+  );
+  assert.equal(unauthorized.status, 401);
+  assert.equal(anonymous.calls.length, 0);
+
+  const disabledState = baseState();
+  disabledState.directResetError = 'MEMBER_DISABLED';
+  const disabled = await createMemberPasswordEnrollmentController(fakeRuntime(disabledState))(
+    request({ action: 'set_password', memberId: 9 }, { Authorization: 'Bearer admin' }),
+  );
+  assert.equal(disabled.status, 400);
+  assert.deepEqual(await json(disabled), { code: 'MEMBER_DISABLED' });
+  assert.equal(disabledState.calls.some((call) => call.name === 'updateUserById'), false);
+});
+
+test('an explicit Auth rejection releases the claim so the member is never locked out', async () => {
+  const state = baseState();
+  state.authUpdateError = 'auth rejected the write';
+  const response = await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request({ action: 'set_password', memberId: 9 }, { Authorization: 'Bearer admin' }),
+  );
+  assert.equal(response.status, 503);
+  assert.deepEqual(await json(response), { code: 'SERVER_UNAVAILABLE' });
+  assert.deepEqual(state.abandoned, ['88888888-8888-4888-8888-888888888888']);
+  assert.equal(state.calls.some((call) => call.name === 'member_password_complete'), false);
+});
+
+test('a member replaces their own password after proving the current one', async () => {
+  const state = baseState();
+  const result = await json(await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request({
+      action: 'change_password',
+      currentPassword: '123456789',
+      newPassword: 'PersonalPassword2026',
+      confirmPassword: 'PersonalPassword2026',
+    }, { Authorization: 'Bearer member' }),
+  ));
+  assert.deepEqual(result, { ok: true, mustChangePassword: false });
+  assert.equal(state.calls.some((call) => call.name === 'verifyMemberPassword'), true);
+  const begin = state.calls.find((call) => call.name === 'member_password_begin_self_change');
+  assert.equal(begin?.args?.p_auth_user_id, '77777777-7777-4777-8777-777777777777');
+  const update = state.calls.find((call) => call.name === 'updateUserById');
+  assert.equal(update?.args?.password, 'PersonalPassword2026');
+  assert.equal(state.clearedMustChange, true);
+});
+
+test('a wrong current password or a weak replacement never reaches Auth', async () => {
+  const wrongState = baseState();
+  wrongState.verifyPassword = false;
+  const wrong = await createMemberPasswordEnrollmentController(fakeRuntime(wrongState))(
+    request({
+      action: 'change_password',
+      currentPassword: 'not-my-password',
+      newPassword: 'PersonalPassword2026',
+      confirmPassword: 'PersonalPassword2026',
+    }, { Authorization: 'Bearer member' }),
+  );
+  assert.equal(wrong.status, 400);
+  assert.deepEqual(await json(wrong), { code: 'INVALID_CREDENTIALS' });
+  assert.equal(wrongState.calls.some((call) => call.name === 'member_password_begin_self_change'), false);
+
+  const weakState = baseState();
+  const weak = await createMemberPasswordEnrollmentController(fakeRuntime(weakState))(
+    request({
+      action: 'change_password',
+      currentPassword: '123456789',
+      newPassword: 'weakpass1',
+      confirmPassword: 'weakpass1',
+    }, { Authorization: 'Bearer member' }),
+  );
+  assert.equal(weak.status, 400);
+  assert.deepEqual(await json(weak), { code: 'WEAK_PASSWORD' });
+  assert.equal(weakState.calls.length, 0);
+
+  const mismatchState = baseState();
+  const mismatch = await createMemberPasswordEnrollmentController(fakeRuntime(mismatchState))(
+    request({
+      action: 'change_password',
+      currentPassword: '123456789',
+      newPassword: 'PersonalPassword2026',
+      confirmPassword: 'PersonalPassword2027',
+    }, { Authorization: 'Bearer member' }),
+  );
+  assert.equal(mismatch.status, 400);
+  assert.deepEqual(await json(mismatch), { code: 'PASSWORD_MISMATCH' });
+});
+
+test('changing a password needs a member session', async () => {
+  const state = baseState();
+  const response = await createMemberPasswordEnrollmentController(fakeRuntime(state))(
+    request({
+      action: 'change_password',
+      currentPassword: '123456789',
+      newPassword: 'PersonalPassword2026',
+      confirmPassword: 'PersonalPassword2026',
+    }),
+  );
+  assert.equal(response.status, 401);
+  assert.equal(state.calls.length, 0);
 });

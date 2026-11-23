@@ -76,6 +76,24 @@ const runtime = {
     if (userError || !userData.user?.id || !email) return null;
     return { userId: userData.user.id, email, db: recoveryClient };
   },
+  // A member changing their password must still know the current one. GoTrue is
+  // the only component that can check a bcrypt hash, so the Edge proves the
+  // password with a password grant and discards the issued session.
+  verifyMemberPassword: async (email: string, password: string) => {
+    if (!configReady || !email || !password) return false;
+    try {
+      const verification = await boundedFetch(`${safeUrl}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { apikey: safeAnonKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const verified = verification.ok;
+      await verification.body?.cancel().catch(() => undefined);
+      return verified;
+    } catch {
+      return false;
+    }
+  },
 } as ControllerRuntime & RecoveryRuntime;
 
 serve(createMemberPasswordEnrollmentController(runtime, {
