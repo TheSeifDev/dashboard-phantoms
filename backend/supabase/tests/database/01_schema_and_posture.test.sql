@@ -23,7 +23,8 @@ SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations
 -- Tables present / removed
 -- ---------------------------------------------------------------------------
 SELECT tables_are('public', ARRAY[
-  'admin_accounts', 'admin_emails', 'announcements', 'member_custom_fields',
+  'admin_accounts', 'admin_emails', 'admin_capability_grants', 'admin_capability_requests',
+  'announcements', 'member_custom_fields',
   'member_app_usage', 'member_device_sessions', 'member_evaluations', 'member_infinite_bonus_events',
   'member_password_audit', 'member_password_invitations', 'member_password_rate_limits',
   'member_password_recovery_sessions', 'member_strikes',
