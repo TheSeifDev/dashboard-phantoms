@@ -598,5 +598,25 @@
     "remote_applied_timestamp": "20261124120100",
     "original_source_version": "20261124120100",
     "original_source_filename": "backend/supabase/migrations/20261124120100_telegram_bot_runtime.sql"
+  },
+  {
+    "version": "20261124150000",
+    "name": "icpc_hub_schema",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124150000_icpc_hub_schema.sql",
+    "sha256": "ccb5cfd2fd74f3fd30f27ea503eba0a88c64bf5f5303ba2b1d0729e1fbc43215",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124150000",
+    "original_source_version": "20261124150000",
+    "original_source_filename": "backend/supabase/migrations/20261124150000_icpc_hub_schema.sql"
+  },
+  {
+    "version": "20261124150100",
+    "name": "icpc_hub_api",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124150100_icpc_hub_api.sql",
+    "sha256": "e7ce1dbe61c439ab47091a73da0deb8e8b3a855e9c54a767b4efd1212ff1b18d",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124150100",
+    "original_source_version": "20261124150100",
+    "original_source_filename": "backend/supabase/migrations/20261124150100_icpc_hub_api.sql"
   }
 ]

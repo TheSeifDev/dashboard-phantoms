@@ -49,6 +49,8 @@ const LedgerPage = lazy(() => import('../features/ledger/LedgerPage'));
 const RankingPage = lazy(() => import('../features/ranking/RankingPage'));
 const AiAssistantPage = lazy(() => import('../features/ai-assistant/AiAssistantPage'));
 const TelegramPage = lazy(() => import('../features/telegram/TelegramPage'));
+const AdminIcpc = lazy(() => import('../features/icpc/AdminIcpc'));
+const MemberIcpc = lazy(() => import('../features/icpc/MemberIcpc'));
 const AnnouncementsPage = lazy(() => import('../features/admin/announcements/AnnouncementsPage'));
 const AdminAccountsPage = lazy(() => import('../features/admin/access/AdminAccountsPage'));
 const TeamsManagementPage = lazy(() => import('../features/teams/TeamsManagementPage'));
@@ -235,6 +237,7 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
       { path: 'ledger', element: <Page><MemberLedgerPage /></Page> },
       { path: 'ranking', element: <Page><MemberRankingPage /></Page> },
       { path: 'projects', element: <Page><MemberWebProjectsPage /></Page> },
+      { path: 'icpc/*', element: <Page><MemberIcpc /></Page> },
     ],
   },
   {
@@ -281,6 +284,7 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
       { path: 'announcements', element: <AdminSection permission="announcements"><Page><AnnouncementsPage /></Page></AdminSection> },
       { path: 'ai-assistant', element: <AdminSection permission="ai_assistant"><Page><AiAssistantPage /></Page></AdminSection> },
       { path: 'telegram', element: <AdminSection permission="whatsapp"><Page><TelegramPage /></Page></AdminSection> },
+      { path: 'icpc/*', element: <AdminSection permission="dashboard"><Page><AdminIcpc /></Page></AdminSection> },
       { path: 'whatsapp', element: <Navigate to="/admin/telegram" replace /> },
       { path: 'admins', element: <ProtectedOwnerRoute><Page><AdminAccountsPage /></Page></ProtectedOwnerRoute> },
       { path: 'teams', element: <ProtectedOwnerRoute><Page><TeamsManagementPage /></Page></ProtectedOwnerRoute> },
