@@ -54,11 +54,11 @@ SELECT is((public.telegram_member_link_code() ->> 'code') IS NOT NULL, true,
   'an enabled bot issues a link code for the member');
 SELECT is(public.telegram_member_link_code() ->> 'code', public.telegram_member_link_code() ->> 'code',
   'asking again returns the same unexpired code');
-SELECT is((SELECT count(*)::int FROM public.telegram_link_codes WHERE user_id = phantoms_test.uid('tg2_m3')), 1,
-  'only one live code exists per member');
 
 RESET ROLE;
 SELECT phantoms_test.clear_auth();
+SELECT is((SELECT count(*)::int FROM public.telegram_link_codes WHERE user_id = phantoms_test.uid('tg2_m3')), 1,
+  'only one live code exists per member');
 UPDATE public.telegram_link_codes
    SET expires_at = now() - INTERVAL '1 minute'
  WHERE user_id = phantoms_test.uid('tg2_m3');
