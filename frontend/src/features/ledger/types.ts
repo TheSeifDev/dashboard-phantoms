@@ -158,6 +158,22 @@ export interface LedgerDueDraft {
   amount: string;
   due_on?: string;
 }
+/** الزام جماعي: إما مبلغ إجمالي بيتقسم، أو مبلغ للفرد بيتضرب في العدد. */
+export type LedgerDueMode = 'total' | 'per_member';
+export interface LedgerDueBulkDraft {
+  label: string;
+  mode: LedgerDueMode;
+  amount: string;
+  member_ids: number[];
+  due_on?: string;
+}
+export interface LedgerDueBulkResult {
+  created: number;
+  skipped: number;
+  per_member: number;
+  total: number;
+  members: number;
+}
 export interface LedgerPaymentDraft {
   amount: string;
   receiver_user_id: string;

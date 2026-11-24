@@ -9,6 +9,7 @@ import type {
   LedgerSeriesPoint,
   MemberLedgerPayload,
 } from './types';
+import type { LedgerDueBulkDraft, LedgerDueBulkResult } from './types';
 interface RpcResult {
   data: unknown;
   error: { message?: string } | null;
@@ -40,7 +41,29 @@ export const ledgerKeys = {
   admin: (unit: string | null) => ['ledger', 'admin', unit ?? 'all'] as const,
   member: () => ['ledger', 'member'] as const,
   series: (unit: string | null) => ['ledger', 'series', unit ?? 'all'] as const,
+  directory: () => ['ledger', 'directory'] as const,
 };
+export interface LedgerDirectoryMember {
+  id: number;
+  full_name: string | null;
+  academic_number: string | null;
+  unit: string | null;
+  work_status: string | null;
+}
+export function useLedgerDirectory(enabled = true) {
+  return useQuery({
+    queryKey: ledgerKeys.directory(),
+    staleTime: 60_000,
+    enabled,
+    queryFn: () =>
+      callRpc<{ members: LedgerDirectoryMember[] }>(
+        adminRpc,
+        'admin_ledger_directory',
+        {},
+        'معرفناش نحمّل قائمة الأعضاء.',
+      ).then((payload) => payload.members ?? []),
+  });
+}
 export function useAdminLedger(unit: string | null = null) {
   return useQuery({
     queryKey: ledgerKeys.admin(unit),
@@ -148,6 +171,20 @@ export function useDeclarePayment() {
         'member_ledger_declare_payment',
         { p_payload: draft },
         'معرفناش نسجّل الدفعة.',
+      ),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSaveLedgerDueBulk() {
+  const invalidate = useLedgerInvalidation();
+  return useMutation({
+    mutationFn: ({ draft }: { draft: LedgerDueBulkDraft }) =>
+      callRpc<LedgerDueBulkResult>(
+        adminRpc,
+        'admin_ledger_save_due_bulk',
+        { p_payload: draft },
+        'معرفناش نحفظ الالتزام.',
       ),
     onSuccess: invalidate,
   });

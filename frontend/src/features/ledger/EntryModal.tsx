@@ -9,6 +9,7 @@ export interface EntryMemberOption {
   id: number;
   full_name: string | null;
   academic_number?: string | null;
+  unit?: string | null;
   work_status?: string | null;
 }
 const KIND_META: Record<LedgerKind, { title: [string, string]; icon: typeof Wallet; hint: [string, string] }> = {
