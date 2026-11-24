@@ -7,7 +7,7 @@ SELECT no_plan();
 -- Fixtures -------------------------------------------------------------------
 SELECT phantoms_test.create_member('gh_owner', NULL, true);
 SELECT phantoms_test.create_member('gh_other', NULL, true);
-SELECT phantoms_test.create_member('gh_idle');
+SELECT phantoms_test.create_member('gh_idle', NULL, true);
 -- Posture: عقود الـ RPC -------------------------------------------------------
 SELECT has_function('public', 'member_github_link', ARRAY['text']::name[],
   'member_github_link(text) exists');
