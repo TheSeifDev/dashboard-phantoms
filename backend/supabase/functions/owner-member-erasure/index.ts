@@ -309,7 +309,10 @@ export function createHandler({ createClient, env = defaultEnv, now = () => Date
       if (authError || !isUuid(userId) || !verifiedTokenClaims(authorization, userId, now)) return { status: 'unauthorized' };
       const { data: access, error: accessError } = await caller.rpc('get_admin_access');
       if (accessError) return { status: 'unavailable' };
-      if (!isRecord(access) || access.is_owner !== true) return { status: 'not_owner' };
+      // المالك، أو مشرف عنده منحة full_owner سارية من المالك.
+      const hasOwnerAuthority = isRecord(access)
+        && (access.is_owner === true || typeof access.owner_authority_until === 'string');
+      if (!hasOwnerAuthority) return { status: 'not_owner' };
       return { status: 'ok', caller, userId };
     } catch {
       return { status: 'unavailable' };

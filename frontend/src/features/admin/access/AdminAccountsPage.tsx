@@ -12,7 +12,10 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import { CardSkeletons } from '../../../components/ui/Skeleton';
 import { Modal } from '../../../components/ui/Modal';
-import { useAdminAccess, useAdminAccounts, useAddAdminAccount, useDemoteAdminAccount, useRemoveAdminAccount, useUpdateAdminPermissions } from './api';
+import { useAdminAccess, useAdminAccounts, useAddAdminAccount, useCapabilityState, useDemoteAdminAccount, useRemoveAdminAccount, useUpdateAdminPermissions } from './api';
+import { CapabilityGate } from './CapabilityGate';
+import { OwnerCapabilityPanel } from './OwnerCapabilityPanel';
+import { AdminPasswordResetModal } from './AdminPasswordResetModal';
 import type { AdminAccount, AdminPermission, AdminPermissions } from '../../../types/db';
 import { ADMIN_PERMISSION_OPTIONS, FULL_ADMIN_PERMISSIONS, normalizeAdminPermissions } from './permissions';
 import { useLocale } from '../../../i18n/useLocale';
@@ -50,6 +53,8 @@ export default function AdminAccountsPage() {
   const [pendingRemoval, setPendingRemoval] = useState<AdminAccount | null>(null);
   const [editingAccount, setEditingAccount] = useState<AdminAccount | null>(null);
   const [permissionDraft, setPermissionDraft] = useState<AdminPermissions>(FULL_ADMIN_PERMISSIONS);
+  const [resetAccount, setResetAccount] = useState<AdminAccount | null>(null);
+  const capabilities = useCapabilityState(Boolean(access.data?.is_admin));
 
   const addAdmin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -134,13 +139,30 @@ export default function AdminAccountsPage() {
       </div>
     );
   }
-  if (!access.data?.is_owner) {
+  if (!access.data?.is_admin) {
     return (
       <div dir={dir}>
         <EmptyState
-          title={t('إدارة الحسابات للمالك فقط', 'Account management is restricted to the owner')}
-          description={t('حسابك يقدر يدير بيانات النظام، لكن إضافة المشرفين أو حذفهم محصورة بمالك النظام.', 'Your account can manage system data, but only the system owner can add or remove administrators.')}
+          title={t('إدارة الحسابات للمالك والمشرفين', 'Account management is for the owner and administrators')}
+          description={t('حسابك مش من حسابات الإدارة، فمش متاح له إدارة المشرفين.', 'Your account is not an administrator account, so administrator management is unavailable.')}
         />
+      </div>
+    );
+  }
+
+  const canManageAccounts = capabilities.data?.is_owner === true || capabilities.data?.capabilities?.admin_accounts?.allowed === true;
+
+  if (!canManageAccounts) {
+    return (
+      <div className="grid gap-4" dir={dir}>
+        <PageHeader
+          icon={<ShieldCheck size={24} />}
+          title={t('إدارة المشرفين', 'Manage administrators')}
+          description={t('الصفحة دي محتاجة موافقة المالك، وتقدر تطلبها لمدة محددة.', 'This page needs owner approval, which you can request for a limited time.')}
+        />
+        <CapabilityGate capability="admin_accounts" title={t('إدارة المشرفين', 'Manage administrators')}>
+          <div />
+        </CapabilityGate>
       </div>
     );
   }
@@ -154,6 +176,8 @@ export default function AdminAccountsPage() {
         title={t('إدارة المشرفين', 'Manage administrators')}
         description={t('مالك النظام يملك كامل الصلاحيات. حدد الأقسام المتاحة لكل مشرف أو احذف حساب دخوله بالكامل.', 'The system owner keeps full access. Choose which sections each administrator can access, or remove their sign-in account.')}
       />
+
+      {capabilities.data?.is_owner === true && <OwnerCapabilityPanel />}
 
       <Card>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
@@ -264,6 +288,18 @@ export default function AdminAccountsPage() {
                         </Badge>
                         {!isOwner && (
                           <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:flex-wrap sm:justify-end">
+                            {account.member_id ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                icon={<KeyRound size={16} />}
+                                onClick={() => setResetAccount(account)}
+                                aria-label={t(`إعادة تعيين كلمة مرور ${account.email}`, `Reset the password for ${account.email}`)}
+                                fullOnMobile
+                              >
+                                {t('كلمة المرور', 'Password')}
+                              </Button>
+                            ) : null}
                             <Button
                               type="button"
                               variant="secondary"
@@ -376,6 +412,7 @@ export default function AdminAccountsPage() {
           </p>
         </form>
       </Modal>
+      <AdminPasswordResetModal isOpen={resetAccount !== null} account={resetAccount} onClose={() => setResetAccount(null)} />
     </div>
   );
 }

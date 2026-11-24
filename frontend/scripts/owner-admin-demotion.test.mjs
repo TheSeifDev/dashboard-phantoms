@@ -131,6 +131,24 @@ exports.useAuthStore = function useAuthStore(selector) { return selector({ user:
     ['src/store/toast.js', `
 exports.toast = { success(message) { globalThis.__ODM_TOASTS.push({ type: 'success', message }); }, error(message) { globalThis.__ODM_TOASTS.push({ type: 'error', message }); } };
 `],
+    ['src/features/admin/access/CapabilityGate.js', `
+const React = require('react');
+exports.CapabilityGate = function CapabilityGate({ children }) { return React.createElement(React.Fragment, null, children); };
+exports.CapabilityBadge = function CapabilityBadge() { return null; };
+`],
+    ['src/features/admin/access/OwnerCapabilityPanel.js', `
+exports.OwnerCapabilityPanel = function OwnerCapabilityPanel() { return null; };
+`],
+    ['src/features/admin/access/AdminPasswordResetModal.js', `
+exports.AdminPasswordResetModal = function AdminPasswordResetModal() { return null; };
+`],
+    ['src/features/admin/access/capabilities.js', `
+exports.CAPABILITY_OPTIONS = [];
+exports.CAPABILITY_BY_KEY = {};
+exports.CAPABILITY_DURATIONS = [];
+exports.capabilityOf = function capabilityOf() { return null; };
+exports.formatRemaining = function formatRemaining() { return ''; };
+`],
   ]);
   for (const [relativePath, contents] of stubs) {
     const destination = join(harnessRoot, relativePath);
@@ -201,6 +219,8 @@ try {
     globalThis.__ODM_RPC = async (name, args) => {
       globalThis.__ODM_CALLS.push({ name, args });
       if (name === 'get_admin_access') return { data: { is_admin: true, is_owner: true, is_team_admin: false, role: 'owner', email: 'owner@phantoms-test.example', permissions: {}, teams: [] }, error: null };
+      if (name === 'admin_capability_state') return { data: { is_owner: true, capabilities: {}, pending_count: 0 }, error: null };
+      if (name === 'admin_capability_inbox') return { data: { requests: [], grants: [] }, error: null };
       if (name === 'admin_list_accounts') return { data: [{ ...ACCOUNT }, { user_id: OWNER, email: 'owner@phantoms-test.example', role: 'owner', created_at: ACCOUNT.created_at, created_by: null, permissions: ACCOUNT.permissions }], error: null };
       if (name === 'admin_demote_account') {
         if (globalThis.__ODM_DEMOTION_GATE) return globalThis.__ODM_DEMOTION_GATE;
