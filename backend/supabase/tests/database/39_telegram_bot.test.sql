@@ -97,7 +97,7 @@ SELECT ok((SELECT count(*) FROM public.telegram_outbox WHERE kind = 'announcemen
   'a published announcement reaches the outbox');
 
 INSERT INTO public.member_evaluations (member_id, title, grade, points, feedback, created_by)
-SELECT m.id, 'Telegram evaluation', 'A', 5, 'تمام', phantoms_test.uid('tg_owner')
+SELECT m.id, 'Telegram evaluation', 'excellent', 5, 'تمام', phantoms_test.uid('tg_owner')
 FROM public.members AS m WHERE m.email = 'tg-member@phantoms-test.example';
 SELECT ok((SELECT count(*) FROM public.telegram_outbox WHERE kind = 'evaluation') >= 1,
   'a new evaluation reaches the outbox');
