@@ -9,6 +9,14 @@ export interface MemberAppUsage {
   last_used_at: string;
   last_app_version: string;
   last_app_build: string;
+  platform: AppUsagePlatform;
+}
+
+/** Native platforms that can report app use; the web build never reports. */
+export type AppUsagePlatform = 'android' | 'ios';
+
+export function appUsagePlatform(value: unknown): AppUsagePlatform | null {
+  return value === 'android' || value === 'ios' ? value : null;
 }
 
 export function appUsageMemberIds(ids: number[]): number[] {
@@ -27,13 +35,15 @@ export function parseAppUsageRows(value: unknown, requested: number[]): MemberAp
       || typeof row.last_used_at !== 'string' || !Number.isFinite(Date.parse(row.last_used_at))
       || Date.parse(row.last_used_at) < Date.parse(row.first_used_at)
       || typeof row.last_app_version !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$/.test(row.last_app_version)
-      || typeof row.last_app_build !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$/.test(row.last_app_build)) {
+      || typeof row.last_app_build !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$/.test(row.last_app_build)
+      || appUsagePlatform(row.platform) === null) {
       throw new Error('APP_USAGE_UNAVAILABLE');
     }
     seen.add(row.member_id);
     return {
       member_id: row.member_id, first_used_at: row.first_used_at, last_used_at: row.last_used_at,
       last_app_version: row.last_app_version, last_app_build: row.last_app_build,
+      platform: appUsagePlatform(row.platform) as AppUsagePlatform,
     };
   });
 }
@@ -60,9 +70,21 @@ export function useOwnerAppUsage(ownerId: string | null, isOwner: boolean, ids: 
   });
 }
 
-export async function recordMemberAppUsage(deviceToken: string, version: string, build: string): Promise<void> {
+export async function recordMemberAppUsage(deviceToken: string, version: string, build: string, platform: AppUsagePlatform): Promise<void> {
   const { error } = await memberSupabase.rpc('member_record_app_usage', {
-    p_device_token: deviceToken, p_app_version: version, p_app_build: build,
+    p_device_token: deviceToken, p_app_version: version, p_app_build: build, p_platform: platform,
+  });
+  if (error) throw new Error('APP_USAGE_UNAVAILABLE');
+}
+
+/**
+ * حسابات الإدارة (مالك/أدمن) بتدخل من بوابة الإدارة، فمش بتمر على مسار العضو
+ * اللي بيرفض الأدمن. الدالة دي بتسجل استخدام الحساب لنفسه فقط: الخادم بيحدد
+ * العضو من ربط الدخول، ومفيش أي معرّف جاي من المتصفح.
+ */
+export async function recordAdminAppUsage(version: string, build: string, platform: AppUsagePlatform): Promise<void> {
+  const { error } = await supabase.rpc('admin_record_app_usage', {
+    p_app_version: version, p_app_build: build, p_platform: platform,
   });
   if (error) throw new Error('APP_USAGE_UNAVAILABLE');
 }

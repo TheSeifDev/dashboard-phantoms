@@ -558,5 +558,15 @@
     "remote_applied_timestamp": "20261124080000",
     "original_source_version": "20261124080000",
     "original_source_filename": "backend/supabase/migrations/20261124080000_ledger_series_window_fix.sql"
+  },
+  {
+    "version": "20261124100000",
+    "name": "member_app_usage_platform_and_admin",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124100000_member_app_usage_platform_and_admin.sql",
+    "sha256": "14346ee91d57e09e4993dd7aea314aaa0bddcdcec4dd5d7bc91fda43071a90ec",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124100000",
+    "original_source_version": "20261124100000",
+    "original_source_filename": "backend/supabase/migrations/20261124100000_member_app_usage_platform_and_admin.sql"
   }
 ]
