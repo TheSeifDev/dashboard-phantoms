@@ -23,6 +23,8 @@ export function MemberProfileCompletionGuard({ children }: { children: ReactNode
   );
   // Every profile field is mandatory, but only the core identity fields block
   // the workspace; the rest is collected by the completion banner + reminders.
-  if (!isMemberCoreProfileComplete(profile.data)) return <Navigate to="/portal/settings" replace state={{ profileCompletionRequired: true, from: location.pathname }} />;
+  // صفحة الإعدادات نفسها هي مكان إكمال البيانات، فمينفعش تعمل redirect لنفسها.
+  const onSettings = location.pathname.replace(/\/+$/, '') === '/portal/settings';
+  if (!isMemberCoreProfileComplete(profile.data) && !onSettings) return <Navigate to="/portal/settings" replace state={{ profileCompletionRequired: true, from: location.pathname }} />;
   return <>{children}</>;
 }

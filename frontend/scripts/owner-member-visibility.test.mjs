@@ -134,6 +134,10 @@ test('preview rejects unsafe optional links and supports Arabic example reset an
 test('preview is guarded and declared, never bypasses protected member Settings', () => {
   const router = readFileSync(join(frontend, 'src/router/index.tsx'), 'utf8');
   assert.match(router, /path: 'members\/experience', element: <AdminSection permission="members">/);
-  assert.match(router, /path: '\/portal\/settings', element: <ProtectedMemberRoute allowIncompleteProfile>/);
+  // الإعدادات بقت child جوه /portal عشان تاخد نفس السايدبار والهيدر، والحماية
+  // بتيجي من مسار الأب (ProtectedMemberRoute) — مفيش مسار منفصل بيعدي الحماية.
+  assert.match(router, /path: '\/portal',\s*element: <ProtectedMemberRoute>/);
+  assert.match(router, /\{ path: 'settings', element: <Page><MemberSettingsPage \/>/);
+  assert.doesNotMatch(router, /path: '\/portal\/settings'/);
   assert.ok(JSON.parse(readFileSync(join(frontend, 'public/manus-routes.json'))).routes.some((r) => r.path === '/admin/members/experience'));
 });
