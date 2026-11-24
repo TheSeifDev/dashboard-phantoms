@@ -96,8 +96,8 @@ VALUES ('Telegram announcement', 'Body', '{"type":"all"}'::jsonb, true);
 SELECT ok((SELECT count(*) FROM public.telegram_outbox WHERE kind = 'announcement') >= 1,
   'a published announcement reaches the outbox');
 
-INSERT INTO public.member_evaluations (member_id, title, grade, points, created_by)
-SELECT m.id, 'Telegram evaluation', 'A', 5, phantoms_test.uid('tg_owner')
+INSERT INTO public.member_evaluations (member_id, title, grade, points, feedback, created_by)
+SELECT m.id, 'Telegram evaluation', 'A', 5, 'تمام', phantoms_test.uid('tg_owner')
 FROM public.members AS m WHERE m.email = 'tg-member@phantoms-test.example';
 SELECT ok((SELECT count(*) FROM public.telegram_outbox WHERE kind = 'evaluation') >= 1,
   'a new evaluation reaches the outbox');
