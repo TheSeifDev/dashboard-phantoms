@@ -143,6 +143,7 @@ SELECT lives_ok(
        (SELECT g.id FROM public.admin_capability_grants AS g
         WHERE g.capability = 'full_owner' LIMIT 1)) $$,
   'the owner can revoke a live grant');
+RESET ROLE;
 SELECT phantoms_test.clear_auth();
 SELECT phantoms_test.login_as('cap_admin');
 SELECT ok(NOT public.is_owner(), 'revoking removes the owner authority immediately');
