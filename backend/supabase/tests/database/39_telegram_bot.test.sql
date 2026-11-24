@@ -107,8 +107,8 @@ VALUES ('Telegram reference', 'https://example.com', phantoms_test.uid('tg_owner
 SELECT ok((SELECT count(*) FROM public.telegram_outbox WHERE kind = 'reference') >= 1,
   'a new reference reaches the outbox');
 
-INSERT INTO public.member_infinite_bonus_events (member_id, member_name, member_email, enabled, actor_user_id)
-SELECT m.id, m.full_name, m.email, true, phantoms_test.uid('tg_owner')
+INSERT INTO public.member_infinite_bonus_events (member_id, member_name, member_email, enabled, reason, actor_user_id, actor_email)
+SELECT m.id, m.full_name, m.email, true, 'اختبار', phantoms_test.uid('tg_owner'), 'owner@phantoms-test.example'
 FROM public.members AS m WHERE m.email = 'tg-member@phantoms-test.example';
 SELECT ok((SELECT count(*) FROM public.telegram_outbox WHERE kind = 'bonus') >= 1,
   'a bonus change reaches the outbox');
