@@ -209,7 +209,6 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
   },
   { path: '/forgot-password', element: <Page><MemberForgotPasswordPage /></Page> },
   { path: '/member/recovery', element: <Page><MemberRecoveryPage /></Page> },
-  { path: '/portal/settings', element: <ProtectedMemberRoute allowIncompleteProfile><Page><MemberSettingsPage /></Page></ProtectedMemberRoute> },
   {
     path: '/join',
     element: <Page><MemberSelfRegisterPage /></Page>,
@@ -238,6 +237,8 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
       { path: 'ranking', element: <Page><MemberRankingPage /></Page> },
       { path: 'projects', element: <Page><MemberWebProjectsPage /></Page> },
       { path: 'icpc/*', element: <Page><MemberIcpc /></Page> },
+      // الإعدادات جوه نفس شِل البوابة (سايدبار + هيدر) — مش صفحة منفصلة.
+      { path: 'settings', element: <Page><MemberSettingsPage /></Page> },
     ],
   },
   {
