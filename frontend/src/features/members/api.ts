@@ -19,7 +19,7 @@ import {
 } from './customFieldsApi';
 import { isInvitePlaceholderMember, syncPendingPre0020Invites } from './memberInviteApi';
 import { ADMIN_MEMBER_COLUMNS, PRE_CUSTOM_FIELDS_ADMIN_MEMBER_COLUMNS } from './memberColumns';
-import { assertMemberDeletionResult } from './member-delete-errors';
+import { assertMemberDeletionResult, classifyOwnerDeletionRpcError, memberDeletionNoMatchError } from './member-delete-errors';
 export { ADMIN_MEMBER_COLUMNS } from './memberColumns';
 
 /**
@@ -220,8 +220,17 @@ export const useOwnerDeleteMember = () => {
   return useMutation({
     mutationFn: async (id: number) => {
       const { data, error } = await (supabase.rpc as unknown as UntypedRpc)('owner_delete_member', { p_member_id: id });
-      if (error) throw new MemberDeletionError('member_delete_unknown');
-      return data as { ok: boolean; member_id: number };
+      if (error) throw new MemberDeletionError(classifyOwnerDeletionRpcError(error.message));
+      const result = data as { ok?: unknown; member_id?: unknown } | null;
+      if (!result || result.ok !== true || result.member_id !== id) throw memberDeletionNoMatchError();
+      // تأكيد فعلي من الخادم: السجل مش موجود خلاص.
+      const { count, error: verifyError } = await supabase
+        .from(TABLES.members)
+        .select('id', { count: 'exact', head: true })
+        .eq('id', id);
+      if (verifyError) throw new MemberDeletionError(classifyOwnerDeletionRpcError(verifyError.message));
+      if ((count ?? 0) > 0) throw memberDeletionNoMatchError();
+      return { ok: true, member_id: id };
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['members'] }),
   });
