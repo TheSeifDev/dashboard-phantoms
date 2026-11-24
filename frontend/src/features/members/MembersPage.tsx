@@ -34,6 +34,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { useAuthStore } from '../../store/auth';
 import { useAdminAccess } from '../admin/access/api';
 import { useOwnerAppUsageDirectory } from '../app-usage/api';
+import { useTelegramLinksOverview } from '../telegram/api';
 import type { AppUsageDisplay } from '../app-usage/MemberAppUsageDetails';
 import './member-directory.css';
 const emptyMember: MemberInsert = {
@@ -141,7 +142,8 @@ export default function MembersPage() {
     filters.information !== 'ALL' ||
     filters.team !== 'ALL' ||
     filters.app !== 'ALL' ||
-    filters.github !== 'ALL';
+    filters.github !== 'ALL' ||
+    filters.telegram !== 'ALL';
 
   const workConditions = useMemo(
     () => [
@@ -201,6 +203,17 @@ export default function MembersPage() {
     return { linked, missing: Math.max(0, total - linked) };
   }, [allMemberIds, githubLinkedIds]);
 
+  // مين ربط تلجرام ومين لسه — من RPC الإدارة اللي بيرجّع كل الأعضاء بحالة الربط.
+  const telegramOverview = useTelegramLinksOverview();
+  const telegramLinkedIds = useMemo(() => {
+    const rows = telegramOverview.data ?? [];
+    return new Set(rows.filter((row) => row.linked).map((row) => row.member_id));
+  }, [telegramOverview.data]);
+  const telegramCounts = useMemo(() => {
+    const total = allMemberIds.length;
+    const linked = allMemberIds.filter((id) => telegramLinkedIds.has(id)).length;
+    return { linked, missing: Math.max(0, total - linked) };
+  }, [allMemberIds, telegramLinkedIds]);
   const visibleMembers = useMemo(
     () => {
       const filtered = (query.data ?? []).filter((member) => {
@@ -224,7 +237,9 @@ export default function MembersPage() {
           : filters.app === 'INSTALLED' ? installedIds.has(member.id) : !installedIds.has(member.id);
         const matchesGithub = filters.github === 'ALL'
           || (filters.github === 'LINKED' ? githubLinkedIds.has(member.id) : !githubLinkedIds.has(member.id));
-        return matchesText && matchesWorkConditions && matchesDevice && matchesAlexandria && matchesActivity && matchesInformation && matchesTeam && matchesApp && matchesGithub;
+        const matchesTelegram = filters.telegram === 'ALL'
+          || (filters.telegram === 'LINKED' ? telegramLinkedIds.has(member.id) : !telegramLinkedIds.has(member.id));
+        return matchesText && matchesWorkConditions && matchesDevice && matchesAlexandria && matchesActivity && matchesInformation && matchesTeam && matchesApp && matchesGithub && matchesTelegram;
       });
       const byName = (left: Member, right: Member) => left.full_name.localeCompare(right.full_name, 'ar');
       switch (filters.sort) {
@@ -241,7 +256,7 @@ export default function MembersPage() {
           return [...filtered].sort(byName);
       }
     },
-    [filters, query.data, pendingDeleteMap, teamsByMember, appUsageReady, installedIds, githubLinkedIds],
+    [filters, query.data, pendingDeleteMap, teamsByMember, appUsageReady, installedIds, githubLinkedIds, telegramLinkedIds],
   );
 
   // العودة لأول صفحة عند تغير الفلاتر أو البيانات أو حجم الصفحة
@@ -478,6 +493,8 @@ export default function MembersPage() {
           appCounts={appCounts}
           showGithubFilter
           githubCounts={githubCounts}
+          showTelegramFilter
+          telegramCounts={telegramCounts}
         />
       </section>
 
@@ -540,6 +557,7 @@ export default function MembersPage() {
               appUsage={appUsage}
               teamsByMember={teamsByMember}
               teamNames={teamNames}
+              telegramLinkedIds={telegramLinkedIds}
               isOwner={isOwner}
               currentOwnerUserId={ownerId}
               onView={setDrawerMember}

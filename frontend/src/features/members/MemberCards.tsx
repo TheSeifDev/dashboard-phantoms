@@ -5,7 +5,7 @@ import { memberSpecializationLabel } from './member-profile-display';
 import { MemberAcademicDetails, MemberInformationStatus, MemberMissingFields } from './MemberAcademicDetails';
 import { MemberAvatar } from '../../components/ui/MemberAvatar';
 import { OwnerMemberErasure } from './OwnerMemberErasure';
-import { ChevronDown, Eye, Mail, MapPin, Pencil, Phone, ShieldAlert, Trash2 } from 'lucide-react';
+import { ChevronDown, Eye, Mail, MapPin, Pencil, Phone, Send, ShieldAlert, Trash2 } from 'lucide-react';
 import { useLocale } from '../../i18n/useLocale';
 import { MemberAppUsageDetails, type AppUsageDisplay } from '../app-usage/MemberAppUsageDetails';
 import { resolveGithubHandle } from '../dashboard/github';
@@ -17,6 +17,7 @@ export function MemberCards({
   appUsage,
   teamsByMember,
   teamNames,
+  telegramLinkedIds,
   isOwner = false,
   currentOwnerUserId = null,
   onView,
@@ -31,6 +32,8 @@ export function MemberCards({
   teamsByMember?: Record<number, string[]>;
   /** كود التيم → الاسم المعروض */
   teamNames?: Record<string, string>;
+  /** أكواد الأعضاء اللي رابطين تلجرام */
+  telegramLinkedIds?: Set<number>;
   isOwner?: boolean;
   currentOwnerUserId?: string | null;
   onView: (member: Member) => void;
@@ -98,6 +101,16 @@ export function MemberCards({
                 <dd>
                   {githubHandle ? (
                     <a className="member-dir-github" href={`https://github.com/${githubHandle}`} target="_blank" rel="noreferrer noopener" dir="ltr" title={t('فتح حساب GitHub', 'Open the GitHub account')}>@{githubHandle}</a>
+                  ) : (
+                    <span className="member-dir-github-missing">{t('مش مربوط', 'Not linked')}</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt><Send size={12} aria-hidden="true" />{t('تلجرام', 'Telegram')}</dt>
+                <dd>
+                  {telegramLinkedIds?.has(member.id) ? (
+                    <span className="member-dir-github">{t('مربوط', 'Linked')}</span>
                   ) : (
                     <span className="member-dir-github-missing">{t('مش مربوط', 'Not linked')}</span>
                   )}
