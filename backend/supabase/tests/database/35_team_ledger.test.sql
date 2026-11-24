@@ -295,4 +295,45 @@ SELECT lives_ok(
 SELECT is((public.admin_ledger_overview() #>> '{summary,expected}')::numeric, 500::numeric,
   'deleting a due lowers the expected total');
 
+-- الالتزام الجماعي: إجمالي بيتقسم، أو للفرد بيتضرب -------------------------
+SELECT has_function('public', 'admin_ledger_save_due_bulk', ARRAY['jsonb']::name[],
+  'admin_ledger_save_due_bulk(jsonb) exists');
+SELECT has_function('public', 'admin_ledger_directory', ARRAY[]::name[],
+  'admin_ledger_directory() exists');
+SELECT is(
+  (SELECT count(*)::int FROM jsonb_array_elements(public.admin_ledger_directory() -> 'members')),
+  (SELECT count(*)::int FROM public.members WHERE COALESCE(work_status, 'active') <> 'left'),
+  'the directory lists every active member, not only the ones with ledger rows');
+SELECT is(
+  (public.admin_ledger_save_due_bulk(jsonb_build_object(
+    'label', 'اشتراك الترم', 'mode', 'total', 'amount', '300',
+    'member_ids', jsonb_build_array(
+      phantoms_test.mid('gld_payer'), phantoms_test.mid('gld_other'), phantoms_test.mid('gld_custom')))) ->> 'per_member')::numeric,
+  100::numeric,
+  'a 300 total splits into 100 per member for three members');
+SELECT is(
+  (public.admin_ledger_save_due_bulk(jsonb_build_object(
+    'label', 'رحلة', 'mode', 'per_member', 'amount', '250',
+    'member_ids', jsonb_build_array(phantoms_test.mid('gld_payer'), phantoms_test.mid('gld_other')))) ->> 'total')::numeric,
+  500::numeric,
+  '250 per member becomes a 500 total for two members');
+SELECT is(
+  (public.admin_ledger_save_due_bulk(jsonb_build_object(
+    'label', 'اشتراك الترم', 'mode', 'total', 'amount', '900',
+    'member_ids', jsonb_build_array(phantoms_test.mid('gld_payer'), phantoms_test.mid('gld_other'), phantoms_test.mid('gld_custom')))) ->> 'skipped')::int,
+  3,
+  'members that already have the due are skipped instead of failing the batch');
+SELECT is(
+  (SELECT sum((entry ->> 'amount')::numeric)
+   FROM jsonb_array_elements(public.admin_ledger_overview() -> 'dues') AS entry
+   WHERE entry ->> 'label' = 'اشتراك الترم'),
+  300::numeric,
+  'the stored dues add up to exactly the requested total');
+RESET ROLE;
+SELECT phantoms_test.clear_auth();
+SELECT phantoms_test.login_as('gld_other');
+SELECT throws_ok(
+  $$ SELECT public.admin_ledger_save_due_bulk('{"label":"nope","amount":"10","member_ids":[1]}'::jsonb) $$,
+  'P0001', NULL,
+  'members cannot create bulk dues');
 SELECT * FROM finish();

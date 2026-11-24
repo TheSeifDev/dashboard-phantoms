@@ -32,13 +32,16 @@ import {
   useDecideLedgerPayment,
   useDeleteLedgerDue,
   useDeleteLedgerEntry,
+  useLedgerDirectory,
   useLedgerSeries,
   useSaveLedgerDue,
+  useSaveLedgerDueBulk,
   useSaveLedgerEntry,
 } from './api';
 import type {
   AdminLedgerPayload,
   LedgerDue,
+  LedgerDueBulkDraft,
   LedgerDueDraft,
   LedgerEntry,
   LedgerEntryDraft,
@@ -56,6 +59,21 @@ import './ledger.css';
 type TabKey = 'all' | 'payment' | 'expense' | 'withdrawal' | 'members' | 'dues';
 const KIND_LABEL: Record<LedgerKind, string> = { payment: 'دفعة', expense: 'مصروف', withdrawal: 'خصم' };
 const KIND_ICON = { payment: ArrowDownLeft, expense: Receipt, withdrawal: ArrowUpRight } as const;
+/** أزرار الحركات: أيقونة + عنوان + سطر توضيحي، والالتزام ليه لون مميز. */
+const QUICK_ACTIONS: Array<{
+  key: LedgerKind | 'due';
+  icon: typeof Wallet;
+  ar: string;
+  en: string;
+  hintAr: string;
+  hintEn: string;
+  tone: 'primary' | 'neutral' | 'accent';
+}> = [
+  { key: 'payment', icon: ArrowDownLeft, ar: 'دفعة', en: 'Payment', hintAr: 'فلوس داخلة', hintEn: 'money in', tone: 'primary' },
+  { key: 'expense', icon: Receipt, ar: 'مصروف', en: 'Expense', hintAr: 'اتصرف في إيه', hintEn: 'what it went on', tone: 'neutral' },
+  { key: 'withdrawal', icon: ArrowUpRight, ar: 'خصم', en: 'Deduction', hintAr: 'سحب عضو', hintEn: 'member withdrawal', tone: 'neutral' },
+  { key: 'due', icon: Target, ar: 'الزام', en: 'Due', hintAr: 'على مجموعة أعضاء', hintEn: 'for a group', tone: 'accent' },
+];
 
 function StatusChip({ status }: { status: LedgerEntry['status'] }) {
   return <span className={`ldg-chip ldg-chip--${status}`}>{LEDGER_STATUS_LABELS[status]}</span>;
@@ -96,6 +114,8 @@ export function LedgerBoard({ members }: { members?: EntryMemberOption[] }) {
   const decide = useDecideLedgerPayment();
   const saveDue = useSaveLedgerDue();
   const removeDue = useDeleteLedgerDue();
+  const saveDueBulk = useSaveLedgerDueBulk();
+  const directory = useLedgerDirectory();
   const [tab, setTab] = useState<TabKey>('all');
   const [query, setQuery] = useState('');
   const [entryModal, setEntryModal] = useState<LedgerKind | null>(null);
@@ -149,6 +169,26 @@ export function LedgerBoard({ members }: { members?: EntryMemberOption[] }) {
     toast.success(t('اتحفظ الالتزام.', 'Due saved.'));
     setDueModal(null);
   };
+  const submitDueBulk = async (draft: LedgerDueBulkDraft) => {
+    const result = await saveDueBulk.mutateAsync({ draft });
+    if (result.created === 0) {
+      toast.info(t('الأعضاء المختارين عندهم نفس الالتزام بالفعل.', 'The selected members already have that due.'));
+      setDueModal(null);
+      return;
+    }
+    toast.success(
+      result.skipped > 0
+        ? t(
+          `اتضاف الالتزام لـ ${result.created} عضو · ${result.skipped} كان عندهم نفس الالتزام.`,
+          `Due added for ${result.created} members · ${result.skipped} already had it.`,
+        )
+        : t(
+          `اتضاف الالتزام لـ ${result.created} عضو — ${money(result.per_member)} للفرد.`,
+          `Due added for ${result.created} members — ${money(result.per_member)} each.`,
+        ),
+    );
+    setDueModal(null);
+  };
   const confirmDeleteEntry = async () => {
     if (!deleteEntry) return;
     try {
@@ -195,7 +235,8 @@ export function LedgerBoard({ members }: { members?: EntryMemberOption[] }) {
       <div className="ldg-topbar" data-ldg-enter>
         <div className="ldg-units" role="group" aria-label={t('فلتر التيم/الوحدة', 'Filter by team or unit')}>
           <button type="button" className="ldg-unit" aria-pressed={unit === null} onClick={() => setUnit(null)}>
-            {t('الكل', 'All')} · {number(totalMembers)}
+            <span>{t('الكل', 'All')}</span>
+            <span className="ldg-unit-count">{number(totalMembers)}</span>
           </button>
           {units.map((item) => (
             <button
@@ -205,23 +246,30 @@ export function LedgerBoard({ members }: { members?: EntryMemberOption[] }) {
               aria-pressed={unit === item.unit}
               onClick={() => setUnit(unit === item.unit ? null : item.unit)}
             >
-              {item.unit} · {number(item.count)}
+              <span>{item.unit}</span>
+              <span className="ldg-unit-count">{number(item.count)}</span>
             </button>
           ))}
         </div>
-        <div className="ldg-actions">
-          <Button icon={<ArrowDownLeft size={17} aria-hidden="true" />} onClick={() => setEntryModal('payment')}>
-            {t('دفعة', 'Payment')}
-          </Button>
-          <Button variant="secondary" icon={<Receipt size={17} aria-hidden="true" />} onClick={() => setEntryModal('expense')}>
-            {t('مصروف', 'Expense')}
-          </Button>
-          <Button variant="secondary" icon={<ArrowUpRight size={17} aria-hidden="true" />} onClick={() => setEntryModal('withdrawal')}>
-            {t('خصم', 'Deduction')}
-          </Button>
-          <Button variant="secondary" icon={<Target size={17} aria-hidden="true" />} onClick={() => setDueModal({ due: null })}>
-            {t('التزام', 'Due')}
-          </Button>
+        <div className="ldg-actions" role="group" aria-label={t('تسجيل حركة', 'Record an entry')}>
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={action.key}
+                type="button"
+                className="ldg-action"
+                data-tone={action.tone}
+                onClick={() => (action.key === 'due' ? setDueModal({ due: null }) : setEntryModal(action.key))}
+              >
+                <span className="ldg-action-icon" aria-hidden="true"><Icon size={17} /></span>
+                <span className="ldg-action-copy">
+                  <strong>{t(action.ar, action.en)}</strong>
+                  <small>{t(action.hintAr, action.hintEn)}</small>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -357,7 +405,8 @@ export function LedgerBoard({ members }: { members?: EntryMemberOption[] }) {
           <div className="ldg-tabs" role="group" aria-label={t('تصفية الحركات', 'Filter entries')}>
             {tabs.map((item) => (
               <button key={item.key} type="button" className="ldg-tab" aria-pressed={tab === item.key} onClick={() => setTab(item.key)}>
-                {item.label} · {number(item.count)}
+                <span>{item.label}</span>
+                <span className="ldg-tab-count">{number(item.count)}</span>
               </button>
             ))}
           </div>
@@ -402,7 +451,7 @@ export function LedgerBoard({ members }: { members?: EntryMemberOption[] }) {
         ) : tab === 'dues' ? (
           <>
             <div className="ldg-toolbar-actions">
-              <Button variant="secondary" icon={<Target size={16} aria-hidden="true" />} onClick={() => setDueModal({ due: null })}>
+              <Button icon={<Target size={16} aria-hidden="true" />} onClick={() => setDueModal({ due: null })}>
                 {t('التزام جديد', 'New due')}
               </Button>
             </div>
@@ -534,10 +583,12 @@ export function LedgerBoard({ members }: { members?: EntryMemberOption[] }) {
         <DueModal
           isOpen
           due={dueModal.due}
-          members={memberOptions}
+          members={directory.data && directory.data.length > 0 ? directory.data : memberOptions}
+          presetMemberId={dueModal.memberId}
           onClose={() => setDueModal(null)}
           onSubmit={submitDue}
-          isPending={saveDue.isPending}
+          onSubmitBulk={submitDueBulk}
+          isPending={saveDue.isPending || saveDueBulk.isPending}
         />
       )}
       <ConfirmDialog

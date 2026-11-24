@@ -618,5 +618,15 @@
     "remote_applied_timestamp": "20261124150100",
     "original_source_version": "20261124150100",
     "original_source_filename": "backend/supabase/migrations/20261124150100_icpc_hub_api.sql"
+  },
+  {
+    "version": "20261124190000",
+    "name": "ledger_bulk_due",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124190000_ledger_bulk_due.sql",
+    "sha256": "5a3a1fe32f2fc371be00663996029a6ee92b991e4aea11031be82952adfe8b03",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124190000",
+    "original_source_version": "20261124190000",
+    "original_source_filename": "backend/supabase/migrations/20261124190000_ledger_bulk_due.sql"
   }
 ]
