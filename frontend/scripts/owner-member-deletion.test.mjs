@@ -295,7 +295,10 @@ test('legacy member deletion is labeled as profile-row-only, not full account er
   const toolbar = readFileSync(path.join(frontend, 'src/features/members/MemberToolbar.tsx'), 'utf8');
   const profileModal = readFileSync(path.join(frontend, 'src/features/members/MemberProfileModal.tsx'), 'utf8');
   assert.ok(membersPage.includes("title={t('تأكيد حذف سجل العضو'"));
-  assert.ok(membersPage.includes("confirmLabel={t('حذف سجل العضو فقط'"));
+  assert.ok(membersPage.includes("t('حذف سجل العضو فقط', 'Delete profile record only')"));
+  assert.ok(membersPage.includes("t('حذف نهائي', 'Delete permanently')"));
+  assert.ok(membersPage.includes('useOwnerDeleteMember'));
+  assert.ok(membersPage.includes('isOwner ? ownerRemove.mutateAsync : remove.mutateAsync'));
   assert.ok(membersPage.includes('هذا لا يحذف حساب تسجيل الدخول ولا يلغي Admin.'));
   assert.ok(membersPage.includes('الحذف العادي موقوف لحفظ سجل الدعوات'));
   assert.ok(membersPage.includes('افتح معاينة المالك الآمنة'));
@@ -307,4 +310,7 @@ test('legacy member deletion is labeled as profile-row-only, not full account er
   assert.ok(memberCards.includes('id={`member-owner-actions-${member.id}`}'));
   assert.ok(profileModal.includes("t('حذف سجل العضو فقط', 'Delete profile record only')"));
   assert.doesNotMatch(membersPage, /member_password_invitations|23503|private@example\.test/);
+  const membersApi = readFileSync(path.join(frontend, 'src/features/members/api.ts'), 'utf8');
+  assert.ok(membersApi.includes("'owner_delete_member'"));
+  assert.ok(membersApi.includes('p_member_id: id'));
 });
