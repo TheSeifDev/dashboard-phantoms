@@ -137,11 +137,13 @@ SELECT ok((public.get_admin_access() ->> 'owner_authority_until') IS NOT NULL,
 -- سحب المنحة ----------------------------------------------------------------
 RESET ROLE;
 SELECT phantoms_test.clear_auth();
+SELECT set_config('phantoms_test.revoke_grant_id',
+  (SELECT g.id::text FROM public.admin_capability_grants AS g
+   WHERE g.capability = 'full_owner' ORDER BY g.id DESC LIMIT 1), false);
 SELECT phantoms_test.login_as('cap_owner');
 SELECT lives_ok(
   $$ SELECT public.admin_revoke_capability_grant(
-       (SELECT g.id FROM public.admin_capability_grants AS g
-        WHERE g.capability = 'full_owner' LIMIT 1)) $$,
+       current_setting('phantoms_test.revoke_grant_id')::bigint) $$,
   'the owner can revoke a live grant');
 RESET ROLE;
 SELECT phantoms_test.clear_auth();
