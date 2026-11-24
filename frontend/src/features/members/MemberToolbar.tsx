@@ -2,6 +2,7 @@ import { useId, useState, type ReactElement } from 'react';
 import { ArrowUpDown, Filter, RotateCcw, Search, SlidersHorizontal, Smartphone, Users, X } from 'lucide-react';
 
 import { useLocale } from '../../i18n/useLocale';
+import { GithubMark } from '../dashboard/GithubMark';
 
 export type MemberActivityFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 export type MemberInformationFilter = 'ALL' | 'COMPLETE' | 'MISSING';
@@ -10,6 +11,8 @@ export type MemberSort = 'name' | 'newest' | 'oldest' | 'incomplete';
 export type MemberTeamFilter = string;
 /** مين نزّل التطبيق ومين لسه */
 export type MemberAppFilter = 'ALL' | 'INSTALLED' | 'NOT_INSTALLED';
+/** مين ربط الكود (GitHub) ومين لسه */
+export type MemberGithubFilter = 'ALL' | 'LINKED' | 'MISSING';
 
 export interface MemberFiltersValue {
   search: string;
@@ -20,6 +23,7 @@ export interface MemberFiltersValue {
   information: MemberInformationFilter;
   team: MemberTeamFilter;
   app: MemberAppFilter;
+  github: MemberGithubFilter;
   sort: MemberSort;
 }
 
@@ -32,6 +36,7 @@ export const EMPTY_MEMBER_FILTERS: MemberFiltersValue = {
   information: 'ALL',
   team: 'ALL',
   app: 'ALL',
+  github: 'ALL',
   sort: 'name',
 };
 
@@ -45,6 +50,7 @@ export function countActiveFilters(value: MemberFiltersValue): number {
     value.information !== 'ALL',
     value.team !== 'ALL',
     value.app !== 'ALL',
+    value.github !== 'ALL',
   ].filter(Boolean).length;
 }
 
@@ -58,6 +64,8 @@ export function MemberToolbar({
   teamOptions = [],
   showAppFilter = false,
   appCounts,
+  showGithubFilter = false,
+  githubCounts,
 }: {
   workConditions: string[];
   value: MemberFiltersValue;
@@ -68,6 +76,8 @@ export function MemberToolbar({
   teamOptions?: Array<{ value: string; label: string; count?: number }>;
   showAppFilter?: boolean;
   appCounts?: { installed: number; missing: number };
+  showGithubFilter?: boolean;
+  githubCounts?: { linked: number; missing: number };
 }) {
   const { t, number } = useLocale();
   const panelId = useId();
@@ -114,6 +124,27 @@ export function MemberToolbar({
       ]
     : [];
 
+  const githubChips: Array<{ key: string; label: string; count?: number; icon: ReactElement; pressed: boolean; toggle: () => void }> = showGithubFilter
+    ? [
+        {
+          key: 'github-linked',
+          label: t('ربطوا الكود', 'Code linked'),
+          count: githubCounts?.linked,
+          icon: <GithubMark size={14} />,
+          pressed: value.github === 'LINKED',
+          toggle: () => set('github', value.github === 'LINKED' ? 'ALL' : 'LINKED'),
+        },
+        {
+          key: 'github-missing',
+          label: t('لسه ما ربطوش', 'Not linked yet'),
+          count: githubCounts?.missing,
+          icon: <GithubMark size={14} />,
+          pressed: value.github === 'MISSING',
+          toggle: () => set('github', value.github === 'MISSING' ? 'ALL' : 'MISSING'),
+        },
+      ]
+    : [];
+
   const tags: Array<{ key: string; label: string; clear: () => void }> = [];
   if (value.search.trim()) tags.push({ key: 'search', label: `${t('بحث', 'Search')}: ${value.search.trim()}`, clear: () => set('search', '') });
   if (value.activity !== 'ALL') tags.push({ key: 'activity', label: value.activity === 'ACTIVE' ? t('نشط', 'Active') : t('غير نشط', 'Inactive'), clear: () => set('activity', 'ALL') });
@@ -122,6 +153,7 @@ export function MemberToolbar({
   if (value.device !== 'ALL') tags.push({ key: 'device', label: devices.find((option) => option.value === value.device)?.label ?? value.device, clear: () => set('device', 'ALL') });
   if (value.work_conditions !== 'ALL') tags.push({ key: 'work_conditions', label: value.work_conditions, clear: () => set('work_conditions', 'ALL') });
   if (value.team !== 'ALL') tags.push({ key: 'team', label: `${t('تيم', 'Team')}: ${teamOptions.find((option) => option.value === value.team)?.label ?? value.team}`, clear: () => set('team', 'ALL') });
+  if (value.github !== 'ALL') tags.push({ key: 'github', label: value.github === 'LINKED' ? t('ربطوا الكود', 'Code linked') : t('لسه ما ربطوش', 'Not linked yet'), clear: () => set('github', 'ALL') });
   if (value.app !== 'ALL') tags.push({ key: 'app', label: value.app === 'INSTALLED' ? t('نزّلوا التطبيق', 'App installed') : t('لسه ما نزّلوه', 'Not installed yet'), clear: () => set('app', 'ALL') });
 
   return (
@@ -189,6 +221,14 @@ export function MemberToolbar({
         {appChips.length > 0 && <span className="member-dir-sep" aria-hidden="true" />}
         {appChips.map((chip) => (
           <button key={chip.key} type="button" className="member-dir-chip" data-tone="app" aria-pressed={chip.pressed} onClick={chip.toggle}>
+            {chip.icon}
+            {chip.label}
+            {typeof chip.count === 'number' && <em className="member-dir-chip-count">{number(chip.count)}</em>}
+          </button>
+        ))}
+        {githubChips.length > 0 && <span className="member-dir-sep" aria-hidden="true" />}
+        {githubChips.map((chip) => (
+          <button key={chip.key} type="button" className="member-dir-chip" data-tone="github" aria-pressed={chip.pressed} onClick={chip.toggle}>
             {chip.icon}
             {chip.label}
             {typeof chip.count === 'number' && <em className="member-dir-chip-count">{number(chip.count)}</em>}
@@ -264,6 +304,16 @@ export function MemberToolbar({
                 <option value="ALL">{t('الكل', 'All')}</option>
                 <option value="INSTALLED">{t('نزّلوا التطبيق', 'App installed')}</option>
                 <option value="NOT_INSTALLED">{t('لسه ما نزّلوه', 'Not installed yet')}</option>
+              </select>
+            </label>
+          )}
+          {showGithubFilter && (
+            <label className="member-dir-field">
+              <span>{t('ربط الكود (GitHub)', 'Code linking (GitHub)')}</span>
+              <select value={value.github} onChange={(event) => set('github', event.target.value as MemberGithubFilter)}>
+                <option value="ALL">{t('الكل', 'All')}</option>
+                <option value="LINKED">{t('ربطوا الكود', 'Code linked')}</option>
+                <option value="MISSING">{t('لسه ما ربطوش', 'Not linked yet')}</option>
               </select>
             </label>
           )}

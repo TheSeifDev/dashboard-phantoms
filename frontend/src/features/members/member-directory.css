@@ -898,7 +898,8 @@ html[lang="ar"] .member-dir-console-title h2 { letter-spacing: 0; }
   background: color-mix(in oklab, var(--pill-active-ink) 18%, transparent);
 }
 .member-dir-chip[data-tone="team"] svg,
-.member-dir-chip[data-tone="app"] svg { opacity: 0.85; }
+.member-dir-chip[data-tone="app"] svg,
+.member-dir-chip[data-tone="github"] svg { opacity: 0.85; }
 
 /* Team badges on member cards */
 .member-dir-teams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
@@ -917,3 +918,9 @@ html[lang="ar"] .member-dir-console-title h2 { letter-spacing: 0; }
 .member-dir-team[data-team="ai"] { border-color: color-mix(in oklab, var(--crew-2) 38%, var(--glass-hairline)); }
 .member-dir-team[data-team="software"] { border-color: color-mix(in oklab, var(--chart-blue) 38%, var(--glass-hairline)); }
 .member-dir-team[data-team="hardware"] { border-color: color-mix(in oklab, var(--chart-amber) 38%, var(--glass-hairline)); }
+
+/* GitHub link state on member cards (Round 31) */
+.member-dir-facts dt svg { display: inline-block; vertical-align: -2px; margin-inline-end: 4px; opacity: .75; }
+.member-dir-github { font-family: var(--font-mono); font-size: 11px; font-weight: 800; color: var(--link); text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: text-decoration-color .18s ease; }
+.member-dir-github:hover { text-decoration-color: currentColor; }
+.member-dir-github-missing { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; border: 1px dashed var(--border-strong); color: var(--text-muted); font-size: 10px; font-weight: 800; }
