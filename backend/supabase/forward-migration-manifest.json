@@ -508,5 +508,45 @@
     "remote_applied_timestamp": "20261124020029",
     "original_source_version": "20261124020000",
     "original_source_filename": "backend/supabase/migrations/20261124020000_member_leaderboard_parity.sql"
+  },
+  {
+    "version": "20261124050000",
+    "name": "global_ledger",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124050000_global_ledger.sql",
+    "sha256": "6d61d8a32dde414ea5bf37a32cdf5b950e747279d01edfa6181b97c850b78ecf",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124050000",
+    "original_source_version": "20261124050000",
+    "original_source_filename": "backend/supabase/migrations/20261124050000_global_ledger.sql"
+  },
+  {
+    "version": "20261124060000",
+    "name": "ledger_series",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124060000_ledger_series.sql",
+    "sha256": "e133fc349e464b99fd93bcf06c2c3e61cddec8095f541741f083debaae393ffb",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124060000",
+    "original_source_version": "20261124060000",
+    "original_source_filename": "backend/supabase/migrations/20261124060000_ledger_series.sql"
+  },
+  {
+    "version": "20261124070000",
+    "name": "ledger_head_scope",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124070000_ledger_head_scope.sql",
+    "sha256": "96e5e5eb7e49093f9d45d6e0dc89426fcac4738556740a20386307dd4bf22b60",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124070000",
+    "original_source_version": "20261124070000",
+    "original_source_filename": "backend/supabase/migrations/20261124070000_ledger_head_scope.sql"
+  },
+  {
+    "version": "20261124080000",
+    "name": "ledger_series_window_fix",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124080000_ledger_series_window_fix.sql",
+    "sha256": "d18ae320e9ee47ef82484c84836c2150fe2ec9724e94b4975920d2d005b27ab6",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124080000",
+    "original_source_version": "20261124080000",
+    "original_source_filename": "backend/supabase/migrations/20261124080000_ledger_series_window_fix.sql"
   }
 ]

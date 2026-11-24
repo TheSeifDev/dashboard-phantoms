@@ -8,7 +8,6 @@
   color-scheme: light;
   /* Brand roots */
   --crimson: #DC143C;
-  --emerald: #10B981;
   --indigo: #5B5BF7;
   --violet: #8B5CF6;
   --fuchsia: #D946EF;
@@ -37,7 +36,7 @@
   --primary-ink: #A1102F;
   --on-primary: #FFFFFF;
   --on-danger: #FFFFFF;
-  --on-success: #04231A;
+  --on-success: #04222B;
   --link: #4338CA;
   --link-hover: #312E81;
   --accent: #4F46E5;
@@ -51,10 +50,11 @@
   --chart-violet: #8B5CF6;
   --chart-amber: #F59E0B;
   /* Team ledger charts: lime signal + neutral bars */
-  --chart-lime: #4FBF2A;
-  --chart-lime-soft: #EAF9E0;
-  --chart-lime-ink: #14350A;
-  --chart-lime-text: #1E6A0B;
+  /* chart accent — كان أخضر وبقى إنديجو زي هوية الداشبورد */
+  --chart-accent: #5B5BF7;
+  --chart-accent-soft: #EDEDFE;
+  --chart-accent-ink: #FFFFFF;
+  --chart-accent-text: #3B3BD0;
   --chart-bar: #DDE3EE;
   --chart-bar-hover: #C7D0E0;
   --chart-track: #EDF0F7;
@@ -70,11 +70,11 @@
   --crew-4: #DC143C;
   --hex-untracked: #D7DCE7;
   /* Semantic */
-  --success: #10B981;
-  --success-hover: #059669;
-  --success-soft: #DDF8EE;
-  --success-border: #A4E6CB;
-  --success-text: #036648;
+  --success: #22B8E6;
+  --success-hover: #1AA6D2;
+  --success-soft: #E0F6FD;
+  --success-border: #A9E4F7;
+  --success-text: #0B5F7C;
   --warning: #B86A05;
   --warning-hover: #92530A;
   --warning-soft: #FEF3E0;
@@ -236,10 +236,10 @@
   --chart-slate: #8A93A8;
   --chart-violet: #A78BFA;
   --chart-amber: #FBBF24;
-  --chart-lime: #8AF54F;
-  --chart-lime-soft: #1C2A15;
-  --chart-lime-ink: #0A1406;
-  --chart-lime-text: #B7FF8A;
+  --chart-accent: #8C8CFF;
+  --chart-accent-soft: #1B1B33;
+  --chart-accent-ink: #0B0B1A;
+  --chart-accent-text: #BFBFFF;
   --chart-bar: #232834;
   --chart-bar-hover: #2F3644;
   --chart-track: #1A1F29;
@@ -253,11 +253,11 @@
   --crew-3: #E05AF0;
   --crew-4: #FF3D63;
   --hex-untracked: #222736;
-  --success: #10B981;
-  --success-hover: #34D399;
-  --success-soft: #0F3428;
-  --success-border: #1E6049;
-  --success-text: #86EFC3;
+  --success: #38C6EF;
+  --success-hover: #22B8E6;
+  --success-soft: #0C2A35;
+  --success-border: #1B5468;
+  --success-text: #8FE2F7;
   --warning: #F0B44C;
   --warning-hover: #F7CA7A;
   --warning-soft: #33270F;

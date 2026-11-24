@@ -72,7 +72,7 @@
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-.tms-metric strong.is-accent { color: var(--chart-lime-text); }
+.tms-metric strong.is-accent { color: var(--chart-accent-text); }
 .tms-metric small { color: var(--text-muted); font-size: 10.5px; line-height: 1.5; }
 
 /* ---------------------------------------------------------------- */
@@ -220,9 +220,9 @@
 }
 .tms-status-filters button:hover { border-color: var(--border-strong); color: var(--text); }
 .tms-status-filters button[aria-pressed='true'] {
-  border-color: var(--chart-lime);
-  background: var(--chart-lime-soft);
-  color: var(--chart-lime-text);
+  border-color: var(--chart-accent);
+  background: var(--chart-accent-soft);
+  color: var(--chart-accent-text);
 }
 
 /* Team list ------------------------------------------------------- */
@@ -253,8 +253,8 @@
 }
 .tms-team:hover { background: var(--surface-hover); border-color: var(--border); }
 .tms-team.is-selected {
-  border-color: var(--chart-lime);
-  background: var(--chart-lime-soft);
+  border-color: var(--chart-accent);
+  background: var(--chart-accent-soft);
 }
 .tms-team-mark {
   display: grid;
@@ -271,9 +271,9 @@
   letter-spacing: -0.01em;
 }
 .tms-team.is-selected .tms-team-mark {
-  border-color: var(--chart-lime);
-  background: var(--chart-lime);
-  color: var(--chart-lime-ink);
+  border-color: var(--chart-accent);
+  background: var(--chart-accent);
+  color: var(--chart-accent-ink);
 }
 .tms-team-mark.is-off { opacity: 0.55; }
 .tms-team-copy { display: grid; gap: 1px; min-width: 0; flex: 1 1 auto; }
@@ -306,7 +306,7 @@
 }
 .tms-team-meta span { white-space: nowrap; }
 .tms-team.is-selected .tms-team-copy small,
-.tms-team.is-selected .tms-team-meta { color: var(--chart-lime-text); }
+.tms-team.is-selected .tms-team-meta { color: var(--chart-accent-text); }
 
 .tms-rail-empty { display: grid; gap: 8px; justify-items: start; padding: 8px 2px; }
 .tms-rail-empty p { margin: 0; color: var(--text-muted); font-size: 12px; }
@@ -355,8 +355,8 @@
   min-height: 36px;
   padding: 0 12px;
   border-radius: var(--radius-full);
-  background: var(--chart-lime);
-  color: var(--chart-lime-ink);
+  background: var(--chart-accent);
+  color: var(--chart-accent-ink);
   font-size: 11.5px;
   font-weight: 900;
   text-decoration: none;
@@ -446,7 +446,7 @@
   font-weight: 900;
   letter-spacing: 0.02em;
 }
-.tms-seat-tag--head { background: var(--chart-lime-soft); color: var(--chart-lime-text); }
+.tms-seat-tag--head { background: var(--chart-accent-soft); color: var(--chart-accent-text); }
 .tms-seat-tag--monitor { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
 .tms-seat-state {
   display: inline-flex;
@@ -566,7 +566,7 @@
 }
 .tms-perm input { position: absolute; opacity: 0; width: 0; height: 0; }
 .tms-perm:hover { border-color: var(--border-strong); color: var(--text); }
-.tms-perm.is-on { border-color: var(--chart-lime); background: var(--chart-lime-soft); color: var(--chart-lime-text); }
+.tms-perm.is-on { border-color: var(--chart-accent); background: var(--chart-accent-soft); color: var(--chart-accent-text); }
 .tms-perm:focus-within { outline: 2px solid var(--border-focus); outline-offset: 1px; }
 .tms-seat-editor-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
@@ -625,9 +625,9 @@
 .tms-filter-chips button span { font-size: 10px; font-weight: 900; opacity: 0.75; font-variant-numeric: tabular-nums; }
 .tms-filter-chips button:hover { border-color: var(--border-strong); color: var(--text); }
 .tms-filter-chips button[aria-pressed='true'] {
-  border-color: var(--chart-lime);
-  background: var(--chart-lime-soft);
-  color: var(--chart-lime-text);
+  border-color: var(--chart-accent);
+  background: var(--chart-accent-soft);
+  color: var(--chart-accent-text);
 }
 
 .tms-member-list { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
@@ -719,11 +719,11 @@
 
 /* Empty seat: calm lime outline instead of a second crimson primary */
 .tms-seat.is-empty .tms-seat-foot button {
-  border-color: var(--chart-lime);
-  background: var(--chart-lime-soft);
-  color: var(--chart-lime-text);
+  border-color: var(--chart-accent);
+  background: var(--chart-accent-soft);
+  color: var(--chart-accent-text);
 }
-.tms-seat.is-empty .tms-seat-foot button:hover:not(:disabled) { background: var(--chart-lime); color: var(--chart-lime-ink); }
+.tms-seat.is-empty .tms-seat-foot button:hover:not(:disabled) { background: var(--chart-accent); color: var(--chart-accent-ink); }
 
 @media (min-width: 760px) {
   .tms-seat-grid { align-items: start; }

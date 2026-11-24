@@ -408,7 +408,7 @@ export function OwnerMemberErasure({ member, currentOwnerUserId, isOwner, api = 
           )}
 
           {phase === 'complete' && outcome?.status === 'complete' && (
-            <section className="grid gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-emerald-800 dark:text-emerald-200" role="status" aria-live="polite">
+            <section className="grid gap-3 rounded-xl border border-[var(--success-border)] bg-[var(--success-soft)] p-4 text-[var(--success-text)]" role="status" aria-live="polite">
               <h3 className="font-black">{t('اكتمل المحو بتأكيد الخادم', 'Erasure complete — confirmed by the server')}</h3>
               <p className="text-sm leading-6">{t('هذه هي الحالة الوحيدة التي نعرضها كاكتمال ناجح.', 'This is the only state reported as successfully complete.')}</p>
               <dl className="grid gap-2 text-sm sm:grid-cols-3">

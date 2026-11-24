@@ -28,7 +28,7 @@ const TONE_CLASS: Record<HomeCardTone, string> = {
 
 function HomeCard({ icon, title, value, hint, action, tone = 'neutral', loading }: HomeCardProps) {
   // Same KPI card anatomy as the admin dashboard so both surfaces read as one product.
-  const kpiTone = tone === 'warn' ? 'red' : tone === 'success' ? 'green' : tone === 'accent' ? 'violet' : undefined;
+  const kpiTone = tone === 'warn' ? 'red' : tone === 'success' ? 'cyan' : tone === 'accent' ? 'violet' : undefined;
   return (
     <article className="kpi-card glass-card" data-tone={kpiTone} data-tilt="4" data-reveal>
       <div className="kpi-head">

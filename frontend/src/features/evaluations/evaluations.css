@@ -127,7 +127,6 @@ html[lang="ar"] .eval-title { letter-spacing: 0; line-height: 1.32; }
 .eval-stat--star { --tone: var(--star); }
 .eval-stat--violet { --tone: var(--chart-violet); }
 .eval-stat--amber { --tone: var(--chart-amber); }
-.eval-stat--emerald { --tone: var(--success); }
 .eval-stat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .eval-stat-label {
   color: var(--text-muted);

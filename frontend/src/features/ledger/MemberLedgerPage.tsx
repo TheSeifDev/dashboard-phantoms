@@ -1,31 +1,53 @@
 import { useMemo, useRef, useState } from 'react';
-import { ArrowDownLeft, CircleDollarSign, HandCoins, Receipt, Target, Wallet } from 'lucide-react';
+import { ArrowDownLeft, CircleDollarSign, HandCoins, Receipt, ShieldCheck, Target, Wallet } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { PageHeader } from '../../components/ui/PageHeader';
 import { CardSkeletons } from '../../components/ui/Skeleton';
 import { useLocale } from '../../i18n/useLocale';
 import { formatDate } from '../../lib/dateUtils';
 import { toast } from '../../store/toast';
 import { PayModal } from './PayModal';
 import { LedgerInsights } from './LedgerInsights';
+import { LedgerKpiGrid, LedgerStatStrip } from './LedgerKpis';
 import { useLedgerEnter } from './animations';
-import { useDeclarePayment, useMemberLedger } from './api';
+import { useDeclarePayment, useLedgerSeries, useMemberLedger } from './api';
 import type { LedgerPaymentDraft, MemberLedgerPayload } from './types';
 import { EXPENSE_CATEGORY_LABELS, LEDGER_STATUS_LABELS, money } from './types';
 import './ledger.css';
+
+/** سلسلة مدفوعات العضو على آخر 6 شهور (من دفعاته هو بس). */
+function ownSeries(payload: MemberLedgerPayload | undefined): { paid: number[]; remaining: number[] } {
+  const months: string[] = [];
+  const now = new Date();
+  for (let back = 5; back >= 0; back -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - back, 1);
+    months.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+  }
+  const paid = months.map((month) => (payload?.payments ?? [])
+    .filter((payment) => payment.status === 'approved' && payment.occurred_on.slice(0, 7) === month)
+    .reduce((total, payment) => total + Number(payment.amount), 0));
+  const expected = payload?.summary.my_expected ?? 0;
+  let cumulative = 0;
+  const remaining = paid.map((amount) => {
+    cumulative += amount;
+    return Math.max(expected - cumulative, 0);
+  });
+  return { paid, remaining };
+}
+
 export default function MemberLedgerPage() {
   const { t, number, dir } = useLocale();
-  const [teamId, setTeamId] = useState<string | null>(null);
-  const ledger = useMemberLedger(teamId);
+  const ledger = useMemberLedger();
+  const seriesQuery = useLedgerSeries(null, 'member');
   const declare = useDeclarePayment();
   const [payOpen, setPayOpen] = useState(false);
   const pageRef = useRef<HTMLDivElement>(null);
-  const payload: MemberLedgerPayload | undefined = ledger.data;
-  const activeTeamId = teamId ?? payload?.team.id ?? null;
+  const payload = ledger.data;
+  const series = seriesQuery.data ?? [];
   const summary = payload?.summary;
   const expenses = payload?.expenses ?? [];
+  const mine = useMemo(() => ownSeries(payload), [payload]);
   const totalSpentByCategory = useMemo(() => {
     const map = new Map<string, number>();
     expenses.forEach((expense) => {
@@ -35,8 +57,7 @@ export default function MemberLedgerPage() {
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
   }, [expenses]);
   const submitPayment = async (draft: LedgerPaymentDraft) => {
-    if (!activeTeamId) return;
-    const result = await declare.mutateAsync({ teamId: activeTeamId, draft });
+    const result = await declare.mutateAsync({ draft });
     toast.success(t(
       `اتسجلت دفعتك ${money(result.amount)} — مستنية تأكيد ${result.receiver_label ?? 'المستلم'}.`,
       `Your ${money(result.amount)} payment is recorded — waiting for ${result.receiver_label ?? 'the receiver'} to confirm.`,
@@ -46,45 +67,35 @@ export default function MemberLedgerPage() {
   useLedgerEnter(pageRef, [Boolean(payload)]);
   return (
     <div className="ldg-page" dir={dir} ref={pageRef}>
-      <PageHeader
-        icon={<Wallet size={22} aria-hidden="true" />}
-        title={t('خزنة التيم', 'Team ledger')}
-        description={t('شفافية كاملة: كام متاح في الخزنة، إجمالي اللي اتدفع واتصرف، والفلوس اتصرفت في إيه. وتقدر تسجّل «أنا دفعت» لحد ما المستلم يأكدها.', 'Full transparency: the available balance, total collected and spent, and what the money went on. You can also declare “I paid” until the receiver confirms it.')}
-        actions={
-          <Button icon={<HandCoins size={17} aria-hidden="true" />} onClick={() => setPayOpen(true)} disabled={!payload}>
-            {t('أنا دفعت', 'I paid')}
-          </Button>
-        }
-      />
       {ledger.isPending && <CardSkeletons count={3} />}
       {ledger.isError && (
         <ErrorState
-          message={ledger.error instanceof Error ? ledger.error.message : t('معرفناش نحمّل خزنة التيم.', 'Could not load the team ledger.')}
+          message={ledger.error instanceof Error ? ledger.error.message : t('معرفناش نحمّل الخزنة.', 'Could not load the ledger.')}
           onRetry={() => { void ledger.refetch(); }}
         />
       )}
       {payload && summary && (
         <>
-          {payload.teams.length > 1 && (
-            <div className="ldg-teams" role="group" aria-label={t('اختيار التيم', 'Select team')}>
-              {payload.teams.map((team) => (
-                <button
-                  key={team.id}
-                  type="button"
-                  className="ldg-team-tab"
-                  aria-pressed={team.id === payload.team.id}
-                  onClick={() => setTeamId(team.id)}
-                >
-                  {team.name}
-                </button>
-              ))}
+          <div className="ldg-topbar" data-ldg-enter>
+            <div className="ldg-units">
+              <span className="ldg-unit-chip ldg-unit-chip--mine">
+                <ShieldCheck size={14} aria-hidden="true" /> {t('تيمك/وحدتك', 'Your unit')}: {payload.unit}
+              </span>
             </div>
-          )}
+            <div className="ldg-actions">
+              <Button icon={<HandCoins size={17} aria-hidden="true" />} onClick={() => setPayOpen(true)}>
+                {t('أنا دفعت', 'I paid')}
+              </Button>
+            </div>
+          </div>
+
           <section className="ldg-hero" aria-label={t('ملخص الخزنة', 'Ledger summary')} data-ldg-enter>
             <div className="ldg-hero-main">
               <span className="ldg-hero-label"><Wallet size={15} aria-hidden="true" /> {t('المبلغ المتاح حاليًا', 'Available balance')}</span>
               <strong className="ldg-hero-value">{money(summary.balance)}</strong>
-              <span className="ldg-hero-team">{payload.team.name} · {t('الرصيد = المدفوعات المؤكدة − المصروفات − الخصومات', 'Balance = approved payments − expenses − deductions')}</span>
+              <span className="ldg-hero-team">
+                {t('خزنة الفريق كلها', 'The whole team ledger')} · {t('الرصيد = المدفوعات المؤكدة − المصروفات − الخصومات', 'Balance = approved payments − expenses − deductions')}
+              </span>
             </div>
             <div className="ldg-hero-side">
               <div><span>{t('إجمالي المدفوع', 'Total collected')}</span><strong>{money(summary.collected)}</strong></div>
@@ -92,40 +103,65 @@ export default function MemberLedgerPage() {
               <div><span>{t('إجمالي الخصومات', 'Total deductions')}</span><strong>{money(summary.withdrawals)}</strong></div>
             </div>
           </section>
-          <section className="ldg-metrics" aria-label={t('حالتي مع الخزنة', 'My ledger status')} data-ldg-enter>
-            <article className="ldg-metric">
-              <span>{t('دفعت', 'I paid')}<ArrowDownLeft size={15} aria-hidden="true" /></span>
-              <strong>{money(summary.my_paid)}</strong>
-              <small>{t('دفعات مؤكدة', 'approved payments')}</small>
-            </article>
-            <article className="ldg-metric">
-              <span>{t('فاضل عليّ', 'Remaining')}<Target size={15} aria-hidden="true" /></span>
-              <strong>{money(summary.my_remaining)}</strong>
-              <small>{t('من إجمالي', 'out of')} {money(summary.my_expected)}</small>
-            </article>
-            <article className="ldg-metric">
-              <span>{t('مستنية تأكيد', 'Pending')}<CircleDollarSign size={15} aria-hidden="true" /></span>
-              <strong>{money(summary.my_pending)}</strong>
-              <small>{t('دفعات لسه بتتراجع', 'payments under review')}</small>
-            </article>
-            <article className="ldg-metric">
-              <span>{t('مصروفات التيم', 'Team expenses')}<Receipt size={15} aria-hidden="true" /></span>
-              <strong>{money(summary.expenses)}</strong>
-              <small>{number(summary.expense_count)} {t('مصروف مسجل', 'recorded expenses')}</small>
-            </article>
-          </section>
+
+          <LedgerKpiGrid
+            tiles={[
+              {
+                key: 'my-paid',
+                title: t('أنا دفعت', 'I paid'),
+                value: summary.my_paid,
+                detail: t('دفعات مؤكدة', 'approved payments'),
+                icon: ArrowDownLeft,
+                tone: 'violet',
+                series: mine.paid,
+              },
+              {
+                key: 'my-remaining',
+                title: t('فاضل عليّ', 'My remaining'),
+                value: summary.my_remaining,
+                detail: `${t('من إجمالي', 'out of')} ${money(summary.my_expected)}`,
+                icon: Target,
+                tone: 'amber',
+                series: mine.remaining,
+              },
+              {
+                key: 'team-expenses',
+                title: t('مصروفات الفريق', 'Team expenses'),
+                value: summary.expenses,
+                detail: `${number(summary.expense_count)} ${t('مصروف مسجل', 'recorded expenses')}`,
+                icon: Receipt,
+                tone: 'blue',
+                series: series.map((point) => Number(point.expenses) || 0),
+              },
+              {
+                key: 'balance',
+                title: t('المتاح في الخزنة', 'Available balance'),
+                value: summary.balance,
+                detail: t('رصيد تراكمي على آخر 6 شهور', 'Cumulative balance over 6 months'),
+                icon: Wallet,
+                tone: 'violet',
+                series: series.map((point) => Number(point.balance) || 0),
+              },
+            ]}
+          />
+
+          <LedgerStatStrip
+            items={[
+              { key: 'my-pending', label: t('مستنية تأكيد', 'Pending'), value: money(summary.my_pending), hint: t('دفعات لسه بتتراجع', 'payments under review') },
+              { key: 'collected', label: t('اللي اتدفع للفريق', 'Collected'), value: money(summary.collected), hint: `${number(summary.payment_count)} ${t('دفعة', 'payments')}` },
+              { key: 'withdrawals', label: t('الخصومات', 'Deductions'), value: money(summary.withdrawals), hint: t('فلوس اتسحبت من الخزنة', 'taken out of the ledger') },
+              { key: 'outstanding', label: t('مستحق على الفريق', 'Team outstanding'), value: money(summary.outstanding), hint: `${t('من إجمالي', 'out of')} ${money(summary.expected)}` },
+            ]}
+          />
+
           <LedgerInsights
-            entries={payload.payments.map((payment) => ({
-              amount: payment.amount,
-              kind: 'payment' as const,
-              status: payment.status,
-              occurred_on: payment.occurred_on,
-            }))}
-            paidTotal={summary.my_paid}
-            remainingTotal={summary.my_remaining}
-            expectedTotal={summary.my_expected}
+            series={series}
+            paidTotal={summary.collected}
+            remainingTotal={summary.outstanding}
+            expectedTotal={summary.expected}
             variant="member"
           />
+
           <div className="ldg-split">
             <section className="ldg-panel" aria-label={t('الفلوس اتصرفت في إيه', 'What the money was spent on')}>
               <header className="ldg-panel-head">
@@ -134,7 +170,7 @@ export default function MemberLedgerPage() {
               </header>
               {expenses.length === 0 ? (
                 <div className="ldg-panel-body">
-                  <p className="ldg-muted">{t('لسه مفيش مصروفات متسجلة على التيم.', 'No team expenses recorded yet.')}</p>
+                  <p className="ldg-muted">{t('لسه مفيش مصروفات متسجلة على الفريق.', 'No team expenses recorded yet.')}</p>
                 </div>
               ) : (
                 <div className="ldg-panel-body">
@@ -190,7 +226,7 @@ export default function MemberLedgerPage() {
                 {payload.payments.length === 0 ? (
                   <EmptyState
                     title={t('لسه مسجلتش أي دفعة', 'No payments recorded yet')}
-                    description={t('لو دفعت للتيم، سجّل المبلغ واختار استلم من مين — وتابع التأكيد هنا.', 'If you paid the team, record the amount and who received it — track the confirmation here.')}
+                    description={t('لو دفعت للفريق، سجّل المبلغ واختار استلم من مين — وتابع التأكيد هنا.', 'If you paid the team, record the amount and who received it — track the confirmation here.')}
                     action={<Button onClick={() => setPayOpen(true)}>{t('أنا دفعت', 'I paid')}</Button>}
                   />
                 ) : (
@@ -213,21 +249,25 @@ export default function MemberLedgerPage() {
               </div>
             </section>
           </div>
+
           <section className="ldg-note">
             <CircleDollarSign size={15} aria-hidden="true" />
-            <p>{t('الخزنة دي شفافة للتيم كله في الأرقام الأساسية بس. تفاصيل دفعات باقي الأعضاء والتزاماتهم متاحة لإدارة التيم وهيدزها — إنت بتشوف بياناتك إنت بس.', 'The ledger is transparent to the whole team for the headline numbers only. Other members’ payments and dues stay with the team admins and heads — you only see your own data.')}</p>
+            <p>{t('إنت شايف الخزنة كلها: المتاح، إجمالي اللي اتدفع، إجمالي المصروفات، والفلوس اتصرفت في إيه. الحاجة الوحيدة المخفية عنك هي مين دفع ومين لسه مدفعش — دي للإدارة وهيدز التيمات بس.', 'You see the whole ledger: the balance, total collected, total spent, and what the money went on. The only thing hidden from you is who paid and who has not — that stays with admins and team heads.')}</p>
           </section>
-          {activeTeamId && (
-            <PayModal
-              isOpen={payOpen}
-              receivers={payload.receivers}
-              dues={payload.dues}
-              remaining={summary.my_remaining}
-              onClose={() => setPayOpen(false)}
-              onSubmit={submitPayment}
-              isPending={declare.isPending}
-            />
-          )}
+          <section className="ldg-note">
+            <Target size={15} aria-hidden="true" />
+            <p>{t('دفعاتك إنت ظاهرة لك بالكامل (مؤكدة / مستنية / مرفوضة) مع ملاحظة المراجعة، ولو دفعت لحد مش من الإدارة أو هيد/مونيتور تيمك مش هينفع تسجّلها.', 'Your own payments stay fully visible to you (approved / pending / rejected) with the review note. You can only record a payment to an admin or a head/monitor of your own team.')}</p>
+          </section>
+
+          <PayModal
+            isOpen={payOpen}
+            receivers={payload.receivers}
+            dues={payload.dues}
+            remaining={summary.my_remaining}
+            onClose={() => setPayOpen(false)}
+            onSubmit={submitPayment}
+            isPending={declare.isPending}
+          />
         </>
       )}
     </div>

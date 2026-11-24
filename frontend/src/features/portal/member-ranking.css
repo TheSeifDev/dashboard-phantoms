@@ -330,8 +330,8 @@
 .mr-row:hover { border-color: var(--border-strong); }
 
 .mr-row[data-me='true'] {
-  border-color: var(--chart-lime-soft);
-  background: color-mix(in srgb, var(--chart-lime) 8%, var(--surface));
+  border-color: var(--chart-accent-soft);
+  background: color-mix(in srgb, var(--chart-accent) 8%, var(--surface));
 }
 
 .mr-rank {
@@ -394,9 +394,9 @@
   font-weight: 800;
   padding: 2px 7px;
   border-radius: 999px;
-  border: 1px solid var(--chart-lime-soft);
-  background: var(--chart-lime-soft);
-  color: var(--chart-lime-text);
+  border: 1px solid var(--chart-accent-soft);
+  background: var(--chart-accent-soft);
+  color: var(--chart-accent-text);
 }
 
 .mr-teams {
