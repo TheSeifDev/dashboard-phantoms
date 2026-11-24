@@ -33,7 +33,7 @@ const permissionEnglish: Record<AdminPermission, { label: string; description: s
   ranking: { label: 'Team ranking', description: 'View member rankings and points.' },
   notes: { label: 'Notes', description: 'View, add, and edit member notes.' },
   announcements: { label: 'Announcements', description: 'Manage announcements and send notifications.' },
-  whatsapp: { label: 'WhatsApp', description: 'Send tasks and monitor the WhatsApp connection.' },
+  whatsapp: { label: 'Telegram bot', description: 'Manage the team Telegram bot, linking and delivery.' },
   ai_assistant: { label: 'AI assistant', description: 'Use the AI assistant services.' },
   web_projects: { label: 'Web Projects', description: 'Administer the Web Projects program and its projects.' },
 };

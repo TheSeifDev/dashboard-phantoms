@@ -17,7 +17,7 @@ const pages: Array<{ path: string; ar: string; en: string; permission?: AdminPer
   { path: '/admin/notes', ar: 'الملاحظات والتوجيهات', en: 'Notes & feedback', permission: 'notes' },
   { path: '/admin/announcements', ar: 'الإعلانات والتنبيهات', en: 'Announcements', permission: 'announcements' },
   { path: '/admin/ai-assistant', ar: 'مساعد PHANTOMS الذكي', en: 'AI assistant', permission: 'ai_assistant' },
-  { path: '/admin/whatsapp', ar: 'إرسال المهام عبر واتساب', en: 'WhatsApp assignments', permission: 'whatsapp' },
+  { path: '/admin/telegram', ar: 'بوت تلجرام', en: 'Telegram bot', permission: 'whatsapp' },
   { path: '/admin/admins', ar: 'إدارة المشرفين', en: 'Administrators', ownerOnly: true },
   { path: '/admin/teams', ar: 'إدارة الفرق الداخلية', en: 'Internal teams', ownerOnly: true },
   { path: '/admin/web-projects', ar: 'مشروعات الويب', en: 'Web Projects', permission: 'web_projects' },

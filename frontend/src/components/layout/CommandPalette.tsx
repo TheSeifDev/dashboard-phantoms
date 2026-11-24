@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight, ChartGantt, CircleDot, ClipboardCheck, CornerDownLeft, FileChartColumn, FolderGit2, FolderKanban,
-  Languages, LayoutDashboard, Library, Lightbulb, ListChecks, ListTodo, Megaphone, MessageCircle, Moon, Network, Search,
-  ShieldCheck, Sparkles, SquareKanban, StickyNote, Sun, Trophy, Users, type LucideProps,
+  Languages, LayoutDashboard, Library, Lightbulb, ListChecks, ListTodo, Megaphone, Moon, Network, Search,
+  Send, ShieldCheck, Sparkles, SquareKanban, StickyNote, Sun, Trophy, Users, type LucideProps,
 } from 'lucide-react';
 import { gsap, prefersReducedMotion } from '../motion/gsap';
 import { useLocale } from '../../i18n/useLocale';
@@ -29,7 +29,7 @@ const ICONS: Record<string, Icon> = {
   '/admin/notes': StickyNote,
   '/admin/announcements': Megaphone,
   '/admin/ai-assistant': Sparkles,
-  '/admin/whatsapp': MessageCircle,
+  '/admin/telegram': Send,
   '/admin/admins': ShieldCheck,
   '/admin/teams': Network,
   '/admin/web-projects': FolderKanban,
