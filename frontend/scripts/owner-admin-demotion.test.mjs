@@ -139,6 +139,9 @@ exports.CapabilityBadge = function CapabilityBadge() { return null; };
     ['src/features/admin/access/OwnerCapabilityPanel.js', `
 exports.OwnerCapabilityPanel = function OwnerCapabilityPanel() { return null; };
 `],
+    ['src/features/admin/access/AdminCapabilityMatrix.js', `
+exports.AdminCapabilityMatrix = function AdminCapabilityMatrix() { return null; };
+`],
     ['src/features/admin/access/AdminPasswordResetModal.js', `
 exports.AdminPasswordResetModal = function AdminPasswordResetModal() { return null; };
 `],
