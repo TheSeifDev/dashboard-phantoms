@@ -1,4 +1,4 @@
--- 25 — Minimal client-reported Android app-use evidence.
+-- 25 — Minimal client-reported Android/iOS app-use evidence, including Admins.
 -- Every fixture and assertion is transaction-local; the whole test rolls back.
 -- This proves app use only, not installation, device inventory, hardware identity,
 -- or attestation.
@@ -17,8 +17,10 @@ BEGIN
   PERFORM phantoms_test.create_member(n, NULL, true)
   FROM unnest(ARRAY[
     'usage-member', 'usage-other', 'inactive-member', 'revoked-member',
-    'bad-binding', 'bad-email', 'unconfirmed-member'
+    'bad-binding', 'bad-email', 'unconfirmed-member', 'admin-self'
   ]) AS n;
+  -- An Admin that is also a linked Member reports through the Admin RPC.
+  PERFORM phantoms_test.grant_admin('admin-self', 'admin', phantoms_test.perms('members'));
   UPDATE public.members
   SET work_status = 'inactive'
   WHERE id = phantoms_test.mid('inactive-member');
@@ -26,15 +28,15 @@ BEGIN
   PERFORM phantoms_test.bind_device(n)
   FROM unnest(ARRAY[
     'usage-member', 'usage-other', 'inactive-member', 'revoked-member',
-    'bad-binding', 'bad-email', 'unconfirmed-member'
+    'bad-binding', 'bad-email', 'unconfirmed-member', 'admin-self'
   ]) AS n;
 END $$;
 
--- Canonical migration inventory is now 24 historical + 55 forward files.
-SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 80,
-  'local disposable migration history records all 80 canonical files');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261124080000',
-  'local disposable migration history ends at the member leaderboard migration');
+-- Canonical migration inventory is now 24 historical + 57 forward files.
+SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 81,
+  'local disposable migration history records all 81 canonical files');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261124100000',
+  'local disposable migration history ends at the app-usage platform/admin migration');
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
            WHERE version <= '20261114164006'), 24,
   'historical migration cohort remains exactly 24 migrations');
@@ -49,15 +51,19 @@ SELECT ok(NOT has_table_privilege('anon', 'public.member_app_usage', 'SELECT'),
   'anon has no direct table SELECT privilege');
 SELECT ok(NOT has_table_privilege('authenticated', 'public.member_app_usage', 'SELECT'),
   'authenticated has no direct table SELECT privilege');
-SELECT ok(NOT has_function_privilege('anon', 'public.member_record_app_usage(text,text,text)', 'EXECUTE'),
+SELECT ok(NOT has_function_privilege('anon', 'public.member_record_app_usage(text,text,text,text)', 'EXECUTE'),
   'anon cannot execute member recording');
-SELECT ok(has_function_privilege('authenticated', 'public.member_record_app_usage(text,text,text)', 'EXECUTE'),
+SELECT ok(has_function_privilege('authenticated', 'public.member_record_app_usage(text,text,text,text)', 'EXECUTE'),
   'authenticated can execute only the recording RPC');
+SELECT ok(NOT has_function_privilege('anon', 'public.admin_record_app_usage(text,text,text)', 'EXECUTE'),
+  'anon cannot execute admin recording');
+SELECT ok(has_function_privilege('authenticated', 'public.admin_record_app_usage(text,text,text)', 'EXECUTE'),
+  'authenticated can execute the admin recording RPC, which performs its own admin guard');
 SELECT ok(has_function_privilege('authenticated', 'public.owner_member_app_usage(bigint[])', 'EXECUTE'),
   'authenticated can invoke the owner read RPC, which performs its own owner guard');
 SELECT is((SELECT pg_get_function_result('public.owner_member_app_usage(bigint[])'::regprocedure)),
-  'TABLE(member_id bigint, first_used_at timestamp with time zone, last_used_at timestamp with time zone, last_app_version text, last_app_build text)',
-  'owner read returns only numeric member id and first/last usage/version/build fields');
+  'TABLE(member_id bigint, first_used_at timestamp with time zone, last_used_at timestamp with time zone, last_app_version text, last_app_build text, platform text)',
+  'owner read returns only numeric member id, first/last usage, version/build, and platform fields');
 
 -- Preserve existing Member/Auth binding rows around successful recording.
 INSERT INTO phantoms_test.vars(key, value)
@@ -83,7 +89,13 @@ SELECT is(phantoms_test.var('usage-first')::jsonb ->> 'member_id',
   phantoms_test.mid('usage-member')::text,
   'recording resolves the exact bound member rather than accepting a caller member id');
 SELECT is(phantoms_test.var('usage-first')::jsonb ->> 'platform', 'android',
-  'recording stores the only accepted platform');
+  'recording defaults to android when the caller omits the platform');
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('usage-ios', public.member_record_app_usage(
+  phantoms_test.tok('usage-member'), '1.0.0', '100', 'ios'
+)::text);
+SELECT is(phantoms_test.var('usage-ios')::jsonb ->> 'platform', 'ios',
+  'an iOS Member report is recorded with the ios platform');
 SELECT is(phantoms_test.var('usage-first')::jsonb ->> 'evidence_classification', 'client_reported',
   'recording labels evidence as explicitly client reported');
 SELECT is(phantoms_test.var('usage-first')::jsonb ->> 'last_app_version', '1.0.0',
@@ -142,6 +154,10 @@ SELECT is((SELECT member_id FROM public.owner_member_app_usage(ARRAY[
              phantoms_test.mid('usage-other'), phantoms_test.mid('usage-member')
            ])), phantoms_test.mid('usage-member'),
   'owner read returns the recorded member id and omits no-usage members');
+SELECT is((SELECT platform FROM public.owner_member_app_usage(ARRAY[
+             phantoms_test.mid('usage-member')
+           ])), 'android',
+  'owner read exposes the recorded platform so the UI can label the device');
 SELECT throws_like(
   $$SELECT * FROM public.owner_member_app_usage(ARRAY(SELECT generate_series(1,101)::bigint))$$,
   '%INVALID_INPUT%',
@@ -255,13 +271,46 @@ SELECT throws_like(
 RESET ROLE;
 
 -- Bounded inputs and immutable relational safety constraints ------------------
+-- Admin recording: only the caller's own linked Member, never a caller member id.
+SELECT phantoms_test.login_as('admin-self');
+INSERT INTO phantoms_test.vars(key, value)
+VALUES ('admin-usage', public.admin_record_app_usage('2.0.0', '200', 'ios')::text);
+SELECT is(phantoms_test.var('admin-usage')::jsonb ->> 'member_id',
+  phantoms_test.mid('admin-self')::text,
+  'Admin recording resolves the Admin''s own linked Member');
+SELECT is(phantoms_test.var('admin-usage')::jsonb ->> 'platform', 'ios',
+  'Admin recording stores the reported platform');
+SELECT throws_like(
+  $$SELECT public.member_record_app_usage(phantoms_test.tok('admin-self'), '2.0.0', '200')$$,
+  '%UNAUTHORIZED%', 'an Admin account cannot report through the Member RPC');
+SELECT throws_like(
+  $$SELECT public.admin_record_app_usage('2.0.0', '200', 'web')$$,
+  '%INVALID_INPUT%', 'Admin recording rejects an unknown platform');
+RESET ROLE;
+SELECT phantoms_test.login_as('members_admin');
+SELECT throws_like(
+  $$SELECT public.admin_record_app_usage('2.0.0', '200', 'android')$$,
+  '%MEMBER_NOT_LINKED%', 'an Admin without a linked Member cannot record app usage');
+RESET ROLE;
+SELECT phantoms_test.login_as('usage-other');
+SELECT throws_like(
+  $$SELECT public.admin_record_app_usage('2.0.0', '200', 'android')$$,
+  '%ADMIN_ONLY%', 'an ordinary Member cannot use the Admin recording RPC');
+RESET ROLE;
+SELECT phantoms_test.login_as('owner');
+SELECT is((SELECT platform FROM public.owner_member_app_usage(ARRAY[
+             phantoms_test.mid('admin-self')
+           ])), 'ios',
+  'owner read shows the platform an Admin account reported from');
+RESET ROLE;
+
 SELECT throws_ok($$
   INSERT INTO public.member_app_usage (
     member_id, first_used_at, last_used_at, last_app_version, last_app_build, platform
   ) VALUES (
-    phantoms_test.mid('usage-other'), now(), now(), '1.0.0', '100', 'ios'
+    phantoms_test.mid('usage-other'), now(), now(), '1.0.0', '100', 'web'
   )
-$$, '23514', NULL, 'platform is constrained to android');
+$$, '23514', NULL, 'platform is constrained to android and ios');
 SELECT throws_ok($$
   INSERT INTO public.member_app_usage (
     member_id, first_used_at, last_used_at, last_app_version, last_app_build

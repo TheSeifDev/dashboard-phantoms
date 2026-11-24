@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { getDeviceToken, useAuthStore } from '../../store/auth';
-import { recordMemberAppUsage } from './api';
+import { appUsagePlatform, recordMemberAppUsage } from './api';
 
 const REPORT_INTERVAL_MS = 5 * 60 * 1000;
 const attempts = new Map<string, number>();
@@ -12,11 +12,13 @@ export function MemberAppUsageTracker() {
   const memberId = useAuthStore((state) => state.currentMember?.id ?? null);
   const memberEmail = useAuthStore((state) => state.currentMember?.email ?? '');
   useEffect(() => {
-    if (!memberId || !Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
+    if (!memberId || !Capacitor.isNativePlatform()) return;
+    const platform = appUsagePlatform(Capacitor.getPlatform());
+    if (!platform) return;
     let active = true;
     let busy = false;
     let removeNativeListener: (() => void) | undefined;
-    const key = `${memberId}:${memberEmail}`;
+    const key = `${memberId}:${memberEmail}:${platform}`;
     const sameIdentity = (device: string) => {
       const current = useAuthStore.getState().currentMember;
       return active && current?.id === memberId && current.email === memberEmail && getDeviceToken() === device;
@@ -35,7 +37,7 @@ export function MemberAppUsageTracker() {
         if (latest !== undefined && Date.now() - latest < REPORT_INTERVAL_MS) return;
         // Only a live effect claims the attempt, so StrictMode cleanup cannot lose first use.
         attempts.set(key, Date.now());
-        await recordMemberAppUsage(device, info.version, info.build);
+        await recordMemberAppUsage(device, info.version, info.build, platform);
       } catch {
         // Throttle failures too; telemetry must never disrupt sign-in or spam retries.
         if (sameIdentity(device)) attempts.set(key, Date.now());

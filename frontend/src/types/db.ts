@@ -349,8 +349,9 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      member_record_app_usage: { Args: { p_device_token: string; p_app_version: string; p_app_build: string }; Returns: unknown };
-      owner_member_app_usage: { Args: { p_member_ids: number[] }; Returns: { member_id: number; first_used_at: string; last_used_at: string; last_app_version: string; last_app_build: string }[] };
+      member_record_app_usage: { Args: { p_device_token: string; p_app_version: string; p_app_build: string; p_platform?: 'android' | 'ios' }; Returns: unknown };
+      admin_record_app_usage: { Args: { p_app_version: string; p_app_build: string; p_platform?: 'android' | 'ios' }; Returns: unknown };
+      owner_member_app_usage: { Args: { p_member_ids: number[] }; Returns: { member_id: number; first_used_at: string; last_used_at: string; last_app_version: string; last_app_build: string; platform: 'android' | 'ios' }[] };
       member_get_profile_settings: { Args: { p_device_token: string }; Returns: unknown };
       member_update_profile_settings: { Args: { p_device_token: string; p_profile: unknown }; Returns: unknown };
       member_password_self_recovery_access: { Args: Record<string, never>; Returns: boolean };
