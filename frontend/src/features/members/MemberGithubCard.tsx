@@ -26,10 +26,14 @@ export function MemberGithubCard() {
   const [profile, setProfile] = useState<GithubProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  // العضو اللي الـ handle بتاعه اتجاب أوتوماتيك من البورتفوليو لازم يقدر يغيّره
+  // من غير ما يفك الربط الأول.
+  const [replacing, setReplacing] = useState(false);
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
 
   const handle = state.data?.handle ?? null;
+  const detected = state.data?.source === 'detected';
   const busy = phase !== 'idle' || link.isPending;
 
   const errorText = (code: string) => {
@@ -58,6 +62,7 @@ export function MemberGithubCard() {
       if (!live.current) return;
       setValue('');
       setDone(true);
+      setReplacing(false);
     } catch (cause) {
       if (!live.current) return;
       setProfile(null);
@@ -100,7 +105,7 @@ export function MemberGithubCard() {
         </div>
         {handle && (
           <span className="mset-github-state" data-on="true">
-            <CheckCircle2 size={14} aria-hidden="true" /> {t('مربوط', 'Linked')}
+            <CheckCircle2 size={14} aria-hidden="true" /> {detected ? t('مكتشف أوتوماتيك', 'Auto-detected') : t('مربوط', 'Linked')}
           </span>
         )}
       </div>
@@ -109,17 +114,24 @@ export function MemberGithubCard() {
         <p className="mset-github-note"><Loader2 size={14} className="mset-spin" aria-hidden="true" /> {t('بنتحقق من حالة الربط…', 'Checking the link status…')}</p>
       ) : state.isError ? (
         <p className="mset-github-error" role="alert">{t('معرفناش نقرأ حالة الربط. حدّث الصفحة.', 'Could not read the link status. Refresh the page.')}</p>
-      ) : handle ? (
+      ) : handle && !replacing ? (
         <div className="mset-github-linked">
           <img className="mset-github-avatar" src={avatar ?? ''} alt="" width={56} height={56} loading="lazy" />
           <div className="mset-github-id">
             <strong dir="ltr">@{handle}</strong>
-            <small>{t('المساهمات والأفاتار بيقروا من الحساب ده.', 'Contributions and avatar come from this account.')}</small>
+            <small>
+              {detected
+                ? t('جبناه أوتوماتيك من لينك البورتفوليو — المساهمات بتتحسب من الحساب ده.', 'Detected automatically from your portfolio link — contributions are counted from this account.')
+                : t('المساهمات والأفاتار بيقروا من الحساب ده.', 'Contributions and avatar come from this account.')}
+            </small>
           </div>
           <div className="mset-github-actions">
             <a className="mset-github-link" href={`https://github.com/${handle}`} target="_blank" rel="noreferrer noopener">
               {t('فتح البروفايل', 'Open profile')} <ArrowUpRight size={15} aria-hidden="true" />
             </a>
+            <Button variant="ghost" icon={<Link2 size={16} />} onClick={() => { setReplacing(true); setError(null); setDone(false); }}>
+              {t('تغيير الحساب', 'Change account')}
+            </Button>
             <Button variant="secondary" icon={<Unlink size={16} />} onClick={() => { void unlink(); }} isLoading={phase === 'saving'} loadingText={t('بيفك…', 'Unlinking…')}>
               {t('فك الربط', 'Unlink')}
             </Button>
@@ -145,8 +157,13 @@ export function MemberGithubCard() {
             </div>
           </label>
           <Button type="button" icon={<Link2 size={17} />} onClick={() => { void submit(); }} isLoading={busy} loadingText={phase === 'checking' ? t('بنتحقق من GitHub…', 'Checking GitHub…') : t('بيربط…', 'Linking…')}>
-            {t('اربط الحساب', 'Link account')}
+            {handle ? t('حدّث الحساب', 'Update account') : t('اربط الحساب', 'Link account')}
           </Button>
+          {replacing && (
+            <Button type="button" variant="ghost" onClick={() => { setReplacing(false); setValue(''); setError(null); }}>
+              {t('إلغاء', 'Cancel')}
+            </Button>
+          )}
         </div>
       )}
 
