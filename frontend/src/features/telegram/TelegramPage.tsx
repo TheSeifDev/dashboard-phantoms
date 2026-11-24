@@ -112,7 +112,10 @@ export default function TelegramPage() {
 
   const persist = (payload: Record<string, unknown>) => {
     save.mutate(payload, {
-      onSuccess: () => toast.success(t('تم حفظ إعدادات البوت', 'Bot settings saved')),
+      onSuccess: () => {
+        if ('bot_token' in payload) setToken('');
+        toast.success(t('تم حفظ إعدادات البوت', 'Bot settings saved'));
+      },
       onError: (error: Error) => toast.error(error.message),
     });
   };
@@ -185,7 +188,15 @@ export default function TelegramPage() {
           <Button
             icon={<Check size={16} />}
             isLoading={save.isPending}
-            onClick={() => persist({ bot_token: token, bot_username: botUsername, drain_url: drainUrl, enabled })}
+            onClick={() => {
+              // التوكن مبيتبعتش فاضي أبدًا: الحفظ التاني مش المفروض يمسح التوكن المحفوظ.
+              persist({
+                ...(token.trim() ? { bot_token: token.trim() } : {}),
+                bot_username: botUsername,
+                drain_url: drainUrl,
+                enabled,
+              });
+            }}
           >
             {t('حفظ', 'Save')}
           </Button>
