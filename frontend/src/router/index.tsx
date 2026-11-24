@@ -118,7 +118,7 @@ function ProtectedOwnerRoute({ children }: { children: React.ReactNode }) {
   const access = useAdminAccess(user?.id ?? null);
   if (access.isPending) return <PhantomLoader message={t('بنتأكد من صلاحية المالك...', 'Checking owner access...')} />;
   if (access.isError) return <ErrorState message={t('معرفناش نتحقق من صلاحية المالك.', 'Could not verify owner access.')} onRetry={() => { void access.refetch(); }} />;
-  if (!access.data?.is_owner) return <Navigate to="/admin" replace />;
+  if (!access.data?.owner_authority) return <Navigate to="/admin" replace />;
   return <>{children}</>;
 }
 
@@ -159,7 +159,7 @@ function RequireAdminPermission({ permission, children }: { permission: AdminPer
   const access = useAdminAccess(user?.id ?? null);
   if (access.isPending) return <PhantomLoader message={t('بنتأكد من صلاحيات القسم...', 'Checking section access...')} />;
   if (access.isError) return <ErrorState message={t('معرفناش نتحقق من صلاحية القسم.', 'Could not verify access to this section.')} onRetry={() => { void access.refetch(); }} />;
-  if (access.data?.is_owner || access.data?.permissions?.[permission] === true) return <>{children}</>;
+  if (access.data?.owner_authority || access.data?.permissions?.[permission] === true) return <>{children}</>;
   const path = firstAllowedAdminPath(access.data?.permissions);
   return path ? <Navigate to={path} replace /> : <NoAdminSections />;
 }

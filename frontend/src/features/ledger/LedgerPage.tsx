@@ -24,7 +24,7 @@ export default function LedgerPage() {
     })),
     [membersQuery.data],
   );
-  const canUseLedger = access.data?.is_owner === true
+  const canUseLedger = access.data?.owner_authority === true
     || access.data?.permissions?.members === true
     || (access.data?.teams?.length ?? 0) > 0;
   return (

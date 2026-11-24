@@ -239,3 +239,46 @@ export function useRevokeCapabilityGrant() {
     },
   });
 }
+
+/** المالك بس: مصفوفة قدرات كل المشرفين عشان يمنح/يسحب بشكل مباشر ودائم. */
+export const capabilityMatrixKey = ['admin-capability-matrix'] as const;
+export interface CapabilityMatrixEntry {
+  user_id: string;
+  email: string;
+  role: 'owner' | 'admin';
+  permissions: Partial<AdminPermissions>;
+  capabilities: Record<AdminCapability, { allowed: boolean; permanent: boolean; granted_until: string | null }>;
+}
+export function useCapabilityMatrix(enabled: boolean) {
+  return useQuery({
+    queryKey: capabilityMatrixKey,
+    enabled,
+    queryFn: async (): Promise<CapabilityMatrixEntry[]> => {
+      const { data, error } = await supabase.rpc('admin_capability_matrix');
+      if (error) throw toAppError(error, 'معرفناش نحمّل صلاحيات المشرفين.');
+      return (data as CapabilityMatrixEntry[] | null) ?? [];
+    },
+    staleTime: 15_000,
+    refetchOnMount: 'always',
+    retry: false,
+  });
+}
+export function useSetAdminCapability() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, capability, granted }: { userId: string; capability: AdminCapability; granted: boolean }) => {
+      const { data, error } = await supabase.rpc('admin_set_capability', {
+        p_user_id: userId, p_capability: capability, p_granted: granted,
+      });
+      if (error) throw toAppError(error, 'معرفناش نحفظ الصلاحية.');
+      return data as { user_id: string; capability: string; granted: boolean };
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: capabilityMatrixKey });
+      await queryClient.invalidateQueries({ queryKey: capabilityInboxKey });
+      await queryClient.invalidateQueries({ queryKey: capabilityStateKey });
+      await queryClient.invalidateQueries({ queryKey: adminAccountsKey });
+      await queryClient.invalidateQueries({ queryKey: ['admin-access'] });
+    },
+  });
+}

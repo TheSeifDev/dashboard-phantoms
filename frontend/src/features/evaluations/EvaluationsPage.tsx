@@ -80,7 +80,7 @@ export default function EvaluationsPage() {
   const expelMember = useExpelMember();
   const ownerId = useAuthStore((state) => state.user?.id ?? null);
   const access = useAdminAccess(ownerId);
-  const isOwner = Boolean(ownerId) && access.data?.is_owner === true;
+  const isOwner = Boolean(ownerId) && access.data?.owner_authority === true;
 
   const [createOpen, setCreateOpen] = useState(false);
   const [preselectedMemberId, setPreselectedMemberId] = useState<number | null>(null);

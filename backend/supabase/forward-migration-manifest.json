@@ -678,5 +678,15 @@
     "remote_applied_timestamp": "20261124230000",
     "original_source_version": "20261124230000",
     "original_source_filename": "backend/supabase/migrations/20261124230000_owner_member_hard_delete.sql"
+  },
+  {
+    "version": "20261124233000",
+    "name": "admin_owner_parity",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124233000_admin_owner_parity.sql",
+    "sha256": "4a277853027bac68210f383195da47227c8a2944c9b4dd17d8e459352c82826c",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124233000",
+    "original_source_version": "20261124233000",
+    "original_source_filename": "backend/supabase/migrations/20261124233000_admin_owner_parity.sql"
   }
 ]

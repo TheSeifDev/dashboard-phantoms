@@ -20,7 +20,7 @@ export default function RankingPage() {
   const customFieldsQuery = useMemberCustomFields();
   const user = useAuthStore((state) => state.user);
   const adminAccess = useAdminAccess(user?.id ?? null);
-  const canRecordRatings = adminAccess.data?.is_owner === true || adminAccess.data?.permissions?.ranking === true;
+  const canRecordRatings = adminAccess.data?.owner_authority === true || adminAccess.data?.permissions?.ranking === true;
   const [search, setSearch] = useState('');
   const [onlyWithBonus, setOnlyWithBonus] = useState(false);
   const [adjustingMember, setAdjustingMember] = useState<Member | null>(null);
