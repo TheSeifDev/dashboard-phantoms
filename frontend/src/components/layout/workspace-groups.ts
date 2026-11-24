@@ -1,4 +1,4 @@
-import { BookMarked, CalendarCheck2, ClipboardCheck, FolderKanban, LayoutDashboard, ListChecks, Megaphone, Network, Settings, Smartphone, Trophy, Wallet } from 'lucide-react';
+import { BarChart3, BookMarked, BookOpen, CalendarCheck2, CalendarDays, ClipboardCheck, FolderKanban, GraduationCap, LayoutDashboard, ListChecks, Megaphone, Network, Settings, Smartphone, Swords, Trophy, Wallet } from 'lucide-react';
 import type { SidebarGroup } from './AppSidebar';
 
 /**
@@ -24,6 +24,19 @@ export const MEMBER_WORKSPACE_GROUPS: SidebarGroup[] = [
       { to: '/portal/ranking', label: 'ترتيب الفريق', icon: Trophy },
       { to: '/portal?tab=ANNOUNCEMENTS', label: 'الإعلانات', icon: Megaphone, matchSearch: true },
       { to: '/portal/team', label: 'الفريق الداخلي', icon: Network },
+    ],
+  },
+  {
+    title: 'البرمجة التنافسية',
+    items: [
+      { to: '/portal/icpc', label: 'ICPC Hub', icon: Swords, end: true },
+      { to: '/portal/icpc/training', label: 'خريطة التدريب', icon: GraduationCap },
+      { to: '/portal/icpc/problems', label: 'بنك المسائل', icon: ListChecks },
+      { to: '/portal/icpc/contests', label: 'المسابقات', icon: Trophy },
+      { to: '/portal/icpc/team', label: 'أداء الفريق', icon: Network },
+      { to: '/portal/icpc/calendar', label: 'تقويم التدريب', icon: CalendarDays },
+      { to: '/portal/icpc/knowledge', label: 'قاعدة المعرفة', icon: BookOpen },
+      { to: '/portal/icpc/analytics', label: 'التحليلات', icon: BarChart3 },
     ],
   },
   {
