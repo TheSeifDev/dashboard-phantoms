@@ -647,11 +647,11 @@ function TeamCustomFieldsSection({ userId, teamId }: { userId: string; teamId: s
 }
 
 /** الخزنة داخل مساحة الفريق — نفس لوحة الإدارة بالكامل، محصورة على تيم العضو. */
-function TeamLedgerSection({ teamId }: { teamId: string }) {
+function TeamLedgerSection() {
   return (
     <div className="min-w-0">
       <Suspense fallback={<CardSkeletons count={2} />}>
-        <LedgerBoard teamId={teamId} />
+        <LedgerBoard />
       </Suspense>
     </div>
   );
@@ -665,7 +665,7 @@ function WorkspacePanel({ section, userId, teamId }: { section: TeamWorkspaceSec
     case 'ranking': return <TeamRankingSection userId={userId} teamId={teamId} />;
     case 'announcements': return <TeamAnnouncementsSection userId={userId} teamId={teamId} />;
     case 'custom-fields': return <TeamCustomFieldsSection userId={userId} teamId={teamId} />;
-    case 'ledger': return <TeamLedgerSection teamId={teamId} />;
+    case 'ledger': return <TeamLedgerSection />;
   }
 }
 

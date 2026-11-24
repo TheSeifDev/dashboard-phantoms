@@ -1,4 +1,4 @@
-/** عقود RPC الخزنة — مشتركة بين لوحة الإدارة وبوابة العضو. */
+/** عقود RPC الخزنة — خزنة واحدة global مشتركة بين الإدارة وبوابة العضو. */
 export type LedgerKind = 'payment' | 'expense' | 'withdrawal';
 export type LedgerStatus = 'pending' | 'approved' | 'rejected';
 export type LedgerExpenseCategory =
@@ -11,10 +11,10 @@ export type LedgerExpenseCategory =
   | 'event'
   | 'marketing'
   | 'other';
-export interface LedgerTeam {
-  id: string;
-  slug: string;
-  name: string;
+/** التيم/الوحدة اللي العضو تابع لها (AI / Software / HR / PR / المالك …). */
+export interface LedgerUnitOption {
+  unit: string;
+  count: number;
 }
 export interface LedgerReceiver {
   user_id: string;
@@ -32,6 +32,7 @@ export interface LedgerEntry {
   note: string | null;
   member_id: number | null;
   member_name: string | null;
+  member_unit: string | null;
   receiver_user_id: string | null;
   receiver_label: string | null;
   receiver_email: string | null;
@@ -45,6 +46,7 @@ export interface LedgerDue {
   id: number;
   member_id: number;
   full_name: string;
+  unit: string;
   label: string;
   amount: number;
   due_on: string | null;
@@ -55,6 +57,7 @@ export interface LedgerMemberRow {
   member_id: number;
   full_name: string;
   academic_number: string | null;
+  unit: string;
   due_total: number;
   paid_total: number;
   remaining: number;
@@ -77,10 +80,18 @@ export interface LedgerSummary {
   late_count: number;
   member_count: number;
 }
+/** نقطة واحدة في سلسلة الـ chart: شهر + أرقامه + الرصيد التراكمي. */
+export interface LedgerSeriesPoint {
+  month: string;
+  collected: number;
+  expenses: number;
+  withdrawals: number;
+  balance: number;
+}
 export interface AdminLedgerPayload {
-  team: LedgerTeam;
-  teams: LedgerTeam[];
   can_manage: boolean;
+  unit: string | null;
+  units: LedgerUnitOption[];
   summary: LedgerSummary;
   receivers: LedgerReceiver[];
   entries: LedgerEntry[];
@@ -114,20 +125,14 @@ export interface MemberLedgerPayment {
   decided_at: string | null;
   created_at: string;
 }
-export interface MemberLedgerSummary {
-  collected: number;
-  expenses: number;
-  withdrawals: number;
-  balance: number;
-  expense_count: number;
+export interface MemberLedgerSummary extends LedgerSummary {
   my_paid: number;
   my_pending: number;
   my_expected: number;
   my_remaining: number;
 }
 export interface MemberLedgerPayload {
-  team: LedgerTeam;
-  teams: LedgerTeam[];
+  unit: string;
   summary: MemberLedgerSummary;
   expenses: MemberLedgerExpense[];
   dues: MemberLedgerDue[];
@@ -203,6 +208,12 @@ export function money(value: number | string | null | undefined): string {
     maximumFractionDigits: 2,
   }).format(safe);
   return `${formatted} ج.م`;
+}
+/** رقم عادي بدون عملة — للخانات اللي جانبها chart. */
+export function plainNumber(value: number | string | null | undefined): string {
+  const amount = typeof value === 'string' ? Number(value) : value ?? 0;
+  const safe = Number.isFinite(amount) ? amount : 0;
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(safe);
 }
 /** تاريخ اليوم بصيغة YYYY-MM-DD لخانة التاريخ. */
 export function todayIso(): string {

@@ -389,7 +389,7 @@ export default function MembersPage() {
             <li data-tone="blue">
               {t(`${number(memberMetrics.total)} عضو مسجّل`, `${number(memberMetrics.total)} registered`)}
             </li>
-            <li data-tone="green">
+            <li data-tone="success">
               {t(`${number(memberMetrics.active)} نشط`, `${number(memberMetrics.active)} active`)}
             </li>
             <li data-tone="amber">

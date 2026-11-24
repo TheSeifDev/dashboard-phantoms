@@ -71,7 +71,7 @@ html[lang="ar"] .dashboard-eyebrow { letter-spacing: 0; font-size: 12px; }
 .dashboard-panel-icon svg,
 .dashboard-hex-orb svg { width: 18px; height: 18px; stroke-width: 1.9; }
 .dashboard-panel-icon[data-tone="blue"] { --tone: var(--chart-blue); }
-.dashboard-panel-icon[data-tone="green"] { --tone: var(--success); }
+.dashboard-panel-icon[data-tone="cyan"] { --tone: var(--success); }
 .dashboard-panel-icon[data-tone="amber"] { --tone: var(--chart-amber); }
 .dashboard-panel-icon[data-tone="red"] { --tone: var(--crew-4); }
 .dashboard-panel-icon[data-tone="violet"] { --tone: var(--crew-2); }
@@ -375,7 +375,7 @@ html[lang="ar"] .dashboard-hero-title { letter-spacing: 0; line-height: 1.25; }
   will-change: transform;
 }
 .kpi-card[data-tone="violet"] { --tone: var(--crew-2); }
-.kpi-card[data-tone="green"] { --tone: var(--success); }
+.kpi-card[data-tone="cyan"] { --tone: var(--success); }
 .kpi-card[data-tone="amber"] { --tone: var(--chart-amber); }
 .kpi-card::after {
   content: "";

@@ -36,7 +36,7 @@ export function WhatsAppQRViewer({
     ? status.state ?? (status.connected ? 'connected' : status.qr ? 'qr_ready' : status.enabled ? 'connecting' : 'disconnected')
     : undefined;
   const borderClass = connectionState === 'connected'
-    ? 'border-s-emerald-600'
+    ? 'border-s-[var(--success)]'
     : connectionState === 'qr_ready' || connectionState === 'connecting'
       ? 'border-s-amber-500'
       : 'border-s-[var(--border)]';

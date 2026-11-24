@@ -418,7 +418,7 @@ export function WhatsAppNotificationCenter({
           dir={dir}
           className="fixed inset-x-0 top-0 z-[130] mx-auto w-full max-w-xl px-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4"
         >
-          <div className="overflow-hidden rounded-2xl border border-[var(--success-border)] border-s-4 border-s-emerald-600 bg-[var(--surface)] p-3.5 shadow-[var(--shadow-lg)]">
+          <div className="overflow-hidden rounded-2xl border border-[var(--success-border)] border-s-4 border-s-[var(--success)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-lg)]">
             <div className="flex items-start gap-3">
               <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--success)] text-[var(--on-success)]">
                 <BellRing size={20} aria-hidden="true" />
