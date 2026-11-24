@@ -91,6 +91,9 @@ const mocks = {
   // منطقة الخطر بتحتاج QueryClient وتستدعي RPCs، فبنثبتها هنا وبتتغطى في scripts/member-deletion.test.ts.
   'features/members/MemberDangerZone.tsx': { MemberDangerZone: () => el('section', { id: 'delete-account' }, el('h2', null, 'Delete account permanently')) },
   // كارت تلجرام بيستدعي RPCs بتاعته، فبيتغطى في scripts/telegram-bot.test.mjs.
+  'features/dashboard/GithubMark.tsx': { GithubMark: () => el('span', { 'aria-hidden': 'true' }) },
+  'features/members/MemberGithubCard.tsx': { MemberGithubCard: () => el('section', { id: 'github-link' }, el('h2', null, 'Code linking')) },
+  'features/members/github-link-api.ts': { useGithubLinkState: () => ({ data: { linked: false, handle: null, profile_url: null }, isPending: false, isError: false }) },
   'features/telegram/MemberTelegramCard.tsx': { MemberTelegramCard: () => el('section', { id: 'telegram-link' }, el('h2', null, 'Telegram notifications')) },
 };
 const actual = new Set(['features/members/profile-fields.ts', 'features/members/MemberProfileFields.tsx', 'features/members/MissingProfileFields.tsx', 'features/members/profile-api.ts', 'features/members/MemberSettingsPage.tsx', 'features/members/MemberPasswordCard.tsx', 'features/auth/member-password-access.ts', 'features/auth/member-password-change-api.ts', 'features/members/MemberProfileCompletionGuard.tsx', 'features/auth/member-password.ts', 'features/auth/member-recovery.ts', 'features/auth/member-recovery-api.ts', 'features/auth/MemberRecoveryPage.tsx', 'features/auth/MemberForgotPasswordPage.tsx']);

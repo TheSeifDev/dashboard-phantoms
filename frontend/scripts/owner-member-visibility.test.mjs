@@ -25,6 +25,7 @@ const mocks = {
   'features/members/customFieldsApi.ts': { formatCustomFieldValue: (_, v) => String(v ?? ''), getMemberCustomFieldValue: (m, f) => m.custom_fields?.[f.id] },
   'features/members/MemberCells.tsx': { DeviceChips: () => null, ReadinessChip: () => null, WorkStatusChip: () => null },
   'features/dashboard/github.ts': { githubAvatarUrl: (handle, size = 64) => `https://github.com/${handle}.png?size=${size}`, resolveGithubHandle: () => null },
+  'features/dashboard/GithubMark.tsx': { GithubMark: () => null },
   'features/members/OwnerMemberErasure.tsx': { OwnerMemberErasure: ({ isOwner }) => isOwner ? el('button', { 'data-testid': 'owner-erasure-preview' }, 'Owner erasure preview') : null },
 };
 const actual = new Set(['features/members/profile-fields.ts', 'features/members/member-profile-display.ts', 'features/members/MemberAcademicDetails.tsx', 'features/members/MissingProfileFields.tsx', 'features/members/MemberCards.tsx', 'features/members/MemberProfileFields.tsx', 'features/members/MemberExperiencePreviewPage.tsx', 'features/app-usage/MemberAppUsageDetails.tsx', 'components/ui/MemberAvatar.tsx']);

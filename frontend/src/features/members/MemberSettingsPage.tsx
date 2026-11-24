@@ -1,20 +1,25 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentType, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ArrowUpRight, Info, LockKeyhole, Save, ShieldCheck, UserRound } from 'lucide-react';
+import {
+  ArrowUpRight, CheckCircle2, Info, KeyRound, LockKeyhole, Save, Send, ShieldCheck, Trash2, UserRound,
+} from 'lucide-react';
 import { gsap } from 'gsap';
 import { useLocale } from '../../i18n/useLocale';
 import { getDeviceToken, useAuthStore } from '../../store/auth';
 import { Button } from '../../components/ui/Button';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { PhantomLoader } from '../../components/motion/PhantomLoader';
+import { GithubMark } from '../dashboard/GithubMark';
 import { MemberProfileFields } from './MemberProfileFields';
 import { MissingProfileFields } from './MissingProfileFields';
+import { MemberGithubCard } from './MemberGithubCard';
 import { MemberTelegramCard } from '../telegram/MemberTelegramCard';
 import { MemberPasswordCard } from './MemberPasswordCard';
 import { MemberDangerZone } from './MemberDangerZone';
 import { validateMemberProfile, type MemberProfileInput } from './profile-fields';
 import { memberProfileKey, MemberProfileApiError, profileToInput, saveMemberProfile, useMemberProfile, type MemberProfileSnapshot } from './profile-api';
+import { useGithubLinkState } from './github-link-api';
 import '../../styles/member-settings.css';
 
 function SettingsForm({ initial }: { initial: MemberProfileSnapshot }) {
@@ -72,7 +77,6 @@ function SettingsForm({ initial }: { initial: MemberProfileSnapshot }) {
   return <>
     {!saved.profile_complete && <div className="settings-completion-notice settings-reveal" role="status"><Info size={21} aria-hidden="true" /><div><strong>{t('كل بيانات حسابك إلزامية الآن', 'Every profile field is required now')}</strong><p>{t('أكمل الحقول الناقصة واحفظها لتعود إلى مساحة العمل. لحد ما تكمّلها هيوصلك تذكير باستمرار. حسابك وعضويات التيم محفوظة كما هي.', 'Fill in the missing fields and save to return to your workspace. You keep getting reminders until they are complete. Your account and team memberships are unchanged.')}</p><MissingProfileFields fields={saved.missing_fields} /></div></div>}
     <form ref={formRef} onSubmit={(event) => { void submit(event); }} noValidate aria-busy={saving || undefined} className="settings-form settings-reveal">
-      <div className="settings-section-heading"><span className="settings-section-number" aria-hidden="true">01</span><div><h2>{t('معلوماتك في PHANTOMS', 'Your PHANTOMS information')}</h2><p>{t('كل الحقول إلزامية لاستكمال حسابك. بياناتك لا تغيّر صلاحيات التيم.', 'Every field is required to complete your account. Your profile does not change team permissions.')}</p></div></div>
       <label className="auth-field settings-login-email" htmlFor="settings-email">{t('البريد الإلكتروني المسجل *', 'Registered email address *')}<input id="settings-email" type="email" dir="ltr" readOnly value={saved.email} aria-describedby="settings-email-note" /><span id="settings-email-note" className="settings-hint">{t('بريد تسجيل الدخول ثابت هنا لحماية ربط حسابك. لتغييره تواصل مع الإدارة.', 'Your sign-in email is read-only to protect your account binding. Contact the administrators to change it.')}</span></label>
       {error && <div id="settings-error" className="auth-error" role="alert">{error}</div>}
       <MemberProfileFields idPrefix="settings" profile={profile} disabled={saving} invalidField={invalidField} errorId="settings-error" onChange={(key, value) => { setProfile((current) => ({ ...current, [key]: value })); setInvalidField(null); setError(''); setSuccess(false); }} />
@@ -82,11 +86,37 @@ function SettingsForm({ initial }: { initial: MemberProfileSnapshot }) {
   </>;
 }
 
+const SECTIONS: { id: string; icon: ComponentType<{ size?: number }>; ar: string; en: string }[] = [
+  { id: 'mset-profile', icon: UserRound, ar: 'معلوماتي', en: 'My information' },
+  { id: 'mset-github', icon: GithubMark, ar: 'ربط الكود', en: 'Code linking' },
+  { id: 'mset-telegram', icon: Send, ar: 'تيليجرام', en: 'Telegram' },
+  { id: 'mset-security', icon: KeyRound, ar: 'كلمة المرور', en: 'Password' },
+  { id: 'mset-danger', icon: Trash2, ar: 'حذف الحساب', en: 'Delete account' },
+];
+
+function SectionBlock({ id, index, title, description, children }: { id: string; index: string; title: string; description: string; children: ReactNode }) {
+  return (
+    <section id={id} className="mset-block settings-reveal" aria-labelledby={`${id}-title`}>
+      <header className="mset-block-head">
+        <span className="mset-block-index" aria-hidden="true">{index}</span>
+        <div>
+          <h2 id={`${id}-title`}>{title}</h2>
+          <p>{description}</p>
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
+
 export default function MemberSettingsPage() {
   const { t, dir } = useLocale();
   const profile = useMemberProfile();
+  const github = useGithubLinkState();
   const root = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState<string>('mset-profile');
   const ready = Boolean(profile.data);
+
   useEffect(() => {
     if (!root.current || !ready) return;
     const media = gsap.matchMedia();
@@ -96,17 +126,109 @@ export default function MemberSettingsPage() {
     });
     return () => media.revert();
   }, [ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const nodes = SECTIONS.map((section) => document.getElementById(section.id)).filter((node): node is HTMLElement => Boolean(node));
+    if (!nodes.length || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+      if (visible?.target.id) setActive(visible.target.id);
+    }, { rootMargin: '-30% 0px -55% 0px', threshold: 0 });
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, [ready]);
+
+  const jump = useCallback((id: string) => {
+    const node = document.getElementById(id);
+    if (!node) return;
+    const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    node.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    setActive(id);
+  }, []);
+
+  const complete = profile.data?.profile_complete ?? false;
+  const githubLinked = github.data?.linked === true;
+
   return <div ref={root} dir={dir} className="member-settings-page member-settings-page--embedded">
     <div className="member-settings-main">
-      <Link to="/download" className="settings-back-link self-start">{t('تطبيق PHANTOMS للموبايل (أندرويد و iOS)', 'Get the PHANTOMS app (Android and iOS)')}<ArrowUpRight size={17} aria-hidden="true" /></Link>
-      <div className="settings-title-row"><div><span className="settings-eyebrow">PHANTOMS / {t('حسابي', 'MY ACCOUNT')}</span><h1>{t('الإعدادات ومعلوماتي', 'Settings & information')}</h1><p>{t('ملف واضح. تواصل أسهل. حساب أكثر أماناً.', 'A clear profile. Easier collaboration. A safer account.')}</p></div>{profile.data?.profile_complete && <Link to="/portal" className="settings-back-link">{t('مساحة العمل', 'Workspace')}<ArrowUpRight size={17} aria-hidden="true" /></Link>}</div>
-      {profile.isPending || !profile.isFetchedAfterMount ? <PhantomLoader message={t('بنحمّل معلوماتك...', 'Loading your information...')} /> : profile.isError || !profile.data ? <ErrorState message={t('تعذّر تحميل معلوماتك. أعد المحاولة؛ لم تتغير بيانات حسابك.', 'Your information could not be loaded. Retry; your account details have not changed.')} onRetry={() => { void profile.refetch(); }} /> : <div className="member-settings-layout">
-        <aside className="settings-summary settings-reveal" aria-label={t('حالة الملف الشخصي', 'Profile status')}><div className="settings-profile-mark" aria-hidden="true"><UserRound size={30} /></div><h2>{profile.data.full_name}</h2><p className="settings-summary-email" dir="ltr">{profile.data.email}</p><div className={`settings-status ${profile.data.profile_complete ? 'is-complete' : ''}`}><ShieldCheck size={17} aria-hidden="true" />{profile.data.profile_complete ? t('معلوماتك مكتملة', 'Information complete') : t('معلومات مطلوبة', 'Information required')}</div><div className="settings-summary-divider" /><p className="settings-hint">{t('تخصصك يصف مجال اهتمامك. عضويات Software وHardware وAI يديرها الفريق بصورة مستقلة.', 'Your specialization describes your focus. Software, Hardware and AI team memberships are managed separately.')}</p><div className="settings-security"><LockKeyhole size={19} aria-hidden="true" /><h3>{t('أمان الحساب', 'Account security')}</h3><p>{t('استعادة كلمة المرور تتم عبر البريد المسجل أو رابط إدارة آمن.', 'Recover your password through your registered email or a secure administrator link.')}</p><Link to="/forgot-password">{t('استعادة كلمة المرور', 'Password recovery')}<ArrowUpRight size={15} aria-hidden="true" /></Link></div></aside>
-        <section className="settings-editor" aria-label={t('تعديل البيانات', 'Edit information')}><SettingsForm key={`${profile.data.member_id}:${profile.data.email}`} initial={profile.data} /></section>
+      <header className="mset-hero settings-reveal">
+        <div className="mset-hero-copy">
+          <span className="settings-eyebrow">PHANTOMS / {t('حسابي', 'MY ACCOUNT')}</span>
+          <h1>{t('الإعدادات', 'Settings')}</h1>
+          <p>{t('كل حاجة عن حسابك في مكان واحد: بياناتك، ربط الكود، تيليجرام والأمان.', 'Everything about your account in one place: your details, code linking, Telegram and security.')}</p>
+          <div className="mset-hero-chips">
+            <span className={`mset-chip ${complete ? 'is-on' : 'is-warn'}`}>
+              <ShieldCheck size={14} aria-hidden="true" />
+              {complete ? t('البيانات مكتملة', 'Details complete') : t('بيانات ناقصة', 'Details missing')}
+            </span>
+            <span className={`mset-chip ${githubLinked ? 'is-on' : 'is-off'}`}>
+              <GithubMark size={14} />
+              {githubLinked ? `@${github.data?.handle ?? ''}` : t('الكود مش مربوط', 'Code not linked')}
+            </span>
+          </div>
+        </div>
+        <div className="mset-hero-actions">
+          {complete && <Link to="/portal" className="mset-hero-link">{t('مساحة العمل', 'Workspace')}<ArrowUpRight size={16} aria-hidden="true" /></Link>}
+          <Link to="/download" className="mset-hero-link">{t('تطبيق الموبايل', 'Mobile app')}<ArrowUpRight size={16} aria-hidden="true" /></Link>
+        </div>
+      </header>
+
+      {profile.isPending || !profile.isFetchedAfterMount ? <PhantomLoader message={t('بنحمّل معلوماتك...', 'Loading your information...')} /> : profile.isError || !profile.data ? <ErrorState message={t('تعذّر تحميل معلوماتك. أعد المحاولة؛ لم تتغير بيانات حسابك.', 'Your information could not be loaded. Retry; your account details have not changed.')} onRetry={() => { void profile.refetch(); }} /> : <div className="mset-grid">
+        <aside className="mset-side settings-reveal" aria-label={t('تنقل سريع في الإعدادات', 'Settings navigation')}>
+          <div className="mset-id">
+            <div className="mset-id-mark" aria-hidden="true">{profile.data.full_name.trim().slice(0, 1) || <UserRound size={24} />}</div>
+            <div className="mset-id-copy">
+              <h2>{profile.data.full_name}</h2>
+              <p dir="ltr">{profile.data.email}</p>
+            </div>
+          </div>
+          <div className={`settings-status ${complete ? 'is-complete' : ''}`}>
+            <ShieldCheck size={17} aria-hidden="true" />
+            {complete ? t('معلوماتك مكتملة', 'Information complete') : t('معلومات مطلوبة', 'Information required')}
+          </div>
+          <nav className="mset-nav" aria-label={t('أقسام الإعدادات', 'Settings sections')}>
+            {SECTIONS.map((section) => {
+              const Icon = section.icon;
+              return (
+                <button key={section.id} type="button" className="mset-nav-item" data-active={active === section.id} aria-current={active === section.id ? 'true' : undefined} onClick={() => jump(section.id)}>
+                  <Icon size={16} aria-hidden="true" />
+                  <span>{t(section.ar, section.en)}</span>
+                  {section.id === 'mset-github' && <span className="mset-nav-dot" data-on={githubLinked} aria-hidden="true" />}
+                </button>
+              );
+            })}
+          </nav>
+          <div className="settings-security">
+            <LockKeyhole size={19} aria-hidden="true" />
+            <h3>{t('أمان الحساب', 'Account security')}</h3>
+            <p>{t('استعادة كلمة المرور تتم عبر البريد المسجل أو رابط إدارة آمن.', 'Recover your password through your registered email or a secure administrator link.')}</p>
+            <Link to="/forgot-password">{t('استعادة كلمة المرور', 'Password recovery')}<ArrowUpRight size={15} aria-hidden="true" /></Link>
+          </div>
+        </aside>
+
+        <div className="mset-column">
+          <SectionBlock id="mset-profile" index="01" title={t('معلوماتي', 'My information')} description={t('البيانات دي بتظهر للإدارة وأعضاء تيمك، وكل حقولها إلزامية.', 'These details are visible to the admins and your team, and every field is required.')}>
+            <SettingsForm key={`${profile.data.member_id}:${profile.data.email}`} initial={profile.data} />
+          </SectionBlock>
+
+          <SectionBlock id="mset-github" index="02" title={t('ربط الكود', 'Code linking')} description={t('لينك GitHub هو مصدر مساهماتك وأفاتارك في الداشبورد.', 'Your GitHub link powers your contributions and avatar across the dashboard.')}>
+            <MemberGithubCard />
+          </SectionBlock>
+
+          <SectionBlock id="mset-telegram" index="03" title={t('تيليجرام', 'Telegram')} description={t('اربط تيليجرام عشان الإشعارات والمهام توصلك على طول.', 'Link Telegram so notifications and tasks reach you instantly.')}>
+            <MemberTelegramCard />
+          </SectionBlock>
+
+          <SectionBlock id="mset-security" index="04" title={t('كلمة المرور', 'Password')} description={t('غيّر كلمة المرور بشكل دوري، واستخدم كلمة قوية مش مستخدمة في مكان تاني.', 'Rotate your password regularly and use a strong one you do not reuse elsewhere.')}>
+            <MemberPasswordCard />
+          </SectionBlock>
+
+          <SectionBlock id="mset-danger" index="05" title={t('حذف الحساب', 'Delete account')} description={t('إجراء نهائي — بيتشال معاه وصولك لكل حاجة في PHANTOMS.', 'A permanent action — it removes your access to everything in PHANTOMS.')}>
+            <MemberDangerZone />
+          </SectionBlock>
+        </div>
       </div>}
-      {profile.data && <div className="mt-6"><MemberTelegramCard /></div>}
-      {profile.data && <div className="mt-6"><MemberPasswordCard /></div>}
-      {profile.data && <div className="mt-3"><MemberDangerZone /></div>}
     </div>
   </div>;
 }

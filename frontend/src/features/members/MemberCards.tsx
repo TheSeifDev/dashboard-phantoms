@@ -8,6 +8,8 @@ import { OwnerMemberErasure } from './OwnerMemberErasure';
 import { ChevronDown, Eye, Mail, MapPin, Pencil, Phone, ShieldAlert, Trash2 } from 'lucide-react';
 import { useLocale } from '../../i18n/useLocale';
 import { MemberAppUsageDetails, type AppUsageDisplay } from '../app-usage/MemberAppUsageDetails';
+import { resolveGithubHandle } from '../dashboard/github';
+import { GithubMark } from '../dashboard/GithubMark';
 
 export function MemberCards({
   members,
@@ -44,6 +46,7 @@ export function MemberCards({
       {members.map((member) => {
         const specialization = memberSpecializationLabel(member.specialization);
         const memberTeams = teamsByMember?.[member.id] ?? [];
+        const githubHandle = resolveGithubHandle(member);
         return (
           <li key={member.id} id={`member-card-${member.id}`} className="member-dir-card glass-card">
             <div className="member-dir-card-head">
@@ -89,6 +92,16 @@ export function MemberCards({
               <div>
                 <dt>{t('الأجهزة', 'Devices')}</dt>
                 <dd><DeviceChips device={member.device} /></dd>
+              </div>
+              <div>
+                <dt><GithubMark size={12} />{t('الكود', 'Code')}</dt>
+                <dd>
+                  {githubHandle ? (
+                    <a className="member-dir-github" href={`https://github.com/${githubHandle}`} target="_blank" rel="noreferrer noopener" dir="ltr" title={t('فتح حساب GitHub', 'Open the GitHub account')}>@{githubHandle}</a>
+                  ) : (
+                    <span className="member-dir-github-missing">{t('مش مربوط', 'Not linked')}</span>
+                  )}
+                </dd>
               </div>
               {cardFields.map((field) => (
                 <div key={field.id}>

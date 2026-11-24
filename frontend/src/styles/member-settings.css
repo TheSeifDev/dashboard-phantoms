@@ -61,3 +61,97 @@
 @media (prefers-reduced-motion: reduce) {
   .member-settings-page *, .member-settings-page *::before, .member-settings-page *::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* ============================================================
+   Round 31 — settings redesign: hero, sticky nav, section blocks
+   ============================================================ */
+.mset-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+.mset-hero-copy { min-width: 0; }
+.mset-hero-copy h1 { font-size: clamp(26px, 3.4vw, 40px); line-height: 1.25; font-weight: 900; margin: 0; letter-spacing: -.01em; }
+.mset-hero-copy p { color: var(--text-muted); font-size: 13px; line-height: 1.9; margin-top: 8px; max-width: 56ch; }
+.mset-hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.mset-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-muted); font-size: 11px; font-weight: 800; }
+.mset-chip.is-on { color: var(--success-text); background: var(--success-soft); border-color: transparent; }
+.mset-chip.is-warn { color: var(--warning-text); background: var(--warning-soft); border-color: transparent; }
+.mset-chip.is-off { color: var(--text-muted); }
+.mset-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.mset-hero-link { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 800; transition: border-color .2s ease, background .2s ease; }
+.mset-hero-link:hover { border-color: var(--border-strong); background: var(--surface-2); }
+
+.mset-grid { display: grid; grid-template-columns: minmax(0, 268px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.mset-side { position: sticky; top: calc(var(--header-h) + 20px); display: grid; gap: 16px; padding: 18px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-xs); min-width: 0; }
+.mset-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.mset-id-mark { display: grid; place-items: center; width: 46px; height: 46px; flex-shrink: 0; border-radius: 14px; background: var(--primary-soft); color: var(--primary); font-size: 18px; font-weight: 900; text-transform: uppercase; }
+.mset-id-copy { min-width: 0; }
+.mset-id-copy h2 { font-size: 15px; font-weight: 900; line-height: 1.5; overflow-wrap: anywhere; }
+.mset-id-copy p { font-size: 11px; color: var(--text-muted); overflow-wrap: anywhere; margin-top: 2px; }
+.mset-side .settings-status { margin-top: 0; }
+.mset-nav { display: grid; gap: 4px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+.mset-nav-item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px; padding: 0 11px; border-radius: var(--radius-sm); border: 1px solid transparent; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 800; text-align: start; transition: background .18s ease, color .18s ease, border-color .18s ease; }
+.mset-nav-item:hover { background: var(--surface-2); color: var(--text); }
+.mset-nav-item[data-active="true"] { background: var(--primary-soft); border-color: transparent; color: var(--primary); }
+.mset-nav-item svg { flex-shrink: 0; }
+.mset-nav-dot { margin-inline-start: auto; width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); }
+.mset-nav-dot[data-on="true"] { background: var(--success-text); }
+.mset-side .settings-security { margin-top: 0; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+
+.mset-column { display: grid; gap: 26px; min-width: 0; }
+.mset-block { scroll-margin-top: calc(var(--header-h) + 24px); min-width: 0; }
+.mset-block-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.mset-block-index { display: grid; place-items: center; min-width: 30px; height: 30px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 11px; font-weight: 900; font-family: var(--font-mono); }
+.mset-block-head h2 { font-size: 16px; font-weight: 900; line-height: 1.6; }
+.mset-block-head p { font-size: 11px; line-height: 1.9; color: var(--text-muted); margin-top: 3px; max-width: 62ch; }
+
+/* GitHub card */
+.mset-github { display: grid; gap: 16px; padding: clamp(16px, 2.6vw, 24px); border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-xs); min-width: 0; }
+.mset-github-head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.mset-github-mark { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text); }
+.mset-github-copy { min-width: 0; flex: 1 1 220px; }
+.mset-github-copy h3 { font-size: 14px; font-weight: 900; }
+.mset-github-copy p { font-size: 11px; line-height: 1.9; color: var(--text-muted); margin-top: 3px; }
+.mset-github-state { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 3px 10px; border-radius: 999px; background: var(--success-soft); color: var(--success-text); font-size: 11px; font-weight: 800; }
+.mset-github-form { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.mset-github-field { display: grid; gap: 6px; flex: 1 1 240px; min-width: 0; font-size: 11px; font-weight: 800; color: var(--text-muted); }
+.mset-github-input { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); transition: border-color .18s ease, box-shadow .18s ease; }
+.mset-github-input:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.mset-github-input svg { color: var(--text-muted); flex-shrink: 0; }
+.mset-github-input input { flex: 1; min-width: 0; height: 42px; border: 0; background: transparent; color: var(--text); font-size: 13px; font-family: var(--font-mono); }
+.mset-github-input input:focus-visible { outline: none; }
+.mset-github-linked { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-2); }
+.mset-github-avatar { width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--border); object-fit: cover; background: var(--surface); }
+.mset-github-id { min-width: 0; flex: 1 1 180px; }
+.mset-github-id strong { display: block; font-size: 14px; font-weight: 900; font-family: var(--font-mono); overflow-wrap: anywhere; }
+.mset-github-id small { display: block; font-size: 11px; color: var(--text-muted); line-height: 1.8; margin-top: 2px; }
+.mset-github-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mset-github-link { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border); color: var(--text); font-size: 12px; font-weight: 800; }
+.mset-github-link:hover { border-color: var(--border-strong); background: var(--surface); }
+.mset-github-preview { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; border: 1px dashed var(--border-strong); background: var(--surface-2); }
+.mset-github-preview img { width: 32px; height: 32px; border-radius: 9px; }
+.mset-github-preview strong { display: block; font-size: 12px; font-weight: 900; }
+.mset-github-preview small { display: block; font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+.mset-github-note { display: flex; align-items: flex-start; gap: 7px; font-size: 11px; line-height: 1.9; color: var(--text-muted); }
+.mset-github-note svg { flex-shrink: 0; margin-top: 3px; }
+.mset-github-error { padding: 10px 12px; border-radius: 10px; background: var(--danger-soft); color: var(--danger-text); font-size: 11px; font-weight: 800; line-height: 1.8; }
+.mset-github-done { display: flex; align-items: center; gap: 7px; padding: 10px 12px; border-radius: 10px; background: var(--success-soft); color: var(--success-text); font-size: 11px; font-weight: 800; }
+.mset-spin { animation: mset-spin 1s linear infinite; }
+@keyframes mset-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 899px) {
+  .mset-grid { grid-template-columns: minmax(0, 1fr); }
+  .mset-side { position: static; }
+  .mset-nav { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .mset-nav-item { white-space: nowrap; }
+  .mset-side .settings-security { display: none; }
+}
+@media (max-width: 479px) {
+  .mset-hero { align-items: flex-start; }
+  .mset-hero-actions { width: 100%; }
+  .mset-hero-link { flex: 1; justify-content: center; }
+  .mset-github-form { flex-direction: column; align-items: stretch; }
+  .mset-github-field { flex: 0 0 auto; }
+  .mset-github-form > button { width: 100%; }
+  .mset-github-actions { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mset-spin { animation: none; }
+}

@@ -11,6 +11,7 @@ import { CardSkeletons } from '../../components/ui/Skeleton';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { MemberToolbar } from './MemberToolbar';
+import { resolveGithubHandle } from '../dashboard/github';
 import { EMPTY_MEMBER_FILTERS, type MemberFiltersValue } from './MemberToolbar';
 import { MemberCards } from './MemberCards';
 import { MemberProfileModal } from './MemberProfileModal';
@@ -139,7 +140,8 @@ export default function MembersPage() {
     filters.activity !== 'ALL' ||
     filters.information !== 'ALL' ||
     filters.team !== 'ALL' ||
-    filters.app !== 'ALL';
+    filters.app !== 'ALL' ||
+    filters.github !== 'ALL';
 
   const workConditions = useMemo(
     () => [
@@ -189,6 +191,16 @@ export default function MembersPage() {
     return { installed, missing: Math.max(0, total - installed) };
   }, [allMemberIds, appUsageReady, installedIds]);
 
+  const githubLinkedIds = useMemo(
+    () => new Set((query.data ?? []).filter((member) => Boolean(resolveGithubHandle(member))).map((member) => member.id)),
+    [query.data],
+  );
+  const githubCounts = useMemo(() => {
+    const total = allMemberIds.length;
+    const linked = allMemberIds.filter((id) => githubLinkedIds.has(id)).length;
+    return { linked, missing: Math.max(0, total - linked) };
+  }, [allMemberIds, githubLinkedIds]);
+
   const visibleMembers = useMemo(
     () => {
       const filtered = (query.data ?? []).filter((member) => {
@@ -210,7 +222,9 @@ export default function MembersPage() {
         const matchesApp = filters.app === 'ALL' || !appUsageReady
           ? true
           : filters.app === 'INSTALLED' ? installedIds.has(member.id) : !installedIds.has(member.id);
-        return matchesText && matchesWorkConditions && matchesDevice && matchesAlexandria && matchesActivity && matchesInformation && matchesTeam && matchesApp;
+        const matchesGithub = filters.github === 'ALL'
+          || (filters.github === 'LINKED' ? githubLinkedIds.has(member.id) : !githubLinkedIds.has(member.id));
+        return matchesText && matchesWorkConditions && matchesDevice && matchesAlexandria && matchesActivity && matchesInformation && matchesTeam && matchesApp && matchesGithub;
       });
       const byName = (left: Member, right: Member) => left.full_name.localeCompare(right.full_name, 'ar');
       switch (filters.sort) {
@@ -227,7 +241,7 @@ export default function MembersPage() {
           return [...filtered].sort(byName);
       }
     },
-    [filters, query.data, pendingDeleteMap, teamsByMember, appUsageReady, installedIds],
+    [filters, query.data, pendingDeleteMap, teamsByMember, appUsageReady, installedIds, githubLinkedIds],
   );
 
   // العودة لأول صفحة عند تغير الفلاتر أو البيانات أو حجم الصفحة
@@ -462,6 +476,8 @@ export default function MembersPage() {
           teamOptions={teamOptions}
           showAppFilter={isOwner}
           appCounts={appCounts}
+          showGithubFilter
+          githubCounts={githubCounts}
         />
       </section>
 
