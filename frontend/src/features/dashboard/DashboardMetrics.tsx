@@ -12,7 +12,7 @@ export interface MetricSeries {
   submissions: number[];
 }
 
-export type Tone = 'blue' | 'violet' | 'green' | 'amber';
+export type Tone = 'blue' | 'violet' | 'cyan' | 'amber';
 
 export function Sparkline({ values, tone }: { values: number[]; tone: Tone }) {
   const gradient = useId().replace(/:/g, '');
@@ -138,7 +138,7 @@ export function DashboardMetricsGrid({ metrics, taskCount, series }: { metrics: 
         value={metrics.approvedTasks}
         detail={t('الحالات الحالية فقط، وليست سجل الأحداث', 'Current task states, not approval history')}
         icon={CircleCheck}
-        tone="green"
+        tone="violet"
         series={series.approvals}
         deltaLabel={weekly}
       />

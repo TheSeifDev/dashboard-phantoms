@@ -75,24 +75,27 @@ function assertFamily(theme: Record<string, string>, tokenNames: string[], refer
 
 test('canonical brand roots and ink theme anchors match the glass SaaS direction', () => {
   assert.equal(color('crimson'), '#dc143c');
-  assert.equal(color('emerald'), '#10b981');
+  assert.ok(!('emerald' in light) && !('emerald' in dark), 'green is retired from the design system');
+  assert.ok(!Object.keys(light).some((token) => /(^|-)lime(-|$)/.test(token)), 'lime chart tokens are retired');
+  assert.equal(color('chart-accent').toLowerCase(), '#5b5bf7');
   assert.equal(color('graphite-900'), '#12151d');
   assert.equal(color('prussian-blue'), color('graphite-900'), 'legacy Prussian token remains a neutral compatibility alias');
   assert.equal(color('bg', dark), '#090b11');
   assert.equal(color('sidebar-bg', light), '#ffffff');
   assert.equal(color('sidebar-bg', dark), '#0e1118');
   assert.equal(color('primary'), '#dc143c');
-  assert.equal(color('success'), '#10b981');
+  assert.equal(color('success').toLowerCase(), '#22b8e6');
 });
-test('Crimson and Emerald retain their semantic families; links, info and the honeycomb ramp stay in the indigo/blue family', () => {
+test('Crimson and cyan success retain their semantic families; links, info and the honeycomb ramp stay in the indigo/blue family', () => {
   const crimson = ['primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'accent-pink', 'accent-pink-soft', 'crew-4'];
-  const emerald = ['success', 'success-hover', 'success-soft', 'success-border', 'success-text'];
+  const cyan = ['success', 'success-hover', 'success-soft', 'success-border', 'success-text'];
   const indigo = ['link', 'accent', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text'];
   const blue = ['heat-1', 'heat-2', 'heat-3', 'heat-4', 'crew-1', 'chart-blue'];
   const neutral = ['chart-slate', 'sidebar-active-bg', 'sidebar-active-ink', 'sidebar-active-border', 'sidebar-hover', 'sidebar-border', 'sidebar-muted', 'focus-ring', 'sidebar-focus-ring'];
   for (const theme of [light, dark]) {
     assertFamily(theme, crimson, 'crimson', 18);
-    assertFamily(theme, emerald, 'emerald', 16);
+    assertFamily(theme, cyan, 'chart-cyan', 16);
+    assertFamily(theme, ['chart-accent', 'chart-accent-soft', 'chart-accent-text'], 'chart-accent', 16);
     assertFamily(theme, indigo, 'indigo', 16);
     assertFamily(theme, blue, 'crew-1', 14);
     for (const token of neutral) {
@@ -137,7 +140,7 @@ test('primary, success, and danger text use accessible foreground and soft-surfa
   for (const theme of [light, dark]) {
     assert.ok(contrast('#ffffff', color('primary', theme)) >= 4.5, 'white on primary must be >= 4.5:1');
     assert.ok(contrast('#ffffff', color('primary-hover', theme)) >= 4.5, 'white on primary hover must be >= 4.5:1');
-    assert.ok(contrast(color('on-success', theme), color('success', theme)) >= 4.5, 'solid Emerald control foreground must be >= 4.5:1');
+    assert.ok(contrast(color('on-success', theme), color('success', theme)) >= 4.5, 'solid cyan success control foreground must be >= 4.5:1');
     assert.ok(contrast(color('on-danger', theme), color('danger', theme)) >= 4.5, 'solid Crimson danger foreground must be >= 4.5:1');
     assert.ok(contrast(color('on-danger', theme), color('danger-hover', theme)) >= 4.5, 'solid Crimson danger hover foreground must be >= 4.5:1');
     assert.ok(contrast(color('success-text', theme), color('success-soft', theme)) >= 4.5, 'success text on success soft must be >= 4.5:1');
@@ -184,7 +187,7 @@ test('collapsed icon rows reset inherited start alignment and center icons in bo
 });
 
 test('legacy semantic tokens remain available and the compact shell dimensions are preserved', () => {
-  const retained = ['graphite-950', 'graphite-900', 'graphite-850', 'graphite-800', 'graphite-700', 'phantom-black', 'editorial-white', 'phantom-red', 'deep-red', 'accent-pink', 'concrete-grey', 'soft-grey', 'mist-grey', 'primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'on-primary', 'link', 'link-hover', 'accent', 'accent-pink-soft', 'chart-blue', 'chart-ice', 'chart-cyan', 'chart-slate', 'heat-0', 'heat-1', 'heat-2', 'heat-3', 'heat-4', 'success', 'success-hover', 'success-soft', 'success-border', 'success-text', 'warning', 'warning-hover', 'warning-soft', 'warning-border', 'warning-text', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text', 'bg', 'surface', 'surface-2', 'surface-hover', 'bg-elevated', 'surface-elevated', 'card', 'card-hover', 'text', 'text-2', 'text-secondary', 'text-muted', 'text-inverse', 'border', 'border-subtle', 'border-strong', 'border-focus', 'focus-ring'];
+  const retained = ['graphite-950', 'graphite-900', 'graphite-850', 'graphite-800', 'graphite-700', 'phantom-black', 'editorial-white', 'phantom-red', 'deep-red', 'accent-pink', 'concrete-grey', 'soft-grey', 'mist-grey', 'primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'on-primary', 'link', 'link-hover', 'accent', 'accent-pink-soft', 'chart-blue', 'chart-ice', 'chart-cyan', 'chart-slate', 'chart-accent', 'chart-accent-soft', 'chart-accent-ink', 'chart-accent-text', 'on-success', 'heat-0', 'heat-1', 'heat-2', 'heat-3', 'heat-4', 'success', 'success-hover', 'success-soft', 'success-border', 'success-text', 'warning', 'warning-hover', 'warning-soft', 'warning-border', 'warning-text', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text', 'bg', 'surface', 'surface-2', 'surface-hover', 'bg-elevated', 'surface-elevated', 'card', 'card-hover', 'text', 'text-2', 'text-secondary', 'text-muted', 'text-inverse', 'border', 'border-subtle', 'border-strong', 'border-focus', 'focus-ring'];
   for (const token of retained) assert.ok(light[token], `legacy --${token} token remains available`);
   assert.equal(light['sidebar-w'], '222px');
   for (const [token, value] of Object.entries({ touch: '44px', 'header-h': '64px', 'bottom-nav-h': '64px', 'sidebar-rail-w': '68px', 'content-max': '1360px' })) {

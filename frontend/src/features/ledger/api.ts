@@ -6,6 +6,7 @@ import type {
   LedgerDueDraft,
   LedgerEntryDraft,
   LedgerPaymentDraft,
+  LedgerSeriesPoint,
   MemberLedgerPayload,
 } from './types';
 interface RpcResult {
@@ -34,20 +35,34 @@ async function callRpc<T>(client: RpcClient, name: string, args: Record<string, 
   if (result.error) toMessage(result.error, fallback);
   return result.data as T;
 }
+/** الخزنة بقت واحدة global — الفلتر الوحيد هو التيم/الوحدة. */
 export const ledgerKeys = {
-  admin: (teamId: string | null) => ['ledger', 'admin', teamId] as const,
-  member: (teamId: string | null) => ['ledger', 'member', teamId] as const,
+  admin: (unit: string | null) => ['ledger', 'admin', unit ?? 'all'] as const,
+  member: () => ['ledger', 'member'] as const,
+  series: (unit: string | null) => ['ledger', 'series', unit ?? 'all'] as const,
 };
-export function useAdminLedger(teamId: string | null, enabled = true) {
+export function useAdminLedger(unit: string | null = null) {
   return useQuery({
-    queryKey: ledgerKeys.admin(teamId),
-    enabled: enabled && Boolean(teamId),
+    queryKey: ledgerKeys.admin(unit),
     staleTime: 30_000,
     queryFn: () => callRpc<AdminLedgerPayload>(
       adminRpc,
       'admin_ledger_overview',
-      { p_team_id: teamId },
-      'معرفناش نحمّل خزنة التيم.',
+      { p_unit: unit },
+      'معرفناش نحمّل الخزنة.',
+    ),
+  });
+}
+/** أرقام آخر 6 شهور للـ chart والـ sparkline. */
+export function useLedgerSeries(unit: string | null = null, client: 'admin' | 'member' = 'admin') {
+  return useQuery({
+    queryKey: ledgerKeys.series(unit),
+    staleTime: 30_000,
+    queryFn: () => callRpc<LedgerSeriesPoint[]>(
+      client === 'admin' ? adminRpc : memberRpc,
+      'ledger_series',
+      { p_unit: unit },
+      'معرفناش نحمّل أرقام الخزنة.',
     ),
   });
 }
@@ -60,11 +75,11 @@ function useLedgerInvalidation() {
 export function useSaveLedgerEntry() {
   const invalidate = useLedgerInvalidation();
   return useMutation({
-    mutationFn: ({ teamId, draft }: { teamId: string; draft: LedgerEntryDraft }) =>
+    mutationFn: ({ draft }: { draft: LedgerEntryDraft }) =>
       callRpc<{ id: number }>(
         adminRpc,
         'admin_ledger_save_entry',
-        { p_team_id: teamId, p_payload: draft },
+        { p_payload: draft },
         'معرفناش نحفظ الحركة.',
       ),
     onSuccess: invalidate,
@@ -94,11 +109,11 @@ export function useDecideLedgerPayment() {
 export function useSaveLedgerDue() {
   const invalidate = useLedgerInvalidation();
   return useMutation({
-    mutationFn: ({ teamId, draft }: { teamId: string; draft: LedgerDueDraft }) =>
+    mutationFn: ({ draft }: { draft: LedgerDueDraft }) =>
       callRpc<{ id: number }>(
         adminRpc,
         'admin_ledger_save_due',
-        { p_team_id: teamId, p_payload: draft },
+        { p_payload: draft },
         'معرفناش نحفظ الالتزام.',
       ),
     onSuccess: invalidate,
@@ -112,26 +127,26 @@ export function useDeleteLedgerDue() {
     onSuccess: invalidate,
   });
 }
-export function useMemberLedger(teamId: string | null) {
+export function useMemberLedger() {
   return useQuery({
-    queryKey: ledgerKeys.member(teamId),
+    queryKey: ledgerKeys.member(),
     staleTime: 30_000,
     queryFn: () => callRpc<MemberLedgerPayload>(
       memberRpc,
       'member_ledger',
-      { p_team_id: teamId },
-      'معرفناش نحمّل خزنة التيم.',
+      {},
+      'معرفناش نحمّل الخزنة.',
     ),
   });
 }
 export function useDeclarePayment() {
   const invalidate = useLedgerInvalidation();
   return useMutation({
-    mutationFn: ({ teamId, draft }: { teamId: string; draft: LedgerPaymentDraft }) =>
+    mutationFn: ({ draft }: { draft: LedgerPaymentDraft }) =>
       callRpc<{ id: number; status: string; amount: number; receiver_label: string | null }>(
         memberRpc,
         'member_ledger_declare_payment',
-        { p_team_id: teamId, p_payload: draft },
+        { p_payload: draft },
         'معرفناش نسجّل الدفعة.',
       ),
     onSuccess: invalidate,

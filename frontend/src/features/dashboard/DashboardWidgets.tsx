@@ -85,7 +85,7 @@ export function Panel({
   icon: ReactNode;
   action?: { label: string; onClick: () => void };
   className?: string;
-  tone?: 'accent' | 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'cyan';
+  tone?: 'accent' | 'blue' | 'cyan' | 'amber' | 'red' | 'violet';
   children: ReactNode;
 }) {
   const { dir } = useLocale();
@@ -316,7 +316,7 @@ export function DashboardWidgets({ metrics, tasks, contributions, activity, peop
         title={t('حالة التكليفات', 'Task status')}
         subtitle={t(`الحالة الحالية عبر ${number(tasks.length)} تكليفات محمّلة`, `${number(tasks.length)} task records · current states`)}
         icon={<PieChartIcon size={18} />}
-        tone="green"
+        tone="violet"
         action={permissions.tasks ? { label: t('إدارة المهام', 'Manage tasks'), onClick: () => navigate('/admin/tasks') } : undefined}
       >
         {nonEmptySlices.length > 0 ? (

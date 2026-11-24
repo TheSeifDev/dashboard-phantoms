@@ -134,7 +134,7 @@ export function MemberMetricsGrid({
         value={metrics.approved}
         detail={t('الحالات المعتمدة فقط وليست سجل الإنجاز', 'Currently approved states, not your full delivery record')}
         icon={CheckCircle2}
-        tone="green"
+        tone="violet"
         series={metrics.approvedSeries}
         note={
           latestWritten

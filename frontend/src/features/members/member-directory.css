@@ -85,7 +85,7 @@ html[lang="ar"] .member-dir-title { letter-spacing: 0; line-height: 1.3; }
   background: var(--tone, var(--text-muted));
 }
 .member-dir-chips li[data-tone="blue"] { --tone: var(--chart-blue); }
-.member-dir-chips li[data-tone="green"] { --tone: var(--success); }
+.member-dir-chips li[data-tone="success"] { --tone: var(--success); }
 .member-dir-chips li[data-tone="amber"] { --tone: var(--chart-amber); }
 .member-dir-chips li[data-tone="violet"] { --tone: var(--crew-2); }
 .member-dir-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }

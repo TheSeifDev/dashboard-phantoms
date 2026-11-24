@@ -25,16 +25,19 @@ import { DecideModal } from './DecideModal';
 import { DueModal } from './DueModal';
 import { EntryModal, type EntryMemberOption } from './EntryModal';
 import { LedgerInsights } from './LedgerInsights';
+import { LedgerKpiGrid, LedgerStatStrip } from './LedgerKpis';
 import { useLedgerEnter, useLedgerRows } from './animations';
 import {
   useAdminLedger,
   useDecideLedgerPayment,
   useDeleteLedgerDue,
   useDeleteLedgerEntry,
+  useLedgerSeries,
   useSaveLedgerDue,
   useSaveLedgerEntry,
 } from './api';
 import type {
+  AdminLedgerPayload,
   LedgerDue,
   LedgerDueDraft,
   LedgerEntry,
@@ -42,18 +45,52 @@ import type {
   LedgerKind,
   LedgerMemberRow,
 } from './types';
-import { EXPENSE_CATEGORY_LABELS, LEDGER_MEMBER_STATE_LABELS, LEDGER_STATUS_LABELS, money } from './types';
+import {
+  EXPENSE_CATEGORY_LABELS,
+  LEDGER_MEMBER_STATE_LABELS,
+  LEDGER_STATUS_LABELS,
+  money,
+} from './types';
 import './ledger.css';
+
 type TabKey = 'all' | 'payment' | 'expense' | 'withdrawal' | 'members' | 'dues';
 const KIND_LABEL: Record<LedgerKind, string> = { payment: 'دفعة', expense: 'مصروف', withdrawal: 'خصم' };
 const KIND_ICON = { payment: ArrowDownLeft, expense: Receipt, withdrawal: ArrowUpRight } as const;
+
 function StatusChip({ status }: { status: LedgerEntry['status'] }) {
   return <span className={`ldg-chip ldg-chip--${status}`}>{LEDGER_STATUS_LABELS[status]}</span>;
 }
-/** جسم الخزنة القابل لإعادة الاستخدام: لوحة الإدارة ومساحة الفريق. */
-export function LedgerBoard({ teamId, members }: { teamId: string; members?: EntryMemberOption[] }) {
+
+/** ملخص محسوب من الصفوف المفلترة (لما الإدارة تختار تيم/وحدة معينة). */
+function summarizeFiltered(payload: AdminLedgerPayload) {
+  const approved = payload.entries.filter((entry) => entry.status === 'approved');
+  const sum = (kind: LedgerKind) => approved.filter((entry) => entry.kind === kind).reduce((total, entry) => total + Number(entry.amount), 0);
+  const pending = payload.entries.filter((entry) => entry.status === 'pending');
+  const collected = sum('payment');
+  const expenses = sum('expense');
+  const withdrawals = sum('withdrawal');
+  return {
+    collected,
+    expenses,
+    withdrawals,
+    balance: collected - expenses - withdrawals,
+    expected: payload.dues.reduce((total, due) => total + Number(due.amount), 0),
+    outstanding: payload.members.reduce((total, row) => total + Number(row.remaining), 0),
+    pending_count: pending.length,
+    pending_amount: pending.reduce((total, entry) => total + Number(entry.amount), 0),
+    expense_count: approved.filter((entry) => entry.kind === 'expense').length,
+    payment_count: approved.filter((entry) => entry.kind === 'payment').length,
+    late_count: payload.members.filter((row) => row.late).length,
+    member_count: payload.members.length,
+  };
+}
+
+/** جسم الخزنة: خزنة واحدة global + فلتر التيم/الوحدة. */
+export function LedgerBoard({ members }: { members?: EntryMemberOption[] }) {
   const { t, number, dir } = useLocale();
-  const ledger = useAdminLedger(teamId);
+  const [unit, setUnit] = useState<string | null>(null);
+  const ledger = useAdminLedger(unit);
+  const seriesQuery = useLedgerSeries(unit);
   const saveEntry = useSaveLedgerEntry();
   const removeEntry = useDeleteLedgerEntry();
   const decide = useDecideLedgerPayment();
@@ -69,6 +106,7 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
   const boardRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const payload = ledger.data;
+  const series = seriesQuery.data ?? [];
   const memberOptions = useMemo<EntryMemberOption[]>(() => {
     if (members && members.length > 0) return members;
     return (payload?.members ?? []).map((row) => ({
@@ -87,16 +125,17 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
     .filter((entry) => (tab === 'all' ? true : entry.kind === tab))
     .filter((entry) => matches([
       entry.member_name,
+      entry.member_unit,
       entry.title,
       entry.note,
       entry.receiver_label,
       entry.receiver_email,
       entry.category ? EXPENSE_CATEGORY_LABELS[entry.category] : null,
     ]));
-  const filteredMembers = (payload?.members ?? []).filter((row) => matches([row.full_name, row.academic_number]));
-  const filteredDues = (payload?.dues ?? []).filter((row) => matches([row.full_name, row.label]));
+  const filteredMembers = (payload?.members ?? []).filter((row) => matches([row.full_name, row.academic_number, row.unit]));
+  const filteredDues = (payload?.dues ?? []).filter((row) => matches([row.full_name, row.label, row.unit]));
   const submitEntry = async (draft: LedgerEntryDraft) => {
-    await saveEntry.mutateAsync({ teamId, draft });
+    await saveEntry.mutateAsync({ draft });
     toast.success(t('اتحفظت الحركة في الخزنة.', 'Ledger entry saved.'));
     setEntryModal(null);
   };
@@ -106,7 +145,7 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
     setDecideTarget(null);
   };
   const submitDue = async (draft: LedgerDueDraft) => {
-    await saveDue.mutateAsync({ teamId, draft });
+    await saveDue.mutateAsync({ draft });
     toast.success(t('اتحفظ الالتزام.', 'Due saved.'));
     setDueModal(null);
   };
@@ -130,7 +169,10 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
       toast.error(cause instanceof Error ? cause.message : t('معرفناش نحذف الالتزام.', 'Could not delete the due.'));
     }
   };
-  const summary = payload?.summary;
+  const summary = payload ? (unit === null ? payload.summary : summarizeFiltered(payload)) : null;
+  const units = payload?.units ?? [];
+  const totalMembers = units.reduce((total, item) => total + item.count, 0);
+  const fullyPaid = (payload?.members ?? []).filter((row) => row.status === 'paid' || row.status === 'extra').length;
   const tabs: Array<{ key: TabKey; label: string; count: number }> = [
     { key: 'all', label: t('كل الحركات', 'All entries'), count: entries.length },
     { key: 'payment', label: t('المدفوعات', 'Payments'), count: entries.filter((entry) => entry.kind === 'payment').length },
@@ -140,33 +182,56 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
     { key: 'dues', label: t('الالتزامات', 'Dues'), count: payload?.dues.length ?? 0 },
   ];
   useLedgerEnter(boardRef, [Boolean(payload)]);
-  useLedgerRows(panelRef, `${tab}:${query}:${teamId}:${entries.length}`);
+  useLedgerRows(panelRef, `${tab}:${query}:${unit ?? 'all'}:${entries.length}`);
+
   if (ledger.isPending) return <CardSkeletons count={3} />;
   if (ledger.isError) {
-    return <ErrorState message={t('معرفناش نحمّل خزنة التيم.', 'Could not load the team ledger.')} onRetry={() => { void ledger.refetch(); }} />;
+    return <ErrorState message={t('معرفناش نحمّل الخزنة.', 'Could not load the ledger.')} onRetry={() => { void ledger.refetch(); }} />;
   }
   if (!payload || !summary) return null;
+
   return (
     <div className="ldg-board" dir={dir} ref={boardRef}>
-      <div className="ldg-actions" data-ldg-enter>
-        <Button icon={<ArrowDownLeft size={17} aria-hidden="true" />} onClick={() => setEntryModal('payment')}>
-          {t('دفعة', 'Payment')}
-        </Button>
-        <Button variant="secondary" icon={<Receipt size={17} aria-hidden="true" />} onClick={() => setEntryModal('expense')}>
-          {t('مصروف', 'Expense')}
-        </Button>
-        <Button variant="secondary" icon={<ArrowUpRight size={17} aria-hidden="true" />} onClick={() => setEntryModal('withdrawal')}>
-          {t('خصم', 'Deduction')}
-        </Button>
-        <Button variant="secondary" icon={<Target size={17} aria-hidden="true" />} onClick={() => setDueModal({ due: null })}>
-          {t('التزام', 'Due')}
-        </Button>
+      <div className="ldg-topbar" data-ldg-enter>
+        <div className="ldg-units" role="group" aria-label={t('فلتر التيم/الوحدة', 'Filter by team or unit')}>
+          <button type="button" className="ldg-unit" aria-pressed={unit === null} onClick={() => setUnit(null)}>
+            {t('الكل', 'All')} · {number(totalMembers)}
+          </button>
+          {units.map((item) => (
+            <button
+              key={item.unit}
+              type="button"
+              className="ldg-unit"
+              aria-pressed={unit === item.unit}
+              onClick={() => setUnit(unit === item.unit ? null : item.unit)}
+            >
+              {item.unit} · {number(item.count)}
+            </button>
+          ))}
+        </div>
+        <div className="ldg-actions">
+          <Button icon={<ArrowDownLeft size={17} aria-hidden="true" />} onClick={() => setEntryModal('payment')}>
+            {t('دفعة', 'Payment')}
+          </Button>
+          <Button variant="secondary" icon={<Receipt size={17} aria-hidden="true" />} onClick={() => setEntryModal('expense')}>
+            {t('مصروف', 'Expense')}
+          </Button>
+          <Button variant="secondary" icon={<ArrowUpRight size={17} aria-hidden="true" />} onClick={() => setEntryModal('withdrawal')}>
+            {t('خصم', 'Deduction')}
+          </Button>
+          <Button variant="secondary" icon={<Target size={17} aria-hidden="true" />} onClick={() => setDueModal({ due: null })}>
+            {t('التزام', 'Due')}
+          </Button>
+        </div>
       </div>
+
       <section className="ldg-hero" aria-label={t('ملخص الخزنة', 'Ledger summary')} data-ldg-enter>
         <div className="ldg-hero-main">
           <span className="ldg-hero-label"><Wallet size={15} aria-hidden="true" /> {t('المبلغ المتاح حاليًا', 'Available balance')}</span>
           <strong className="ldg-hero-value">{money(summary.balance)}</strong>
-          <span className="ldg-hero-team">{payload.team.name} · {t('الرصيد = المدفوعات المؤكدة − المصروفات − الخصومات', 'Balance = approved payments − expenses − deductions')}</span>
+          <span className="ldg-hero-team">
+            {unit ?? t('كل الخزنة', 'Whole ledger')} · {t('الرصيد = المدفوعات المؤكدة − المصروفات − الخصومات', 'Balance = approved payments − expenses − deductions')}
+          </span>
         </div>
         <div className="ldg-hero-side">
           <div><span>{t('إجمالي المدفوع', 'Total collected')}</span><strong>{money(summary.collected)}</strong></div>
@@ -174,35 +239,85 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
           <div><span>{t('إجمالي الخصومات', 'Total deductions')}</span><strong>{money(summary.withdrawals)}</strong></div>
         </div>
       </section>
-      <section className="ldg-metrics" aria-label={t('مؤشرات الخزنة', 'Ledger metrics')} data-ldg-enter>
-        <article className="ldg-metric">
-          <span>{t('المستحق على الأعضاء', 'Outstanding dues')}<Target size={15} aria-hidden="true" /></span>
-          <strong>{money(summary.outstanding)}</strong>
-          <small>{t('من إجمالي', 'out of')} {money(summary.expected)}</small>
-        </article>
-        <article className="ldg-metric">
-          <span>{t('دفعات مستنية التأكيد', 'Pending approvals')}<Clock3 size={15} aria-hidden="true" /></span>
-          <strong>{number(summary.pending_count)}</strong>
-          <small>{money(summary.pending_amount)} {t('معلّقة', 'on hold')}</small>
-        </article>
-        <article className="ldg-metric">
-          <span>{t('متأخرين عن الدفع', 'Late payers')}<TrendingDown size={15} aria-hidden="true" /></span>
-          <strong>{number(summary.late_count)}</strong>
-          <small>{t('من', 'of')} {number(summary.member_count)} {t('عضو', 'members')}</small>
-        </article>
-        <article className="ldg-metric">
-          <span>{t('أعضاء دفعوا بالكامل', 'Fully paid')}<BadgeCheck size={15} aria-hidden="true" /></span>
-          <strong>{number(payload.members.filter((row) => row.status === 'paid').length)}</strong>
-          <small>{t('التزامات مسددة', 'dues settled')}</small>
-        </article>
-      </section>
+
+      <LedgerKpiGrid
+        tiles={[
+          {
+            key: 'balance',
+            title: t('المتاح في الخزنة', 'Available balance'),
+            value: summary.balance,
+            detail: t('رصيد تراكمي على آخر 6 شهور', 'Cumulative balance over 6 months'),
+            icon: Wallet,
+            tone: 'violet',
+            series: series.map((point) => Number(point.balance) || 0),
+          },
+          {
+            key: 'collected',
+            title: t('إجمالي المدفوع', 'Total collected'),
+            value: summary.collected,
+            detail: `${number(summary.payment_count)} ${t('دفعة مؤكدة', 'approved payments')}`,
+            icon: ArrowDownLeft,
+            tone: 'blue',
+            series: series.map((point) => Number(point.collected) || 0),
+          },
+          {
+            key: 'expenses',
+            title: t('إجمالي المصروفات', 'Total expenses'),
+            value: summary.expenses,
+            detail: `${number(summary.expense_count)} ${t('مصروف مسجل', 'recorded expenses')}`,
+            icon: Receipt,
+            tone: 'amber',
+            series: series.map((point) => Number(point.expenses) || 0),
+          },
+          {
+            key: 'withdrawals',
+            title: t('الخصومات', 'Deductions'),
+            value: summary.withdrawals,
+            detail: t('فلوس اتسحبت من الخزنة', 'Money taken out of the ledger'),
+            icon: ArrowUpRight,
+            tone: 'violet',
+            series: series.map((point) => Number(point.withdrawals) || 0),
+          },
+        ]}
+      />
+
+      <LedgerStatStrip
+        items={[
+          {
+            key: 'outstanding',
+            label: t('المستحق على الأعضاء', 'Outstanding dues'),
+            value: money(summary.outstanding),
+            hint: `${t('من إجمالي', 'out of')} ${money(summary.expected)}`,
+          },
+          {
+            key: 'pending',
+            label: t('دفعات مستنية التأكيد', 'Pending approvals'),
+            value: number(summary.pending_count),
+            hint: `${money(summary.pending_amount)} ${t('معلّقة', 'on hold')}`,
+          },
+          {
+            key: 'late',
+            label: t('متأخرين عن الدفع', 'Late payers'),
+            value: number(summary.late_count),
+            hint: `${t('من', 'of')} ${number(summary.member_count)} ${t('عضو', 'members')}`,
+          },
+          {
+            key: 'paid',
+            label: t('أعضاء دفعوا بالكامل', 'Fully paid'),
+            value: number(fullyPaid),
+            hint: t('التزامات مسددة', 'dues settled'),
+          },
+        ]}
+      />
+
       <LedgerInsights
-        entries={entries}
+        series={series}
         paidTotal={summary.collected}
         remainingTotal={summary.outstanding}
         expectedTotal={summary.expected}
         variant="admin"
       />
+
       {pending.length > 0 && (
         <section className="ldg-pending" aria-label={t('دفعات مستنية التأكيد', 'Pending payments')} data-ldg-enter>
           <header className="ldg-pending-head">
@@ -226,6 +341,7 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
           </div>
         </section>
       )}
+
       <section className="ldg-panel" aria-label={t('حركات الخزنة', 'Ledger entries')} ref={panelRef} data-ldg-enter>
         <div className="ldg-toolbar">
           <div className="ldg-search">
@@ -253,6 +369,7 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
             <div className="ldg-table" role="table" aria-label={t('حالة دفع الأعضاء', 'Member payment status')}>
               <div className="ldg-table-head" role="row">
                 <span role="columnheader">{t('العضو', 'Member')}</span>
+                <span role="columnheader">{t('التيم/الوحدة', 'Unit')}</span>
                 <span role="columnheader">{t('المطلوب', 'Due')}</span>
                 <span role="columnheader">{t('دفع', 'Paid')}</span>
                 <span role="columnheader">{t('فاضل', 'Remaining')}</span>
@@ -264,6 +381,9 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
                   <span className="ldg-cell ldg-cell--name" role="cell">
                     <strong>{row.full_name}</strong>
                     <small>{row.academic_number ?? '—'}{row.next_due_on ? ` · ${t('استحقاق', 'due')} ${formatDate(row.next_due_on)}` : ''}</small>
+                  </span>
+                  <span className="ldg-cell" role="cell" data-label={t('التيم/الوحدة', 'Unit')}>
+                    <span className="ldg-unit-chip">{row.unit}</span>
                   </span>
                   <span className="ldg-cell" role="cell" data-label={t('المطلوب', 'Due')}>{money(row.due_total)}</span>
                   <span className="ldg-cell" role="cell" data-label={t('دفع', 'Paid')}>{money(row.paid_total)}</span>
@@ -287,11 +407,12 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
               </Button>
             </div>
             {filteredDues.length === 0 ? (
-              <EmptyState title={t('مفيش التزامات مسجلة', 'No dues yet')} description={t('حدّد المطلوب من كل عضو (اشتراك شهري، رحلة، معدات) عشان تعرف مين دفع ومين متأخر.', 'Set what each member owes (monthly subscription, trip, equipment) to track who paid and who is late.')} />
+              <EmptyState title={t('مفيش التزامات مسجلة', 'No dues yet')} description={t('حدّد المطلوب من كل عضو (اشتراك، رحلة، معدات) عشان تعرف مين دفع ومين متأخر.', 'Set what each member owes (subscription, trip, equipment) to track who paid and who is late.')} />
             ) : (
               <div className="ldg-table" role="table" aria-label={t('الالتزامات', 'Dues')}>
                 <div className="ldg-table-head" role="row">
                   <span role="columnheader">{t('العضو', 'Member')}</span>
+                  <span role="columnheader">{t('التيم/الوحدة', 'Unit')}</span>
                   <span role="columnheader">{t('الالتزام', 'Due')}</span>
                   <span role="columnheader">{t('المبلغ', 'Amount')}</span>
                   <span role="columnheader">{t('الاستحقاق', 'Due date')}</span>
@@ -300,6 +421,7 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
                 {filteredDues.map((due) => (
                   <div key={due.id} className="ldg-table-row" role="row">
                     <span className="ldg-cell ldg-cell--name" role="cell"><strong>{due.full_name}</strong></span>
+                    <span className="ldg-cell" role="cell" data-label={t('التيم/الوحدة', 'Unit')}><span className="ldg-unit-chip">{due.unit}</span></span>
                     <span className="ldg-cell" role="cell" data-label={t('الالتزام', 'Due')}>{due.label}</span>
                     <span className="ldg-cell" role="cell" data-label={t('المبلغ', 'Amount')}>{money(due.amount)}</span>
                     <span className="ldg-cell" role="cell" data-label={t('الاستحقاق', 'Due date')}>{due.due_on ? formatDate(due.due_on) : '—'}</span>
@@ -319,13 +441,14 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
         ) : filteredEntries.length === 0 ? (
           <EmptyState
             title={query ? t('مفيش نتايج للبحث ده', 'No results for this search') : t('الخزنة لسه فاضية', 'The ledger is empty')}
-            description={query ? t('جرّب اسم تاني أو امسح البحث.', 'Try another name or clear the search.') : t('ابدأ بتسجيل أول دفعة أو مصروف للتيم.', 'Start by recording the first team payment or expense.')}
+            description={query ? t('جرّب اسم تاني أو امسح البحث.', 'Try another name or clear the search.') : t('ابدأ بتسجيل أول دفعة أو مصروف للفريق.', 'Start by recording the first team payment or expense.')}
             action={query ? <Button variant="secondary" onClick={() => setQuery('')}>{t('مسح البحث', 'Clear search')}</Button> : undefined}
           />
         ) : (
           <div className="ldg-table" role="table" aria-label={t('حركات الخزنة', 'Ledger entries')}>
             <div className="ldg-table-head" role="row">
               <span role="columnheader">{t('الحركة', 'Entry')}</span>
+              <span role="columnheader">{t('التيم/الوحدة', 'Unit')}</span>
               <span role="columnheader">{t('المبلغ', 'Amount')}</span>
               <span role="columnheader">{t('المستلم', 'Receiver')}</span>
               <span role="columnheader">{t('التاريخ', 'Date')}</span>
@@ -346,6 +469,9 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
                         {entry.note ? ` · ${entry.note}` : ''}
                       </small>
                     </span>
+                  </span>
+                  <span className="ldg-cell" role="cell" data-label={t('التيم/الوحدة', 'Unit')}>
+                    {entry.member_unit ? <span className="ldg-unit-chip">{entry.member_unit}</span> : '—'}
                   </span>
                   <span className="ldg-cell ldg-cell--amount" role="cell" data-label={t('المبلغ', 'Amount')}>{money(entry.amount)}</span>
                   <span className="ldg-cell" role="cell" data-label={t('المستلم', 'Receiver')}>{entry.kind === 'payment' ? entry.receiver_label ?? '—' : '—'}</span>
@@ -368,20 +494,29 @@ export function LedgerBoard({ teamId, members }: { teamId: string; members?: Ent
           </div>
         )}
       </section>
+
       <section className="ldg-note">
         <CircleDollarSign size={15} aria-hidden="true" />
-        <p>{t('أي عضو في التيم بيشوف من البوابة: المبلغ المتاح، إجمالي المدفوعات والمصروفات، والمصروفات اتصرفت في إيه. تفاصيل دفع كل عضو والالتزامات بتفضل للإدارة وهيدز التيم بس.', 'Every team member sees the available balance, total collected and spent, and what the money went on. Per-member payment details and dues stay with admins and team heads.')}</p>
+        <p>{t('الخزنة واحدة للفريق كله — مفيش خزنة لكل تيم لوحده. الفلتر فوق بيقول العضو تابع لأنهي تيم/وحدة (AI، Software، HR، PR، المالك…) والأرقام بتتغير مع الفلتر.', 'One ledger for the whole team — no per-team ledgers. The filter above shows which team/unit a member belongs to (AI, Software, HR, PR, the owner…), and the numbers follow the filter.')}</p>
       </section>
       <section className="ldg-note">
         <Users size={15} aria-hidden="true" />
-        <p>{t('العضو بيسجّل «أنا دفعت» من البوابة وتفضل مستنية تأكيد المستلم — والمستلم يقدر يوافق أو يرفض بملاحظة ويصحّح المبلغ لو مش مطابق.', 'Members declare “I paid” from the portal and it stays pending until the receiver approves or rejects it with a note — and corrects the amount if it does not match.')}</p>
+        <p>{t('العضو بيسجّل «أنا دفعت» من البوابة وتفضل مستنية تأكيد المستلم — والمستلم يقدر يوافق أو يرفض بملاحظة ويصحّح المبلغ. الاستلام متاح للإدارة وهيدز/مونيتورز تيم العضو.', 'Members declare “I paid” from the portal and it stays pending until the receiver approves or rejects it with a note and can correct the amount. Receiving is open to admins plus the heads/monitors of the member’s team.')}</p>
       </section>
+      <section className="ldg-note">
+        <BadgeCheck size={15} aria-hidden="true" />
+        <p>{t('كل الأرقام هنا بأرقام عادية زي صفحة الـ home، والـ sparkline جنبها بيوضح اتجاه آخر 6 شهور بس.', 'Every number here is plain like the home page, with a sparkline showing the last 6 months of movement.')}</p>
+      </section>
+      <section className="ldg-note">
+        <TrendingDown size={15} aria-hidden="true" />
+        <p>{t('عايز تغيّر تيم/وحدة عضو (زي co-leader أو PR)؟ عدّل خانة unit في البيانات الإضافية للعضو من صفحة الأعضاء، والفلتر هيقرأها على طول.', 'Need to relabel a member (co-leader, PR…)? Edit the unit key in the member’s custom fields from the members page and the filter picks it up immediately.')}</p>
+      </section>
+
       {entryModal && (
         <EntryModal
           isOpen
           kind={entryModal}
           entry={null}
-          teamId={teamId}
           members={memberOptions}
           receivers={payload.receivers}
           onClose={() => setEntryModal(null)}

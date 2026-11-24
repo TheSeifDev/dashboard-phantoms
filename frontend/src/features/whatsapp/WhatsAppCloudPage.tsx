@@ -57,7 +57,7 @@ export default function WhatsAppCloudPage() {
         </div>
       </header>
 
-      <Card className={`grid gap-4 border-s-4 ${status.data?.enabled ? 'border-s-emerald-500' : status.data?.configured ? 'border-s-amber-500' : 'border-s-[var(--border)]'}`}>
+      <Card className={`grid gap-4 border-s-4 ${status.data?.enabled ? 'border-s-[var(--success)]' : status.data?.configured ? 'border-s-amber-500' : 'border-s-[var(--border)]'}`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-3" role="status" aria-live="polite">
             {status.isLoading ? (

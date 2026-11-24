@@ -31,7 +31,6 @@ const KIND_META: Record<LedgerKind, { title: [string, string]; icon: typeof Wall
 export function EntryModal({
   isOpen,
   kind,
-  teamId,
   entry,
   members,
   receivers,
@@ -41,7 +40,6 @@ export function EntryModal({
 }: {
   isOpen: boolean;
   kind: LedgerKind;
-  teamId: string;
   entry?: LedgerEntry | null;
   members: EntryMemberOption[];
   receivers: LedgerReceiver[];
@@ -199,7 +197,6 @@ export function EntryModal({
           <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={400} />
         </label>
         {error && <p className="ldg-form-error" role="alert">{error}</p>}
-        <input type="hidden" value={teamId} readOnly />
       </form>
     </Modal>
   );
