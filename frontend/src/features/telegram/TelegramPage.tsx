@@ -114,12 +114,33 @@ export default function TelegramPage() {
     save.mutate(payload, {
       onSuccess: () => {
         if ('bot_token' in payload) setToken('');
-        toast.success(t('تم حفظ إعدادات البوت', 'Bot settings saved'));
+        const touchesConnection = 'bot_token' in payload || 'bot_username' in payload || 'drain_url' in payload;
+        if (!touchesConnection) {
+          toast.success(t('تم حفظ إعدادات البوت', 'Bot settings saved'));
+          return;
+        }
+        // الحفظ لوحده مش كفاية: تلجرام لازم يتقاله يبعت التحديثات للرابط الجديد،
+        // فبنفعّل الويبهوك أوتوماتيك بعد أي تعديل في التوكن أو اليوزرنيم أو الرابط.
+        syncWebhook.mutate(undefined, {
+          onSuccess: () => {
+            toast.success(t('تم الحفظ وتفعيل الويبهوك — البوت شغال', 'Saved and the webhook is live — the bot is working'));
+          },
+          onError: (error: Error) => toast.error(t(`تم الحفظ، لكن تفعيل الويبهوك فشل: ${error.message}`, `Saved, but the webhook failed: ${error.message}`)),
+        });
       },
       onError: (error: Error) => toast.error(error.message),
     });
   };
 
+  // صحة الاتصال بتتقرأ من حالة محفوظة في الداتابيز (وقت تفعيل الويبهوك + وقت آخر تحديث
+  // وصل من تلجرام + آخر خطأ) عشان مفيش أي نداء إضافي لـ Telegram من المتصفح.
+  const health = !data?.has_token
+    ? { tone: 'neutral' as const, title: t('مفيش توكن محفوظ', 'No token saved'), hint: t('حط التوكن واحفظ — الويبهوك هيتفعّل أوتوماتيك.', 'Add the token and save — the webhook activates automatically.') }
+    : !data.webhook_set_at
+      ? { tone: 'warning' as const, title: t('الويبهوك مش متفعّل', 'Webhook not activated'), hint: t('اضغط «تفعيل الويبهوك» — من غيرها تلجرام مش هيبعت أي رسالة للبوت.', 'Press “Activate webhook” — without it Telegram never delivers a message.') }
+      : !data.last_webhook_at
+        ? { tone: 'warning' as const, title: t('مستني أول رسالة', 'Waiting for the first update'), hint: t('ابعت /start للبوت — أول رسالة بتأكد إن الخط شغال من تلجرام للسيرفر.', 'Send /start to the bot — the first message proves the Telegram-to-server path.') }
+        : { tone: 'success' as const, title: t('الاتصال شغال', 'Connection healthy'), hint: t('تلجرام بيوصل تحديثات للسيرفر.', 'Telegram is delivering updates to the server.') };
   return (
     <div className="grid gap-5 sm:gap-6">
       <PageHeader
@@ -234,12 +255,50 @@ export default function TelegramPage() {
             />
           </div>
         </div>
-        {data?.webhook_set_at && (
-          <p className="text-xs text-[var(--text-muted)]">
-            {t('آخر تفعيل للويبهوك:', 'Webhook activated:')} {date(data.webhook_set_at, { dateStyle: 'medium', timeStyle: 'short' })}
-            {data.last_webhook_at ? ` · ${t('آخر تحديث', 'Last update')} ${date(data.last_webhook_at, { timeStyle: 'short' })}` : ''}
-          </p>
-        )}
+        <div className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="size-2 rounded-full"
+              style={{
+                background:
+                  health.tone === 'success'
+                    ? 'var(--success)'
+                    : health.tone === 'warning'
+                      ? 'var(--warning)'
+                      : 'var(--text-faint)',
+              }}
+            />
+            <p className="text-sm font-semibold text-[var(--text)]">{health.title}</p>
+            <Button
+              variant="ghost"
+              className="ms-auto"
+              icon={<RefreshCw size={14} />}
+              isLoading={syncWebhook.isPending}
+              onClick={() => syncWebhook.mutate(undefined, {
+                onSuccess: () => toast.success(t('تم تفعيل الويبهوك', 'Webhook activated')),
+                onError: (error: Error) => toast.error(error.message),
+              })}
+            >
+              {t('فحص وتفعيل', 'Check & activate')}
+            </Button>
+          </div>
+          <p className="text-xs leading-6 text-[var(--text-muted)]">{health.hint}</p>
+          <dl className="grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-[var(--text-faint)]">{t('آخر تفعيل', 'Activated')}</dt>
+              <dd className="font-semibold text-[var(--text)]">
+                {data?.webhook_set_at ? date(data.webhook_set_at, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-[var(--text-faint)]">{t('آخر رسالة وصلت', 'Last delivery')}</dt>
+              <dd className="font-semibold text-[var(--text)]">
+                {data?.last_webhook_at ? date(data.last_webhook_at, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+              </dd>
+            </div>
+          </dl>
+        </div>
         {data?.last_error && (
           <p className="rounded-[var(--radius-md)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-xs text-[var(--danger)]" dir="ltr">
             {data.last_error}
