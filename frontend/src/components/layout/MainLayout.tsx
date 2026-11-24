@@ -6,6 +6,7 @@ import { AppSidebar, useSidebarDrawer } from './AppSidebar';
 import { useAuthStore } from '../../store/auth';
 import { useThemeStore } from '../../store/theme';
 import { useAdminAccess } from '../../features/admin/access/api';
+import { AdminAppUsageTracker } from '../../features/app-usage/AdminAppUsageTracker';
 import { useLocale } from '../../i18n/useLocale';
 import { gsap, useGSAP, prefersReducedMotion } from '../motion/gsap';
 
@@ -63,6 +64,7 @@ export default function MainLayout() {
   return (
     <div className={isDashboard ? 'app-workspace flex min-h-[100dvh] text-[var(--text)]' : 'app-workspace app-workspace--operations flex min-h-[100dvh] text-[var(--text)]'} dir={dir}>
       <div ref={progress} className="route-progress" aria-hidden="true" />
+      <AdminAppUsageTracker enabled={adminAccess.data?.is_admin === true} />
       {!isDashboard && <a className="skip-link" href="#workspace-content">{t('انتقل إلى المحتوى الرئيسي', 'Skip to main content')}</a>}
       <AppSidebar userName={userName} isOwner={adminAccess.data?.is_owner === true} isAdmin={adminAccess.data?.is_admin === true} permissions={adminAccess.data?.permissions ?? {}} drawerOpen={drawerOpen} onCloseDrawer={closeDrawer} />
       <div className="app-workspace-column flex min-w-0 flex-1 flex-col min-h-[100dvh]">

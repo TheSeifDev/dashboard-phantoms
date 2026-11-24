@@ -126,6 +126,7 @@ jobs:
             scripts/auth-flow.test.ts \
             scripts/member-auth-storage.test.ts \
             scripts/member-logout.test.ts \
+            scripts/member-deletion.test.ts \
             scripts/member-projections.test.ts \
             scripts/dashboard-state.test.ts \
             scripts/task-contributions.test.ts \

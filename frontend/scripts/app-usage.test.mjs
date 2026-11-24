@@ -46,9 +46,9 @@ function load(path) {
   m._compile(ts.transpileModule(readFileSync(file, 'utf8'), { fileName: file, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, file);
   return m.exports;
 }
-const usage = { member_id: 42, first_used_at: '2026-11-21T08:00:00Z', last_used_at: '2026-11-21T08:01:00Z', last_app_version: '1.1.0', last_app_build: '2' };
+const usage = { member_id: 42, first_used_at: '2026-11-21T08:00:00Z', last_used_at: '2026-11-21T08:01:00Z', last_app_version: '1.1.0', last_app_build: '2', platform: 'android' };
 function reset() {
-  native = false; platform = 'web'; device = 'mock-device-token'; state = { currentMember: { id: 42, email: 'demo@example.com' } }; rpcCalls = []; handles = []; language = 'en'; modules.clear();
+  native = false; platform = 'web'; device = 'mock-device-token'; state = { currentMember: { id: 42, email: 'demo@example.com' }, user: { id: 'admin-user-1' } }; rpcCalls = []; handles = []; language = 'en'; modules.clear();
   ownerResponse = { data: [usage], error: null }; recordResponse = { data: {}, error: null };
   metadata = async () => ({ id: 'com.phantoms.app', version: '1.1.0', build: '2' });
 }
@@ -66,6 +66,8 @@ test('Owner read key is actor-bound, disabled for non-Owner and bounded to actua
 test('malformed, unrelated, duplicate and reverse-time evidence fails closed', () => {
   reset(); const api = load('features/app-usage/api.ts');
   for (const value of [null, {}, [{ ...usage, member_id: 43 }], [usage, usage], [{ ...usage, first_used_at: 'invalid' }], [{ ...usage, last_used_at: '2025-01-01' }], [{ ...usage, last_app_build: '<script>' }]]) assert.throws(() => api.parseAppUsageRows(value, [42]), /UNAVAILABLE/);
+  for (const bad of [undefined, 'web', 'Android', 1]) assert.throws(() => api.parseAppUsageRows([{ ...usage, platform: bad }], [42]), /UNAVAILABLE/);
+  assert.deepEqual(api.parseAppUsageRows([{ ...usage, platform: 'ios' }], [42]).map((row) => row.platform), ['ios']);
   assert.deepEqual(api.parseAppUsageRows([], [42]), []);
 });
 test('schema/network errors never become empty no-use evidence', async () => {
@@ -73,13 +75,27 @@ test('schema/network errors never become empty no-use evidence', async () => {
   await assert.rejects(api.fetchOwnerAppUsage([42]), /UNAVAILABLE/);
 });
 test('record uses isolated Member client and sends no member ID/time or Auth mutation', async () => {
-  reset(); await load('features/app-usage/api.ts').recordMemberAppUsage(device, '1.1.0', '2');
-  assert.deepEqual(rpcCalls, [['member', 'member_record_app_usage', { p_device_token: device, p_app_version: '1.1.0', p_app_build: '2' }]]);
+  reset(); await load('features/app-usage/api.ts').recordMemberAppUsage(device, '1.1.0', '2', 'ios');
+  assert.deepEqual(rpcCalls, [['member', 'member_record_app_usage', { p_device_token: device, p_app_version: '1.1.0', p_app_build: '2', p_platform: 'ios' }]]);
 });
-test('browser and native iOS produce no usage writes', async () => {
+test('browser produces no usage writes', async () => {
   reset(); let Tracker = load('features/app-usage/MemberAppUsageTracker.tsx').MemberAppUsageTracker;
   await mount(el(Tracker)); assert.equal(rpcCalls.length, 0); await act(async () => root.unmount()); root = null;
-  native = true; platform = 'ios'; await mount(el(Tracker)); assert.equal(rpcCalls.length, 0);
+  native = true; platform = 'web'; await mount(el(Tracker)); assert.equal(rpcCalls.length, 0);
+});
+test('native iOS records usage with the ios platform', async () => {
+  reset(); native = true; platform = 'ios'; const Tracker = load('features/app-usage/MemberAppUsageTracker.tsx').MemberAppUsageTracker;
+  await mount(el(React.StrictMode, null, el(Tracker)));
+  assert.equal(rpcCalls.length, 1);
+  assert.deepEqual(rpcCalls[0], ['member', 'member_record_app_usage', { p_device_token: device, p_app_version: '1.1.0', p_app_build: '2', p_platform: 'ios' }]);
+});
+test('admin shell reports its own use through the admin RPC, never a member ID', async () => {
+  reset(); native = true; platform = 'ios'; const AdminTracker = load('features/app-usage/AdminAppUsageTracker.tsx').AdminAppUsageTracker;
+  await mount(el(AdminTracker, { enabled: false })); assert.equal(rpcCalls.length, 0);
+  await act(async () => root.render(el(AdminTracker, { enabled: true })));
+  assert.deepEqual(rpcCalls, [['owner', 'admin_record_app_usage', { p_app_version: '1.1.0', p_app_build: '2', p_platform: 'ios' }]]);
+  await act(async () => root.unmount()); root = null;
+  reset(); native = false; await mount(el(AdminTracker, { enabled: true })); assert.equal(rpcCalls.length, 0);
 });
 test('Android StrictMode first mount records once and cleans late/listener handles', async () => {
   reset(); native = true; platform = 'android'; const Tracker = load('features/app-usage/MemberAppUsageTracker.tsx').MemberAppUsageTracker;
