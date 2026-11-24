@@ -428,6 +428,14 @@ export interface Database {
       dismiss_announcement: { Args: { p_announcement_id: number; p_member_id: number; p_device_token?: string | null }; Returns: boolean };
       get_announcement_details: { Args: { p_announcement_id: number }; Returns: AnnouncementMemberDetail[] };
       get_announcement_stats: { Args: { p_announcement_id: number }; Returns: AnnouncementStats[] };
+      request_member_deletion: { Args: { p_reason?: string | null }; Returns: unknown };
+      member_deletion_request_state: { Args: never; Returns: unknown };
+      cancel_member_deletion_request: { Args: never; Returns: unknown };
+      admin_list_member_deletion_requests: { Args: never; Returns: unknown };
+      admin_reject_member_deletion: { Args: { p_request_id: string; p_note?: string | null }; Returns: unknown };
+      member_deletion_admin_execute: { Args: { p_request_id: string }; Returns: unknown };
+      member_deletion_storage_objects: { Args: { p_auth_user_id: string }; Returns: unknown };
+      member_deletion_mark_complete: { Args: { p_request_id: string }; Returns: unknown };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
