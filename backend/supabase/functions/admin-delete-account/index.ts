@@ -42,8 +42,10 @@ serve(async (req) => {
   if (authError || !userData.user) return reply({ code: 'UNAUTHORIZED', message: 'جلسة الإدارة غير صالحة.' }, 401, origin);
 
   const { data: access, error: accessError } = await ownerClient.rpc('get_admin_access');
-  if (accessError || !access?.is_owner) {
-    return reply({ code: 'OWNER_ONLY', message: 'حذف الحسابات متاح لمالك النظام فقط.' }, 403, origin);
+  // المالك دايمًا مسموح؛ المشرف بيحتاج منحة admin_accounts مؤقتة من المالك.
+  const { data: canManageAccounts } = await ownerClient.rpc('has_capability', { p_capability: 'admin_accounts' });
+  if (accessError || !access?.is_admin || canManageAccounts !== true) {
+    return reply({ code: 'OWNER_ONLY', message: 'حذف الحسابات محتاج موافقة المالك.' }, 403, origin);
   }
 
   const payload = await req.json().catch(() => null) as { user_id?: unknown } | null;

@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
+  Lock,
   BookMarked,
   CalendarCheck2,
   ChartGantt,
@@ -205,6 +206,7 @@ function SidebarLinks({
   railTips,
   collapsed = false,
   isOwner,
+  isAdmin = false,
   permissions,
   groups = GROUPS,
 }: {
@@ -212,6 +214,7 @@ function SidebarLinks({
   railTips?: boolean;
   collapsed?: boolean;
   isOwner: boolean;
+  isAdmin?: boolean;
   permissions: Partial<AdminPermissions>;
   groups?: SidebarGroup[];
 }) {
@@ -227,8 +230,10 @@ function SidebarLinks({
       ? 'العمليات'
       : groups.find((group) => group.title !== 'نظرة عامة')?.title ?? null
   ));
+  // المشرفين بيشوفوا كل صفحات المالك كمان — بس الصفحات الحساسة بتظهر بقفل
+  // لحد ما المالك يوافق على صلاحية مؤقتة.
   const canSee = (item: SidebarLink) =>
-    (!item.ownerOnly || isOwner) &&
+    (!item.ownerOnly || isOwner || isAdmin) &&
     (!item.permission || isOwner || permissions[item.permission] === true);
   const visibleGroups = groups
     .map((group) => ({ ...group, items: group.items.filter(canSee) }))
@@ -259,6 +264,7 @@ function SidebarLinks({
         const groupId = `${id}-section-${index}`;
         const links = group.items.map((item) => {
           const { to, label: itemLabel, icon: Icon, end } = item;
+          const locked = item.ownerOnly === true && !isOwner;
           return (
           <li key={to}>
             <NavLink
@@ -276,6 +282,11 @@ function SidebarLinks({
             >
               <Icon size={20} aria-hidden="true" />
               <span className="app-sidebar-item-label">{label(itemLabel)}</span>
+              {locked && (
+                <span className="app-sidebar-item-lock" aria-label={t('محتاجة موافقة المالك', 'Needs owner approval')}>
+                  <Lock size={13} aria-hidden="true" />
+                </span>
+              )}
             </NavLink>
           </li>
           );
@@ -386,6 +397,7 @@ function SidebarGroupList({ id, open, children }: { id: string; open: boolean; c
 export function AppSidebar({
   userName,
   isOwner,
+  isAdmin = false,
   permissions,
   drawerOpen,
   onCloseDrawer,
@@ -400,6 +412,7 @@ export function AppSidebar({
 }: {
   userName: string;
   isOwner: boolean;
+  isAdmin?: boolean;
   permissions: Partial<AdminPermissions>;
   drawerOpen: boolean;
   onCloseDrawer: () => void;
@@ -544,7 +557,7 @@ export function AppSidebar({
         </div>
         <nav ref={navRef} id="desktop-sidebar-navigation" aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-sidebar-nav">
           <span ref={indicatorRef} className="app-sidebar-indicator" aria-hidden="true" />
-          <SidebarLinks railTips collapsed={collapsed} isOwner={isOwner} permissions={permissions} groups={groups} />
+          <SidebarLinks railTips collapsed={collapsed} isOwner={isOwner} isAdmin={isAdmin} permissions={permissions} groups={groups} />
         </nav>
         <div className="app-sidebar-footer">
           {guest ? (
@@ -596,7 +609,7 @@ export function AppSidebar({
           </div>
         </div>
         <nav aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-drawer-nav flex flex-col gap-4 py-4">
-          <SidebarLinks onNavigate={onCloseDrawer} isOwner={isOwner} permissions={permissions} groups={groups} />
+          <SidebarLinks onNavigate={onCloseDrawer} isOwner={isOwner} isAdmin={isAdmin} permissions={permissions} groups={groups} />
           {guest ? (
             <>
               <NavLink to="/login" className="app-sidebar-item app-sidebar-guest-cta" onClick={onCloseDrawer}>

@@ -1,0 +1,22 @@
+
+/* Round 27 — قفل الصفحات اللي محتاجة موافقة المالك في السايدبار */
+.app-sidebar-item-lock {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+
+.app-sidebar[data-collapsed="true"] .app-sidebar-item-lock {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 4px;
+  width: 14px;
+  height: 14px;
+}

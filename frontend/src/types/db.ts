@@ -270,6 +270,8 @@ export interface AdminAccess {
   role: AdminRole | null;
   email: string | null;
   permissions: Partial<AdminPermissions>;
+  /** نهاية صلاحيات المالك المؤقتة (منحة full_owner) لو موجودة. */
+  owner_authority_until?: string | null;
   teams: TeamAccessEntry[];
 }
 
@@ -280,6 +282,8 @@ export interface AdminAccount {
   created_at: string;
   created_by: string | null;
   permissions: AdminPermissions;
+  /** سجل العضو المرتبط بنفس البريد — بيستخدم لتصفير كلمة المرور. */
+  member_id: number | null;
 }
 
 /** نتيجة دالة تسجيل دخول العضو (RPC محصورة بالأعمدة العامة فقط — بلا session_token) */
@@ -408,6 +412,13 @@ export interface Database {
       get_member_pending_review: { Args: never; Returns: { status: string } | null };
       ensure_owner_member_identity: { Args: never; Returns: { member_id: number; email: string; created: boolean } | null };
       admin_list_accounts: { Args: never; Returns: AdminAccount[] };
+      admin_capability_state: { Args: never; Returns: Record<string, unknown> };
+      admin_request_capability: { Args: { p_capability: string; p_note?: string | null }; Returns: Record<string, unknown> };
+      admin_cancel_capability_request: { Args: { p_request_id: number }; Returns: boolean };
+      admin_capability_inbox: { Args: never; Returns: Record<string, unknown> };
+      admin_decide_capability_request: { Args: { p_request_id: number; p_approve: boolean; p_minutes?: number; p_note?: string | null }; Returns: Record<string, unknown> };
+      admin_revoke_capability_grant: { Args: { p_grant_id: number }; Returns: boolean };
+      has_capability: { Args: { p_capability: string }; Returns: boolean };
       admin_add_account: { Args: { p_email: string }; Returns: AdminAccount };
       admin_demote_account: { Args: { p_user_id: string }; Returns: { target_uuid: string; demoted: boolean; member_linked: boolean } };
       admin_update_permissions: { Args: { p_user_id: string; p_permissions: AdminPermissions }; Returns: boolean };

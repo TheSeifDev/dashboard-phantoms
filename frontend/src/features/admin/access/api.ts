@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase/client';
 import { toAppError } from '../../../lib/supabase/errors';
 import type { AdminAccess, AdminAccount } from '../../../types/db';
 import type { AdminPermissions } from '../../../types/db';
+import type { AdminCapability, CapabilityInbox, CapabilityState } from './capabilities';
 
 export const adminAccessKey = (userId: string | null) => ['admin-access', userId] as const;
 export const adminAccountsKey = ['admin-accounts'] as const;
@@ -132,6 +133,109 @@ export function useUpdateAdminPermissions() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: adminAccountsKey });
       await queryClient.invalidateQueries({ queryKey: ['admin-access'] });
+    },
+  });
+}
+
+const capabilityStateKey = ['admin-capability-state'] as const;
+const capabilityInboxKey = ['admin-capability-inbox'] as const;
+
+export function useCapabilityState(enabled: boolean) {
+  return useQuery({
+    queryKey: capabilityStateKey,
+    enabled,
+    queryFn: async (): Promise<CapabilityState> => {
+      const { data, error } = await supabase.rpc('admin_capability_state');
+      if (error) throw toAppError(error, 'معرفناش نتحقق من صلاحيات القدرات.');
+      return data as unknown as CapabilityState;
+    },
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  });
+}
+
+export function useRequestCapability() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ capability, note }: { capability: AdminCapability; note?: string }) => {
+      const { data, error } = await supabase.rpc('admin_request_capability', {
+        p_capability: capability,
+        p_note: note ?? null,
+      });
+      if (error) throw toAppError(error, 'معرفناش نبعت طلب الصلاحية.');
+      return data as { id: number; capability: AdminCapability; status: string };
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: capabilityStateKey });
+      await queryClient.invalidateQueries({ queryKey: capabilityInboxKey });
+    },
+  });
+}
+
+export function useCancelCapabilityRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (requestId: number) => {
+      const { data, error } = await supabase.rpc('admin_cancel_capability_request', { p_request_id: requestId });
+      if (error) throw toAppError(error, 'معرفناش نلغي الطلب.');
+      return data === true;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: capabilityStateKey });
+      await queryClient.invalidateQueries({ queryKey: capabilityInboxKey });
+    },
+  });
+}
+
+export function useCapabilityInbox(enabled: boolean) {
+  return useQuery({
+    queryKey: capabilityInboxKey,
+    enabled,
+    queryFn: async (): Promise<CapabilityInbox> => {
+      const { data, error } = await supabase.rpc('admin_capability_inbox');
+      if (error) throw toAppError(error, 'معرفناش نحمّل طلبات الصلاحيات.');
+      return data as unknown as CapabilityInbox;
+    },
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  });
+}
+
+export function useDecideCapabilityRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ requestId, approve, minutes, note }: { requestId: number; approve: boolean; minutes?: number; note?: string }) => {
+      const { data, error } = await supabase.rpc('admin_decide_capability_request', {
+        p_request_id: requestId,
+        p_approve: approve,
+        p_minutes: minutes ?? 1440,
+        p_note: note ?? null,
+      });
+      if (error) throw toAppError(error, 'معرفناش نحفظ القرار.');
+      return data as { id: number; status: string; grant_id: number | null; expires_at: string | null };
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: capabilityInboxKey });
+      await queryClient.invalidateQueries({ queryKey: capabilityStateKey });
+      await queryClient.invalidateQueries({ queryKey: adminAccountsKey });
+    },
+  });
+}
+
+export function useRevokeCapabilityGrant() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (grantId: number) => {
+      const { data, error } = await supabase.rpc('admin_revoke_capability_grant', { p_grant_id: grantId });
+      if (error) throw toAppError(error, 'معرفناش نسحب الصلاحية.');
+      return data === true;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: capabilityInboxKey });
+      await queryClient.invalidateQueries({ queryKey: capabilityStateKey });
     },
   });
 }
