@@ -11,6 +11,7 @@ import { PhantomLoader } from '../../components/motion/PhantomLoader';
 import { MemberProfileFields } from './MemberProfileFields';
 import { MissingProfileFields } from './MissingProfileFields';
 import { MemberPasswordCard } from './MemberPasswordCard';
+import { MemberDangerZone } from './MemberDangerZone';
 import { validateMemberProfile, type MemberProfileInput } from './profile-fields';
 import { memberProfileKey, MemberProfileApiError, profileToInput, saveMemberProfile, useMemberProfile, type MemberProfileSnapshot } from './profile-api';
 import '../../styles/member-settings.css';
@@ -103,6 +104,7 @@ export default function MemberSettingsPage() {
         <section className="settings-editor" aria-label={t('تعديل البيانات', 'Edit information')}><SettingsForm key={`${profile.data.member_id}:${profile.data.email}`} initial={profile.data} /></section>
       </div>}
       {profile.data && <div className="mt-6"><MemberPasswordCard /></div>}
+      {profile.data && <div className="mt-3"><MemberDangerZone /></div>}
     </div>
   </div>;
 }

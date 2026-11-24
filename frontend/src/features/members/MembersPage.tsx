@@ -17,6 +17,7 @@ import { MemberProfileModal } from './MemberProfileModal';
 import { MemberEditor } from './MemberEditor';
 import { MemberCustomFieldsModal } from './MemberCustomFieldsModal';
 import { MemberInviteModal } from './MemberInviteModal';
+import { MemberDeletionQueue } from './MemberDeletionQueue';
 import { MemberJoinReviewQueue } from './MemberJoinReviewQueue';
 import { MemberPasswordResetModal } from './MemberPasswordResetModal';
 import { MemberExcelActions } from './MemberExcelActions';
@@ -441,6 +442,7 @@ export default function MembersPage() {
         </div>
 
         <MemberJoinReviewQueue />
+        <MemberDeletionQueue />
 
         {isOwner && appDirectory.isError && (
           <div className="member-dir-console-note" role="status">
