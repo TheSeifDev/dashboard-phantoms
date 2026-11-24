@@ -799,56 +799,83 @@ html[lang="ar"] .eval-title { letter-spacing: 0; line-height: 1.32; }
   .eval-star-btn:hover { transform: none; }
 }
 
-/* ---------- Evaluation type: stars / minus / strike ---------- */
-.eval-modes { display: grid; gap: 6px; grid-template-columns: 1fr; }
-@media (min-width: 560px) { .eval-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.eval-mode {
+/* ---------- Evaluation type: compact segmented switcher ---------- */
+.eval-modes {
   display: grid;
-  gap: 2px;
-  justify-items: center;
-  min-height: 62px;
-  padding: 8px;
+  gap: 4px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 4px;
   border: 1px solid var(--glass-hairline);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--glass-bg-strong);
-  color: var(--text-secondary);
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
-.eval-mode b { font-size: 12px; font-weight: 800; }
-.eval-mode small { color: var(--text-muted); font-size: 10px; font-weight: 700; line-height: 1.4; }
-.eval-mode svg { color: currentColor; }
-.eval-mode:hover { border-color: var(--border-strong); color: var(--text); }
+.eval-mode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.eval-mode b { font-size: 12px; font-weight: 800; white-space: nowrap; }
+.eval-mode-icon { display: inline-flex; flex: 0 0 auto; color: currentColor; }
+.eval-mode:hover { background: color-mix(in oklab, var(--text) 5%, transparent); color: var(--text); }
 .eval-mode:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
-.eval-mode--stars[aria-pressed="true"] { border-color: var(--star-line); background: color-mix(in oklab, var(--star) 12%, var(--surface)); color: var(--star-deep); }
+.eval-mode--stars[aria-pressed="true"] {
+  border-color: var(--star-line);
+  background: color-mix(in oklab, var(--star) 16%, var(--surface));
+  color: var(--star-deep);
+}
 [data-theme="dark"] .eval-mode--stars[aria-pressed="true"] { color: var(--star); }
-.eval-mode--minus[aria-pressed="true"] { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger-text); }
-.eval-mode--strike[aria-pressed="true"] { border-color: var(--danger); background: var(--danger-soft); color: var(--danger-text); }
-.eval-mode[aria-pressed="true"] small { color: currentColor; opacity: .8; }
+.eval-mode--minus[aria-pressed="true"],
+.eval-mode--strike[aria-pressed="true"] {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+.eval-mode-caption {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.6;
+}
+@media (max-width: 420px) {
+  .eval-mode { gap: 4px; padding: 0 4px; }
+  .eval-mode b { font-size: 11px; }
+}
 
-/* ---------- Minus stars (deduction control under the stars) ---------- */
-.eval-award--minus { border-color: var(--danger-border); background: color-mix(in oklab, var(--danger) 6%, var(--surface)); }
+/* ---------- Minus stars: slashed stars instead of dashes ---------- */
+.eval-award--minus {
+  border-color: var(--danger-border);
+  background: color-mix(in oklab, var(--danger) 5%, var(--surface));
+}
 .eval-award-title--minus svg { color: var(--danger); fill: var(--danger); }
 .eval-award-total--minus { border-color: var(--danger-border); color: var(--danger-text); }
 [data-theme="dark"] .eval-award-total--minus { color: var(--danger-text); }
-.eval-minus-track { gap: 2px; }
-.eval-minus-btn { position: relative; color: var(--border-strong); }
+.eval-minus-track { gap: 4px; }
+.eval-minus-btn { position: relative; color: color-mix(in oklab, var(--danger) 45%, var(--border)); }
+.eval-minus-btn svg { fill: transparent; stroke-width: 1.7; }
 .eval-minus-btn--on { color: var(--danger); }
-.eval-minus-btn--on svg:first-child { filter: drop-shadow(0 2px 5px rgb(196 22 55 / .28)); }
-.eval-minus-mark {
+.eval-minus-btn--on svg { fill: currentColor; filter: drop-shadow(0 2px 5px rgb(196 22 55 / 0.22)); }
+.eval-minus-btn--on::after {
+  content: '';
   position: absolute;
-  inset-block-end: 4px;
-  inset-inline-end: 4px;
-  width: 15px;
-  height: 15px;
-  padding: 2px;
+  left: 50%;
+  top: 50%;
+  width: 27px;
+  height: 2px;
   border-radius: 999px;
-  background: var(--surface);
-  color: inherit;
-  stroke-width: 3.4;
+  background: color-mix(in oklab, var(--danger) 5%, var(--surface));
+  transform: translate(-50%, -50%) rotate(-45deg);
+  pointer-events: none;
 }
-[data-theme="dark"] .eval-minus-mark { background: var(--surface-2); }
 .eval-award-readout--minus { color: var(--danger-text); }
 .eval-award-readout--minus svg { color: var(--danger); }
 
