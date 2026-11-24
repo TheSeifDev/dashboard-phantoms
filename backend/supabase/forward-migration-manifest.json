@@ -553,7 +553,7 @@
     "version": "20261124090000",
     "name": "admin_capabilities",
     "canonical_repository_filename": "backend/supabase/migrations/20261124090000_admin_capabilities.sql",
-    "sha256": "4e55a2b9771fbfd04bafd1cee7f958f3d832f228e559167bd08b24fdc2c50c4f",
+    "sha256": "241e49bd45d9c5e6e63932cb98d77a0add368dc840e5e6df3ff817e3287d5d1f",
     "production_status": "applied",
     "remote_applied_timestamp": "20261124090000",
     "original_source_version": "20261124090000",

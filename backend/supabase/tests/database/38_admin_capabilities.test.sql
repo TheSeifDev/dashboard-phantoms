@@ -90,6 +90,8 @@ SELECT lives_ok(
         WHERE entry ->> 'status' = 'pending' LIMIT 1),
        true, 60, 'ساعة واحدة') $$,
   'the owner approves the request for 60 minutes');
+RESET ROLE;
+SELECT phantoms_test.clear_auth();
 SELECT is(
   (SELECT count(*)::int FROM public.admin_capability_grants AS g
    WHERE g.capability = 'admin_accounts' AND g.expires_at > pg_catalog.now()),
