@@ -38,9 +38,14 @@ SELECT is(public.member_github_state() ->> 'profile_url', NULL,
 -- Linking accepts a full URL, an @handle and a bare handle --------------------
 SELECT is(public.member_github_link('https://github.com/Octo-Cat/repo') ->> 'handle', 'octo-cat',
   'a full profile URL is normalized to a lowercase handle');
+-- The members table is not readable from a member session, so the stored jsonb
+-- is inspected as the fixture owner and then the member session is restored.
+RESET ROLE;
 SELECT is((SELECT m.custom_fields ->> 'github' FROM public.members AS m
             WHERE m.id = phantoms_test.mid('gh_owner')), 'octo-cat',
   'the handle is stored in the github custom field');
+SELECT phantoms_test.clear_auth();
+SELECT phantoms_test.login_as('gh_owner');
 SELECT is(public.member_github_state() ->> 'linked', 'true',
   'the member is reported as linked');
 SELECT is(public.member_github_state() ->> 'profile_url', 'https://github.com/octo-cat',
@@ -75,11 +80,14 @@ SELECT phantoms_test.clear_auth();
 SELECT phantoms_test.login_as('gh_owner');
 SELECT is(public.member_github_link('') ->> 'linked', 'false',
   'an empty value unlinks the account');
+SELECT is(public.member_github_state() ->> 'handle', NULL,
+  'the state reports no handle after unlinking');
+-- The members table is not readable from a member session; verify the stored
+-- jsonb as the fixture owner after the RPC has committed its write.
+RESET ROLE;
 SELECT is((SELECT m.custom_fields ? 'github' FROM public.members AS m
             WHERE m.id = phantoms_test.mid('gh_owner')), false,
   'unlinking removes the github key entirely');
-SELECT is(public.member_github_state() ->> 'handle', NULL,
-  'the state reports no handle after unlinking');
 SELECT is((SELECT m.custom_fields ->> 'unit' FROM public.members AS m
             WHERE m.id = phantoms_test.mid('gh_owner')), 'AI',
   'unlinking leaves the rest of custom_fields untouched');
