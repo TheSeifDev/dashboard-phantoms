@@ -416,26 +416,28 @@ export function EvaluationCreateModal({
                 aria-pressed={mode === option}
                 className={`eval-mode eval-mode--${option}`}
               >
-                {option === 'stars' ? <Star size={15} aria-hidden="true" /> : null}
-                {option === 'minus' ? <Minus size={15} aria-hidden="true" /> : null}
-                {option === 'strike' ? <AlertTriangle size={15} aria-hidden="true" /> : null}
+                <span className="eval-mode-icon" aria-hidden="true">
+                  {option === 'stars' ? <Star size={14} /> : null}
+                  {option === 'minus' ? <Minus size={14} /> : null}
+                  {option === 'strike' ? <AlertTriangle size={14} /> : null}
+                </span>
                 <b>
                   {option === 'stars'
                     ? t('نجوم', 'Stars')
                     : option === 'minus'
-                      ? t('خصم نجوم', 'Deduct stars')
-                      : t('تحذير (Strike)', 'Warning (strike)')}
+                      ? t('خصم نجوم', 'Deduct')
+                      : t('تحذير', 'Strike')}
                 </b>
-                <small>
-                  {option === 'stars'
-                    ? t('يضيف لرصيد النجوم', 'Adds to the star balance')
-                    : option === 'minus'
-                      ? t('يشيل من رصيد النجوم', 'Removes from the star balance')
-                      : t(`${STRIKE_LIMIT} تحذيرات والثالث طرد`, `${STRIKE_LIMIT} strikes, the third means expulsion`)}
-                </small>
               </button>
             ))}
           </div>
+          <p className="eval-mode-caption">
+            {mode === 'stars'
+              ? t('كل تقييم بيضيف نجومه لرصيد العضو والنجوم بتتراكم.', 'Every review adds its stars to the member balance, and stars accumulate.')
+              : mode === 'minus'
+                ? t('بتشيل نجوم من الرصيد — حركة مستقلة بتتسجل في سجل التقييمات.', 'Removes stars from the balance — a standalone entry in the review history.')
+                : t(`تحذير رسمي بدون نجوم — ${STRIKE_LIMIT} تحذيرات والثالث معناه طرد.`, `A formal warning with no stars — ${STRIKE_LIMIT} strikes and the third means expulsion.`)}
+          </p>
         </fieldset>
 
         {mode === 'strike' ? (
@@ -484,8 +486,46 @@ export function EvaluationCreateModal({
               })}
             </ul>
           </fieldset>
+        ) : mode === 'minus' ? (
+            <fieldset className="eval-award eval-award--minus">
+              <legend className="sr-only">{t('خصم النجوم', 'Deduct stars')}</legend>
+              <div className="eval-award-head">
+                <h3 className="eval-award-title eval-award-title--minus" id="eval-minus-label">
+                  <Minus size={15} aria-hidden="true" />
+                  {t('خصم نجوم من الرصيد', 'Deduct stars from the balance')}
+                </h3>
+                <span className="eval-award-total eval-award-total--minus">
+                  <Minus size={11} aria-hidden="true" />
+                  {t(`${number(minus)} من ${number(MAX_STARS)}`, `${number(minus)} of ${number(MAX_STARS)}`)}
+                </span>
+              </div>
+
+              <EvalMinusInput
+                value={minus}
+                onChange={setMinus}
+                label={t('اختر عدد النجوم التي تُخصم من العضو', 'Choose how many stars to deduct')}
+                describedBy="eval-minus-readout"
+              />
+
+              <p className="eval-award-readout eval-award-readout--minus" id="eval-minus-readout" role="status" aria-live="polite">
+                <Minus size={13} aria-hidden="true" />
+                {singleMemberId ? (
+                  t(
+                    `هيتخصم ${number(minus)} نجمة من رصيد العضو، ورصيده ينزل من ${number(singleBalance)} إلى ${number(Math.max(0, singleBalance - minus))}.`,
+                    `${number(minus)} star${minus > 1 ? 's' : ''} will be deducted: balance goes from ${number(singleBalance)} to ${number(Math.max(0, singleBalance - minus))}.`,
+                  )
+                ) : (
+                  t(
+                    `هيتخصم ${number(minus)} نجمة من كل عضو محدد — ${number(minus * selectedIds.length)} نجمة إجمالاً.`,
+                    `${number(minus)} star${minus > 1 ? 's' : ''} deducted from each selected member — ${number(minus * selectedIds.length)} in total.`,
+                  )
+                )}
+              </p>
+              <p className="eval-hint">
+                {t('الخصم حركة مستقلة: بيتسجل في سجل التقييمات ومش بيتمسح لو حذفت تقييماً قديماً.', 'Deductions are standalone entries: they appear in the history and stay even if an older review is deleted.')}
+              </p>
+            </fieldset>
         ) : (
-          <>
             <fieldset className="eval-award">
               <legend className="sr-only">{t('النجوم الذهبية', 'Golden stars')}</legend>
               <div className="eval-award-head">
@@ -532,46 +572,6 @@ export function EvaluationCreateModal({
                 {t('النجوم تتراكم: كل تقييم يضيف نجومه إلى رصيد العضو، ويقدر يجمع عدد كبير منها مع الوقت.', 'Stars accumulate: every review adds to the member balance, so they can collect many over time.')}
               </p>
             </fieldset>
-
-            <fieldset className="eval-award eval-award--minus">
-              <legend className="sr-only">{t('خصم النجوم', 'Deduct stars')}</legend>
-              <div className="eval-award-head">
-                <h3 className="eval-award-title eval-award-title--minus" id="eval-minus-label">
-                  <Minus size={15} aria-hidden="true" />
-                  {t('خصم نجوم من الرصيد', 'Deduct stars from the balance')}
-                </h3>
-                <span className="eval-award-total eval-award-total--minus">
-                  <Minus size={11} aria-hidden="true" />
-                  {t(`${number(minus)} من ${number(MAX_STARS)}`, `${number(minus)} of ${number(MAX_STARS)}`)}
-                </span>
-              </div>
-
-              <EvalMinusInput
-                value={minus}
-                onChange={setMinus}
-                label={t('اختر عدد النجوم التي تُخصم من العضو', 'Choose how many stars to deduct')}
-                describedBy="eval-minus-readout"
-              />
-
-              <p className="eval-award-readout eval-award-readout--minus" id="eval-minus-readout" role="status" aria-live="polite">
-                <Minus size={13} aria-hidden="true" />
-                {singleMemberId ? (
-                  t(
-                    `هيتخصم ${number(minus)} نجمة من رصيد العضو، ورصيده ينزل من ${number(singleBalance)} إلى ${number(Math.max(0, singleBalance - minus))}.`,
-                    `${number(minus)} star${minus > 1 ? 's' : ''} will be deducted: balance goes from ${number(singleBalance)} to ${number(Math.max(0, singleBalance - minus))}.`,
-                  )
-                ) : (
-                  t(
-                    `هيتخصم ${number(minus)} نجمة من كل عضو محدد — ${number(minus * selectedIds.length)} نجمة إجمالاً.`,
-                    `${number(minus)} star${minus > 1 ? 's' : ''} deducted from each selected member — ${number(minus * selectedIds.length)} in total.`,
-                  )
-                )}
-              </p>
-              <p className="eval-hint">
-                {t('الخصم حركة مستقلة: بيتسجل في سجل التقييمات ومش بيتمسح لو حذفت تقييماً قديماً.', 'Deductions are standalone entries: they appear in the history and stay even if an older review is deleted.')}
-              </p>
-            </fieldset>
-          </>
         )}
 
         <label className="eval-field" htmlFor="eval-feedback-input">

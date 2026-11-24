@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { Minus, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useLocale } from '../../i18n/useLocale';
 
 const MAX_STARS = 5;
@@ -134,7 +134,7 @@ export function EvalStarInput({ value, onChange, label, describedBy }: InputProp
 
 /**
  * اختيار خصم النجوم (نجوم بالسالب): ١ إلى ٥ نجوم تُخصم من رصيد العضو.
- * نفس سلوك النجوم الذهبية في الكيبورد، لكن الأيقونة نجمة عليها علامة سالب.
+ * نفس سلوك النجوم الذهبية في الكيبورد، والنجمة المخصومة بتظهر مشطوبة.
  */
 export function EvalMinusInput({ value, onChange, label, describedBy }: InputProps) {
   const { t, number, dir } = useLocale();
@@ -197,7 +197,6 @@ export function EvalMinusInput({ value, onChange, label, describedBy }: InputPro
               }}
             >
               <Star aria-hidden="true" />
-              <Minus className="eval-minus-mark" aria-hidden="true" />
             </button>
           );
         })}
