@@ -90,6 +90,8 @@ export function MemberDeletionQueue() {
     return <div className="member-dir-console-note" role="status">{t('بنراجع طلبات حذف الحساب...', 'Loading account deletion requests...')}</div>;
   }
   if (requestsQuery.isError) {
+    // الأدمن من غير صلاحية «الأعضاء» مش المفروض يشوف الطابور أصلًا.
+    if (requestsQuery.error instanceof MemberDeletionApiError && requestsQuery.error.code === 'FORBIDDEN') return null;
     return <ErrorState message={t('تعذّر تحميل طلبات حذف الحساب.', 'Account deletion requests could not be loaded.')} onRetry={() => { void requestsQuery.refetch(); }} />;
   }
   if (requests.length === 0) return null;
