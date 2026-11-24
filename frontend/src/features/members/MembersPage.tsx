@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ChevronLeft, ChevronRight, Eye, Link2, MoreHorizontal, Settings2, UserPlus, X } from 'lucide-react';
 import type { Member, MemberInsert } from '../../types/db';
-import { useMembers, useAddMember, useUpdateMember, useDeleteMember, useMemberTeamDirectory } from './api';
+import { useMembers, useAddMember, useUpdateMember, useDeleteMember, useOwnerDeleteMember, useMemberTeamDirectory } from './api';
 import { useMemberCustomFields } from './customFieldsApi';
 import { useNotes } from '../notes/api';
 import { Button } from '../../components/ui/Button';
@@ -112,6 +112,7 @@ export default function MembersPage() {
   const isOwner = Boolean(ownerId) && access.data?.is_owner === true && !access.isError && access.isFetchedAfterMount;
   const update = useUpdateMember();
   const remove = useDeleteMember();
+  const ownerRemove = useOwnerDeleteMember();
   const [filters, setFilters] = useState<MemberFiltersValue>({
     ...EMPTY_MEMBER_FILTERS,
   });
@@ -367,9 +368,12 @@ export default function MembersPage() {
     if (!target) return;
     setMemberToDelete(null);
     setDeletionIssue(null);
+    // المالك بيمسح نهائيًا من الـ RPC اللي بينضّف الدعوات والاشتراكات الأول،
+    // وباقي الأدوار بتفضل على الحذف المحمي بالقيود.
+    const deleteMember = isOwner ? ownerRemove.mutateAsync : remove.mutateAsync;
     scheduleDelete(
       target,
-      (id) => remove.mutateAsync(id),
+      (id) => deleteMember(id),
       DELETE_UNDO_MS,
       (cause) => {
         logError(cause, 'MembersPage.deleteMember');
@@ -645,10 +649,12 @@ export default function MembersPage() {
         itemName={memberToDelete?.full_name}
         description={
           memberToDelete
-            ? t(`سيُطلب حذف ${memberToDelete.full_name} بعد 5 ثوانٍ يمكنك خلالها التراجع. لا يتم الحذف إلا بعد تأكيد الخادم؛ سجلات الدعوات أو الفرق أو المشروعات قد تمنعه لحماية التاريخ. هذا لا يحذف حساب تسجيل الدخول ولا يلغي Admin.`, `Deletion of ${memberToDelete.full_name} will be requested after a 5-second undo window. It is complete only after server confirmation; invitation, team or project history may block it. This does not delete the sign-in account or revoke Admin access.`)
+            ? isOwner
+              ? t(`هيتعمل حذف نهائي لسجل ${memberToDelete.full_name} بعد 5 ثوانٍ تقدر تتراجع فيها. الحذف بينضّف دعوات كلمة المرور واشتراكات الفرق واستخدام التطبيق ومراجع مشاريع الويب الخاصة بيه، وبعدها بيمسح السجل — ومش بيحذف حساب تسجيل الدخول ولا بيلغي Admin.`, `The profile record of ${memberToDelete.full_name} will be permanently deleted after a 5-second undo window. The delete clears their password invitations, team memberships, app usage and web-project references first, then removes the record. It does not delete the sign-in account or revoke Admin access.`)
+              : t(`سيُطلب حذف ${memberToDelete.full_name} بعد 5 ثوانٍ يمكنك خلالها التراجع. لا يتم الحذف إلا بعد تأكيد الخادم؛ سجلات الدعوات أو الفرق أو المشروعات قد تمنعه لحماية التاريخ. هذا لا يحذف حساب تسجيل الدخول ولا يلغي Admin.`, `Deletion of ${memberToDelete.full_name} will be requested after a 5-second undo window. It is complete only after server confirmation; invitation, team or project history may block it. This does not delete the sign-in account or revoke Admin access.`)
             : undefined
         }
-        confirmLabel={t('حذف سجل العضو فقط', 'Delete profile record only')}
+        confirmLabel={isOwner ? t('حذف نهائي', 'Delete permanently') : t('حذف سجل العضو فقط', 'Delete profile record only')}
         isPending={false}
         pendingLabel={t('بنمسح...', 'Deleting...')}
       />
