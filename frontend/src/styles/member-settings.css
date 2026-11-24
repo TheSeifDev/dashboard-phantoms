@@ -148,6 +148,8 @@
   .mset-hero-actions { width: 100%; }
   .mset-hero-link { flex: 1; justify-content: center; }
   .mset-github-form { flex-direction: column; align-items: stretch; }
+  .mset-github-field { flex: 0 0 auto; }
+  .mset-github-form > button { width: 100%; }
   .mset-github-actions { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
