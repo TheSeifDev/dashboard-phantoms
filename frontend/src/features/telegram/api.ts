@@ -175,15 +175,46 @@ export function useBroadcastTelegram() {
   });
 }
 
+const BOT_ERRORS: Record<string, string> = {
+  unauthorized: 'الجلسة انتهت. سجّل الدخول من جديد.',
+  forbidden: 'الحساب ده مش من إدارة البوت.',
+  'missing token': 'مفيش توكن محفوظ للبوت. احفظ التوكن الأول.',
+  'Not Found': 'توكن البوت غير صالح (تلجرام رفض الطلب). راجع التوكن من BotFather.',
+  Unauthorized: 'التوكن غلط — تلجرام رفضه. انسخ التوكن تاني من BotFather.',
+};
+
+function botErrorText(raw: string): string {
+  const trimmed = raw.trim();
+  if (BOT_ERRORS[trimmed]) return BOT_ERRORS[trimmed];
+  if (/Failed to send a request|Failed to fetch|NetworkError/i.test(trimmed)) {
+    return 'معرفناش نوصل لخدمة البوت. جرّب تاني بعد لحظات.';
+  }
+  if (/non-2xx/i.test(trimmed)) return 'خدمة البوت ردت بخطأ. جرّب «فحص الاتصال» وهاتلاقي التفاصيل.';
+  return trimmed;
+}
+
+/** بينادي الـ edge function ويطلّع رسالة الخطأ الحقيقية اللي جاية من السيرفر. */
+async function invokeBot<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke('telegram-bot', { body });
+  if (error) {
+    const context = (error as { context?: Response }).context;
+    if (context && typeof context.json === 'function') {
+      const payload = await context.clone().json().catch(() => null) as { description?: string; error?: string } | null;
+      const detail = payload?.description ?? payload?.error;
+      if (detail) throw new Error(botErrorText(detail));
+    }
+    throw new Error(botErrorText(error.message));
+  }
+  return data as T;
+}
+
 /** يفعّل الويبهوك على تلجرام عبر الـ edge function بعد ما المالك يحط التوكن. */
 export function useSyncTelegramWebhook() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('telegram-bot', { body: { action: 'sync-auth' } });
-      if (error) throw new Error(error.message);
-      const payload = data as { ok?: boolean; description?: string } | null;
-      if (!payload?.ok) throw new Error(payload?.description ?? 'فشل تفعيل الويبهوك.');
+      const payload = await invokeBot<{ ok?: boolean; description?: string }>({ action: 'sync-auth' });
+      if (!payload?.ok) throw new Error(botErrorText(payload?.description ?? 'فشل تفعيل الويبهوك.'));
       return payload;
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: stateKey }),
