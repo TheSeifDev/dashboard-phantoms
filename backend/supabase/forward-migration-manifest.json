@@ -638,5 +638,25 @@
     "remote_applied_timestamp": "20261124200000",
     "original_source_version": "20261124200000",
     "original_source_filename": "backend/supabase/migrations/20261124200000_member_github_link.sql"
+  },
+  {
+    "version": "20261124210000",
+    "name": "member_github_resolve",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124210000_member_github_resolve.sql",
+    "sha256": "f9cf0b1272dcc91072829d0411c318f6b8d493b1e62d2df21f1cd80eb6bcf48a",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124210000",
+    "original_source_version": "20261124210000",
+    "original_source_filename": "backend/supabase/migrations/20261124210000_member_github_resolve.sql"
+  },
+  {
+    "version": "20261124211000",
+    "name": "member_github_resolve_path_fix",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124211000_member_github_resolve_path_fix.sql",
+    "sha256": "cd379ef753dabf06d9955cc680b268fce026cdc7e3c3ce8cc7ed5771dba97a12",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124211000",
+    "original_source_version": "20261124211000",
+    "original_source_filename": "backend/supabase/migrations/20261124211000_member_github_resolve_path_fix.sql"
   }
 ]

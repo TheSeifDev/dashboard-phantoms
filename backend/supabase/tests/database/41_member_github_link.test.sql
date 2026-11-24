@@ -7,7 +7,7 @@ SELECT no_plan();
 -- Fixtures -------------------------------------------------------------------
 SELECT phantoms_test.create_member('gh_owner', NULL, true);
 SELECT phantoms_test.create_member('gh_other', NULL, true);
-SELECT phantoms_test.create_member('gh_idle');
+SELECT phantoms_test.create_member('gh_idle', NULL, true);
 -- Posture: عقود الـ RPC -------------------------------------------------------
 SELECT has_function('public', 'member_github_link', ARRAY['text']::name[],
   'member_github_link(text) exists');
@@ -91,5 +91,63 @@ SELECT is((SELECT m.custom_fields ? 'github' FROM public.members AS m
 SELECT is((SELECT m.custom_fields ->> 'unit' FROM public.members AS m
             WHERE m.id = phantoms_test.mid('gh_owner')), 'AI',
   'unlinking leaves the rest of custom_fields untouched');
+-- Resolution: نفس مصدر الحقيقة اللي الداشبورد بيقرأ منه -------------------------
+SELECT has_function('public', 'member_github_strict', ARRAY['text']::name[],
+  'member_github_strict(text) exists');
+SELECT has_function('public', 'member_github_handle', ARRAY['jsonb', 'text']::name[],
+  'member_github_handle(jsonb, text) exists');
+SELECT is(public.member_github_strict('https://github.com/Octo-Cat/repo'), 'octo-cat',
+  'a full profile URL normalizes to a lowercase handle');
+SELECT is(public.member_github_strict('@Octo-Cat'), 'octo-cat',
+  'an @handle normalizes');
+SELECT is(public.member_github_strict('https://gitlab.com/octo-cat'), NULL,
+  'a non-GitHub link is rejected');
+SELECT is(public.member_github_strict('login'), NULL,
+  'a reserved GitHub path is rejected');
+SELECT is(public.member_github_resolve('{"github":"octo-cat"}'::jsonb, NULL), 'octo-cat',
+  'the explicit github custom field wins');
+SELECT is(public.member_github_resolve('{"GitHub Username":"octo-cat"}'::jsonb, NULL), 'octo-cat',
+  'a custom field labelled GitHub is used');
+SELECT is(public.member_github_resolve('{}'::jsonb, 'https://github.com/octo-cat'), 'octo-cat',
+  'a github.com portfolio URL is used as a fallback');
+SELECT is(public.member_github_resolve('{}'::jsonb, 'https://example.com/me'), NULL,
+  'a non-GitHub portfolio URL is ignored');
+
+-- A member whose handle only lives in the portfolio URL is reported as linked.
+RESET ROLE;
+UPDATE public.members
+   SET portfolio_url = 'https://github.com/portfolio-cat',
+       custom_fields = COALESCE(custom_fields, '{}'::jsonb) - 'github'
+ WHERE id = phantoms_test.mid('gh_idle');
+SELECT phantoms_test.clear_auth();
+SELECT phantoms_test.login_as('gh_idle');
+SELECT is(public.member_github_state() ->> 'linked', 'true',
+  'a portfolio GitHub link counts as linked');
+SELECT is(public.member_github_state() ->> 'handle', 'portfolio-cat',
+  'the state resolves the handle from the portfolio URL');
+SELECT is(public.member_github_state() ->> 'source', 'detected',
+  'the state reports the handle was detected, not typed');
+
+-- Unlinking must clear every source, otherwise the member stays "linked".
+SELECT is(public.member_github_link('') ->> 'linked', 'false',
+  'unlinking a detected handle succeeds');
+SELECT is(public.member_github_state() ->> 'linked', 'false',
+  'the member is unlinked after clearing the portfolio link');
+RESET ROLE;
+SELECT is((SELECT m.portfolio_url FROM public.members AS m WHERE m.id = phantoms_test.mid('gh_idle')), NULL,
+  'unlinking clears a github.com portfolio URL');
+
+-- Uniqueness also covers handles held only in another member's portfolio URL.
+-- gh_other كان رابط second-cat في حقل github، فبنشيله عشان الـ handle يبقى
+-- جاي من البورتفوليو بس (وده اللي بنختبره هنا).
+UPDATE public.members
+   SET portfolio_url = 'https://github.com/portfolio-cat',
+       custom_fields = COALESCE(custom_fields, '{}'::jsonb) - 'github'
+ WHERE id = phantoms_test.mid('gh_other');
+SELECT phantoms_test.clear_auth();
+SELECT phantoms_test.login_as('gh_owner');
+SELECT throws_like('SELECT public.member_github_link(''portfolio-cat'')', 'HANDLE_TAKEN%',
+  'a handle held only in another portfolio URL cannot be claimed');
+
 SELECT * FROM finish();
 ROLLBACK;

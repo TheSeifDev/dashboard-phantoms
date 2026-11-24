@@ -73,10 +73,14 @@ function toLinkError(cause: unknown): never {
 
 export const githubLinkKeys = { state: ['member', 'github-link'] as const };
 
+export type GithubLinkSource = 'custom' | 'detected';
+
 export interface GithubLinkState {
   handle: string | null;
   linked: boolean;
   profile_url: string | null;
+  /** custom = العضو كتبه بنفسه، detected = اتجاب أوتوماتيك من لينك البورتفوليو. */
+  source: GithubLinkSource | null;
 }
 
 export function useGithubLinkState() {
@@ -96,6 +100,7 @@ export function useGithubLinkState() {
         handle: typeof data.handle === 'string' ? data.handle : null,
         linked: data.linked === true,
         profile_url: typeof data.profile_url === 'string' ? data.profile_url : null,
+        source: data.source === 'custom' || data.source === 'detected' ? data.source : null,
       };
     },
   });
@@ -112,9 +117,14 @@ export function useLinkGithub() {
         toLinkError(cause);
       }
       if (result.error) toLinkError(result.error);
-      const data = (result.data ?? {}) as { handle?: string | null; linked?: boolean };
+      const data = (result.data ?? {}) as { handle?: string | null; linked?: boolean; source?: string | null };
       const next = typeof data.handle === 'string' ? data.handle : null;
-      return { handle: next, linked: data.linked === true, profile_url: next ? `https://github.com/${next}` : null };
+      return {
+        handle: next,
+        linked: data.linked === true,
+        profile_url: next ? `https://github.com/${next}` : null,
+        source: data.source === 'custom' || data.source === 'detected' ? data.source : (next ? 'custom' : null),
+      };
     },
     onSuccess: (state) => {
       cache.setQueryData(githubLinkKeys.state, state);
