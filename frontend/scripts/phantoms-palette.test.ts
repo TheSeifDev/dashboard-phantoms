@@ -186,11 +186,11 @@ test('collapsed icon rows reset inherited start alignment and center icons in bo
   assert.match(rail, /width:\s*54px;/);
 });
 
-test('legacy semantic tokens remain available and requested sidebar dimensions are preserved', () => {
+test('legacy semantic tokens remain available and the compact shell dimensions are preserved', () => {
   const retained = ['graphite-950', 'graphite-900', 'graphite-850', 'graphite-800', 'graphite-700', 'phantom-black', 'editorial-white', 'phantom-red', 'deep-red', 'accent-pink', 'concrete-grey', 'soft-grey', 'mist-grey', 'primary', 'primary-hover', 'primary-active', 'primary-soft', 'primary-ink', 'on-primary', 'link', 'link-hover', 'accent', 'accent-pink-soft', 'chart-blue', 'chart-ice', 'chart-cyan', 'chart-slate', 'chart-accent', 'chart-accent-soft', 'chart-accent-ink', 'chart-accent-text', 'on-success', 'heat-0', 'heat-1', 'heat-2', 'heat-3', 'heat-4', 'success', 'success-hover', 'success-soft', 'success-border', 'success-text', 'warning', 'warning-hover', 'warning-soft', 'warning-border', 'warning-text', 'danger', 'danger-hover', 'danger-soft', 'danger-border', 'danger-text', 'info', 'info-hover', 'info-soft', 'info-border', 'info-text', 'bg', 'surface', 'surface-2', 'surface-hover', 'bg-elevated', 'surface-elevated', 'card', 'card-hover', 'text', 'text-2', 'text-secondary', 'text-muted', 'text-inverse', 'border', 'border-subtle', 'border-strong', 'border-focus', 'focus-ring'];
   for (const token of retained) assert.ok(light[token], `legacy --${token} token remains available`);
-  assert.equal(light['sidebar-w'], '244px');
-  for (const [token, value] of Object.entries({ touch: '44px', 'header-h': '78px', 'bottom-nav-h': '64px', 'sidebar-rail-w': '76px', 'content-max': '1560px' })) {
+  assert.equal(light['sidebar-w'], '222px');
+  for (const [token, value] of Object.entries({ touch: '44px', 'header-h': '64px', 'bottom-nav-h': '64px', 'sidebar-rail-w': '68px', 'content-max': '1360px' })) {
     assert.equal(light[token], value, `existing --${token} dimension is preserved`);
   }
 });
