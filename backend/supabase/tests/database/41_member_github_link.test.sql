@@ -138,8 +138,11 @@ SELECT is((SELECT m.portfolio_url FROM public.members AS m WHERE m.id = phantoms
   'unlinking clears a github.com portfolio URL');
 
 -- Uniqueness also covers handles held only in another member's portfolio URL.
+-- gh_other كان رابط second-cat في حقل github، فبنشيله عشان الـ handle يبقى
+-- جاي من البورتفوليو بس (وده اللي بنختبره هنا).
 UPDATE public.members
-   SET portfolio_url = 'https://github.com/portfolio-cat'
+   SET portfolio_url = 'https://github.com/portfolio-cat',
+       custom_fields = COALESCE(custom_fields, '{}'::jsonb) - 'github'
  WHERE id = phantoms_test.mid('gh_other');
 SELECT phantoms_test.clear_auth();
 SELECT phantoms_test.login_as('gh_owner');
