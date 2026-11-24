@@ -668,5 +668,15 @@
     "remote_applied_timestamp": "20261124220000",
     "original_source_version": "20261124220000",
     "original_source_filename": "backend/supabase/migrations/20261124220000_telegram_auto_link.sql"
+  },
+  {
+    "version": "20261124230000",
+    "name": "owner_member_hard_delete",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124230000_owner_member_hard_delete.sql",
+    "sha256": "a437ba8be1e23bb3cc68a894fe52e3eab52a8359af0babdf72aaf46a3c569567",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124230000",
+    "original_source_version": "20261124230000",
+    "original_source_filename": "backend/supabase/migrations/20261124230000_owner_member_hard_delete.sql"
   }
 ]

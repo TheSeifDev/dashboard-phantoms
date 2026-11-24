@@ -1,3 +1,4 @@
+import { MemberDeletionError } from './member-delete-errors';
 // =====================================================
 // طبقة بيانات الأعضاء — Online-First صارمة
 // لا قاعدة ظل. لا سقوط صامت. الخطأ = isError في الواجهة.
@@ -200,6 +201,27 @@ export const useDeleteMember = () => {
         .eq('id', id)
         .select('id');
       return assertMemberDeletionResult(id, data, error);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['members'] }),
+  });
+};
+
+type UntypedRpc = (name: string, args?: Record<string, unknown>) => PromiseLike<{
+  data: unknown;
+  error: { message: string } | null;
+}>;
+/**
+ * الحذف النهائي لسجل العضو — للمالك فقط.
+ * الـ RPC بيتعامل مع الدعوات والاشتراكات والمراجع المرتبطة (RESTRICT) وبعدين
+ * بيمسح السجل، بدل ما الخادم يرفض الحذف بسبب دعوة قديمة.
+ */
+export const useOwnerDeleteMember = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data, error } = await (supabase.rpc as unknown as UntypedRpc)('owner_delete_member', { p_member_id: id });
+      if (error) throw new MemberDeletionError('member_delete_unknown');
+      return data as { ok: boolean; member_id: number };
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['members'] }),
   });
