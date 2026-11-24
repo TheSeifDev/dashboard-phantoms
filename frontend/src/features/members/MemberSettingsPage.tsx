@@ -10,6 +10,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { PhantomLoader } from '../../components/motion/PhantomLoader';
 import { MemberProfileFields } from './MemberProfileFields';
 import { MissingProfileFields } from './MissingProfileFields';
+import { MemberTelegramCard } from '../telegram/MemberTelegramCard';
 import { MemberPasswordCard } from './MemberPasswordCard';
 import { MemberDangerZone } from './MemberDangerZone';
 import { validateMemberProfile, type MemberProfileInput } from './profile-fields';
@@ -103,6 +104,7 @@ export default function MemberSettingsPage() {
         <aside className="settings-summary settings-reveal" aria-label={t('حالة الملف الشخصي', 'Profile status')}><div className="settings-profile-mark" aria-hidden="true"><UserRound size={30} /></div><h2>{profile.data.full_name}</h2><p className="settings-summary-email" dir="ltr">{profile.data.email}</p><div className={`settings-status ${profile.data.profile_complete ? 'is-complete' : ''}`}><ShieldCheck size={17} aria-hidden="true" />{profile.data.profile_complete ? t('معلوماتك مكتملة', 'Information complete') : t('معلومات مطلوبة', 'Information required')}</div><div className="settings-summary-divider" /><p className="settings-hint">{t('تخصصك يصف مجال اهتمامك. عضويات Software وHardware وAI يديرها الفريق بصورة مستقلة.', 'Your specialization describes your focus. Software, Hardware and AI team memberships are managed separately.')}</p><div className="settings-security"><LockKeyhole size={19} aria-hidden="true" /><h3>{t('أمان الحساب', 'Account security')}</h3><p>{t('استعادة كلمة المرور تتم عبر البريد المسجل أو رابط إدارة آمن.', 'Recover your password through your registered email or a secure administrator link.')}</p><Link to="/forgot-password">{t('استعادة كلمة المرور', 'Password recovery')}<ArrowUpRight size={15} aria-hidden="true" /></Link></div></aside>
         <section className="settings-editor" aria-label={t('تعديل البيانات', 'Edit information')}><SettingsForm key={`${profile.data.member_id}:${profile.data.email}`} initial={profile.data} /></section>
       </div>}
+      {profile.data && <div className="mt-6"><MemberTelegramCard /></div>}
       {profile.data && <div className="mt-6"><MemberPasswordCard /></div>}
       {profile.data && <div className="mt-3"><MemberDangerZone /></div>}
     </div>

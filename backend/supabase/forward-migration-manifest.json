@@ -578,5 +578,25 @@
     "remote_applied_timestamp": "20261124100000",
     "original_source_version": "20261124100000",
     "original_source_filename": "backend/supabase/migrations/20261124100000_member_app_usage_platform_and_admin.sql"
+  },
+  {
+    "version": "20261124120000",
+    "name": "telegram_bot",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124120000_telegram_bot.sql",
+    "sha256": "4c356b6a8dba5eaa97a221916fe705530ed037640929d3947f039f0357d65be5",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124120000",
+    "original_source_version": "20261124120000",
+    "original_source_filename": "backend/supabase/migrations/20261124120000_telegram_bot.sql"
+  },
+  {
+    "version": "20261124120100",
+    "name": "telegram_bot_runtime",
+    "canonical_repository_filename": "backend/supabase/migrations/20261124120100_telegram_bot_runtime.sql",
+    "sha256": "b428c632e2c63c37fbf4409fcd93f14e77a6713497e438a90a630e7d843c31c4",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261124120100",
+    "original_source_version": "20261124120100",
+    "original_source_filename": "backend/supabase/migrations/20261124120100_telegram_bot_runtime.sql"
   }
 ]

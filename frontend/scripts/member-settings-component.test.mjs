@@ -90,6 +90,8 @@ const mocks = {
   'features/auth/MemberAccessGuard.tsx': { cleanupMemberState: async () => setMember(null) },
   // منطقة الخطر بتحتاج QueryClient وتستدعي RPCs، فبنثبتها هنا وبتتغطى في scripts/member-deletion.test.ts.
   'features/members/MemberDangerZone.tsx': { MemberDangerZone: () => el('section', { id: 'delete-account' }, el('h2', null, 'Delete account permanently')) },
+  // كارت تلجرام بيستدعي RPCs بتاعته، فبيتغطى في scripts/telegram-bot.test.mjs.
+  'features/telegram/MemberTelegramCard.tsx': { MemberTelegramCard: () => el('section', { id: 'telegram-link' }, el('h2', null, 'Telegram notifications')) },
 };
 const actual = new Set(['features/members/profile-fields.ts', 'features/members/MemberProfileFields.tsx', 'features/members/MissingProfileFields.tsx', 'features/members/profile-api.ts', 'features/members/MemberSettingsPage.tsx', 'features/members/MemberPasswordCard.tsx', 'features/auth/member-password-access.ts', 'features/auth/member-password-change-api.ts', 'features/members/MemberProfileCompletionGuard.tsx', 'features/auth/member-password.ts', 'features/auth/member-recovery.ts', 'features/auth/member-recovery-api.ts', 'features/auth/MemberRecoveryPage.tsx', 'features/auth/MemberForgotPasswordPage.tsx']);
 const modules = new Map();

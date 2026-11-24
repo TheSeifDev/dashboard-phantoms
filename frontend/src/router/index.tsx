@@ -48,7 +48,7 @@ const ReferencesPage = lazy(() => import('../features/references/ReferencesPage'
 const LedgerPage = lazy(() => import('../features/ledger/LedgerPage'));
 const RankingPage = lazy(() => import('../features/ranking/RankingPage'));
 const AiAssistantPage = lazy(() => import('../features/ai-assistant/AiAssistantPage'));
-const WhatsAppTasksPage = lazy(() => import('../features/whatsapp/WhatsAppTasksPage'));
+const TelegramPage = lazy(() => import('../features/telegram/TelegramPage'));
 const AnnouncementsPage = lazy(() => import('../features/admin/announcements/AnnouncementsPage'));
 const AdminAccountsPage = lazy(() => import('../features/admin/access/AdminAccountsPage'));
 const TeamsManagementPage = lazy(() => import('../features/teams/TeamsManagementPage'));
@@ -280,7 +280,8 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
       { path: 'notes', element: <AdminSection permission="notes"><Page><NotesPage /></Page></AdminSection> },
       { path: 'announcements', element: <AdminSection permission="announcements"><Page><AnnouncementsPage /></Page></AdminSection> },
       { path: 'ai-assistant', element: <AdminSection permission="ai_assistant"><Page><AiAssistantPage /></Page></AdminSection> },
-      { path: 'whatsapp', element: <AdminSection permission="whatsapp"><Page><WhatsAppTasksPage /></Page></AdminSection> },
+      { path: 'telegram', element: <AdminSection permission="whatsapp"><Page><TelegramPage /></Page></AdminSection> },
+      { path: 'whatsapp', element: <Navigate to="/admin/telegram" replace /> },
       { path: 'admins', element: <ProtectedOwnerRoute><Page><AdminAccountsPage /></Page></ProtectedOwnerRoute> },
       { path: 'teams', element: <ProtectedOwnerRoute><Page><TeamsManagementPage /></Page></ProtectedOwnerRoute> },
       { path: 'web-projects', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },

@@ -24,6 +24,8 @@ SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations
 -- ---------------------------------------------------------------------------
 SELECT tables_are('public', ARRAY[
   'admin_accounts', 'admin_emails', 'admin_capability_grants', 'admin_capability_requests',
+  'telegram_settings', 'telegram_links', 'telegram_link_codes', 'telegram_outbox',
+  'telegram_updates', 'telegram_command_audit',
   'announcements', 'member_custom_fields',
   'member_app_usage', 'member_deletion_requests', 'member_device_sessions', 'member_evaluations', 'member_infinite_bonus_events',
   'member_password_audit', 'member_password_invitations', 'member_password_rate_limits',

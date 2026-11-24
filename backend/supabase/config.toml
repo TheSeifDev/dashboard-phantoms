@@ -444,6 +444,10 @@ enabled = true
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
 
 # Core production functions retain gateway JWT and handler-level owner checks.
+# Telegram calls this endpoint without a Supabase JWT; the handler verifies the bot secret itself.
+[functions.telegram-bot]
+verify_jwt = false
+
 [functions.admin-invite]
 verify_jwt = true
 

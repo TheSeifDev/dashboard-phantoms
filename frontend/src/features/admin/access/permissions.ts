@@ -52,7 +52,7 @@ export function firstAllowedAdminPath(permissions: Partial<AdminPermissions> | n
     ranking: '/admin/ranking',
     notes: '/admin/notes',
     announcements: '/admin/announcements',
-    whatsapp: '/admin/whatsapp',
+    whatsapp: '/admin/telegram',
     ai_assistant: '/admin/ai-assistant',
     web_projects: '/admin/web-projects',
   } satisfies Record<AdminPermission, string>)[option.key] : null;
