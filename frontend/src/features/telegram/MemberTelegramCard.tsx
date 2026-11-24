@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, BellOff, Check, Copy, ExternalLink, Link2, Loader2, Send } from 'lucide-react';
 import { toast } from '../../store/toast';
 import { useLocale } from '../../i18n/useLocale';
@@ -6,6 +6,11 @@ import {
   useCreateTelegramLinkCode, useTelegramMemberState, useToggleTelegramMuteSelf, useUnlinkTelegramSelf,
 } from './api';
 
+/**
+ * ربط تلجرام بقى أوتوماتيك: أول ما العضو يفتح الكارت بنجهّز له كود صالح
+ * (الـ RPC بيرجّع نفس الكود لو لسه صالح) وبنعرض زر واحد بيفتح تلجرام
+ * والكود متضمّن في اللينك — ضغطة واحدة بدون نسخ ولزق.
+ */
 export function MemberTelegramCard() {
   const { t, date } = useLocale();
   const state = useTelegramMemberState();
@@ -13,6 +18,19 @@ export function MemberTelegramCard() {
   const toggleMute = useToggleTelegramMuteSelf();
   const unlink = useUnlinkTelegramSelf();
   const [copied, setCopied] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const autoRequested = useRef(false);
+  const enabled = state.data?.enabled === true;
+  const linked = state.data?.linked === true;
+
+  useEffect(() => {
+    if (autoRequested.current || !enabled || linked) return;
+    if (createCode.isPending || createCode.data) return;
+    autoRequested.current = true;
+    createCode.mutate(undefined, { onError: () => { autoRequested.current = false; } });
+    // بنجهّز الكود مرة واحدة لكل فتح للصفحة
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, linked]);
 
   const copy = async (value: string) => {
     try {
@@ -48,7 +66,6 @@ export function MemberTelegramCard() {
   }
 
   const code = createCode.data;
-
   return (
     <section className="glass-card grid gap-3 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -67,7 +84,6 @@ export function MemberTelegramCard() {
           </span>
         )}
       </div>
-
       {data.linked ? (
         <>
           <p className="text-sm leading-7 text-[var(--text-muted)]">
@@ -105,19 +121,43 @@ export function MemberTelegramCard() {
             {t('اربط حسابك مرة واحدة وهتستقبل كل إشعارات الفريق على تلجرام.', 'Link once and receive every team notification on Telegram.')}
           </p>
           <div className="flex flex-wrap items-center gap-2">
+            {code?.deep_link ? (
+              <a
+                className="inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--primary)] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--primary-hover)]"
+                href={code.deep_link}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                <Send size={16} aria-hidden="true" />
+                {t('ربط أوتوماتيك في تلجرام', 'Link automatically on Telegram')}
+                <ExternalLink size={14} aria-hidden="true" />
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--primary)] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                disabled={createCode.isPending}
+                onClick={() => createCode.mutate(undefined, { onError: (error: Error) => toast.error(error.message) })}
+              >
+                {createCode.isPending ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <Link2 size={15} aria-hidden="true" />}
+                {t('جهّز زر الربط', 'Prepare the link button')}
+              </button>
+            )}
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-transparent bg-[var(--primary)] px-3 py-2 text-sm font-bold text-white transition hover:bg-[var(--primary-hover)] disabled:opacity-60"
-              disabled={createCode.isPending}
-              onClick={() => createCode.mutate(undefined, {
-                onError: (error: Error) => toast.error(error.message),
-              })}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--link)] underline"
+              onClick={() => setShowManual((open) => !open)}
+              aria-expanded={showManual}
             >
-              {createCode.isPending ? <Loader2 size={15} className="animate-spin" aria-hidden="true" /> : <Link2 size={15} aria-hidden="true" />}
-              {t('اعمل كود ربط', 'Create link code')}
+              {showManual ? t('إخفاء الكود', 'Hide the code') : t('عندي كود بالفعل', 'I already have a code')}
             </button>
-            {code && (
-              <>
+          </div>
+          <p className="text-xs leading-6 text-[var(--text-muted)]">
+            {t('الزر بيفتح تلجرام على البوت والكود جاهز — بتدوس Start وخلاص. الكود صالح 20 دقيقة وبيتجدد لوحده.', 'The button opens the bot on Telegram with the code ready — just press Start. The code lives 20 minutes and renews itself.')}
+          </p>
+          {showManual && code && (
+            <div className="grid gap-1 text-sm leading-7 text-[var(--text-muted)]">
+              <div className="flex flex-wrap items-center gap-2">
                 <code className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 font-mono text-sm tracking-widest text-[var(--text)]" dir="ltr">
                   {code.code}
                 </code>
@@ -129,22 +169,11 @@ export function MemberTelegramCard() {
                   {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                   {copied ? t('اتنسخ', 'Copied') : t('نسخ', 'Copy')}
                 </button>
-              </>
-            )}
-          </div>
-          {code && (
-            <div className="grid gap-1 text-sm leading-7 text-[var(--text-muted)]">
+              </div>
               <p>
-                {t('ابعت للبوت:', 'Send the bot:')}{' '}
+                {t('أو ابعت للبوت:', 'Or send the bot:')}{' '}
                 <code className="rounded bg-[var(--surface-2)] px-1.5 py-0.5" dir="ltr">/start {code.code}</code>
               </p>
-              {code.deep_link && (
-                <a className="inline-flex items-center gap-1 font-semibold text-[var(--link)] underline" href={code.deep_link} target="_blank" rel="noreferrer">
-                  {t('أو افتح البوت مباشرة', 'Or open the bot directly')}
-                  <ExternalLink size={14} aria-hidden="true" />
-                </a>
-              )}
-              <p className="text-xs">{t('الكود صالح 20 دقيقة.', 'The code is valid for 20 minutes.')}</p>
             </div>
           )}
         </>

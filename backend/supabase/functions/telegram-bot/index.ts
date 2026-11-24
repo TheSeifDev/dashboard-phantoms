@@ -150,6 +150,18 @@ const HELP = [
   '/unlink — فصل الحساب',
 ].join('\n');
 
+// ربط أوتوماتيك: تلجرام بيبعت رقم العضو اللي هو نفسه ضغط الزر، فبنطابقه مع
+// members.phone من غير أي كود يتكتب بالإيد.
+const contactKeyboard = {
+  keyboard: [[{ text: 'شارك رقمي واربط أوتوماتيك', request_contact: true }]],
+  resize_keyboard: true,
+  one_time_keyboard: true,
+};
+
+function backToMenuKeyboard() {
+  return { inline_keyboard: [[{ text: 'إلغاء', callback_data: 'menu' }]] };
+}
+
 function menuKeyboard(isAdmin: boolean) {
   const rows: Json[][] = [
     [{ text: 'بياناتي', callback_data: 'me' }, { text: 'مهامي', callback_data: 'tasks' }],
@@ -439,8 +451,9 @@ async function handleCommand(config: BotConfig, chatId: number, text: string, ct
       if (!ctx.linked) {
         await send(config, chatId,
           'أهلًا بيك في بوت PHANTOMS.\n\n' +
-          'عشان تربط حسابك: افتح البوابة → الحساب والإعدادات → ربط تلجرام → اعمل كود، وبعدين ابعتلي:\n' +
-          '<code>/start الكود</code>');
+          'أسهل طريقة للربط: اضغط الزرار اللي تحت وشارك رقم الموبايل المسجل في البوابة — الربط بيتم أوتوماتيك.\n\n' +
+          'أو لو عندك كود من البوابة ابعتلي: <code>/start الكود</code>',
+          contactKeyboard);
         return;
       }
       await send(config, chatId, `أهلًا ${esc(ctx.full_name ?? '')}\n\n${HELP}`, menuKeyboard(Boolean(ctx.is_admin)));
@@ -669,6 +682,39 @@ async function handleUpdate(config: BotConfig, update: Json) {
   }
 
   if (message && chatId) {
+    const contact = message.contact as Json | undefined;
+    if (contact) {
+      const from = message.from as Json | undefined;
+      const ownerId = Number((contact.user_id as number | undefined) ?? 0);
+      // بنقبل الرقم بس لو العضو شارك رقمه هو (مش رقم حد تاني من دفتر تليفونه).
+      if (ownerId && from?.id && ownerId !== Number(from.id as number | undefined)) {
+        await send(config, chatId, 'ابعت رقمك إنت من نفس حسابك — مش رقم حد تاني.', contactKeyboard);
+        return;
+      }
+      const { data, error } = await admin.rpc('telegram_link_self_by_contact', {
+        p_phone: String(contact.phone_number ?? ''),
+        p_chat_id: chatId,
+        p_username: (from?.username as string | undefined) ?? null,
+        p_first_name: (from?.first_name as string | undefined) ?? null,
+      });
+      const result = (data ?? {}) as Json;
+      if (!error && result.ok) {
+        const refreshed = await context(chatId);
+        await send(config, chatId,
+          `تم ربط حسابك${refreshed.full_name ? ` يا ${esc(refreshed.full_name)}` : ''} أوتوماتيك من رقمك.\n` +
+          'من دلوقتي كل إشعارات الفريق هتوصلك هنا.\n\n' + HELP,
+          menuKeyboard(Boolean(refreshed.is_admin)));
+        return;
+      }
+      const reason = String(result.reason ?? '');
+      const reply = reason === 'AMBIGUOUS'
+        ? 'في أكتر من عضو مسجل بنفس الرقم، فمحتاج كود من البوابة: <code>/start الكود</code>'
+        : reason === 'NO_MATCH'
+          ? 'الرقم ده مش مسجل في البوابة. حدّث رقمك في «الحساب والإعدادات» أو اربط بكود: <code>/start الكود</code>'
+          : 'معرفناش نربط الرقم ده. جرّب كود من البوابة: <code>/start الكود</code>';
+      await send(config, chatId, reply, backToMenuKeyboard());
+      return;
+    }
     const text = String(message.text ?? '');
     if (!text.startsWith('/')) {
       const ctx = await context(chatId);

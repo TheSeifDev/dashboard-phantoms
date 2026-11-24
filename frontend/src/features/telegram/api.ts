@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase/client';
+import { memberSupabase } from '../../lib/supabase/member-client';
 
 export type TelegramNotifyFlags = {
   tasks: boolean;
@@ -88,6 +89,34 @@ async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> 
   const { data, error } = await (supabase.rpc as unknown as UntypedRpc)(name, args ?? {});
   if (error) throw new Error(error.message);
   return data as T;
+}
+
+/** جلسة العضو منفصلة عن جلسة الإدارة، فنداءات العضو لازم تروح على عميله. */
+async function memberRpc<T>(name: string, args?: Record<string, unknown>): Promise<T> {
+  const { data, error } = await (memberSupabase.rpc as unknown as UntypedRpc)(name, args ?? {});
+  if (error) throw new Error(error.message);
+  return data as T;
+}
+
+export type TelegramLinkOverviewRow = {
+  member_id: number;
+  full_name: string;
+  email: string;
+  linked: boolean;
+  username: string | null;
+  linked_at: string | null;
+  muted: boolean;
+  last_seen_at: string | null;
+};
+
+/** مين ربط تلجرام ومين لسه — للإدارة فقط (الـ RPC بيفحص الصلاحية). */
+export function useTelegramLinksOverview(enabled = true) {
+  return useQuery({
+    queryKey: ['telegram', 'overview'] as const,
+    enabled,
+    staleTime: 60_000,
+    queryFn: () => rpc<TelegramLinkOverviewRow[]>('telegram_links_overview'),
+  });
 }
 
 export function useTelegramState(enabled = true) {
@@ -225,20 +254,20 @@ export function useTelegramMemberState(enabled = true) {
   return useQuery({
     queryKey: memberKey,
     enabled,
-    queryFn: () => rpc<TelegramMemberState>('telegram_member_link_state'),
+    queryFn: () => memberRpc<TelegramMemberState>('telegram_member_link_state'),
   });
 }
 
 export function useCreateTelegramLinkCode() {
   return useMutation({
-    mutationFn: () => rpc<TelegramLinkCode>('telegram_member_link_code'),
+    mutationFn: () => memberRpc<TelegramLinkCode>('telegram_member_link_code'),
   });
 }
 
 export function useUnlinkTelegramSelf() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => rpc<boolean>('telegram_unlink_self'),
+    mutationFn: () => memberRpc<boolean>('telegram_unlink_self'),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: memberKey }),
   });
 }
@@ -246,7 +275,7 @@ export function useUnlinkTelegramSelf() {
 export function useToggleTelegramMuteSelf() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => rpc<boolean>('telegram_toggle_mute_self'),
+    mutationFn: () => memberRpc<boolean>('telegram_toggle_mute_self'),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: memberKey }),
   });
 }
