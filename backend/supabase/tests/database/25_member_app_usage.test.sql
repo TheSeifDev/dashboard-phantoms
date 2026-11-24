@@ -33,9 +33,9 @@ BEGIN
 END $$;
 
 -- Canonical migration inventory is now 24 historical + 62 forward files.
-SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 92,
-  'local disposable migration history records all 92 canonical files');
-SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261124230000',
+SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 93,
+  'local disposable migration history records all 93 canonical files');
+SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261124233000',
   'local disposable migration history ends at the Telegram bot runtime migration');
 SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations
            WHERE version <= '20261114164006'), 24,
@@ -352,6 +352,22 @@ SELECT phantoms_test.login_as('usage-member');
 SELECT is((public.member_record_app_usage(phantoms_test.tok('usage-member'), '2.0.0', '200') ->> 'last_used_at')::timestamptz,
   phantoms_test.var('future-last')::timestamptz, 'monotonic upsert survives a clock regression');
 RESET ROLE;
+
+
+-- مشرف عنده سلطة المالك (full_owner) بيشوف نفس تقرير المالك -------------------
+RESET ROLE;
+INSERT INTO public.admin_capability_grants (user_id, capability, granted_by, expires_at)
+VALUES (phantoms_test.uid('admin-self'), 'full_owner', phantoms_test.uid('owner'), NULL);
+SELECT phantoms_test.login_as('admin-self');
+SELECT ok(public.is_owner(), 'a permanent full_owner grant gives the Admin owner authority');
+SELECT is((SELECT count(*)::int FROM public.owner_member_app_usage(ARRAY[
+             phantoms_test.mid('usage-member')
+           ])), 1,
+  'an Admin with owner authority reads the same app-use report as the Owner');
+RESET ROLE;
+SELECT phantoms_test.clear_auth();
+DELETE FROM public.admin_capability_grants
+WHERE user_id = phantoms_test.uid('admin-self') AND capability = 'full_owner';
 
 SELECT * FROM finish();
 ROLLBACK;

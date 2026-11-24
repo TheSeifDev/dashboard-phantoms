@@ -264,7 +264,11 @@ export interface TeamMemberCandidate extends Omit<TeamMemberSummary, 'membership
 
 export interface AdminAccess {
   is_admin: boolean;
+  /** Real owner role only — governance of administrator accounts stays here. */
   is_owner: boolean;
+  /** Owner authority: the real owner or an administrator granted full_owner. */
+  owner_authority?: boolean;
+  owner_authority_permanent?: boolean;
   /** Team-scoped only; never changes is_admin or global permissions. */
   is_team_admin: boolean;
   role: AdminRole | null;
@@ -417,6 +421,8 @@ export interface Database {
       admin_request_capability: { Args: { p_capability: string; p_note?: string | null }; Returns: Record<string, unknown> };
       admin_cancel_capability_request: { Args: { p_request_id: number }; Returns: boolean };
       admin_capability_inbox: { Args: never; Returns: Record<string, unknown> };
+      admin_capability_matrix: { Args: never; Returns: unknown };
+      admin_set_capability: { Args: { p_user_id: string; p_capability: string; p_granted: boolean }; Returns: { user_id: string; capability: string; granted: boolean } };
       admin_decide_capability_request: { Args: { p_request_id: number; p_approve: boolean; p_minutes?: number; p_note?: string | null }; Returns: Record<string, unknown> };
       admin_revoke_capability_grant: { Args: { p_grant_id: number }; Returns: boolean };
       has_capability: { Args: { p_capability: string }; Returns: boolean };

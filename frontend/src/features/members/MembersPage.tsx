@@ -109,7 +109,7 @@ export default function MembersPage() {
   const add = useAddMember();
   const ownerId = useAuthStore((state) => state.user?.id ?? null);
   const access = useAdminAccess(ownerId);
-  const isOwner = Boolean(ownerId) && access.data?.is_owner === true && !access.isError && access.isFetchedAfterMount;
+  const isOwner = Boolean(ownerId) && access.data?.owner_authority === true && !access.isError && access.isFetchedAfterMount;
   const update = useUpdateMember();
   const remove = useDeleteMember();
   const ownerRemove = useOwnerDeleteMember();

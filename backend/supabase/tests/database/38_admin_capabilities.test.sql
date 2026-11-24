@@ -163,5 +163,65 @@ SELECT throws_ok(
   'P0001', 'UNAUTHORIZED',
   'a plain member cannot request capabilities');
 
+
+-- منحة دائمة يديرها المالك مباشرة (admin_set_capability) ----------------------
+RESET ROLE;
+SELECT phantoms_test.clear_auth();
+SELECT phantoms_test.login_as('cap_admin');
+SELECT throws_ok(
+  $$ SELECT public.admin_set_capability(phantoms_test.uid('cap_admin'), 'full_owner', true) $$,
+  'P0001', 'OWNER_ONLY: منح الصلاحيات للمالك بس.',
+  'an administrator cannot grant capabilities, not even to themselves');
+SELECT throws_ok(
+  $$ SELECT public.admin_capability_matrix() $$,
+  'P0001', 'OWNER_ONLY: مصفوفة الصلاحيات بتظهر للمالك بس.',
+  'the capability matrix is owner-only');
+RESET ROLE;
+SELECT phantoms_test.clear_auth();
+SELECT phantoms_test.login_as('cap_owner');
+SELECT is((public.admin_set_capability(phantoms_test.uid('cap_admin'), 'full_owner', true) ->> 'granted')::boolean,
+  true, 'the owner grants full owner authority permanently');
+SELECT is((public.admin_set_capability(phantoms_test.uid('cap_admin'), 'app_usage', true) ->> 'granted')::boolean,
+  true, 'the owner grants the app usage report permanently');
+SELECT throws_ok(
+  $$ SELECT public.admin_set_capability(phantoms_test.uid('cap_owner'), 'full_owner', false) $$,
+  'P0001', 'OWNER_IMMUTABLE: صلاحيات المالك ثابتة.',
+  'owner capabilities cannot be changed');
+SELECT throws_ok(
+  $$ SELECT public.admin_set_capability(phantoms_test.uid('cap_member'), 'app_usage', true) $$,
+  'P0001', 'ADMIN_NOT_FOUND', 'capabilities only apply to existing administrators');
+SELECT throws_ok(
+  $$ SELECT public.admin_set_capability(phantoms_test.uid('cap_admin'), 'not_a_capability', true) $$,
+  'P0001', 'INVALID_INPUT', 'unknown capability keys are rejected');
+SELECT is((SELECT count(*)::int FROM jsonb_array_elements(public.admin_capability_matrix()) AS row
+           WHERE (row ->> 'email') = (SELECT email FROM phantoms_test.users WHERE name = 'cap_admin')
+             AND (row #>> '{capabilities,full_owner,permanent}')::boolean), 1,
+  'the owner matrix marks the grant as permanent');
+
+-- المشرف بقى عنده سلطة المالك في الواجهة والقراءة -----------------------------
+RESET ROLE;
+SELECT phantoms_test.clear_auth();
+SELECT phantoms_test.login_as('cap_admin');
+SELECT ok(public.is_owner(), 'a permanent full_owner grant satisfies is_owner()');
+SELECT is((public.get_admin_access() ->> 'owner_authority')::boolean, true,
+  'the access payload opens owner authority for the administrator');
+SELECT is((public.get_admin_access() ->> 'owner_authority_permanent')::boolean, true,
+  'the access payload reports the permanent owner authority');
+SELECT is((public.get_admin_access() ->> 'is_owner')::boolean, false,
+  'the real owner flag stays false for the administrator');
+
+-- سحب دائم بيمنع فورًا --------------------------------------------------------
+RESET ROLE;
+SELECT phantoms_test.clear_auth();
+SELECT phantoms_test.login_as('cap_owner');
+SELECT is((public.admin_set_capability(phantoms_test.uid('cap_admin'), 'full_owner', false) ->> 'granted')::boolean,
+  false, 'the owner revokes full owner authority permanently');
+RESET ROLE;
+SELECT phantoms_test.clear_auth();
+SELECT phantoms_test.login_as('cap_admin');
+SELECT ok(NOT public.is_owner(), 'the revoked administrator loses owner authority');
+SELECT is((public.get_admin_access() ->> 'owner_authority')::boolean, false,
+  'the access payload closes owner authority after the revoke');
+
 SELECT * FROM finish();
 ROLLBACK;

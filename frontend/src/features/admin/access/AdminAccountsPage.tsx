@@ -15,6 +15,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { useAdminAccess, useAdminAccounts, useAddAdminAccount, useCapabilityState, useDemoteAdminAccount, useRemoveAdminAccount, useUpdateAdminPermissions } from './api';
 import { CapabilityGate } from './CapabilityGate';
 import { OwnerCapabilityPanel } from './OwnerCapabilityPanel';
+import { AdminCapabilityMatrix } from './AdminCapabilityMatrix';
 import { AdminPasswordResetModal } from './AdminPasswordResetModal';
 import type { AdminAccount, AdminPermission, AdminPermissions } from '../../../types/db';
 import { ADMIN_PERMISSION_OPTIONS, FULL_ADMIN_PERMISSIONS, normalizeAdminPermissions } from './permissions';
@@ -178,6 +179,7 @@ export default function AdminAccountsPage() {
       />
 
       {capabilities.data?.is_owner === true && <OwnerCapabilityPanel />}
+      {capabilities.data?.is_owner === true && <AdminCapabilityMatrix />}
 
       <Card>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">

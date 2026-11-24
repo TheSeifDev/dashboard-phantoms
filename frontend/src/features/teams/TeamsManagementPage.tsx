@@ -520,7 +520,7 @@ export default function TeamsManagementPage() {
   const { t, dir, number } = useLocale();
   const user = useAuthStore((state) => state.user);
   const access = useAdminAccess(user?.id ?? null);
-  const ownerConfirmed = access.data?.is_owner === true;
+  const ownerConfirmed = access.data?.owner_authority === true;
   const teams = useOwnerTeams(ownerConfirmed);
   const candidates = useTeamAdminCandidates(ownerConfirmed);
   const createTeam = useCreateTeam();
@@ -592,7 +592,7 @@ export default function TeamsManagementPage() {
 
   if (access.isPending || (access.isFetching && !access.data)) return <CardSkeletons count={2} />;
   if (access.isError) return <ErrorState message={t('تعذر التحقق من صلاحية Owner.', 'Could not verify Owner access.')} onRetry={() => { void access.refetch(); }} />;
-  if (!access.data?.is_owner) return <EmptyState title={t('إدارة الفرق للمالك فقط', 'Team management is restricted to the owner')} description={t('تعيين Head/Monitor وتغيير الصلاحيات يتم من Owner فقط.', 'Only the Owner can assign Heads/Monitors or change their permissions.')} />;
+  if (!access.data?.owner_authority) return <EmptyState title={t('إدارة الفرق للمالك فقط', 'Team management is restricted to the owner')} description={t('تعيين Head/Monitor وتغيير الصلاحيات يتم من Owner فقط.', 'Only the Owner can assign Heads/Monitors or change their permissions.')} />;
 
   return (
     <div className="teams-management" dir={dir}>
@@ -628,7 +628,7 @@ export default function TeamsManagementPage() {
           <form onSubmit={(event) => void create(event)} className="tms-create-form">
             <label className="tms-field"><span>{t('اسم الفريق', 'Team name')}</span><input ref={nameInput} value={name} onChange={(event) => setName(event.target.value)} required minLength={2} maxLength={80} placeholder={t('مثال: Software', 'e.g. Software')} /></label>
             <label className="tms-field"><span>{t('معرّف URL', 'URL slug')}</span><input value={slug} onChange={(event) => setSlug(event.target.value)} required minLength={2} maxLength={40} pattern="[a-z0-9][a-z0-9-]{0,38}[a-z0-9]" dir="ltr" placeholder="software" /></label>
-            <Button type="submit" icon={<Plus size={17} aria-hidden="true" />} isLoading={createTeam.isPending} disabled={!access.data.is_owner}>{t('إنشاء فريق', 'Create team')}</Button>
+            <Button type="submit" icon={<Plus size={17} aria-hidden="true" />} isLoading={createTeam.isPending} disabled={!access.data.owner_authority}>{t('إنشاء فريق', 'Create team')}</Button>
           </form>
           <p className="tms-note">{t('لكل فريق Head وMonitor بصلاحيات تختارها أنت. السجلات القديمة تفضل غير معيّنة لحد ما تسندها صراحة.', 'Each team has a Head and Monitor with permissions you choose. Legacy records remain unassigned until explicitly classified.')}</p>
         </div>
@@ -692,7 +692,7 @@ export default function TeamsManagementPage() {
 
           <div className="tms-panel">
             {selected
-              ? <TeamDetail key={selected.team_id} team={selected} candidates={candidates.data ?? []} isOwner={access.data?.is_owner === true} />
+              ? <TeamDetail key={selected.team_id} team={selected} candidates={candidates.data ?? []} isOwner={access.data?.owner_authority === true} />
               : <p className="tms-note">{t('اختار فريق من القائمة عشان تدير مقاعده وأعضائه.', 'Pick a team from the list to manage its seats and members.')}</p>}
           </div>
         </div>

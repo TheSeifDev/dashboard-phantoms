@@ -143,7 +143,7 @@ export default function DashboardPage() {
       contributionQuery.refetch(),
     ]);
   };
-  const hasPermission = (permission: AdminPermission) => accessQuery.data?.is_owner === true || accessQuery.data?.permissions?.[permission] === true;
+  const hasPermission = (permission: AdminPermission) => accessQuery.data?.owner_authority === true || accessQuery.data?.permissions?.[permission] === true;
 
   if (dashboardState.status === 'error' || contributionQuery.isError) {
     const message = dashboardState.status === 'error'
