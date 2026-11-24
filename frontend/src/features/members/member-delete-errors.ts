@@ -6,6 +6,7 @@ export type MemberDeletionErrorCode =
   | 'member_delete_dependency_other'
   | 'member_delete_permission'
   | 'member_delete_missing_schema'
+  | 'member_delete_self'
   | 'member_delete_unknown';
 
 export interface MemberDeletionResult {
@@ -86,6 +87,21 @@ export function memberDeletionErrorFromProvider(raw: unknown): MemberDeletionErr
 
 export function memberDeletionNoMatchError(): MemberDeletionError {
   return new MemberDeletionError('member_delete_no_match');
+}
+
+/**
+ * The owner RPC raises stable machine prefixes (FORBIDDEN / SELF_DELETE_FORBIDDEN /
+ * MEMBER_NOT_FOUND / MEMBER_DELETE_FAILED). Map them to the same public codes so the
+ * UI never shows a raw provider payload or a vague "unconfirmed" message.
+ */
+export function classifyOwnerDeletionRpcError(message: unknown): MemberDeletionErrorCode {
+  const text = typeof message === 'string' ? message : '';
+  if (/SELF_DELETE_FORBIDDEN/.test(text)) return 'member_delete_self';
+  if (/FORBIDDEN/.test(text) || /permission denied/i.test(text)) return 'member_delete_permission';
+  if (/MEMBER_NOT_FOUND/.test(text)) return 'member_delete_no_match';
+  if (/MEMBER_DELETE_FAILED/.test(text)) return 'member_delete_no_match';
+  if (/owner_member_erasure_operations|check constraint/i.test(text)) return 'member_delete_unknown';
+  return classifyMemberDeletionError({ message: text });
 }
 
 /**

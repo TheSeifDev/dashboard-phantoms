@@ -2,7 +2,7 @@
 -- المرتبطة (RESTRICT) ويمسح السجل، ومحدش غير المالك يقدر ينفّذه.
 BEGIN;
 \ir _helpers.psql
-SELECT plan(9);
+SELECT plan(11);
 
 -- Fixtures -------------------------------------------------------------------
 DO $$
@@ -78,6 +78,19 @@ SELECT is((SELECT count(*)::int FROM public.members WHERE email = 'hd-target@pha
 SELECT is((SELECT count(*)::int FROM public.member_password_invitations
             WHERE normalized_email = 'hd-target@phantoms-test.example'), 0,
   'the linked password invitations are gone too');
+
+-- العملية لازم تتقفل بـ 'complete' وبـ targets فاضية، وإلا الـ CHECK constraint
+-- بيرفض التحديث وكل الحذف بيرجع (وده اللي كان بيخلي الحذف يفشل في production).
+SELECT is((SELECT count(*)::int FROM public.owner_member_erasure_operations
+            WHERE status = 'complete'
+              AND target_member_id IS NULL
+              AND target_auth_user_id IS NULL
+              AND completed_at IS NOT NULL
+              AND result ->> 'member_id' = :'target_member_id'), 1,
+  'the erasure operation is closed as complete with its targets cleared');
+SELECT is((SELECT count(*)::int FROM public.owner_member_erasure_operations
+            WHERE status <> 'complete' AND result ->> 'member_id' = :'target_member_id'), 0,
+  'no erasure operation is left open for the deleted member');
 
 SELECT * FROM finish();
 ROLLBACK;

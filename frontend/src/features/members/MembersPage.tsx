@@ -92,6 +92,11 @@ function memberDeletionIssueCopy(code: MemberDeletionErrorCode, t: (arabic: stri
         title: t('مسار الحذف غير متاح حاليًا', 'The deletion path is currently unavailable'),
         description: t('لم يتأكد حذف سجل العضو. تواصل مع مسؤول النظام؛ لا تحاول تعديل قاعدة البيانات يدويًا.', 'Deletion of the member record was not confirmed. Contact the system administrator; do not modify the database manually.'),
       };
+    case 'member_delete_self':
+      return {
+        title: t('مش مسموح تحذف السجل المرتبط بحسابك', 'You cannot delete the record bound to your account'),
+        description: t('السجل ده مربوط بحساب الدخول بتاعك، والحذف النهائي محمي عشان ما تفقدش وصولك. العضو ما اتحذفش.', 'This record is bound to your own sign-in account, so permanent deletion is blocked to keep your access. The member was not deleted.'),
+      };
     case 'member_delete_unknown':
     default:
       return {
@@ -371,6 +376,10 @@ export default function MembersPage() {
     // المالك بيمسح نهائيًا من الـ RPC اللي بينضّف الدعوات والاشتراكات الأول،
     // وباقي الأدوار بتفضل على الحذف المحمي بالقيود.
     const deleteMember = isOwner ? ownerRemove.mutateAsync : remove.mutateAsync;
+    const ownerSuccess = `${target.full_name} — ${t(
+      'اتحذف نهائيًا من قاعدة البيانات بعد تأكيد الخادم، مع دعواته وارتباطاته. حساب الدخول نفسه ما اتلمسش.',
+      'permanently deleted after server confirmation, along with its invitations and links. The sign-in account itself was untouched.',
+    )}`;
     scheduleDelete(
       target,
       (id) => deleteMember(id),
@@ -386,6 +395,7 @@ export default function MembersPage() {
       () => {
         if (mountedRef.current) setDeletionIssue(null);
       },
+      isOwner ? ownerSuccess : undefined,
     );
   };
 

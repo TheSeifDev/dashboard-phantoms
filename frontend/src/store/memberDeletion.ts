@@ -24,7 +24,8 @@ interface MemberDeletionState {
     commitFn: (id: number) => Promise<unknown>,
     durationMs?: number,
     onError?: (err: unknown) => void,
-    onSuccess?: () => void
+    onSuccess?: () => void,
+    successMessage?: string
   ) => void;
   undoDelete: (memberId: number, expectedToken?: DeletionToken) => boolean;
   isPendingDelete: (memberId: number) => boolean;
@@ -80,6 +81,11 @@ function failureCopy(code: MemberDeletionErrorCode): DeletionCopy {
         arabic: 'مسار حذف الأعضاء غير متاح حاليًا بسبب إعداد خادم ناقص. تواصل مع مسؤول النظام؛ العضو ما اتحذفش.',
         english: 'Member deletion is unavailable because the server schema is incomplete. Contact the system administrator; the member was not deleted.',
       };
+    case 'member_delete_self':
+      return {
+        arabic: 'السجل ده مربوط بحساب الدخول بتاعك، فمش مسموح تحذفه من هنا. العضو ما اتحذفش.',
+        english: 'This record is bound to your own sign-in account, so it cannot be deleted here. The member was not deleted.',
+      };
     case 'member_delete_unknown':
     default:
       return {
@@ -109,7 +115,7 @@ export const useMemberDeletionStore = create<MemberDeletionState>((set, get) => 
   return {
     pendingMap: {},
 
-    scheduleDelete: (member, commitFn, durationMs = DEFAULT_DELETE_UNDO_MS, onError, onSuccess) => {
+    scheduleDelete: (member, commitFn, durationMs = DEFAULT_DELETE_UNDO_MS, onError, onSuccess, successMessage) => {
       // If a deletion is already queued for this exact member, clear existing timer first.
       const existing = get().pendingMap[member.id];
       if (existing?.phase === 'committing') return;
@@ -128,7 +134,10 @@ export const useMemberDeletionStore = create<MemberDeletionState>((set, get) => 
         try {
           await commitFn(member.id);
           removePendingIfCurrent(member.id, { generation, timerId });
-          toast.success(`${member.full_name} — ${translate({ arabic: 'تم حذف سجل العضو بعد تأكيد الخادم؛ ده مش حذف حساب الدخول.', english: 'member record deleted after server confirmation; this does not delete the Auth account.' })}`);
+          toast.success(
+            successMessage ??
+              `${member.full_name} — ${translate({ arabic: 'تم حذف سجل العضو بعد تأكيد الخادم؛ ده مش حذف حساب الدخول.', english: 'member record deleted after server confirmation; this does not delete the Auth account.' })}`,
+          );
           onSuccess?.();
         } catch (cause) {
           const safeCause = safeDeletionError(cause);
