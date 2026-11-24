@@ -149,11 +149,11 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   /* Layout */
   --touch: 44px;
-  --header-h: 78px;
+  --header-h: 64px;
   --bottom-nav-h: 64px;
-  --sidebar-w: 244px;
-  --sidebar-rail-w: 76px;
-  --content-max: 1560px;
+  --sidebar-w: 222px;
+  --sidebar-rail-w: 68px;
+  --content-max: 1360px;
   --radius-xs: 6px;
   --radius-sm: 10px;
   --radius: 14px;
