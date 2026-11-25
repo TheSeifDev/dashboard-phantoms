@@ -276,6 +276,14 @@ export interface TeamMemberCandidate extends Omit<TeamMemberSummary, 'membership
   membership_status: TeamMembershipStatus | null;
 }
 
+/** خطة الفريق المكتوبة — Round 38 (team_plan_get / team_plan_save). */
+export interface TeamPlan {
+  team_id: string;
+  plan: string;
+  updated_at: string | null;
+  can_edit: boolean;
+}
+
 /* ------------------------------------------------------------------ */
 /* لوحة الفريق المستقلة (owner_team_console) — Round 37                */
 /* ------------------------------------------------------------------ */
@@ -551,6 +559,8 @@ export interface Database {
       owner_team_console: { Args: { p_team_id: string }; Returns: TeamConsole };
       owner_team_goal_save: { Args: { p_team_id: string; p_goal_id: number | null; p_title: string; p_metric: string; p_target_value: number; p_current_value: number; p_due_date: string | null; p_status: TeamGoalStatus }; Returns: TeamGoal };
       owner_team_goal_delete: { Args: { p_team_id: string; p_goal_id: number }; Returns: boolean };
+      team_plan_get: { Args: { p_team_id: string }; Returns: TeamPlan };
+      team_plan_save: { Args: { p_team_id: string; p_plan: string }; Returns: TeamPlan };
       has_admin_permission: { Args: { p_permission: string }; Returns: boolean };
       bind_member_device_session: { Args: { p_email: string; p_device_token: string }; Returns: boolean };
       set_member_bonus_infinite: { Args: { p_member_id: number; p_enabled: boolean; p_reason: string }; Returns: boolean };

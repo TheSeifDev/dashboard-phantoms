@@ -23,14 +23,14 @@ const [router, sidebar, header, listPage, teamPage, seatCard, memberRoster, team
 // extracted panels; the guards below apply to the whole feature surface.
 const page = [listPage, teamPage, seatCard, memberRoster, teamCopy].join('\n');
 
-test('internal team management is lazy-loaded and doubly gated to the system Owner', () => {
+test('internal team management is lazy-loaded, Owner-gated for governance, and console-gated for team managers', () => {
   assert.match(router, /const TeamsManagementPage = lazy\(\(\) => import\('\.\.\/features\/teams\/TeamsManagementPage'\)\)/);
   assert.match(router, /path: 'teams', element: <ProtectedOwnerRoute><Page><TeamsManagementPage \/><\/Page><\/ProtectedOwnerRoute>/);
-  assert.match(router, /path: 'teams\/:teamId', element: <ProtectedOwnerRoute><Page><TeamPage \/><\/Page><\/ProtectedOwnerRoute>/);
+  assert.match(router, /path: 'teams\/:teamId', element: <ProtectedTeamConsoleRoute><Page><TeamPage \/><\/Page><\/ProtectedTeamConsoleRoute>/);
   assert.match(page, /const access = useAdminAccess\(user\?\.id \?\? null\)/);
-  assert.match(page, /if \(!access\.data\?\.owner_authority\)/);
-  assert.match(page, /useOwnerTeams\(ownerConfirmed\)/);
-  assert.match(page, /useTeamAdminCandidates\(ownerConfirmed\)/);
+  assert.match(page, /const canOpenConsole = isOwner \|\| isAdmin \|\| teamRole !== null/);
+  assert.match(page, /useOwnerTeams\(isOwner\)/);
+  assert.match(page, /useTeamAdminCandidates\(isOwner\)/);
   assert.ok(JSON.parse(routes).routes.some((route) => route.path === '/admin/teams'));
 });
 

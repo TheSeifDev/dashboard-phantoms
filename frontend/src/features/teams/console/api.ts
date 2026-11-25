@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase/client';
 import { toAppError } from '../../../lib/supabase/errors';
 import { useAuthStore } from '../../../store/auth';
-import type { TeamConsole, TeamGoal, TeamGoalStatus } from '../../../types/db';
+import type { TeamConsole, TeamGoal, TeamGoalStatus, TeamPlan } from '../../../types/db';
 
 /** مفاتيح الاستعلام — كل شيء تحت مظلة الفريق الواحد. */
 export const teamConsoleKey = (teamId: string) => ['team-console', teamId] as const;
@@ -73,6 +73,35 @@ export function useDeleteTeamGoal(teamId: string) {
       'معرفناش نحذف هدف الفريق.',
     ),
     onSuccess: invalidate,
+  });
+}
+
+/** خطة الفريق المكتوبة — يقرأها Owner/Admin/Head/Monitor المسموح لهم باللوحة. */
+export function useTeamPlan(teamId: string, enabled = true) {
+  const userId = useAuthStore((state) => state.user?.id ?? 'anonymous');
+  return useQuery({
+    queryKey: ['team-plan', teamId, userId],
+    queryFn: () => unwrapRpc<TeamPlan>(
+      supabase.rpc('team_plan_get', { p_team_id: teamId }),
+      'معرفناش نحمّل خطة الفريق.',
+    ),
+    enabled: enabled && Boolean(teamId),
+    staleTime: 10_000,
+    retry: false,
+  });
+}
+
+/** حفظ خطة الفريق — الكتابة لصاحب صلاحية dashboard على الفريق أو المالك/الأدمن. */
+export function useSaveTeamPlan(teamId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (plan: string) => unwrapRpc<TeamPlan>(
+      supabase.rpc('team_plan_save', { p_team_id: teamId, p_plan: plan }),
+      'معرفناش نحفظ خطة الفريق.',
+    ),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['team-plan', teamId] });
+    },
   });
 }
 

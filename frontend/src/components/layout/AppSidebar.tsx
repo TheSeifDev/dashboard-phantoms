@@ -585,10 +585,6 @@ export function AppSidebar({
                 <CircleUserRound size={20} aria-hidden="true" />
                 <span className="app-sidebar-item-label">{t('دخول بوابة الأعضاء', 'Member sign in')}</span>
               </NavLink>
-              <NavLink to="/admin/login" className="app-sidebar-item" onClick={() => onCloseDrawer()}>
-                <ShieldCheck size={20} aria-hidden="true" />
-                <span className="app-sidebar-item-label">{t('دخول الإدارة', 'Admin sign in')}</span>
-              </NavLink>
             </div>
           ) : (
             <>
@@ -624,7 +620,7 @@ export function AppSidebar({
           <MemberAvatar member={memberAvatar} name={userName} size={88} className="app-drawer-user-avatar" />
           <div className="min-w-0">
             <p className="truncate text-sm font-black app-drawer-user-name">{userName}</p>
-            <p className="text-xs font-bold app-drawer-user-role">{roleLabel ?? t('مدير النظام', 'Administrator')}</p>
+            <p className="text-xs font-bold app-drawer-user-role">{roleLabel ?? (isOwner ? t('مالك الفريق', 'Team owner') : t('مدير النظام', 'Administrator'))}</p>
           </div>
         </div>
         <nav aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-drawer-nav flex flex-col gap-4 py-4">
@@ -634,10 +630,6 @@ export function AppSidebar({
               <NavLink to="/login" className="app-sidebar-item app-sidebar-guest-cta" onClick={onCloseDrawer}>
                 <CircleUserRound size={20} aria-hidden="true" />
                 <span className="app-sidebar-item-label">{t('دخول بوابة الأعضاء', 'Member sign in')}</span>
-              </NavLink>
-              <NavLink to="/admin/login" className="app-sidebar-item" onClick={onCloseDrawer}>
-                <ShieldCheck size={20} aria-hidden="true" />
-                <span className="app-sidebar-item-label">{t('دخول الإدارة', 'Admin sign in')}</span>
               </NavLink>
             </>
           ) : (
