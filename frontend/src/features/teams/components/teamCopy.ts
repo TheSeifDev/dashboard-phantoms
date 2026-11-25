@@ -54,7 +54,7 @@ export function useStaggerIn(ref: RefObject<HTMLElement | null>, key: string, op
   useLayoutEffect(() => {
     const root = ref.current;
     if (!root || !motionAllowed()) return;
-    const targets = root.querySelectorAll<HTMLElement>('[data-tm-anim]');
+    const targets = root.querySelectorAll<HTMLElement>('[data-tm-anim], [data-tmc-anim]');
     if (targets.length === 0) return;
     const timeline = gsap.timeline();
     timeline.fromTo(

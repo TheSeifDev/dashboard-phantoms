@@ -109,6 +109,62 @@ const alphaMemberCandidates = [
   { member_id: 201, full_name: 'Taylor Addable', email: 'taylor@example.test', phone: null, work_status: 'active', membership_status: null },
 ];
 
+const recentIso = (days) => new Date(Date.now() - days * 86_400_000).toISOString();
+const consoleFixture = {
+  team: { team_id: TEAM_ALPHA, slug: 'alpha-studio', name: 'Alpha Studio', is_active: true, created_at: '2026-01-01T00:00:00.000Z' },
+  members: [
+    { member_id: 101, full_name: 'Mona Adel', email: 'mona@example.test', membership_status: 'active', team_bonus: 7, main_bonus: 12, evaluation_count: 2 },
+    { member_id: 102, full_name: 'Omar Fathy', email: 'omar@example.test', membership_status: 'active', team_bonus: 2, main_bonus: 5, evaluation_count: 1 },
+  ],
+  tasks: [
+    {
+      id: 900, title: 'Review payments module', description: 'Audit the checkout flow.', has_deadline: true,
+      deadline_date: '2026-02-01T23:59:59.000Z', bonus_points: 5, assigned_all: true,
+      assignees: [
+        { member_id: 101, full_name: 'Mona Adel', status: 'under_review' },
+        { member_id: 102, full_name: 'Omar Fathy', status: 'approved' },
+      ],
+      state: 'review', created_at: recentIso(2),
+    },
+    {
+      id: 901, title: 'Write onboarding docs', description: null, has_deadline: false, deadline_date: null,
+      bonus_points: 0, assigned_all: true, assignees: [], state: 'open', created_at: recentIso(4),
+    },
+  ],
+  evaluations: [
+    { id: 501, member_id: 101, member_name: 'Mona Adel', title: 'Sprint 4 delivery', grade: 'excellent', points: 5, feedback: 'Delivered ahead of schedule.', created_at: recentIso(3) },
+    { id: 502, member_id: 102, member_name: 'Omar Fathy', title: 'Missed standup', grade: 'needs_improvement', points: -2, feedback: 'Two standups missed this week.', created_at: recentIso(5) },
+  ],
+  goals: [
+    { id: 301, title: 'Ship the team product', metric: 'approved tasks', target_value: 40, current_value: 25, due_date: '2026-03-01', status: 'active', updated_at: '2026-01-22T08:00:00.000Z' },
+    { id: 302, title: 'Run 4 internal workshops', metric: 'workshops', target_value: 4, current_value: 4, due_date: '2026-02-10', status: 'done', updated_at: '2026-01-15T08:00:00.000Z' },
+  ],
+  references: [],
+  project_tasks: [
+    { id: 701, project_id: 'fixture-project-1', project_name: 'Phantoms Site', title: 'Build the pricing page', status: 'in_progress', priority: 'high', due_date: '2026-02-05' },
+  ],
+  project_reports: [
+    { id: 801, project_id: 'fixture-project-1', project_name: 'Phantoms Site', member_name: 'Mona Adel', period_start: '2026-01-12', period_end: '2026-01-18', completed_this_week: 'Finished the pricing page layout.', status: 'submitted', blockers: 'Waiting on final copy.', created_at: '2026-01-19T09:00:00.000Z' },
+  ],
+  resources: [
+    { id: 601, title: 'Brand guidelines', category: 'design', description: null, external_url: 'https://example.test/brand', preview_url: null, project_name: 'Phantoms Site', access_status: 'approved', created_at: '2026-01-10T09:00:00.000Z' },
+  ],
+};
+function emptyConsoleFixture(teamId, slug, name) {
+  return {
+    team: { team_id: teamId, slug, name, is_active: true, created_at: '2026-01-01T00:00:00.000Z' },
+    members: [], tasks: [], evaluations: [], goals: [], references: [],
+    project_tasks: [], project_reports: [], resources: [],
+  };
+}
+const referenceFixture = {
+  links: [
+    { id: 1, title: 'React Router docs', url: 'https://reactrouter.com/', description: 'Routing reference', category: 'docs', team_slug: 'alpha-studio', team_name: 'Alpha Studio', created_at: '2026-01-05T00:00:00.000Z', updated_at: '2026-01-05T00:00:00.000Z' },
+    { id: 2, title: 'TypeScript handbook', url: 'https://www.typescriptlang.org/docs/', description: null, category: 'docs', team_slug: null, team_name: null, created_at: '2026-01-04T00:00:00.000Z', updated_at: '2026-01-04T00:00:00.000Z' },
+  ],
+  teams: [{ slug: 'alpha-studio', name: 'Alpha Studio' }],
+  total: 2,
+};
 function queryState(data) {
   return { data, isPending: false, isFetching: false, isError: false, refetch: async () => {} };
 }
@@ -129,6 +185,8 @@ function defaultFixture(overrides = {}) {
     members: { [TEAM_ALPHA]: queryState(alphaMembers), [TEAM_BETA]: queryState([]) },
     memberCandidates: { [TEAM_ALPHA]: queryState(alphaMemberCandidates), [TEAM_BETA]: queryState([]) },
     profiles: { [TEAM_ALPHA]: queryState({ team_id: TEAM_ALPHA, slug: 'alpha-studio', name: 'Alpha Studio', is_active: true, ...defaultProfile }), [TEAM_BETA]: queryState({ team_id: TEAM_BETA, slug: 'beta-ops', name: 'Beta Operations', is_active: false, tagline: '', accent: 'primary', focus_areas: [], updated_at: null }) },
+    console: { [TEAM_ALPHA]: queryState(consoleFixture), [TEAM_BETA]: queryState(emptyConsoleFixture(TEAM_BETA, 'beta-ops', 'Beta Operations')) },
+    references: queryState(referenceFixture),
     ...overrides,
   };
 }
@@ -144,6 +202,17 @@ const compiledSources = [
   ['src/features/teams/components/MemberRoster.tsx', 'src/features/teams/components/MemberRoster.js'],
   ['src/features/teams/components/teamCopy.ts', 'src/features/teams/components/teamCopy.js'],
   ['src/features/admin/access/permissions.ts', 'src/features/admin/access/permissions.js'],
+  ['src/features/teams/console/charts.tsx', 'src/features/teams/console/charts.js'],
+  ['src/features/teams/console/shared.tsx', 'src/features/teams/console/shared.js'],
+  ['src/features/teams/console/OverviewPanel.tsx', 'src/features/teams/console/OverviewPanel.js'],
+  ['src/features/teams/console/TasksPanel.tsx', 'src/features/teams/console/TasksPanel.js'],
+  ['src/features/teams/console/AgilePanel.tsx', 'src/features/teams/console/AgilePanel.js'],
+  ['src/features/teams/console/EvaluationsPanel.tsx', 'src/features/teams/console/EvaluationsPanel.js'],
+  ['src/features/teams/console/PlanPanel.tsx', 'src/features/teams/console/PlanPanel.js'],
+  ['src/features/teams/console/TimelinePanel.tsx', 'src/features/teams/console/TimelinePanel.js'],
+  ['src/features/teams/console/ReferencesPanel.tsx', 'src/features/teams/console/ReferencesPanel.js'],
+  ['src/features/teams/console/ProjectsPanel.tsx', 'src/features/teams/console/ProjectsPanel.js'],
+  ['src/features/references/types.ts', 'src/features/references/types.js'],
 ];
 
 async function writeHarnessFiles(harnessRoot) {
@@ -293,6 +362,33 @@ exports.useSaveTeamProfile = () => ({ isPending: false, mutateAsync: async (inpu
   state().mutations.push({ kind: 'saveTeamProfile', input: structuredClone(input) });
   return { team_id: input.teamId, tagline: input.tagline, accent: input.accent, focus_areas: input.focusAreas, updated_at: null };
 } });
+`],
+    ['src/features/teams/console/api.js', `
+const state = () => globalThis.__TM_FIXTURE;
+const query = (value) => value || { data: undefined, isPending: false, isFetching: false, isError: false, refetch: async () => {} };
+const mutation = (kind) => () => ({ isPending: false, mutateAsync: async (input) => {
+  state().mutations.push({ kind, input: structuredClone(input) });
+  if (kind === 'createTeamTask' || kind === 'createTeamEvaluation') return 1;
+  return true;
+} });
+exports.useTeamConsole = (teamId, enabled = true) => { state().hookEnabled.push({ hook: 'console', enabled }); return query(state().console[teamId]); };
+exports.useSaveTeamGoal = mutation('saveTeamGoal');
+exports.useDeleteTeamGoal = mutation('deleteTeamGoal');
+exports.useCreateTeamTask = mutation('createTeamTask');
+exports.useDeleteTeamTask = mutation('deleteTeamTask');
+exports.useReviewTeamTask = mutation('reviewTeamTask');
+exports.useCreateTeamEvaluation = mutation('createTeamEvaluation');
+`],
+    ['src/features/references/api.js', `
+const state = () => globalThis.__TM_FIXTURE;
+const query = (value) => value || { data: undefined, isPending: false, isFetching: false, isError: false, refetch: async () => {} };
+const mutation = (kind) => () => ({ isPending: false, mutateAsync: async (input) => {
+  state().mutations.push({ kind, input: structuredClone(input) });
+  return true;
+} });
+exports.useAdminReferences = (enabled = true) => { state().hookEnabled.push({ hook: 'references', enabled }); return query(state().references); };
+exports.useSaveReference = mutation('saveReference');
+exports.useDeleteReference = mutation('deleteReference');
 `],
     ['src/node_modules/gsap/index.js', `
 const timeline = () => ({ fromTo: () => timeline(), kill() {}, to: () => timeline() });
@@ -615,8 +711,8 @@ try {
         assert.match(hero().textContent || '', /Backend/, 'Saved focus areas should render in the hero');
         assert.equal(document.querySelector('.teams-management')?.getAttribute('data-accent'), 'violet', 'The saved accent should drive the page accent');
         const tabs = [...document.querySelectorAll('.tms-tabs button')].map((tab) => tab.textContent || '');
-        assert.equal(tabs.length, 5, 'The team page should expose five sections');
-        for (const label of ['Overview', 'Leadership', 'Members', 'Customize', 'Settings']) {
+        assert.equal(tabs.length, 12, 'The team page should expose all twelve sections');
+        for (const label of ['Overview', 'Tasks', 'Agile', 'Evaluations', 'Plan', 'Timeline', 'References', 'Projects', 'Leadership', 'Members', 'Customize', 'Settings']) {
           assert.ok(tabs.some((tab) => tab.includes(label)), `Missing the ${label} section`);
         }
         assert.ok(document.querySelector('.tms-stat-grid'), 'The overview should show real team stats');
@@ -820,6 +916,96 @@ try {
         assert.ok(document.querySelector('[role="alert"]'), 'Team query failure should render an accessible error');
         assert.equal(cardNames().length, 0, 'Team query errors should not expose stale or fabricated team cards');
       } finally { await errorTeams.unmount(); }
+    });
+    await t.test('the team dashboard renders real console panels, charts, and every section', async () => {
+      const mounted = await mount(bundle, { page: 'team' });
+      try {
+        const consoleCalls = mounted.fixture.hookEnabled.filter((entry) => entry.hook === 'console');
+        assert.ok(consoleCalls.length >= 1, 'The console query must run for an Owner on the team page');
+        assert.ok(consoleCalls.every((entry) => entry.enabled), 'The console query must be enabled for an Owner');
+        assert.ok(document.querySelector('.tmc-bars'), 'The overview must render the member bonus bar chart');
+        assert.ok(document.querySelector('.tmc-donut'), 'The overview must render the task-state donut');
+        assert.ok(document.querySelector('.tmc-trend'), 'The overview must render the 14-day activity trend');
+        assert.ok(document.querySelector('.tmc-ring'), 'The overview must render goal progress rings');
+        assert.match(document.body.textContent || '', /Mona Adel/, 'The overview must surface real member names');
+        await openTab('Tasks');
+        assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /Review payments module/, 'The tasks panel must list real team tasks');
+        assert.match(document.body.textContent || '', /Approve/, 'Under-review submissions must expose an approve action');
+        await openTab('Agile');
+        assert.ok(document.querySelectorAll('.tmc-column').length === 4, 'The agile board must render four real state columns');
+        assert.match(document.querySelector('.tmc-column.is-accent')?.textContent || '', /Review payments module/, 'A reviewed task must sit in the review column');
+        await openTab('Evaluations');
+        assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /Sprint 4 delivery/, 'Evaluations must list real records');
+        assert.match(document.body.textContent || '', /counted in the main total/i, 'The evaluations panel must state that points land in the main total');
+        await openTab('Plan');
+        assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /Ship the team product/, 'The plan must list real goals');
+        assert.ok(document.querySelector('.tmc-goal-grid'), 'The plan must render goal rings');
+        await openTab('Timeline');
+        assert.ok(document.querySelector('.tmc-timeline'), 'The timeline must render merged events');
+        assert.match(document.querySelector('.tmc-timeline')?.textContent || '', /Sprint 4 delivery/, 'Evaluations must appear in the timeline');
+        await openTab('References');
+        assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /React Router docs/, 'Team references must be listed');
+        assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /TypeScript handbook/, 'Global references must be listed for the team');
+        await openTab('Projects');
+        assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /Build the pricing page/, 'Project tasks of team members must be listed');
+        await click(buttonContaining('Reports'));
+        assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /Finished the pricing page layout/, 'Project reports must be listed');
+        await click(buttonContaining('Resources'));
+        assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /Brand guidelines/, 'Project resources must be listed');
+      } finally { await mounted.unmount(); }
+    });
+    await t.test('console forms submit real payloads for tasks, evaluations, goals, and references', async () => {
+      const mounted = await mount(bundle, { page: 'team' });
+      try {
+        await openTab('Tasks');
+        await changeControl(findLabelControl('Task title'), 'Ship the audit report');
+        await changeControl(findLabelControl('Approval bonus'), '4');
+        await click(buttonContaining('Add task'));
+        const taskMutation = mounted.fixture.mutations.find((entry) => entry.kind === 'createTeamTask');
+        assert.ok(taskMutation, 'Adding a task must call the create-task mutation');
+        assert.equal(taskMutation.input.title, 'Ship the audit report', 'The task title must be forwarded');
+        assert.equal(taskMutation.input.bonusPoints, 4, 'The approval bonus must be forwarded as a number');
+        assert.equal(taskMutation.input.assignedTo, 'ALL', 'A whole-team task must forward ALL');
+
+        await openTab('Evaluations');
+        await changeControl(findLabelControl('Member', 'select'), '101');
+        await changeControl(findLabelControl('Evaluation title'), 'Weekly review');
+        await changeControl(findLabelControl('Written feedback', 'textarea'), 'Consistent delivery.');
+        await click(buttonContaining('Save evaluation'));
+        const evaluationMutation = mounted.fixture.mutations.find((entry) => entry.kind === 'createTeamEvaluation');
+        assert.ok(evaluationMutation, 'Saving an evaluation must call the team evaluation mutation');
+        assert.equal(evaluationMutation.input.memberId, 101, 'The evaluated member id must be forwarded');
+        assert.equal(evaluationMutation.input.feedback, 'Consistent delivery.', 'The written feedback must be forwarded');
+
+        await openTab('Plan');
+        await changeControl(findLabelControl('Goal title'), 'Close 30 tasks');
+        await changeControl(findLabelControl('Target value'), '30');
+        await click(buttonContaining('Add goal'));
+        const goalMutation = mounted.fixture.mutations.find((entry) => entry.kind === 'saveTeamGoal');
+        assert.ok(goalMutation, 'Adding a goal must call the goal save mutation');
+        assert.equal(goalMutation.input.title, 'Close 30 tasks', 'The goal title must be forwarded');
+        assert.equal(goalMutation.input.targetValue, 30, 'The target value must be forwarded');
+
+        await openTab('References');
+        await changeControl(findLabelControl('Reference title'), 'GSAP docs');
+        await changeControl(findLabelControl('URL'), 'https://gsap.com/docs/');
+        await click(buttonContaining('Save reference'));
+        const referenceMutation = mounted.fixture.mutations.find((entry) => entry.kind === 'saveReference');
+        assert.ok(referenceMutation, 'Saving a reference must call the reference mutation');
+        assert.equal(referenceMutation.input.team_slug, 'alpha-studio', 'A team reference must be scoped to this team slug');
+      } finally { await mounted.unmount(); }
+    });
+    await t.test('a team without console data renders honest empty states, not fabricated stats', async () => {
+      const mounted = await mount(bundle, {
+        page: 'team',
+        teamId: TEAM_BETA,
+      });
+      try {
+        assert.ok(document.querySelector('.tms-tab-panel'), 'The overview must still render its shell');
+        await openTab('Tasks');
+        assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /No team tasks yet/, 'An empty team must show an honest empty state');
+        assert.equal(document.querySelector('.tmc-kcard'), null, 'No task cards may be fabricated');
+      } finally { await mounted.unmount(); }
     });
   });
 } finally {
