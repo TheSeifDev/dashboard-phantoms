@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  ArrowLeft, ArrowUpRight, Check, Crown, Gauge, Layers3, Palette, Pause, Pencil, Play, Plus,
-  Save, Settings2, ShieldCheck, Sparkles, UserCog, UsersRound, X,
+  ArrowLeft, ArrowUpRight, BookOpen, CalendarClock, Check, ClipboardList, Crown, FolderKanban,
+  Gauge, KanbanSquare, Layers3, Palette, Pause, Pencil, Play, Plus, Save, Settings2, ShieldCheck,
+  Sparkles, Star, Target, UserCog, UsersRound, X,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { Badge } from '../../components/ui/Badge';
@@ -14,16 +15,27 @@ import { useAuthStore } from '../../store/auth';
 import { toast } from '../../store/toast';
 import { toAppError } from '../../lib/supabase/errors';
 import { useLocale } from '../../i18n/useLocale';
-import type { TeamAccent } from '../../types/db';
+import type { TeamAccent, TeamConsole } from '../../types/db';
 import { useAdminAccess } from '../admin/access/api';
 import { useOwnerTeamMembers, useOwnerTeams, useSetTeamActive, useTeamAdminCandidates, useUpdateTeamDetails } from './api';
 import { useSaveTeamProfile, useTeamProfile } from './profileApi';
 import { MemberRoster } from './components/MemberRoster';
 import { SeatCard } from './components/SeatCard';
 import { ROLES, initials, useStaggerIn } from './components/teamCopy';
+import { useTeamConsole } from './console/api';
+import { OverviewPanel } from './console/OverviewPanel';
+import { TasksPanel } from './console/TasksPanel';
+import { AgilePanel } from './console/AgilePanel';
+import { EvaluationsPanel } from './console/EvaluationsPanel';
+import { PlanPanel } from './console/PlanPanel';
+import { TimelinePanel } from './console/TimelinePanel';
+import { ReferencesPanel } from './console/ReferencesPanel';
+import { ProjectsPanel } from './console/ProjectsPanel';
 import './teams-management.css';
 
-type TeamTab = 'overview' | 'leadership' | 'members' | 'customize' | 'settings';
+type TeamTab =
+  | 'overview' | 'tasks' | 'agile' | 'evaluations' | 'plan' | 'timeline' | 'references' | 'projects'
+  | 'leadership' | 'members' | 'customize' | 'settings';
 
 const ACCENTS: { value: TeamAccent; ar: string; en: string }[] = [
   { value: 'primary', ar: 'أحمر PHANTOMS', en: 'PHANTOMS red' },
@@ -46,6 +58,7 @@ export default function TeamPage() {
 
   const profile = useTeamProfile(teamId, Boolean(teamId) && ownerConfirmed);
   const members = useOwnerTeamMembers(teamId);
+  const consoleData = useTeamConsole(teamId, Boolean(teamId) && ownerConfirmed);
   const toggle = useSetTeamActive();
   const updateDetails = useUpdateTeamDetails();
   const saveProfile = useSaveTeamProfile();
@@ -155,8 +168,29 @@ export default function TeamPage() {
     );
   }
 
+  const consoleDataValue = consoleData.data ?? null;
+  const openTasks = consoleDataValue ? consoleDataValue.tasks.filter((task) => task.state !== 'approved').length : 0;
+  const reviewTasks = consoleDataValue ? consoleDataValue.tasks.filter((task) => task.state === 'review').length : 0;
+  const projectCount = consoleDataValue
+    ? consoleDataValue.project_tasks.length + consoleDataValue.project_reports.length + consoleDataValue.resources.length
+    : 0;
+  /** بيلف أي بانل محتاج داتا اللوحة بحالات تحميل/خطأ موحدة. */
+  const renderConsole = (render: (data: TeamConsole) => ReactNode) => {
+    if (consoleData.isPending) return <CardSkeletons count={2} />;
+    if (consoleData.isError) {
+      return <ErrorState message={t('تعذر تحميل بيانات لوحة الفريق.', 'Could not load the team console data.')} onRetry={() => { void consoleData.refetch(); }} />;
+    }
+    return consoleDataValue ? render(consoleDataValue) : null;
+  };
   const tabs: { key: TeamTab; label: string; icon: typeof Gauge; badge?: number }[] = [
     { key: 'overview', label: t('نظرة عامة', 'Overview'), icon: Gauge },
+    { key: 'tasks', label: t('المهام', 'Tasks'), icon: ClipboardList, badge: openTasks },
+    { key: 'agile', label: t('أجايل', 'Agile'), icon: KanbanSquare, badge: reviewTasks },
+    { key: 'evaluations', label: t('التقييمات', 'Evaluations'), icon: Star, badge: consoleDataValue?.evaluations.length ?? 0 },
+    { key: 'plan', label: t('خطة الأداء', 'Plan'), icon: Target, badge: consoleDataValue?.goals.length ?? 0 },
+    { key: 'timeline', label: t('المخطط الزمني', 'Timeline'), icon: CalendarClock },
+    { key: 'references', label: t('المصادر', 'References'), icon: BookOpen },
+    { key: 'projects', label: t('المشروعات', 'Projects'), icon: FolderKanban, badge: projectCount },
     { key: 'leadership', label: t('القيادة', 'Leadership'), icon: Crown, badge: ROLES.length - seatsAssigned },
     { key: 'members', label: t('الأعضاء', 'Members'), icon: UsersRound, badge: stats.pending },
     { key: 'customize', label: t('التخصيص', 'Customize'), icon: Palette },
@@ -208,7 +242,7 @@ export default function TeamPage() {
         </div>
       </header>
 
-      <nav className="tms-tabs" role="tablist" aria-label={t('أقسام الفريق', 'Team sections')} data-tm-anim>
+      <nav className="tms-tabs tms-tabs--console" role="tablist" aria-label={t('أقسام الفريق', 'Team sections')} data-tm-anim>
         {tabs.map(({ key, label, icon: Icon, badge }) => (
           <button
             key={key}
@@ -304,9 +338,19 @@ export default function TeamPage() {
                 </div>
               </article>
             </section>
+            <div className="tms-console-block">
+              {renderConsole((data) => <OverviewPanel data={data} onNavigate={(key) => setTab(key as TeamTab)} />)}
+            </div>
           </>
         )}
 
+        {tab === 'tasks' && renderConsole((data) => <TasksPanel teamId={team.team_id} data={data} />)}
+        {tab === 'agile' && renderConsole((data) => <AgilePanel teamId={team.team_id} data={data} />)}
+        {tab === 'evaluations' && renderConsole((data) => <EvaluationsPanel teamId={team.team_id} data={data} />)}
+        {tab === 'plan' && renderConsole((data) => <PlanPanel teamId={team.team_id} data={data} />)}
+        {tab === 'timeline' && renderConsole((data) => <TimelinePanel data={data} />)}
+        {tab === 'projects' && renderConsole((data) => <ProjectsPanel data={data} />)}
+        {tab === 'references' && <ReferencesPanel teamSlug={team.slug} />}
         {tab === 'leadership' && (
           <section className="tms-leadership" aria-labelledby={`tms-lead-${team.team_id}`}>
             <header className="tms-block-head" data-tm-anim>
