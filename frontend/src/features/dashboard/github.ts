@@ -26,8 +26,16 @@ export function normalizeGithubHandle(raw: unknown): string | null {
   return value;
 }
 
-/** Custom field whose key mentions GitHub wins; otherwise a github.com portfolio URL. */
-export function resolveGithubHandle(member: Pick<Member, 'portfolio_url' | 'custom_fields'>): string | null {
+/**
+ * A handle already resolved for this session wins (بوابة الأعضاء بتحمّله من RPC
+ * العضوية لأن بروفايل الجلسة مش بيحتوي على custom_fields)، بعدها الحقل المخصص
+ * اللي اسمه فيه GitHub، وأخيرًا لينك البورتفوليو على github.com.
+ */
+export function resolveGithubHandle(
+  member: Pick<Member, 'portfolio_url' | 'custom_fields'> & { github_handle?: string | null },
+): string | null {
+  const stored = normalizeGithubHandle(member.github_handle ?? null);
+  if (stored) return stored;
   const fields = member.custom_fields ?? {};
   for (const [key, value] of Object.entries(fields)) {
     if (/git\s*hub|جيت\s*هاب/i.test(key)) {

@@ -13,6 +13,7 @@ import { logoutMemberDevice } from '../members/api';
 import { logoutMemberWithCleanup } from './member-logout';
 import { useMemberProjectRoles } from './useMemberProjectRoles';
 import { useMemberTeams } from './useMemberTeams';
+import { useIdentityAvatarHandle } from './useIdentityAvatar';
 import { toast } from '../../store/toast';
 
 type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => { ready: Promise<void> } };
@@ -33,6 +34,8 @@ export default function MemberPortalLayout() {
   const progress = useRef<HTMLDivElement>(null);
   const roles = useMemberProjectRoles(member?.id);
   const teams = useMemberTeams(member?.id);
+  // صورة الهوية من GitHub: الـ handle بيتحفظ في الـ store فيظهر في السايدبار والهيرو.
+  const avatarHandle = useIdentityAvatarHandle();
 
   const teamNames = (teams.data ?? [])
     .filter((team) => team.status === 'approved' || team.status === 'active')
@@ -110,6 +113,7 @@ export default function MemberPortalLayout() {
       <a className="skip-link" href="#portal-content">{t('انتقل إلى المحتوى الرئيسي', 'Skip to main content')}</a>
       <AppSidebar
         userName={userName}
+        avatarHandle={avatarHandle}
         isOwner={false}
         permissions={{}}
         groups={groups}
