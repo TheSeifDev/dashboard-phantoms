@@ -23,7 +23,7 @@ END $$;
 
 -- The disposable chain applies all 93 canonical files; historical provenance remains
 -- anchored to the original 24 initialization migrations.
-SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 94,
+SELECT is((SELECT count(*)::int FROM supabase_migrations.schema_migrations), 95,
   'local disposable migration history records all 95 canonical files');
 SELECT is((SELECT max(version) FROM supabase_migrations.schema_migrations), '20261125180000',
   'local disposable migration history ends at the admin owner-parity migration');
