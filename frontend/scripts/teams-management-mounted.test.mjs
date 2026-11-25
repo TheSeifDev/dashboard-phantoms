@@ -1,9 +1,10 @@
-// Mounted regression coverage for the real TeamsManagementPage component.
+// Mounted regression coverage for the real TeamsManagementPage and TeamPage.
 // Run from the repository root with:
 //   node frontend/scripts/teams-management-mounted.test.mjs
-// The harness compiles the actual page and permission constants into a temporary
-// directory outside the repository. All data hooks, auth/access, locale, and UI
-// primitives are deterministic local mocks; no database or network is used.
+// The harness compiles the actual pages, the extracted seat/member panels, and the
+// permission constants into a temporary directory outside the repository. All data
+// hooks, auth/access, locale, routing, and UI primitives are deterministic local
+// mocks; no database or network is used.
 // If JSDOM is held outside frontend/node_modules, set PHANTOMS_TEST_DEPS_ROOT
 // to that dependency directory (containing package.json and node_modules).
 
@@ -112,14 +113,22 @@ function queryState(data) {
   return { data, isPending: false, isFetching: false, isError: false, refetch: async () => {} };
 }
 
+const defaultProfile = {
+  tagline: 'Fixture tagline for Alpha Studio.',
+  accent: 'violet',
+  focus_areas: ['Backend', 'Research'],
+  updated_at: '2026-01-07T00:00:00.000Z',
+};
+
 function defaultFixture(overrides = {}) {
   return {
     mutations: [],
     hookEnabled: [],
     teams: queryState(teamFixtures),
     candidates: queryState(adminCandidates),
-    members: { [TEAM_ALPHA]: queryState(alphaMembers) },
-    memberCandidates: { [TEAM_ALPHA]: queryState(alphaMemberCandidates) },
+    members: { [TEAM_ALPHA]: queryState(alphaMembers), [TEAM_BETA]: queryState([]) },
+    memberCandidates: { [TEAM_ALPHA]: queryState(alphaMemberCandidates), [TEAM_BETA]: queryState([]) },
+    profiles: { [TEAM_ALPHA]: queryState({ team_id: TEAM_ALPHA, slug: 'alpha-studio', name: 'Alpha Studio', is_active: true, ...defaultProfile }), [TEAM_BETA]: queryState({ team_id: TEAM_BETA, slug: 'beta-ops', name: 'Beta Operations', is_active: false, tagline: '', accent: 'primary', focus_areas: [], updated_at: null }) },
     ...overrides,
   };
 }
@@ -128,22 +137,29 @@ function compileCommonJs(source, fileName) {
   return ts.transpileModule(source, { compilerOptions, fileName }).outputText;
 }
 
+const compiledSources = [
+  ['src/features/teams/TeamsManagementPage.tsx', 'src/features/teams/TeamsManagementPage.js'],
+  ['src/features/teams/TeamPage.tsx', 'src/features/teams/TeamPage.js'],
+  ['src/features/teams/components/SeatCard.tsx', 'src/features/teams/components/SeatCard.js'],
+  ['src/features/teams/components/MemberRoster.tsx', 'src/features/teams/components/MemberRoster.js'],
+  ['src/features/teams/components/teamCopy.ts', 'src/features/teams/components/teamCopy.js'],
+  ['src/features/admin/access/permissions.ts', 'src/features/admin/access/permissions.js'],
+];
+
 async function writeHarnessFiles(harnessRoot) {
   await writeFile(join(harnessRoot, 'package.json'), '{"type":"commonjs"}\n');
   await symlink(join(frontendRoot, 'node_modules'), join(harnessRoot, 'node_modules'), 'dir');
 
-  const pagePath = join(frontendRoot, 'src/features/teams/TeamsManagementPage.tsx');
-  const permissionsPath = join(frontendRoot, 'src/features/admin/access/permissions.ts');
-  const pageOutput = join(harnessRoot, 'src/features/teams/TeamsManagementPage.js');
-  const permissionsOutput = join(harnessRoot, 'src/features/admin/access/permissions.js');
-  await mkdir(dirname(pageOutput), { recursive: true });
-  await mkdir(dirname(permissionsOutput), { recursive: true });
-  await writeFile(pageOutput, compileCommonJs(await readFile(pagePath, 'utf8'), pagePath));
-  await writeFile(permissionsOutput, compileCommonJs(await readFile(permissionsPath, 'utf8'), permissionsPath));
-  // The real page may import its page-scoped stylesheet. The mounted tests assert
+  for (const [source, output] of compiledSources) {
+    const sourcePath = join(frontendRoot, source);
+    const outputPath = join(harnessRoot, output);
+    await mkdir(dirname(outputPath), { recursive: true });
+    await writeFile(outputPath, compileCommonJs(await readFile(sourcePath, 'utf8'), sourcePath));
+  }
+  // The real pages may import their page-scoped stylesheet. The mounted tests assert
   // behavior and semantics rather than computed CSS, so a temporary empty module
   // keeps TSX compilation and import resolution independent of Vite.
-  await writeFile(join(dirname(pageOutput), 'teams-management.css'), '');
+  await writeFile(join(harnessRoot, 'src/features/teams/teams-management.css'), '');
 
   const stubs = new Map([
     ['src/components/ui/Badge.js', `
@@ -156,12 +172,6 @@ exports.Badge = function Badge({ children, variant, ...props }) {
 const React = require('react');
 exports.Button = function Button({ children, icon, variant, isLoading, loadingText, fullOnMobile, ...props }) {
   return React.createElement('button', { ...props, 'aria-busy': Boolean(isLoading) || undefined }, icon, children);
-};
-`],
-    ['src/components/ui/Card.js', `
-const React = require('react');
-exports.Card = function Card({ children, className, ...props }) {
-  return React.createElement('section', { ...props, className }, children);
 };
 `],
     ['src/components/ui/ConfirmDialog.js', `
@@ -177,14 +187,25 @@ exports.ConfirmDialog = function ConfirmDialog({ isOpen, onClose, onConfirm, tit
 `],
     ['src/components/ui/EmptyState.js', `
 const React = require('react');
-exports.EmptyState = function EmptyState({ title, description }) {
-  return React.createElement('section', { 'data-empty-state': 'true' }, React.createElement('h2', null, title), React.createElement('p', null, description));
+exports.EmptyState = function EmptyState({ title, description, action }) {
+  return React.createElement('section', { 'data-empty-state': 'true' }, React.createElement('h2', null, title), React.createElement('p', null, description), action);
 };
 `],
     ['src/components/ui/ErrorState.js', `
 const React = require('react');
 exports.ErrorState = function ErrorState({ message, onRetry }) {
   return React.createElement('div', { role: 'alert' }, React.createElement('p', null, message), onRetry && React.createElement('button', { type: 'button', onClick: onRetry }, 'Retry'));
+};
+`],
+    ['src/components/ui/Modal.js', `
+const React = require('react');
+exports.Modal = function Modal({ isOpen, onClose, title, subtitle, children, footer }) {
+  if (!isOpen) return null;
+  return React.createElement('div', { role: 'dialog', 'aria-label': title },
+    React.createElement('h2', null, title),
+    subtitle ? React.createElement('p', null, subtitle) : null,
+    children,
+    footer ? React.createElement('footer', null, footer) : null);
 };
 `],
     ['src/components/ui/PageHeader.js', `
@@ -235,7 +256,7 @@ exports.useLocale = () => {
 `],
     ['src/features/admin/access/api.js', `
 const React = require('react');
-let access = { isPending: false, isFetching: false, isError: false, data: { is_owner: true }, refetch: async () => {} };
+let access = { isPending: false, isFetching: false, isError: false, data: { is_owner: true, owner_authority: true }, refetch: async () => {} };
 const listeners = new Set();
 const subscribe = (listener) => { listeners.add(listener); return () => listeners.delete(listener); };
 const emit = () => listeners.forEach((listener) => listener());
@@ -264,14 +285,26 @@ exports.useSetTeamAdminSeat = mutation('setTeamAdminSeat');
 exports.useAddTeamMember = mutation('addMember');
 exports.useReviewTeamMember = mutation('reviewMember');
 `],
+    ['src/features/teams/profileApi.js', `
+const state = () => globalThis.__TM_FIXTURE;
+const query = (value) => value || { data: undefined, isPending: false, isFetching: false, isError: false, refetch: async () => {} };
+exports.useTeamProfile = (teamId) => query(state().profiles[teamId]);
+exports.useSaveTeamProfile = () => ({ isPending: false, mutateAsync: async (input) => {
+  state().mutations.push({ kind: 'saveTeamProfile', input: structuredClone(input) });
+  return { team_id: input.teamId, tagline: input.tagline, accent: input.accent, focus_areas: input.focusAreas, updated_at: null };
+} });
+`],
     ['src/node_modules/gsap/index.js', `
 const timeline = () => ({ fromTo: () => timeline(), kill() {}, to: () => timeline() });
-const gsap = { timeline, fromTo: () => ({ kill() {} }) };
+const gsap = { timeline, fromTo: () => ({ kill() {} }), to: () => ({ kill() {} }) };
 exports.default = gsap;
 exports.gsap = gsap;
 `],
     ['src/node_modules/react-router-dom/index.js', `
 const React = require('react');
+let params = { teamId: '' };
+exports.__setParams = (next) => { params = next; };
+exports.useParams = () => params;
 exports.Link = function Link({ to, children, ...props }) { return React.createElement('a', { ...props, href: to }, children); };
 `],
     ['src/node_modules/lucide-react/index.js', `
@@ -292,7 +325,7 @@ module.exports = new Proxy({}, { get(_target, name) {
 
 function installDom() {
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
-    url: 'http://localhost/owner/teams',
+    url: 'http://localhost/admin/teams',
     pretendToBeVisual: true,
   });
   const names = [
@@ -378,14 +411,6 @@ function findLabelControl(text, selector = 'input', root = document) {
   return label.querySelector(selector);
 }
 
-function labelForControl(control) {
-  if (control.id) {
-    const associated = [...document.querySelectorAll('label[for]')].find((label) => label.htmlFor === control.id);
-    if (associated) return associated;
-  }
-  return control.closest('label');
-}
-
 function buttonsContaining(text, root = document) {
   return [...root.querySelectorAll('button')].filter((button) => button.textContent?.includes(text));
 }
@@ -396,43 +421,49 @@ function buttonContaining(text, root = document) {
   return button;
 }
 
-function railTeamNames() {
-  return [...document.querySelectorAll('.tms-team .tms-team-name')]
-    .map((node) => node.textContent?.trim() || '')
-    .filter(Boolean);
+/* ---------------- list page helpers ---------------- */
+function teamCards() {
+  return [...document.querySelectorAll('.tms-card')];
 }
 
-function railTeam(name) {
-  const button = [...document.querySelectorAll('.tms-team')]
-    .find((candidate) => candidate.querySelector('.tms-team-name')?.textContent?.trim() === name);
-  assert.ok(button, `Expected a team rail entry for ${JSON.stringify(name)}`);
-  return button;
+function cardNames() {
+  return teamCards().map((card) => card.querySelector('.tms-card-identity strong')?.textContent?.trim() || '').filter(Boolean);
 }
 
-async function selectTeam(name) {
-  await click(railTeam(name));
+function card(name) {
+  const found = teamCards().find((candidate) => candidate.querySelector('.tms-card-identity strong')?.textContent?.trim() === name);
+  assert.ok(found, `Expected a team card for ${JSON.stringify(name)}`);
+  return found;
 }
 
-function detailPanel() {
-  const panel = document.querySelector('.tms-detail');
-  assert.ok(panel, 'Expected the selected team detail panel');
-  return panel;
+/* ---------------- team page helpers ---------------- */
+function hero() {
+  const node = document.querySelector('.tms-hero');
+  assert.ok(node, 'Expected the team page hero');
+  return node;
 }
 
-function seatCard(role, root = detailPanel()) {
+function openTab(label) {
+  const tabs = [...document.querySelectorAll('.tms-tabs button')];
+  const tab = tabs.find((candidate) => candidate.textContent?.includes(label));
+  assert.ok(tab, `Expected the ${JSON.stringify(label)} tab`);
+  return click(tab);
+}
+
+function seatCard(role, root = document) {
   const seat = [...root.querySelectorAll('.tms-seat')]
     .find((candidate) => candidate.querySelector('.tms-seat-tag')?.textContent?.includes(role));
   assert.ok(seat, `Expected the ${role} seat card`);
   return seat;
 }
 
-async function openSeatEditor(role, root = detailPanel()) {
+async function openSeatEditor(role, root = document) {
   const seat = seatCard(role, root);
   const trigger = [...seat.querySelectorAll('button')]
     .find((button) => ['Edit seat', 'Assign Team Head', 'Assign Team Monitor', 'Open editor'].some((label) => button.textContent?.includes(label)));
   assert.ok(trigger, `Expected an editor trigger inside the ${role} seat`);
   await click(trigger);
-  return seat;
+  return seatCard(role, root);
 }
 
 function membersSection() {
@@ -447,16 +478,18 @@ function memberRow(name, root = membersSection()) {
   return row;
 }
 
-async function mountPage(bundle, { fixture = defaultFixture(), access = { isPending: false, isFetching: false, isError: false, data: { is_owner: true }, refetch: async () => {} }, locale = 'en' } = {}) {
+async function mount(bundle, { page = 'list', teamId = TEAM_ALPHA, fixture = defaultFixture(), access = { isPending: false, isFetching: false, isError: false, data: { is_owner: true, owner_authority: true }, refetch: async () => {} }, locale = 'en' } = {}) {
   globalThis.__TM_FIXTURE = fixture;
   globalThis.__TM_TOASTS = [];
   globalThis.__TM_ACCESS_USERS = [];
   bundle.auth.__set({ user: { id: OWNER_ID } });
   bundle.access.__set(access);
   bundle.locale.__set(locale);
+  bundle.router.__setParams({ teamId });
 
   const root = createRoot(document.getElementById('root'));
-  await act(async () => { root.render(React.createElement(bundle.TeamsManagementPage)); await settle(); });
+  const Component = page === 'team' ? bundle.TeamPage : bundle.TeamsManagementPage;
+  await act(async () => { root.render(React.createElement(Component)); await settle(); });
   return {
     fixture,
     async unmount() {
@@ -478,35 +511,46 @@ try {
   const harnessRequire = createRequire(join(harnessRoot, 'package.json'));
   const bundle = {
     TeamsManagementPage: harnessRequire('./src/features/teams/TeamsManagementPage.js').default,
+    TeamPage: harnessRequire('./src/features/teams/TeamPage.js').default,
     auth: harnessRequire('./src/store/auth.js'),
     access: harnessRequire('./src/features/admin/access/api.js'),
     locale: harnessRequire('./src/i18n/useLocale.js'),
+    router: harnessRequire('./src/node_modules/react-router-dom/index.js'),
   };
 
-  await test('mounted teams management page', async (t) => {
+  await test('mounted teams management pages', async (t) => {
     await t.test('non-Owners are denied and owner-only queries remain disabled', async () => {
-      const mounted = await mountPage(bundle, { access: { isPending: false, isFetching: false, isError: false, data: { is_owner: false }, refetch: async () => {} } });
+      const mounted = await mount(bundle, { access: { isPending: false, isFetching: false, isError: false, data: { is_owner: false, owner_authority: false }, refetch: async () => {} } });
       try {
         assert.ok(document.querySelector('[data-empty-state="true"]'), 'A non-Owner should receive the access-denied state');
         assert.equal(document.querySelector('form'), null, 'A non-Owner must not receive create or management forms');
         assert.deepEqual(mounted.fixture.hookEnabled, [
           { hook: 'teams', enabled: false },
-          { hook: 'adminCandidates', enabled: false },
-        ], 'Owner-only team and candidate queries must remain disabled');
+        ], 'The Owner-only team query must remain disabled');
         assert.equal(mounted.fixture.mutations.length, 0, 'A non-Owner must not be able to mutate team data');
       } finally { await mounted.unmount(); }
     });
 
-    await t.test('search by team name, slug, and manager email combines with status filters and resets', async () => {
-      const mounted = await mountPage(bundle);
+    await t.test('the team list renders one card per team and links to its own page', async () => {
+      const mounted = await mount(bundle);
       try {
         assert.ok([...document.querySelectorAll('h1')].some((heading) => heading.textContent?.includes('Internal teams')), 'The management heading should be present');
+        assert.deepEqual(cardNames().sort(), ['Alpha Studio', 'Beta Operations', 'Gamma Labs'], 'Every team should appear as a card');
+        assert.equal(card('Alpha Studio').getAttribute('href'), `/admin/teams/${TEAM_ALPHA}`, 'Each card must link to its dedicated team page');
+        assert.match(card('Alpha Studio').textContent || '', /4/, 'The Alpha card should surface its member count');
+        assert.match(card('Alpha Studio').textContent || '', /head\.alpha/, 'The Alpha card should surface its Head account');
+        assert.match(card('Beta Operations').textContent || '', /Seat open/, 'A team without a Head should show an open seat');
+        assert.match(card('Beta Operations').textContent || '', /Disabled/, 'A disabled team should be labelled');
+        assert.match(heroless(), /^$/, 'The list page must not render an inline team detail panel');
+      } finally { await mounted.unmount(); }
+    });
+
+    await t.test('search by team name, slug, and manager email combines with status filters and resets', async () => {
+      const mounted = await mount(bundle);
+      try {
         const search = document.querySelector('input[type="search"]');
         assert.ok(search, 'Find-a-team search should be rendered');
         assert.match(search.getAttribute('aria-label') || '', /Find a team/, 'The team search should keep its accessible label');
-        assert.deepEqual(railTeamNames().sort(), ['Alpha Studio', 'Beta Operations', 'Gamma Labs'], 'Every team should appear in the rail');
-        assert.match(railTeam('Alpha Studio').textContent || '', /4/, 'The Alpha rail entry should surface its member count');
-        assert.ok(detailPanel().textContent?.includes('Alpha Studio'), 'The first team should open in the detail panel');
 
         const all = buttonContaining('All');
         const active = buttonContaining('Active');
@@ -516,56 +560,39 @@ try {
         assert.ok(disabled.textContent?.includes('1'), 'Disabled filter should expose its count');
 
         await changeControl(search, 'Alpha Studio');
-        assert.deepEqual(railTeamNames(), ['Alpha Studio'], 'Name search should narrow the team rail');
+        assert.deepEqual(cardNames(), ['Alpha Studio'], 'Name search should narrow the grid');
         await changeControl(search, 'gamma-labs');
-        assert.deepEqual(railTeamNames(), ['Gamma Labs'], 'Slug search should narrow the team rail');
+        assert.deepEqual(cardNames(), ['Gamma Labs'], 'Slug search should narrow the grid');
         await changeControl(search, 'manager.beta@example.test');
-        assert.deepEqual(railTeamNames(), ['Beta Operations'], 'Assigned manager email should be searchable');
+        assert.deepEqual(cardNames(), ['Beta Operations'], 'Assigned manager email should be searchable');
 
         await changeControl(search, 'Alpha');
         await click(disabled);
-        assert.deepEqual(railTeamNames(), [], 'A combined name and Disabled filter should show no teams when they do not overlap');
-        assert.ok(document.querySelector('[role="status"]'), 'The no-results state should be announced');
+        assert.deepEqual(cardNames(), [], 'A combined name and Disabled filter should show no teams when they do not overlap');
+        assert.ok(document.querySelector('[data-empty-state="true"]'), 'The no-results state should be announced');
         await click(all);
-        assert.deepEqual(railTeamNames(), ['Alpha Studio'], 'Resetting status to All should preserve the active text query');
+        assert.deepEqual(cardNames(), ['Alpha Studio'], 'Resetting status to All should preserve the active text query');
         await changeControl(search, 'no-such-team');
-        assert.deepEqual(railTeamNames(), [], 'An unmatched query should show no teams');
+        assert.deepEqual(cardNames(), [], 'An unmatched query should show no teams');
         await changeControl(search, '');
-        assert.deepEqual(railTeamNames().sort(), ['Alpha Studio', 'Beta Operations', 'Gamma Labs'], 'Clearing search should reset the rail');
-
-        await selectTeam('Gamma Labs');
-        assert.ok(detailPanel().textContent?.includes('Gamma Labs'), 'Selecting a rail entry should swap the detail panel');
-        assert.ok(detailPanel().textContent?.includes('No Team Head assigned'), 'An empty team should surface its open Head seat');
+        assert.deepEqual(cardNames().sort(), ['Alpha Studio', 'Beta Operations', 'Gamma Labs'], 'Clearing search should reset the grid');
       } finally { await mounted.unmount(); }
     });
 
-    await t.test('New team control opens the named create disclosure and focuses the team-name field', async () => {
-      const mounted = await mountPage(bundle);
-      try {
-        const trigger = buttonContaining('New team');
-        await click(trigger);
-        const createDetails = document.querySelector('#teams-create');
-        assert.ok(createDetails?.open, 'The New team header action should open the native create disclosure');
-        assert.equal(trigger.getAttribute('aria-expanded'), 'true', 'The disclosure trigger should expose its expanded state');
-        assert.equal(document.activeElement, findLabelControl('Team name', 'input', createDetails), 'Opening New team should focus the team-name input');
-        assert.equal(trigger.getAttribute('aria-controls'), createDetails.id, 'The trigger must identify its disclosure');
-        assert.ok(createDetails.querySelector('summary')?.textContent?.includes('Create team'), 'The native disclosure summary should identify the creation action');
-        assert.ok(createDetails.querySelector('form'), 'The expanded disclosure should contain the creation form');
-      } finally { await mounted.unmount(); }
-    });
-
-    await t.test('create details form trims the name, normalizes the slug, and remains open after success', async () => {
-      const mounted = await mountPage(bundle);
+    await t.test('New team opens a modal, focuses the name field, and normalizes the submitted values', async () => {
+      const mounted = await mount(bundle);
       try {
         await click(buttonContaining('New team'));
-        const createDetails = document.querySelector('#teams-create');
-        assert.ok(createDetails?.open, 'New team should open the create form');
-        const name = findLabelControl('Team name', 'input', createDetails);
-        const slug = findLabelControl('URL slug', 'input', createDetails);
+        const dialog = document.querySelector('[role="dialog"]');
+        assert.ok(dialog, 'The New team action should open a modal dialog');
+        const name = findLabelControl('Team name', 'input', dialog);
+        const slug = findLabelControl('URL slug', 'input', dialog);
+        assert.equal(document.activeElement, name, 'Opening the dialog should focus the team-name input');
+
         await changeControl(name, '  New QA Team  ');
         await changeControl(slug, '  QA-OPS  ');
-        const form = createDetails.querySelector('form');
-        assert.ok(form, 'New team details should contain a form');
+        const form = dialog.querySelector('form');
+        assert.ok(form, 'The dialog should contain the creation form');
         await act(async () => {
           const submit = reactProps(form).onSubmit;
           assert.equal(typeof submit, 'function', 'The real page should own the create form submit handler');
@@ -575,38 +602,40 @@ try {
         assert.deepEqual(mounted.fixture.mutations.filter(({ kind }) => kind === 'createTeam').map(({ input }) => input), [
           { name: 'New QA Team', slug: 'qa-ops' },
         ], 'Creation must trim user text and lowercase the slug before saving');
-        assert.equal(createDetails.open, true, 'A successful create should leave the form open');
-        assert.equal(name.value, '', 'A successful create should clear the team-name field');
-        assert.equal(slug.value, '', 'A successful create should clear the slug field');
+        assert.equal(document.querySelector('[role="dialog"]'), null, 'A successful create should close the dialog');
       } finally { await mounted.unmount(); }
     });
 
-    await t.test('team details edit trims the name and lowercases the URL slug', async () => {
-      const mounted = await mountPage(bundle);
+    await t.test('the team page renders its own hero, customization, and sections', async () => {
+      const mounted = await mount(bundle, { page: 'team' });
       try {
-        const panel = detailPanel();
-        await click(buttonContaining('Edit', panel));
-        const form = panel.querySelector('.tms-edit-form');
-        assert.ok(form, 'Editing should reveal the inline details form inside the detail panel');
-        const name = findLabelControl('Team name', 'input', form);
-        const slug = findLabelControl('URL slug', 'input', form);
-        await changeControl(name, '  Alpha Studio Updated  ');
-        await changeControl(slug, '  ALPHA-UPDATED  ');
-        await act(async () => {
-          const submit = reactProps(form).onSubmit;
-          assert.equal(typeof submit, 'function', 'The real details form should own its submit handler');
-          submit({ preventDefault() {}, target: form, currentTarget: form });
-          await settle();
-        });
-        assert.deepEqual(mounted.fixture.mutations.filter(({ kind }) => kind === 'updateTeamDetails').map(({ input }) => input), [
-          { teamId: TEAM_ALPHA, name: 'Alpha Studio Updated', slug: 'alpha-updated' },
-        ], 'Editing should target this team and normalize both submitted fields');
+        assert.match(hero().textContent || '', /Alpha Studio/, 'The hero should identify the team');
+        assert.match(hero().textContent || '', /alpha-studio/, 'The hero should show the team slug');
+        assert.match(hero().textContent || '', /Fixture tagline for Alpha Studio/, 'The saved team tagline should render in the hero');
+        assert.match(hero().textContent || '', /Backend/, 'Saved focus areas should render in the hero');
+        assert.equal(document.querySelector('.teams-management')?.getAttribute('data-accent'), 'violet', 'The saved accent should drive the page accent');
+        const tabs = [...document.querySelectorAll('.tms-tabs button')].map((tab) => tab.textContent || '');
+        assert.equal(tabs.length, 5, 'The team page should expose five sections');
+        for (const label of ['Overview', 'Leadership', 'Members', 'Customize', 'Settings']) {
+          assert.ok(tabs.some((tab) => tab.includes(label)), `Missing the ${label} section`);
+        }
+        assert.ok(document.querySelector('.tms-stat-grid'), 'The overview should show real team stats');
+      } finally { await mounted.unmount(); }
+    });
+
+    await t.test('an unknown team id fails closed with a way back to the list', async () => {
+      const mounted = await mount(bundle, { page: 'team', teamId: 'missing-team' });
+      try {
+        assert.ok(document.querySelector('[data-empty-state="true"]'), 'An unknown team should render an empty state');
+        assert.equal(document.querySelector('.tms-hero'), null, 'No hero should render for a team that does not exist');
+        assert.equal(document.querySelector('a.tms-back-link')?.getAttribute('href'), '/admin/teams', 'The empty state should link back to the team list');
       } finally { await mounted.unmount(); }
     });
 
     await t.test('Head seat saves the selected account with the exact team-scoped permission set', async () => {
-      const mounted = await mountPage(bundle);
+      const mounted = await mount(bundle, { page: 'team' });
       try {
+        await openTab('Leadership');
         const seat = await openSeatEditor('Head');
         const account = findLabelControl('Existing Auth account', 'select', seat);
         await changeControl(account, 'new-head');
@@ -634,8 +663,9 @@ try {
     });
 
     await t.test('membership details preserve add, approve, suspend, remove, and status controls', async () => {
-      const mounted = await mountPage(bundle);
+      const mounted = await mount(bundle, { page: 'team' });
       try {
+        await openTab('Members');
         const section = membersSection();
         const addSelect = findLabelControl('Add an existing member to this team', 'select', section);
         await changeControl(addSelect, '201');
@@ -661,11 +691,54 @@ try {
       } finally { await mounted.unmount(); }
     });
 
-    await t.test('disabling an active team requires confirmation and does not delete it', async () => {
-      const mounted = await mountPage(bundle);
+    await t.test('customization saves the tagline, accent, and focus areas for this team only', async () => {
+      const mounted = await mount(bundle, { page: 'team' });
       try {
-        const disableButton = buttonContaining('Disable', detailPanel());
-        await click(disableButton);
+        await openTab('Customize');
+        const tagline = findLabelControl('Short team tagline', 'textarea');
+        await changeControl(tagline, '  Building the core platform.  ');
+        await click(buttonContaining('Violet', document.querySelector('.tms-accent-options')));
+        await click(buttonContaining('Amber', document.querySelector('.tms-accent-options')));
+        const focusInput = document.querySelector('.tms-focus-add input');
+        await changeControl(focusInput, 'Platform');
+        await click(buttonContaining('Add', document.querySelector('.tms-focus-add')));
+        await click(buttonContaining('Save customization'));
+        const saved = mounted.fixture.mutations.find(({ kind }) => kind === 'saveTeamProfile');
+        assert.ok(saved, 'Saving the customization should call the mocked mutation');
+        assert.equal(saved.input.teamId, TEAM_ALPHA, 'Customization must stay scoped to this team');
+        assert.equal(saved.input.tagline, 'Building the core platform.', 'The tagline should be trimmed before saving');
+        assert.equal(saved.input.accent, 'amber', 'The last chosen accent should be saved');
+        assert.deepEqual(saved.input.focusAreas, ['Backend', 'Research', 'Platform'], 'Focus areas should keep the saved entries and append the new one');
+      } finally { await mounted.unmount(); }
+    });
+
+    await t.test('settings edit trims the name and lowercases the URL slug', async () => {
+      const mounted = await mount(bundle, { page: 'team' });
+      try {
+        await openTab('Settings');
+        await click(buttonContaining('Edit details'));
+        const form = document.querySelector('.tms-edit-form');
+        assert.ok(form, 'Editing should reveal the inline details form');
+        const name = findLabelControl('Team name', 'input', form);
+        const slug = findLabelControl('URL slug', 'input', form);
+        await changeControl(name, '  Alpha Studio Updated  ');
+        await changeControl(slug, '  ALPHA-UPDATED  ');
+        await act(async () => {
+          const submit = reactProps(form).onSubmit;
+          assert.equal(typeof submit, 'function', 'The real details form should own its submit handler');
+          submit({ preventDefault() {}, target: form, currentTarget: form });
+          await settle();
+        });
+        assert.deepEqual(mounted.fixture.mutations.filter(({ kind }) => kind === 'updateTeamDetails').map(({ input }) => input), [
+          { teamId: TEAM_ALPHA, name: 'Alpha Studio Updated', slug: 'alpha-updated' },
+        ], 'Editing should target this team and normalize both submitted fields');
+      } finally { await mounted.unmount(); }
+    });
+
+    await t.test('disabling an active team requires confirmation and does not delete it', async () => {
+      const mounted = await mount(bundle, { page: 'team' });
+      try {
+        await click(buttonContaining('Disable', hero()));
         assert.equal(mounted.fixture.mutations.filter(({ kind }) => kind === 'setTeamActive').length, 0, 'Opening the confirmation must not change status');
         const dialog = document.querySelector('[role="alertdialog"]');
         assert.ok(dialog, 'Disabling an active team should open a confirmation dialog');
@@ -677,15 +750,16 @@ try {
     });
 
     await t.test('disabled teams cannot add memberships or save a seat, but can remove an existing assignment', async () => {
-      const mounted = await mountPage(bundle);
+      const mounted = await mount(bundle, { page: 'team', teamId: TEAM_BETA });
       try {
-        await selectTeam('Beta Operations');
-        const panel = detailPanel();
-        assert.ok(panel.textContent?.includes('Beta Operations'), 'The disabled team should stay selectable');
-        assert.equal(document.querySelector('.tms-members'), null, 'Disabled teams should not expose the membership manager');
-        assert.ok(panel.querySelector('.tms-disabled'), 'Disabled teams should explain why membership management is paused');
+        assert.match(hero().textContent || '', /Beta Operations/, 'The disabled team page should still render');
 
-        const seat = await openSeatEditor('Monitor', panel);
+        await openTab('Members');
+        assert.equal(document.querySelector('.tms-members'), null, 'Disabled teams should not expose the membership manager');
+        assert.ok(document.querySelector('.tms-disabled'), 'Disabled teams should explain why membership management is paused');
+
+        await openTab('Leadership');
+        const seat = await openSeatEditor('Monitor');
         const account = findLabelControl('Existing Auth account', 'select', seat);
         assert.equal(account.disabled, true, 'A disabled team should not allow changing its seat account');
         const permissionInputs = [...seat.querySelectorAll('input[type="checkbox"]')];
@@ -706,7 +780,7 @@ try {
     });
 
     await t.test('Arabic locale sets RTL direction and renders Arabic labels', async () => {
-      const mounted = await mountPage(bundle, { locale: 'ar' });
+      const mounted = await mount(bundle, { locale: 'ar' });
       try {
         assert.equal(document.querySelector('[dir="rtl"]') !== null, true, 'The teams page should set RTL direction for Arabic');
         const search = document.querySelector('input[type="search"]');
@@ -714,10 +788,16 @@ try {
         assert.match(search.getAttribute('aria-label') || '', /[\u0600-\u06ff]/, 'Search labels should be translated into Arabic');
         assert.match(document.body.textContent || '', /[\u0600-\u06ff]/, 'The mounted Arabic page should render Arabic UI copy');
       } finally { await mounted.unmount(); }
+
+      const arabicTeam = await mount(bundle, { page: 'team', locale: 'ar' });
+      try {
+        assert.equal(document.querySelector('[dir="rtl"]') !== null, true, 'The team page should set RTL direction for Arabic');
+        assert.match(document.body.textContent || '', /[\u0600-\u06ff]/, 'The mounted Arabic team page should render Arabic UI copy');
+      } finally { await arabicTeam.unmount(); }
     });
 
     await t.test('access and team loading/error states fail closed', async () => {
-      const loadingAccess = await mountPage(bundle, {
+      const loadingAccess = await mount(bundle, {
         access: { isPending: true, isFetching: true, isError: false, data: undefined, refetch: async () => {} },
       });
       try {
@@ -725,20 +805,20 @@ try {
         assert.equal(document.querySelector('form'), null, 'Create controls must stay hidden until Owner access is verified');
       } finally { await loadingAccess.unmount(); }
 
-      const loadingTeams = await mountPage(bundle, {
+      const loadingTeams = await mount(bundle, {
         fixture: defaultFixture({ teams: { data: undefined, isPending: true, isFetching: true, isError: false, refetch: async () => {} } }),
       });
       try {
         assert.ok(document.querySelector('[data-skeleton]'), 'Team loading should render skeletons');
-        assert.equal(railTeamNames().length, 0, 'No stale team data should render while the team query is pending');
+        assert.equal(cardNames().length, 0, 'No stale team data should render while the team query is pending');
       } finally { await loadingTeams.unmount(); }
 
-      const errorTeams = await mountPage(bundle, {
+      const errorTeams = await mount(bundle, {
         fixture: defaultFixture({ teams: { data: undefined, isPending: false, isFetching: false, isError: true, refetch: async () => {} } }),
       });
       try {
         assert.ok(document.querySelector('[role="alert"]'), 'Team query failure should render an accessible error');
-        assert.equal(railTeamNames().length, 0, 'Team query errors should not expose stale or fabricated team cards');
+        assert.equal(cardNames().length, 0, 'Team query errors should not expose stale or fabricated team cards');
       } finally { await errorTeams.unmount(); }
     });
   });
@@ -748,4 +828,9 @@ try {
   delete globalThis.__TM_ACCESS_USERS;
   environment?.restore();
   await rm(harnessRoot, { recursive: true, force: true });
+}
+
+// The list page must never render an inline detail panel again.
+function heroless() {
+  return document.querySelector('.tms-detail')?.textContent ?? '';
 }

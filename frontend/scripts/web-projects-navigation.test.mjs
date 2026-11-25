@@ -11,7 +11,7 @@ const router = read('src/router/index.tsx');
 const sidebar = read('src/components/layout/AppSidebar.tsx');
 const header = read('src/components/layout/AdminHeader.tsx');
 const types = read('src/types/db.ts');
-const teams = read('src/features/teams/TeamsManagementPage.tsx');
+const teams = [read('src/features/teams/TeamsManagementPage.tsx'), read('src/features/teams/components/SeatCard.tsx'), read('src/features/teams/components/teamCopy.ts')].join('\n');
 
 const expectedRoutes = [
   '/admin/web-projects',

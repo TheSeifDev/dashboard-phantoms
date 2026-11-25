@@ -5,22 +5,30 @@ import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const read = (path) => readFile(resolve(root, path), 'utf8');
-const [router, sidebar, header, page, api, db, routes, migration] = await Promise.all([
+const [router, sidebar, header, listPage, teamPage, seatCard, memberRoster, teamCopy, api, db, routes, migration] = await Promise.all([
   read('src/router/index.tsx'),
   read('src/components/layout/AppSidebar.tsx'),
   read('src/components/layout/AdminHeader.tsx'),
   read('src/features/teams/TeamsManagementPage.tsx'),
+  read('src/features/teams/TeamPage.tsx'),
+  read('src/features/teams/components/SeatCard.tsx'),
+  read('src/features/teams/components/MemberRoster.tsx'),
+  read('src/features/teams/components/teamCopy.ts'),
   read('src/features/teams/api.ts'),
   read('src/types/db.ts'),
   read('public/manus-routes.json'),
   read('../backend/supabase/migrations/20261120074604_internal_teams_foundation.sql'),
 ]);
+// The teams feature is split across the list page, the per-team page, and two
+// extracted panels; the guards below apply to the whole feature surface.
+const page = [listPage, teamPage, seatCard, memberRoster, teamCopy].join('\n');
 
 test('internal team management is lazy-loaded and doubly gated to the system Owner', () => {
   assert.match(router, /const TeamsManagementPage = lazy\(\(\) => import\('\.\.\/features\/teams\/TeamsManagementPage'\)\)/);
   assert.match(router, /path: 'teams', element: <ProtectedOwnerRoute><Page><TeamsManagementPage \/><\/Page><\/ProtectedOwnerRoute>/);
+  assert.match(router, /path: 'teams\/:teamId', element: <ProtectedOwnerRoute><Page><TeamPage \/><\/Page><\/ProtectedOwnerRoute>/);
   assert.match(page, /const access = useAdminAccess\(user\?\.id \?\? null\)/);
-  assert.match(page, /if \(!access\.data\?\.is_owner\)/);
+  assert.match(page, /if \(!access\.data\?\.owner_authority\)/);
   assert.match(page, /useOwnerTeams\(ownerConfirmed\)/);
   assert.match(page, /useTeamAdminCandidates\(ownerConfirmed\)/);
   assert.ok(JSON.parse(routes).routes.some((route) => route.path === '/admin/teams'));
