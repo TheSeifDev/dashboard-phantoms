@@ -163,14 +163,14 @@
  @media (max-width: 900px) {
     .workspace-header { grid-template-columns: minmax(0, 1fr) auto auto; }
     /* مساحة تنفّس أكبر فوق البار العائم على الشاشات الصغيرة. */
-    .workspace-header { top: 16px; margin-top: calc(20px + env(safe-area-inset-top)); }
+    .workspace-header { top: 22px; margin-top: calc(24px + env(safe-area-inset-top)); }
     .workspace-search-trigger { width: 44px; padding: 0; justify-content: center; }
     [dir="rtl"] .workspace-search-trigger { padding: 0; }
     .workspace-search-placeholder, .workspace-search-trigger .workspace-search-kbd, .workspace-tools-divider { display: none; }
     .header-account { border: 0; padding: 0; margin: 0; background: transparent; box-shadow: none; }
   }
   @media (max-width: 599px) {
-    .workspace-header { gap: 6px; min-height: 54px; margin: calc(22px + env(safe-area-inset-top)) 8px 0; padding: 0 6px 0 8px; border-radius: 16px; top: 20px; }
+    .workspace-header { gap: 6px; min-height: 54px; margin: calc(34px + env(safe-area-inset-top)) 8px 0; padding: 0 6px 0 8px; border-radius: 16px; top: 30px; }
     [dir="rtl"] .workspace-header { padding: 0 8px 0 6px; }
     .workspace-heading { gap: 4px; }
     .workspace-page-title { max-width: 150px; font-size: 14px; }
