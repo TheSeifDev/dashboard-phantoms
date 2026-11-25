@@ -5,6 +5,8 @@ export type MemberAvatarSource = {
   full_name?: string | null;
   portfolio_url?: string | null;
   custom_fields?: Record<string, string | number | boolean | null> | null;
+  /** Handle محسوب مسبقًا للجلسة الحالية (بوابة الأعضاء). */
+  github_handle?: string | null;
 };
 
 export interface MemberAvatarProps {
@@ -28,7 +30,13 @@ export interface MemberAvatarProps {
  * back to the first letter of the name if GitHub is unreachable.
  */
 export function MemberAvatar({ member, handle, name, size = 96, className = '', fallback = null }: MemberAvatarProps) {
-  const resolved = handle ?? (member ? resolveGithubHandle({ portfolio_url: member.portfolio_url ?? null, custom_fields: member.custom_fields ?? undefined }) : null);
+  const resolved = handle ?? (member
+    ? resolveGithubHandle({
+      portfolio_url: member.portfolio_url ?? null,
+      custom_fields: member.custom_fields ?? undefined,
+      github_handle: member.github_handle ?? null,
+    })
+    : null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {

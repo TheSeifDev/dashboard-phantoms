@@ -31,6 +31,12 @@ export type Member = {
   university_email?: string | null;
   linkedin_url?: string | null;
   portfolio_url?: string | null;
+  /**
+   * الـ GitHub handle المحسوب لجلسة العضو الحالية (من `member_github_state`).
+   * مش عمود في الجدول — بيتحفظ في الـ store عشان صور الهوية تظهر من GitHub
+   * في بوابة الأعضاء زي لوحة الإدارة.
+   */
+  github_handle?: string | null;
 }
 
 export type MemberInsert = Omit<Member, 'id' | 'created_at' | 'bonus_infinite' | 'university_email'>;

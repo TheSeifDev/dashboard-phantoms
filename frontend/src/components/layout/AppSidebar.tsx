@@ -427,6 +427,7 @@ export function AppSidebar({
   onSignOut,
   signOutTo = '/admin/login',
   avatarMember,
+  avatarHandle,
   brandSubtitle,
 }: {
   userName: string;
@@ -444,6 +445,8 @@ export function AppSidebar({
   onSignOut?: () => Promise<void>;
   signOutTo?: string;
   avatarMember?: Member | null;
+  /** GitHub handle محسوب للجلسة (بوابة الأعضاء) — بيسبق أي قراءة من صف العضو. */
+  avatarHandle?: string | null;
   brandSubtitle?: string;
 }) {
   const { t, dir } = useLocale();
@@ -590,7 +593,7 @@ export function AppSidebar({
             <>
               <div className="app-sidebar-user" aria-hidden="true">
                 <span className="app-sidebar-user-avatar-wrap">
-                  <MemberAvatar member={memberAvatar} name={userName} size={76} className="app-sidebar-user-avatar" />
+                  <MemberAvatar member={memberAvatar} handle={avatarHandle} name={userName} size={76} className="app-sidebar-user-avatar" />
                   <i className="app-sidebar-user-status" />
                 </span>
                 <span className="app-sidebar-user-copy"><strong dir="auto">{userName}</strong><small>{roleLabel ?? (isOwner ? t('مالك الفريق', 'Team owner') : t('مدير النظام', 'Administrator'))}</small></span>
@@ -617,7 +620,7 @@ export function AppSidebar({
 
       <Drawer isOpen={drawerOpen} onClose={onCloseDrawer} title={t('القائمة الرئيسية', 'Main menu')} className="app-sidebar-drawer">
         <div className="app-drawer-user" aria-label={t('المستخدم الحالي', 'Current user')}>
-          <MemberAvatar member={memberAvatar} name={userName} size={88} className="app-drawer-user-avatar" />
+          <MemberAvatar member={memberAvatar} handle={avatarHandle} name={userName} size={88} className="app-drawer-user-avatar" />
           <div className="min-w-0">
             <p className="truncate text-sm font-black app-drawer-user-name">{userName}</p>
             <p className="text-xs font-bold app-drawer-user-role">{roleLabel ?? (isOwner ? t('مالك الفريق', 'Team owner') : t('مدير النظام', 'Administrator'))}</p>
