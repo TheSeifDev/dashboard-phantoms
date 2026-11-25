@@ -708,5 +708,15 @@
     "remote_applied_timestamp": "20261125180000",
     "original_source_version": "20261125180000",
     "original_source_filename": "backend/supabase/migrations/20261125180000_team_console.sql"
+  },
+  {
+    "version": "20261125190000",
+    "name": "team_console_access",
+    "canonical_repository_filename": "backend/supabase/migrations/20261125190000_team_console_access.sql",
+    "sha256": "32a059b1fb33fb8c3e2b2837831b207187a42a1f1865d65dc62334dc8923caef",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261125190000",
+    "original_source_version": "20261125190000",
+    "original_source_filename": "backend/supabase/migrations/20261125190000_team_console_access.sql"
   }
 ]

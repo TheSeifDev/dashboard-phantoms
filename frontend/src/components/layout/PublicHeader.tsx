@@ -9,7 +9,6 @@ import { useThemeStore } from '../../store/theme';
 const PAGES: PaletteEntry[] = [
   { path: '/download', ar: 'تطبيقات PHANTOMS', en: 'PHANTOMS apps' },
   { path: '/login', ar: 'بوابة الأعضاء', en: 'Member portal' },
-  { path: '/admin/login', ar: 'دخول الإدارة', en: 'Admin sign in' },
   { path: '/forgot-password', ar: 'استعادة كلمة المرور', en: 'Reset password' },
   { path: '/join', ar: 'إنشاء كلمة مرور بالدعوة', en: 'Accept an invite' },
 ];

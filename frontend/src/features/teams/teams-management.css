@@ -1376,3 +1376,17 @@
 .tmc-proj-meta { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; color: var(--text-muted); font-size: 10px; }
 .tmc-proj-text { margin: 0; color: var(--text-secondary); font-size: 11px; line-height: 1.7; }
 .tmc-proj-blocker { margin: 0; color: var(--warning-text); font-size: 10.5px; }
+
+/* خطة الفريق المكتوبة — Round 38 */
+.tmc-plan-text { display: grid; gap: 8px; }
+.tmc-plan-text p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.9;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.tmc-field textarea[name='plan'],
+.tmc-field textarea {
+  min-height: 140px;
+}

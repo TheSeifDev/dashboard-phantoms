@@ -45,12 +45,12 @@ export function useTeamAdminCandidates(enabled = true) {
   });
 }
 
-export function useOwnerTeamMembers(teamId: string) {
+export function useOwnerTeamMembers(teamId: string, enabled = true) {
   const userId = useAuthStore((state) => state.user?.id ?? 'anonymous');
   return useQuery({
     queryKey: [...teamMembersKey(teamId), userId],
     queryFn: () => unwrapRpc<TeamMemberSummary[]>(supabase.rpc('owner_list_team_members', { p_team_id: teamId })),
-    enabled: Boolean(teamId),
+    enabled: enabled && Boolean(teamId),
     retry: false,
   });
 }

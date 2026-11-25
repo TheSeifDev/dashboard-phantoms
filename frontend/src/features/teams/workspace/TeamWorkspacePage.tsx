@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileText,
   Layers3,
+  LayoutDashboard,
   LogOut,
   Moon,
   NotebookPen,
@@ -18,7 +19,7 @@ import {
   UsersRound,
   Wallet,
 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
@@ -749,6 +750,15 @@ export default function TeamWorkspacePage() {
         <select id="team-workspace-picker" value={currentTeam.team_id} onChange={(event) => navigate(`/team/${event.target.value}`)} className="min-h-11 min-w-32 flex-1 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 text-sm font-bold sm:flex-none" aria-label={t('الفريق المعيّن', 'Assigned team')}>
           {teamEntries.map((team) => <option key={team.team_id} value={team.team_id}>{team.name} · {team.role === null ? t('إدارة عامة', 'Global admin') : team.role === 'head' ? t('رئيس الفريق', 'Head') : t('المتابع', 'Monitor')}</option>)}
         </select>
+        {currentTeam.role !== null && (
+          <Link
+            to={`/admin/teams/${currentTeam.team_id}`}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-extrabold text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]"
+          >
+            <LayoutDashboard size={16} aria-hidden="true" />
+            {t('لوحة الفريق', 'Team console')}
+          </Link>
+        )}
         <LanguageToggle />
         <Button type="button" variant="secondary" className="!min-w-11 !px-3" onClick={toggle} aria-label={theme === 'dark' ? t('استخدم المظهر الفاتح', 'Use light theme') : t('استخدم المظهر الداكن', 'Use dark theme')}>{theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}</Button>
         <Button type="button" variant="secondary" icon={<LogOut size={16} aria-hidden="true" />} onClick={() => { void logout(); }}>{t('خروج', 'Sign out')}</Button>
