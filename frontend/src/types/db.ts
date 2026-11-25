@@ -240,6 +240,20 @@ export interface TeamOverview {
   assignments: TeamAdminAssignment[];
 }
 
+/** ألوان تمييز الفريق — كلها من توكنز الهوية، مفيش hex ولا لوحة خام. */
+export type TeamAccent = 'primary' | 'violet' | 'cyan' | 'amber';
+
+export interface TeamProfile {
+  team_id: string;
+  slug: string;
+  name: string;
+  is_active: boolean;
+  tagline: string;
+  accent: TeamAccent;
+  focus_areas: string[];
+  updated_at: string | null;
+}
+
 export interface TeamAdminCandidate {
   user_id: string;
   email: string;
@@ -405,6 +419,8 @@ export interface Database {
       owner_list_team_member_candidates: { Args: { p_team_id: string }; Returns: TeamMemberCandidate[] };
       team_add_member: { Args: { p_team_id: string; p_member_id: number }; Returns: TeamMembershipStatus };
       team_review_member: { Args: { p_team_id: string; p_member_id: number; p_decision: 'approve' | 'suspend' | 'remove' }; Returns: TeamMembershipStatus };
+      team_profile_get: { Args: { p_team_id: string }; Returns: TeamProfile };
+      owner_team_profile_set: { Args: { p_team_id: string; p_tagline: string; p_accent: TeamAccent; p_focus_areas: string[] }; Returns: TeamProfile };
       has_admin_permission: { Args: { p_permission: string }; Returns: boolean };
       bind_member_device_session: { Args: { p_email: string; p_device_token: string }; Returns: boolean };
       set_member_bonus_infinite: { Args: { p_member_id: number; p_enabled: boolean; p_reason: string }; Returns: boolean };

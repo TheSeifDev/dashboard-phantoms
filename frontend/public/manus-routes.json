@@ -98,6 +98,9 @@
       "path": "/admin/teams"
     },
     {
+      "path": "/admin/teams/:teamId"
+    },
+    {
       "path": "/admin/ledger"
     },
     {

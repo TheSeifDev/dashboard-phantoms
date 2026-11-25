@@ -39,7 +39,7 @@ SELECT tables_are('public', ARRAY[
   'owner_member_erasure_operations', 'owner_member_erasure_storage_objects', 'tasks',
   'task_contribution_events', 'task_contribution_ledger_config', 'whatsapp_settings',
   'teams', 'team_memberships', 'team_admin_assignments', 'team_access_audit',
-  'team_member_metrics', 'team_member_custom_field_values', 'announcement_recipients',
+  'team_member_metrics', 'team_member_custom_field_values', 'announcement_recipients', 'team_profiles',
   'web_idea_contributors', 'web_idea_reviews', 'web_ideas', 'web_program_admin_audit',
   'web_project_activity_logs', 'web_project_agreement_acceptances', 'web_project_agreements',
   'web_project_consents', 'web_project_deliverables', 'web_project_integrations',

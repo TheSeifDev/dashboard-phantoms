@@ -54,6 +54,7 @@ const MemberIcpc = lazy(() => import('../features/icpc/MemberIcpc'));
 const AnnouncementsPage = lazy(() => import('../features/admin/announcements/AnnouncementsPage'));
 const AdminAccountsPage = lazy(() => import('../features/admin/access/AdminAccountsPage'));
 const TeamsManagementPage = lazy(() => import('../features/teams/TeamsManagementPage'));
+const TeamPage = lazy(() => import('../features/teams/TeamPage'));
 const TeamWorkspacePage = lazy(() => import('../features/teams/workspace/TeamWorkspacePage'));
 const WebProjectsPage = lazy(() => import('../features/web-projects/WebProjectsPage'));
 
@@ -289,6 +290,7 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
       { path: 'whatsapp', element: <Navigate to="/admin/telegram" replace /> },
       { path: 'admins', element: <ProtectedOwnerRoute><Page><AdminAccountsPage /></Page></ProtectedOwnerRoute> },
       { path: 'teams', element: <ProtectedOwnerRoute><Page><TeamsManagementPage /></Page></ProtectedOwnerRoute> },
+      { path: 'teams/:teamId', element: <ProtectedOwnerRoute><Page><TeamPage /></Page></ProtectedOwnerRoute> },
       { path: 'web-projects', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
       { path: 'web-projects/ideas', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
       { path: 'web-projects/projects', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
