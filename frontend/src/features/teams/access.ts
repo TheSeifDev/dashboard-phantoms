@@ -8,10 +8,10 @@ type WorkspaceAccess = {
 
 /** Global access always keeps its original workspace. Team access is separate. */
 export function managerDestination(access: WorkspaceAccess | null | undefined): '/admin' | '/team' | null {
-  // Heads and Monitors are management accounts too. They may still have
-  // team-scoped permissions, but they must never land in the member portal.
-  if (access?.is_admin === true || access?.is_team_admin === true) return '/admin';
-  return authorizedTeamEntries(access).length ? '/team' : null;
+  if (access?.is_admin === true) return '/admin';
+  // A team-admin flag is only a projection; require a verified active seat.
+  if (authorizedTeamEntries(access).length > 0) return '/admin';
+  return null;
 }
 
 /** Global administrators may explicitly open a team using their global feature
