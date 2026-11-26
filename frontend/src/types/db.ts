@@ -271,6 +271,8 @@ export interface AdminAccess {
   owner_authority_permanent?: boolean;
   /** Team-scoped only; never changes is_admin or global permissions. */
   is_team_admin: boolean;
+  /** Head/Monitor role used for management UI labelling; may coexist with a global role. */
+  management_role?: TeamAdminRole | null;
   role: AdminRole | null;
   email: string | null;
   permissions: Partial<AdminPermissions>;

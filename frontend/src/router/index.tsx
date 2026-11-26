@@ -89,7 +89,6 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   if (access.isError) {
     return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir={dir}><ErrorState message={t('معرفناش نتحقق من صلاحيات الإدارة. مفيش صفحات هتفتح قبل نجاح التحقق.', 'Could not verify administrator access. No pages will open until verification succeeds.')} onRetry={() => { void access.refetch(); }} /><Button variant="secondary" onClick={() => void handleLogout()}>{t('تسجيل الخروج', 'Sign out')}</Button></div>;
   }
-  if (managerDestination(access.data) === '/team') return <Navigate to="/team" replace />;
   if (!access.data?.is_admin) {
     return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir={dir}><ErrorState message={t('الحساب ده مش مضاف كحساب إداري. تواصل مع مالك النظام لو محتاج صلاحية.', 'This account is not registered as an administrator. Contact the system owner if you need access.')} /><Button variant="secondary" onClick={() => void handleLogout()}>{t('تسجيل الخروج', 'Sign out')}</Button></div>;
   }

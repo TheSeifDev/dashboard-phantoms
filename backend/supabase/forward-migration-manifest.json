@@ -688,5 +688,15 @@
     "remote_applied_timestamp": "20261124233000",
     "original_source_version": "20261124233000",
     "original_source_filename": "backend/supabase/migrations/20261124233000_admin_owner_parity.sql"
+  },
+  {
+    "version": "20261126143000",
+    "name": "team_managers_admin_access",
+    "canonical_repository_filename": "backend/supabase/migrations/20261126143000_team_managers_admin_access.sql",
+    "sha256": "c205099c0b98ceddb80be3d7a97035a3b58fb3d56a5786ffc61b6145c448d4cf",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261126121515",
+    "original_source_version": "20261126143000",
+    "original_source_filename": "backend/supabase/migrations/20261126143000_team_managers_admin_access.sql"
   }
 ]
