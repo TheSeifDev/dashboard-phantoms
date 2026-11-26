@@ -50,6 +50,7 @@ export function toAppError(raw: unknown, fallback: string): Error {
       OWNER_IMMUTABLE: 'مينفعش حذف أو تخفيض صلاحيات مالك النظام.',
       OWNER_ONLY: 'إدارة حسابات المشرفين متاحة للمالك الأساسي فقط.',
       TASK_NOT_FOUND: 'المهمة دي مش موجودة.',
+      TEAM_ACCESS_DENIED: 'لوحة الفريق متاحة للمالك والأدمن والـ Head/Monitor بتوع الفريق بس.',
       SERVER_CONFIG: 'إعداد خدمة الدعوات مش مكتمل على الخادم.',
       UNAUTHORIZED: 'بيانات الدخول مش مطابقة. راجعها وجرّب تاني.',
     };

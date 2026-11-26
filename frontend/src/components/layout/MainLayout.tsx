@@ -1,11 +1,12 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { AdminHeader, type ThemeOrigin } from './AdminHeader';
 import { AppSidebar, useSidebarDrawer } from './AppSidebar';
 import { useAuthStore } from '../../store/auth';
 import { useThemeStore } from '../../store/theme';
 import { useAdminAccess } from '../../features/admin/access/api';
+import { authorizedTeamEntries } from '../../features/teams/access';
 import { AdminAppUsageTracker } from '../../features/app-usage/AdminAppUsageTracker';
 import { useLocale } from '../../i18n/useLocale';
 import { gsap, useGSAP, prefersReducedMotion } from '../motion/gsap';
@@ -56,6 +57,19 @@ export default function MainLayout() {
     }
   }, [toggle]);
 
+  // التاج في السايدبار بيعبّر عن الدور الحقيقي: مالك، أدمن، أو Head/Monitor على فريق.
+  const roleLabel = useMemo(() => {
+    const data = adminAccess.data;
+    if (data?.owner_authority === true) return t('مالك الفريق', 'Team owner');
+    if (data?.is_admin === true) return t('مدير النظام', 'Administrator');
+    const entry = authorizedTeamEntries(data)[0];
+    if (entry) {
+      const role = entry.role === 'head' ? t('Head', 'Head') : t('Monitor', 'Monitor');
+      return `${role} · ${entry.name}`;
+    }
+    return t('مدير النظام', 'Administrator');
+  }, [adminAccess.data, t]);
+
   const { drawerOpen, openDrawer, closeDrawer } = useSidebarDrawer();
   const userName = (user?.user_metadata?.full_name as string | undefined)
     || user?.email?.split('@')[0]
@@ -66,7 +80,7 @@ export default function MainLayout() {
       <div ref={progress} className="route-progress" aria-hidden="true" />
       <AdminAppUsageTracker enabled={adminAccess.data?.is_admin === true} />
       {!isDashboard && <a className="skip-link" href="#workspace-content">{t('انتقل إلى المحتوى الرئيسي', 'Skip to main content')}</a>}
-      <AppSidebar userName={userName} isOwner={adminAccess.data?.owner_authority === true} isAdmin={adminAccess.data?.is_admin === true} permissions={adminAccess.data?.permissions ?? {}} drawerOpen={drawerOpen} onCloseDrawer={closeDrawer} />
+      <AppSidebar userName={userName} isOwner={adminAccess.data?.owner_authority === true} isAdmin={adminAccess.data?.is_admin === true} permissions={adminAccess.data?.permissions ?? {}} roleLabel={roleLabel} drawerOpen={drawerOpen} onCloseDrawer={closeDrawer} />
       <div className="app-workspace-column flex min-w-0 flex-1 flex-col min-h-[100dvh]">
         <AdminHeader path={pathname} isDark={theme === 'dark'} drawerOpen={drawerOpen} onToggleTheme={toggleTheme} onOpenMenu={openDrawer} isOwner={adminAccess.data?.owner_authority === true} permissions={adminAccess.data?.permissions ?? {}} />
         <main ref={content} id="workspace-content" tabIndex={isDashboard ? undefined : -1} className={isDashboard ? 'workspace-content mx-auto w-full max-w-[var(--content-max)] flex-1 px-4 py-5 md:px-7 md:py-6' : 'workspace-content workspace-content--operations mx-auto w-full max-w-[var(--content-max)] flex-1 px-4 py-5 md:px-7 md:py-6'}>

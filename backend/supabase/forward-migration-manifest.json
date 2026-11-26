@@ -690,6 +690,36 @@
     "original_source_filename": "backend/supabase/migrations/20261124233000_admin_owner_parity.sql"
   },
   {
+    "version": "20261125120000",
+    "name": "team_profiles",
+    "canonical_repository_filename": "backend/supabase/migrations/20261125120000_team_profiles.sql",
+    "sha256": "d935f6afa500e2833e7a8a478a66711aa559fc29eaaa10c50ffc4c9f20565190",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261125120000",
+    "original_source_version": "20261125120000",
+    "original_source_filename": "backend/supabase/migrations/20261125120000_team_profiles.sql"
+  },
+  {
+    "version": "20261125180000",
+    "name": "team_console",
+    "canonical_repository_filename": "backend/supabase/migrations/20261125180000_team_console.sql",
+    "sha256": "66c0691f0dd0ee7c961cd25d6b74ee9200528cc55eea25a5b9e7dec924073ce0",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261125180000",
+    "original_source_version": "20261125180000",
+    "original_source_filename": "backend/supabase/migrations/20261125180000_team_console.sql"
+  },
+  {
+    "version": "20261125190000",
+    "name": "team_console_access",
+    "canonical_repository_filename": "backend/supabase/migrations/20261125190000_team_console_access.sql",
+    "sha256": "32a059b1fb33fb8c3e2b2837831b207187a42a1f1865d65dc62334dc8923caef",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261125190000",
+    "original_source_version": "20261125190000",
+    "original_source_filename": "backend/supabase/migrations/20261125190000_team_console_access.sql"
+  },
+  {
     "version": "20261126120000",
     "name": "team_managers_admin_access",
     "canonical_repository_filename": "backend/supabase/migrations/20261126120000_team_managers_admin_access.sql",

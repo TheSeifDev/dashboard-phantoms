@@ -14,7 +14,7 @@ import type { AdminPermission } from '../types/db';
 import { clearAdminSetupIntent, inspectAdminCallback } from '../features/auth/auth-flow';
 import { MemberAccessGuard } from '../features/auth/MemberAccessGuard';
 import { useLocale } from '../i18n/useLocale';
-import { managerDestination } from '../features/teams/access';
+import { authorizedTeamEntries, managerDestination } from '../features/teams/access';
 import { MemberProfileCompletionGuard } from '../features/members/MemberProfileCompletionGuard';
 import { AppDownloadBanner } from '../features/app-download/AppDownloadBanner';
 
@@ -54,6 +54,7 @@ const MemberIcpc = lazy(() => import('../features/icpc/MemberIcpc'));
 const AnnouncementsPage = lazy(() => import('../features/admin/announcements/AnnouncementsPage'));
 const AdminAccountsPage = lazy(() => import('../features/admin/access/AdminAccountsPage'));
 const TeamsManagementPage = lazy(() => import('../features/teams/TeamsManagementPage'));
+const TeamPage = lazy(() => import('../features/teams/TeamPage'));
 const TeamWorkspacePage = lazy(() => import('../features/teams/workspace/TeamWorkspacePage'));
 const WebProjectsPage = lazy(() => import('../features/web-projects/WebProjectsPage'));
 
@@ -76,6 +77,9 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const ready = useAuthStore((s) => s.ready);
   const clear = useAuthStore((s) => s.clear);
   const access = useAdminAccess(user?.id ?? null);
+  const { pathname } = useLocation();
+  // مسار لوحة فريق معيّن: مسموح للـ Head/Monitor يدخلوه من غير ما يتحول لـ /team.
+  const isTeamConsolePath = /^\/admin\/teams\/[^/]+\/?$/.test(pathname);
   const handleLogout = async () => {
     await supabase.auth.signOut();
     clear();
@@ -89,7 +93,9 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   if (access.isError) {
     return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir={dir}><ErrorState message={t('معرفناش نتحقق من صلاحيات الإدارة. مفيش صفحات هتفتح قبل نجاح التحقق.', 'Could not verify administrator access. No pages will open until verification succeeds.')} onRetry={() => { void access.refetch(); }} /><Button variant="secondary" onClick={() => void handleLogout()}>{t('تسجيل الخروج', 'Sign out')}</Button></div>;
   }
-  if (!access.data?.is_admin) {
+  const teamManagerConsole = isTeamConsolePath && authorizedTeamEntries(access.data).length > 0;
+  if (managerDestination(access.data) === '/team' && !teamManagerConsole) return <Navigate to="/team" replace />;
+  if (!access.data?.is_admin && !teamManagerConsole) {
     return <div className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-5" dir={dir}><ErrorState message={t('الحساب ده مش مضاف كحساب إداري. تواصل مع مالك النظام لو محتاج صلاحية.', 'This account is not registered as an administrator. Contact the system owner if you need access.')} /><Button variant="secondary" onClick={() => void handleLogout()}>{t('تسجيل الخروج', 'Sign out')}</Button></div>;
   }
   return <>{children}</>;
@@ -111,6 +117,18 @@ function ProtectedTeamRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** لوحة الفريق: المالك، أو الأدمن، أو Head/Monitor متعيّن على فريق. */
+function ProtectedTeamConsoleRoute({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale();
+  const user = useAuthStore((s) => s.user);
+  const access = useAdminAccess(user?.id ?? null);
+  if (access.isPending) return <PhantomLoader message={t('بنتأكد من صلاحية الفريق...', 'Checking team access...')} />;
+  if (access.isError) return <ErrorState message={t('معرفناش نتحقق من صلاحية الفريق.', 'Could not verify team access.')} onRetry={() => { void access.refetch(); }} />;
+  const data = access.data;
+  const allowed = data?.owner_authority === true || data?.is_admin === true || authorizedTeamEntries(data).length > 0;
+  if (!allowed) return <Navigate to="/admin" replace />;
+  return <>{children}</>;
+}
 function ProtectedOwnerRoute({ children }: { children: React.ReactNode }) {
   const { t } = useLocale();
   const user = useAuthStore((s) => s.user);
@@ -288,6 +306,7 @@ export const router = createBrowserRouter([{ element: <AppDownloadShell />, chil
       { path: 'whatsapp', element: <Navigate to="/admin/telegram" replace /> },
       { path: 'admins', element: <ProtectedOwnerRoute><Page><AdminAccountsPage /></Page></ProtectedOwnerRoute> },
       { path: 'teams', element: <ProtectedOwnerRoute><Page><TeamsManagementPage /></Page></ProtectedOwnerRoute> },
+      { path: 'teams/:teamId', element: <ProtectedTeamConsoleRoute><Page><TeamPage /></Page></ProtectedTeamConsoleRoute> },
       { path: 'web-projects', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
       { path: 'web-projects/ideas', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },
       { path: 'web-projects/projects', element: <AdminSection permission="web_projects"><Page><WebProjectsPage /></Page></AdminSection> },

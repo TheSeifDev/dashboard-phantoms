@@ -29,14 +29,14 @@ function runCheck() {
     encoding: 'utf8',
   });
 }
-test('local inventory retains seventy applied forwards and the sole pending team-scope correction', () => {
+test('local inventory retains seventy-three applied forwards and the sole pending team-scope correction', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
   assert.equal(pending, 1);
-  assert.equal(applied, 70);
+  assert.equal(applied, 73);
   const pendingScopeFix = entries.find((entry) => entry.version === '20261126130000');
   assert.equal(pendingScopeFix?.name, 'team_rpc_scope_isolation');
   assert.equal(pendingScopeFix?.production_status, 'not_applied');

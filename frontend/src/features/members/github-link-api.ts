@@ -83,10 +83,12 @@ export interface GithubLinkState {
   source: GithubLinkSource | null;
 }
 
-export function useGithubLinkState() {
+/** حالة ربط GitHub للعضو الحالي؛ `enabled` بيقفل الاستعلام لو مفيش جلسة عضو. */
+export function useGithubLinkState(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: githubLinkKeys.state,
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
     queryFn: async (): Promise<GithubLinkState> => {
       let result: RpcResult;
       try {

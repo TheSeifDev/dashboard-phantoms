@@ -31,6 +31,12 @@ export type Member = {
   university_email?: string | null;
   linkedin_url?: string | null;
   portfolio_url?: string | null;
+  /**
+   * الـ GitHub handle المحسوب لجلسة العضو الحالية (من `member_github_state`).
+   * مش عمود في الجدول — بيتحفظ في الـ store عشان صور الهوية تظهر من GitHub
+   * في بوابة الأعضاء زي لوحة الإدارة.
+   */
+  github_handle?: string | null;
 }
 
 export type MemberInsert = Omit<Member, 'id' | 'created_at' | 'bonus_infinite' | 'university_email'>;
@@ -240,6 +246,20 @@ export interface TeamOverview {
   assignments: TeamAdminAssignment[];
 }
 
+/** ألوان تمييز الفريق — كلها من توكنز الهوية، مفيش hex ولا لوحة خام. */
+export type TeamAccent = 'primary' | 'violet' | 'cyan' | 'amber';
+
+export interface TeamProfile {
+  team_id: string;
+  slug: string;
+  name: string;
+  is_active: boolean;
+  tagline: string;
+  accent: TeamAccent;
+  focus_areas: string[];
+  updated_at: string | null;
+}
+
 export interface TeamAdminCandidate {
   user_id: string;
   email: string;
@@ -260,6 +280,141 @@ export interface TeamMemberSummary {
 
 export interface TeamMemberCandidate extends Omit<TeamMemberSummary, 'membership_status' | 'created_at'> {
   membership_status: TeamMembershipStatus | null;
+}
+
+/** خطة الفريق المكتوبة — Round 38 (team_plan_get / team_plan_save). */
+export interface TeamPlan {
+  team_id: string;
+  plan: string;
+  updated_at: string | null;
+  can_edit: boolean;
+}
+
+/* ------------------------------------------------------------------ */
+/* لوحة الفريق المستقلة (owner_team_console) — Round 37                */
+/* ------------------------------------------------------------------ */
+
+/** حالة المهمة المجمّعة داخل لوحة الفريق (من tracking لكل الأعضاء). */
+export type TeamConsoleTaskState = 'open' | 'review' | 'revision' | 'approved';
+
+export interface TeamConsoleTeam {
+  team_id: string;
+  slug: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface TeamConsoleMember {
+  member_id: number;
+  full_name: string;
+  email: string;
+  membership_status: TeamMembershipStatus;
+  /** بونص الفريق التراكمي (team_member_metrics). */
+  team_bonus: number;
+  /** إجمالي البونص الأساسي للعضو (ييشمل تقييمات الفريق لأنها تُكتب في notes). */
+  main_bonus: number;
+  evaluation_count: number;
+}
+
+export interface TeamConsoleAssignee {
+  member_id: number;
+  full_name: string;
+  status: string;
+}
+
+export interface TeamConsoleTask {
+  id: number;
+  title: string;
+  description: string | null;
+  has_deadline: boolean;
+  deadline_date: string | null;
+  bonus_points: number;
+  assigned_all: boolean;
+  assignees: TeamConsoleAssignee[];
+  state: TeamConsoleTaskState;
+  created_at: string;
+}
+
+export interface TeamConsoleEvaluation {
+  id: number;
+  member_id: number;
+  member_name: string;
+  title: string;
+  grade: MemberEvaluationGrade;
+  points: number;
+  feedback: string;
+  created_at: string;
+}
+
+export type TeamGoalStatus = 'active' | 'done' | 'paused';
+
+export interface TeamGoal {
+  id: number;
+  title: string;
+  metric: string;
+  target_value: number;
+  current_value: number;
+  due_date: string | null;
+  status: TeamGoalStatus;
+  updated_at: string;
+}
+
+export interface TeamConsoleReference {
+  id: number;
+  title: string;
+  url: string;
+  description: string | null;
+  category: string;
+  team_scoped: boolean;
+  created_at: string;
+}
+
+export interface TeamConsoleProjectTask {
+  id: number;
+  project_id: string;
+  project_name: string;
+  title: string;
+  status: string;
+  priority: string | null;
+  due_date: string | null;
+}
+
+export interface TeamConsoleProjectReport {
+  id: number;
+  project_id: string;
+  project_name: string;
+  member_name: string;
+  period_start: string | null;
+  period_end: string | null;
+  completed_this_week: string | null;
+  status: string;
+  blockers: string | null;
+  created_at: string;
+}
+
+export interface TeamConsoleResource {
+  id: number;
+  title: string;
+  category: string;
+  description: string | null;
+  external_url: string | null;
+  preview_url: string | null;
+  project_name: string;
+  access_status: string;
+  created_at: string;
+}
+
+export interface TeamConsole {
+  team: TeamConsoleTeam;
+  members: TeamConsoleMember[];
+  tasks: TeamConsoleTask[];
+  evaluations: TeamConsoleEvaluation[];
+  goals: TeamGoal[];
+  references: TeamConsoleReference[];
+  project_tasks: TeamConsoleProjectTask[];
+  project_reports: TeamConsoleProjectReport[];
+  resources: TeamConsoleResource[];
 }
 
 export interface AdminAccess {
@@ -407,6 +562,13 @@ export interface Database {
       owner_list_team_member_candidates: { Args: { p_team_id: string }; Returns: TeamMemberCandidate[] };
       team_add_member: { Args: { p_team_id: string; p_member_id: number }; Returns: TeamMembershipStatus };
       team_review_member: { Args: { p_team_id: string; p_member_id: number; p_decision: 'approve' | 'suspend' | 'remove' }; Returns: TeamMembershipStatus };
+      team_profile_get: { Args: { p_team_id: string }; Returns: TeamProfile };
+      owner_team_profile_set: { Args: { p_team_id: string; p_tagline: string; p_accent: TeamAccent; p_focus_areas: string[] }; Returns: TeamProfile };
+      owner_team_console: { Args: { p_team_id: string }; Returns: TeamConsole };
+      owner_team_goal_save: { Args: { p_team_id: string; p_goal_id: number | null; p_title: string; p_metric: string; p_target_value: number; p_current_value: number; p_due_date: string | null; p_status: TeamGoalStatus }; Returns: TeamGoal };
+      owner_team_goal_delete: { Args: { p_team_id: string; p_goal_id: number }; Returns: boolean };
+      team_plan_get: { Args: { p_team_id: string }; Returns: TeamPlan };
+      team_plan_save: { Args: { p_team_id: string; p_plan: string }; Returns: TeamPlan };
       has_admin_permission: { Args: { p_permission: string }; Returns: boolean };
       bind_member_device_session: { Args: { p_email: string; p_device_token: string }; Returns: boolean };
       set_member_bonus_infinite: { Args: { p_member_id: number; p_enabled: boolean; p_reason: string }; Returns: boolean };

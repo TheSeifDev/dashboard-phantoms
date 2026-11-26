@@ -98,6 +98,10 @@
       "path": "/admin/teams"
     },
     {
+      "path": "/admin/teams/:teamId",
+      "title": "Team dashboard — tasks, agile, evaluations, plan, timeline, references, projects"
+    },
+    {
       "path": "/admin/ledger"
     },
     {

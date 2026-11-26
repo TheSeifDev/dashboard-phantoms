@@ -13,6 +13,7 @@ import { Field, Progress, StatusBadge, WebNav, safeHref } from './common';
 import { projectAttention, trackedProgress } from './domain';
 import { IdeasPanel } from './IdeasPanel';
 import { ResourcesPanel } from './ResourcesPanel';
+import { MemberPicker } from './MemberPicker';
 import ProjectWorkspacePage from './ProjectWorkspacePage';
 import type { WebActivity, WebIdea, WebMembership, WebMilestone, WebProject, WebTask, WebUpdate } from './types';
 
@@ -42,6 +43,8 @@ export default function WebProjectsPage() {
   const candidates = useWebCandidates('admin');
   const rpc = useWebRpc('admin');
   const [creating, setCreating] = useState(false);
+  const [ownerId, setOwnerId] = useState('');
+  const [leaderId, setLeaderId] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [selectedProject, setSelectedProject] = useState('');
@@ -55,9 +58,14 @@ export default function WebProjectsPage() {
   const create = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    if (!ownerId) {
+      toast.error(t('اختار مسؤول المنتج الأول.', 'Select the product owner first.'));
+      return;
+    }
     try {
       const id = await rpc.mutateAsync({ name: 'web_create_project', args: { p_name: String(form.get('name')).trim(), p_slug: String(form.get('slug')).trim(), p_owner_member_id: Number(form.get('owner')), p_lead_member_id: form.get('leader') ? Number(form.get('leader')) : null } });
-      setCreating(false); toast.success(t('تم إنشاء المشروع. سجل الاتفاق وأضف الأعضاء قبل التفعيل.', 'Project created. Record agreement terms and add members before activation.'));
+      setCreating(false); setOwnerId(''); setLeaderId('');
+      toast.success(t('تم إنشاء المشروع. سجل الاتفاق وأضف الأعضاء قبل التفعيل.', 'Project created. Record agreement terms and add members before activation.'));
       navigate(`/admin/web-projects/projects/${String(id)}?tab=settings`);
     } catch (error) { toast.error(error instanceof Error ? error.message : t('تعذر إنشاء المشروع.', 'Could not create project.')); }
   };
@@ -90,6 +98,6 @@ export default function WebProjectsPage() {
         </>}
       </>}
     </>}
-    <Modal isOpen={creating} onClose={() => setCreating(false)} title={t('إنشاء مشروع ويب', 'Create a Web Project')} maxWidth="lg" footer={<Button form="wp-project-create" type="submit" isLoading={rpc.isPending} disabled={!candidates.data?.length}>{t('إنشاء المشروع', 'Create project')}</Button>}><form id="wp-project-create" onSubmit={(event) => void create(event)} className="wp-stack"><Field label={t('اسم المنتج', 'Product name')}><input name="name" required minLength={3} maxLength={180} /></Field><Field label={t('المعرف الفريد', 'Unique slug')}><input name="slug" required minLength={3} maxLength={100} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="product-name" dir="ltr" /></Field><Field label={t('مسؤول المنتج من الأعضاء الموجودين', 'Product owner from existing members')}><select name="owner" required><option value="">{t('اختر المسؤول', 'Select owner')}</option>{candidates.data?.map((person) => <option key={person.member_id} value={person.member_id}>{person.full_name}</option>)}</select></Field><Field label={t('القائد الأساسي', 'Primary leader')}><select name="leader"><option value="">{t('يحدد لاحقًا قبل التفعيل', 'Assign later, before activation')}</option>{candidates.data?.map((person) => <option key={person.member_id} value={person.member_id}>{person.full_name}</option>)}</select></Field>{candidates.isError && <ErrorState message={candidates.error.message} onRetry={() => void candidates.refetch()} />}<div className="wp-notice">{t('الملكية الفكرية لا تنتقل تلقائيًا إلى PHANTOMS. يجب تسجيل الاتفاق والترخيص والإسناد وموافقة المساهمين بوضوح قبل المشاركة.', 'Intellectual property is not automatically assigned to PHANTOMS. Record ownership, licensing, attribution and contributor acceptance explicitly before participation.')}</div></form></Modal>
+    <Modal isOpen={creating} onClose={() => setCreating(false)} title={t('إنشاء مشروع ويب', 'Create a Web Project')} maxWidth="lg" footer={<Button form="wp-project-create" type="submit" isLoading={rpc.isPending} disabled={!candidates.data?.length || !ownerId}>{t('إنشاء المشروع', 'Create project')}</Button>}><form id="wp-project-create" onSubmit={(event) => void create(event)} className="wp-stack"><Field label={t('اسم المنتج', 'Product name')}><input name="name" required minLength={3} maxLength={180} /></Field><Field label={t('المعرف الفريد', 'Unique slug')}><input name="slug" required minLength={3} maxLength={100} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="product-name" dir="ltr" /></Field><Field label={t('مسؤول المنتج', 'Product owner')}><MemberPicker name="owner" value={ownerId} onChange={setOwnerId} candidates={candidates.data ?? []} placeholder={t('اختار عضو واحد', 'Select one member')} invalid={!ownerId} /></Field><p className="wp-hint">{t('شخص واحد بس لكل مشروع: هو اللي بيستلم دعوة المشروع كمساهم، وبيتحول لقائد تلقائيًا لو ما اخترتش قائد أساسي. مفيش حد أقصى لعدد المشروعات اللي الشخص يقدر يكون مسؤول عنها.', 'One person per project: they receive the project invitation as a contributor, and become the lead automatically if you do not pick a primary leader. There is no cap on how many projects one person can own.')}</p><Field label={t('القائد الأساسي (اختياري)', 'Primary leader (optional)')}><MemberPicker name="leader" value={leaderId} onChange={setLeaderId} candidates={candidates.data ?? []} placeholder={t('يحدد لاحقًا قبل التفعيل', 'Assign later, before activation')} clearLabel={t('بدون قائد دلوقتي', 'No leader yet')} /></Field><p className="wp-hint">{t('القائد هو اللي بيدير المهام والمراجعات والموافقات جوه المشروع. تقدر تسيبه فاضي وتحدده من إعدادات المشروع قبل التفعيل، ولو حددت نفس الشخص كمسؤول وقائد بياخد دور lead مباشرة.', 'The leader runs tasks, reviews and approvals inside the project. You can leave it empty and assign it from project settings before activation; if the same person is owner and leader, they get the lead role directly.')}</p><p className="wp-hint">{t(`${number(candidates.data?.length ?? 0)} عضو مؤهل للاختيار (لازم يكون عضوية نشطة وحساب دخول جاهز).`, `${number(candidates.data?.length ?? 0)} eligible members (active membership and a ready sign-in account).`)}</p>{candidates.isError && <ErrorState message={candidates.error.message} onRetry={() => void candidates.refetch()} />}<div className="wp-notice">{t('الملكية الفكرية لا تنتقل تلقائيًا إلى PHANTOMS. يجب تسجيل الاتفاق والترخيص والإسناد وموافقة المساهمين بوضوح قبل المشاركة.', 'Intellectual property is not automatically assigned to PHANTOMS. Record ownership, licensing, attribution and contributor acceptance explicitly before participation.')}</div></form></Modal>
   </div>;
 }
