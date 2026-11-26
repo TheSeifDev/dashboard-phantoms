@@ -9,7 +9,9 @@ type WorkspaceAccess = {
 /** Global access always keeps its original workspace. Team access is separate. */
 export function managerDestination(access: WorkspaceAccess | null | undefined): '/admin' | '/team' | null {
   if (access?.is_admin === true) return '/admin';
-  return authorizedTeamEntries(access).length ? '/team' : null;
+  // A team-admin flag is only a projection; require a verified active seat.
+  if (authorizedTeamEntries(access).length > 0) return '/admin';
+  return null;
 }
 
 /** Global administrators may explicitly open a team using their global feature

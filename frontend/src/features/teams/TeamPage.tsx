@@ -15,13 +15,14 @@ import { useAuthStore } from '../../store/auth';
 import { toast } from '../../store/toast';
 import { toAppError } from '../../lib/supabase/errors';
 import { useLocale } from '../../i18n/useLocale';
-import type { TeamAccent, TeamConsole } from '../../types/db';
+import type { TeamAccent, TeamConsole, TeamOverview, TeamPermission } from '../../types/db';
 import { useAdminAccess } from '../admin/access/api';
 import { useOwnerTeamMembers, useOwnerTeams, useSetTeamActive, useTeamAdminCandidates, useUpdateTeamDetails } from './api';
 import { useSaveTeamProfile, useTeamProfile } from './profileApi';
 import { MemberRoster } from './components/MemberRoster';
 import { SeatCard } from './components/SeatCard';
 import { ROLES, initials, useStaggerIn } from './components/teamCopy';
+import { authorizedTeamEntries, workspaceTeamEntries } from './access';
 import { useTeamConsole } from './console/api';
 import { OverviewPanel } from './console/OverviewPanel';
 import { TasksPanel } from './console/TasksPanel';
@@ -51,14 +52,34 @@ export default function TeamPage() {
   const { t, dir, number, date } = useLocale();
   const user = useAuthStore((state) => state.user);
   const access = useAdminAccess(user?.id ?? null);
-  const ownerConfirmed = access.data?.owner_authority === true;
-  const teams = useOwnerTeams(ownerConfirmed);
-  const candidates = useTeamAdminCandidates(ownerConfirmed);
-  const team = (teams.data ?? []).find((entry) => entry.team_id === teamId) ?? null;
+  const isOwner = access.data?.owner_authority === true;
+  const isAdmin = access.data?.is_admin === true;
+  /** Head/Monitor على نفس الفريق — من get_admin_access، مش تخمين في الواجهة. */
+  const accessTeam = useMemo(() => {
+    const entries = [...authorizedTeamEntries(access.data), ...workspaceTeamEntries(access.data)];
+    return entries.find((entry) => entry.team_id === teamId) ?? null;
+  }, [access.data, teamId]);
+  const teamRole = accessTeam?.role ?? null;
+  const canOpenConsole = isOwner || isAdmin || teamRole !== null;
+  const canSeeMembers = isOwner || isAdmin;
 
-  const profile = useTeamProfile(teamId, Boolean(teamId) && ownerConfirmed);
-  const members = useOwnerTeamMembers(teamId);
-  const consoleData = useTeamConsole(teamId, Boolean(teamId) && ownerConfirmed);
+  const teams = useOwnerTeams(isOwner);
+  const candidates = useTeamAdminCandidates(isOwner);
+  const ownerTeam = (teams.data ?? []).find((entry) => entry.team_id === teamId) ?? null;
+  // المالك/الأدمن بياخدوا الفريق من owner_list_teams؛ الـ Head/Monitor من access teams؛
+  // وأي حد تاني (أدمن مش متعيّن) بياخده من حمولة اللوحة نفسها.
+
+  const profile = useTeamProfile(teamId, Boolean(teamId) && canOpenConsole);
+  const members = useOwnerTeamMembers(teamId, canSeeMembers);
+  const consoleData = useTeamConsole(teamId, Boolean(teamId) && canOpenConsole);
+  const consoleTeam = consoleData.data?.team ?? null;
+  const team: TeamOverview | null = ownerTeam
+    ?? (consoleTeam
+      ? { team_id: consoleTeam.team_id, slug: consoleTeam.slug, name: consoleTeam.name, is_active: consoleTeam.is_active, member_count: 0, assignments: [] }
+      : null)
+    ?? (accessTeam
+      ? { team_id: accessTeam.team_id, slug: accessTeam.slug, name: accessTeam.name, is_active: true, member_count: 0, assignments: [] }
+      : null);
   const toggle = useSetTeamActive();
   const updateDetails = useUpdateTeamDetails();
   const saveProfile = useSaveTeamProfile();
@@ -91,14 +112,17 @@ export default function TeamPage() {
   }, [profile.data]);
 
   const stats = useMemo(() => {
-    const all = members.data ?? [];
+    // المالك/الأدمن عندهم roster كامل؛ الـ Head/Monitor بياخدوا العضويات من اللوحة.
+    const all: { membership_status: string }[] = canSeeMembers
+      ? (members.data ?? [])
+      : (consoleData.data?.members ?? []);
     return {
       members: all.length,
       active: all.filter((member) => member.membership_status === 'active').length,
       pending: all.filter((member) => member.membership_status === 'pending').length,
       suspended: all.filter((member) => member.membership_status === 'suspended').length,
     };
-  }, [members.data]);
+  }, [members.data, consoleData.data, canSeeMembers]);
 
   const seatsAssigned = team ? ROLES.filter((role) => team.assignments.some((assignment) => assignment.role === role)).length : 0;
 
@@ -150,13 +174,14 @@ export default function TeamPage() {
     }
   };
 
-  if (access.isPending || (access.isFetching && !access.data) || teams.isPending) return <CardSkeletons count={2} />;
-  if (access.isError) return <ErrorState message={t('تعذر التحقق من صلاحية Owner.', 'Could not verify Owner access.')} onRetry={() => { void access.refetch(); }} />;
-  if (!access.data?.owner_authority) {
-    return <EmptyState title={t('إدارة الفرق للمالك فقط', 'Team management is restricted to the owner')} description={t('تعيين Head/Monitor وتغيير الصلاحيات يتم من Owner فقط.', 'Only the Owner can assign Heads/Monitors or change their permissions.')} />;
+  if (access.isPending || (access.isFetching && !access.data) || (isOwner && teams.isPending)) return <CardSkeletons count={2} />;
+  if (access.isError) return <ErrorState message={t('تعذر التحقق من صلاحياتك.', 'Could not verify your access.')} onRetry={() => { void access.refetch(); }} />;
+  if (!canOpenConsole) {
+    return <EmptyState title={t('لوحة الفريق لمشرفي الفريق', 'This team console is for the team managers')} description={t('الوصول متاح للمالك، أو الأدمن، أو الـ Head/Monitor المتعيّنين على الفريق.', 'Access is open to the owner, global admins, and the team’s assigned Heads and Monitors.')} />;
   }
-  if (teams.isError) return <ErrorState message={t('تعذر تحميل بيانات الفريق.', 'Could not load the team.')} onRetry={() => { void teams.refetch(); }} />;
+  if (isOwner && teams.isError) return <ErrorState message={t('تعذر تحميل بيانات الفريق.', 'Could not load the team.')} onRetry={() => { void teams.refetch(); }} />;
   if (!team) {
+    if (consoleData.isPending) return <CardSkeletons count={2} />;
     return (
       <div className="teams-management" dir={dir}>
         <EmptyState
@@ -182,7 +207,7 @@ export default function TeamPage() {
     }
     return consoleDataValue ? render(consoleDataValue) : null;
   };
-  const tabs: { key: TeamTab; label: string; icon: typeof Gauge; badge?: number }[] = [
+  const allTabs: { key: TeamTab; label: string; icon: typeof Gauge; badge?: number }[] = [
     { key: 'overview', label: t('نظرة عامة', 'Overview'), icon: Gauge },
     { key: 'tasks', label: t('المهام', 'Tasks'), icon: ClipboardList, badge: openTasks },
     { key: 'agile', label: t('أجايل', 'Agile'), icon: KanbanSquare, badge: reviewTasks },
@@ -196,11 +221,25 @@ export default function TeamPage() {
     { key: 'customize', label: t('التخصيص', 'Customize'), icon: Palette },
     { key: 'settings', label: t('الإعدادات', 'Settings'), icon: Settings2 },
   ];
+  /** القسم بيحتاج أنهي صلاحية فريق — الحوكمة (قيادة/تخصيص/إعدادات) للمالك بس. */
+  const tabPermission: Record<TeamTab, TeamPermission> = {
+    overview: 'dashboard', tasks: 'tasks', agile: 'tasks', evaluations: 'ranking',
+    plan: 'dashboard', timeline: 'dashboard', references: 'dashboard', projects: 'tasks',
+    leadership: 'dashboard', members: 'members', customize: 'dashboard', settings: 'dashboard',
+  };
+  const canSeeTab = (key: TeamTab) => {
+    if (key === 'leadership' || key === 'customize' || key === 'settings') return isOwner;
+    if (key === 'members') return canSeeMembers;
+    if (isOwner || isAdmin) return true;
+    return accessTeam?.permissions[tabPermission[key]] === true;
+  };
+  const tabs = allTabs.filter((entry) => canSeeTab(entry.key));
+  const activeTab = tabs.some((entry) => entry.key === tab) ? tab : 'overview';
 
   return (
     <div className="teams-management tms-team-page" dir={dir} data-accent={accent} ref={rootRef}>
-      <Link to="/admin/teams" className="tms-back-link" data-tm-anim>
-        <ArrowLeft size={15} aria-hidden="true" />{t('كل الفرق', 'All teams')}
+      <Link to={isOwner || isAdmin ? '/admin/teams' : '/team'} className="tms-back-link" data-tm-anim>
+        <ArrowLeft size={15} aria-hidden="true" />{isOwner || isAdmin ? t('كل الفرق', 'All teams') : t('مساحة الفريق', 'Team workspace')}
       </Link>
 
       <header className="tms-hero" data-tm-anim>
@@ -227,18 +266,22 @@ export default function TeamPage() {
               {t('مساحة الفريق', 'Team workspace')}<ArrowUpRight size={15} aria-hidden="true" />
             </Link>
           )}
-          <Button type="button" variant="ghost" icon={<Pencil size={14} aria-hidden="true" />} onClick={() => { setTab('settings'); setEditing(true); }}>
-            {t('تعديل', 'Edit')}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            icon={team.is_active ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
-            onClick={() => { if (team.is_active) setPendingDisable(true); else void setActive(true); }}
-            isLoading={toggle.isPending}
-          >
-            {team.is_active ? t('إيقاف', 'Disable') : t('تفعيل', 'Enable')}
-          </Button>
+          {isOwner && (
+            <>
+              <Button type="button" variant="ghost" icon={<Pencil size={14} aria-hidden="true" />} onClick={() => { setTab('settings'); setEditing(true); }}>
+                {t('تعديل', 'Edit')}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                icon={team.is_active ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
+                onClick={() => { if (team.is_active) setPendingDisable(true); else void setActive(true); }}
+                isLoading={toggle.isPending}
+              >
+                {team.is_active ? t('إيقاف', 'Disable') : t('تفعيل', 'Enable')}
+              </Button>
+            </>
+          )}
         </div>
       </header>
 
@@ -249,9 +292,9 @@ export default function TeamPage() {
             type="button"
             role="tab"
             id={`tm-tab-${key}`}
-            aria-selected={tab === key}
+            aria-selected={activeTab === key}
             aria-controls={`tm-panel-${key}`}
-            className={tab === key ? 'is-active' : ''}
+            className={activeTab === key ? 'is-active' : ''}
             onClick={() => setTab(key)}
           >
             <Icon size={15} aria-hidden="true" />
@@ -261,8 +304,8 @@ export default function TeamPage() {
         ))}
       </nav>
 
-      <div className="tms-tab-panel" id={`tm-panel-${tab}`} role="tabpanel" aria-labelledby={`tm-tab-${tab}`}>
-        {tab === 'overview' && (
+      <div className="tms-tab-panel" id={`tm-panel-${activeTab}`} role="tabpanel" aria-labelledby={`tm-tab-${activeTab}`}>
+        {activeTab === 'overview' && (
           <>
             <div className="tms-stat-grid">
               <article className="tms-stat" data-tm-anim>
@@ -294,7 +337,7 @@ export default function TeamPage() {
             {members.isError && <ErrorState message={t('تعذر تحميل أعضاء الفريق.', 'Could not load team memberships.')} onRetry={() => { void members.refetch(); }} />}
 
             <section className="tms-overview-grid">
-              <article className="tms-panel-card" data-tm-anim>
+              {canSeeMembers ? <article className="tms-panel-card" data-tm-anim>
                 <header className="tms-block-head">
                   <div>
                     <span className="tms-kicker"><Crown size={14} aria-hidden="true" />{t('القيادة', 'Leadership')}</span>
@@ -316,8 +359,8 @@ export default function TeamPage() {
                     );
                   })}
                 </ul>
-                <button type="button" className="tms-link" onClick={() => setTab('leadership')}>{t('إدارة المقاعد', 'Manage seats')}</button>
-              </article>
+                {isOwner ? <button type="button" className="tms-link" onClick={() => setTab('leadership')}>{t('إدارة المقاعد', 'Manage seats')}</button> : null}
+              </article> : null}
 
               <article className="tms-panel-card" data-tm-anim>
                 <header className="tms-block-head">
@@ -333,8 +376,8 @@ export default function TeamPage() {
                   <li><span>{t('آخر تحديث للتخصيص', 'Customization updated')}</span><b>{profile.data?.updated_at ? date(profile.data.updated_at) : t('لسه', 'Not yet')}</b></li>
                 </ul>
                 <div className="tms-panel-actions">
-                  <Button type="button" variant="secondary" onClick={() => setTab('members')}>{t('فتح الأعضاء', 'Open members')}</Button>
-                  <Button type="button" variant="ghost" onClick={() => setTab('customize')}>{t('تخصيص الفريق', 'Customize team')}</Button>
+                  {canSeeMembers ? <Button type="button" variant="secondary" onClick={() => setTab('members')}>{t('فتح الأعضاء', 'Open members')}</Button> : null}
+                  {isOwner ? <Button type="button" variant="ghost" onClick={() => setTab('customize')}>{t('تخصيص الفريق', 'Customize team')}</Button> : null}
                 </div>
               </article>
             </section>
@@ -344,14 +387,14 @@ export default function TeamPage() {
           </>
         )}
 
-        {tab === 'tasks' && renderConsole((data) => <TasksPanel teamId={team.team_id} data={data} />)}
-        {tab === 'agile' && renderConsole((data) => <AgilePanel teamId={team.team_id} data={data} />)}
-        {tab === 'evaluations' && renderConsole((data) => <EvaluationsPanel teamId={team.team_id} data={data} />)}
-        {tab === 'plan' && renderConsole((data) => <PlanPanel teamId={team.team_id} data={data} />)}
-        {tab === 'timeline' && renderConsole((data) => <TimelinePanel data={data} />)}
-        {tab === 'projects' && renderConsole((data) => <ProjectsPanel data={data} />)}
-        {tab === 'references' && <ReferencesPanel teamSlug={team.slug} />}
-        {tab === 'leadership' && (
+        {activeTab === 'tasks' && renderConsole((data) => <TasksPanel teamId={team.team_id} data={data} />)}
+        {activeTab === 'agile' && renderConsole((data) => <AgilePanel teamId={team.team_id} data={data} />)}
+        {activeTab === 'evaluations' && renderConsole((data) => <EvaluationsPanel teamId={team.team_id} data={data} />)}
+        {activeTab === 'plan' && renderConsole((data) => <PlanPanel teamId={team.team_id} data={data} />)}
+        {activeTab === 'timeline' && renderConsole((data) => <TimelinePanel data={data} />)}
+        {activeTab === 'projects' && renderConsole((data) => <ProjectsPanel data={data} />)}
+        {activeTab === 'references' && <ReferencesPanel teamSlug={team.slug} />}
+        {activeTab === 'leadership' && (
           <section className="tms-leadership" aria-labelledby={`tms-lead-${team.team_id}`}>
             <header className="tms-block-head" data-tm-anim>
               <div>
@@ -363,20 +406,20 @@ export default function TeamPage() {
             {!team.is_active && <p className="tms-disabled" data-tm-anim><Pause size={15} aria-hidden="true" />{t('الوصول متوقف. فعّل الفريق عشان تعدّل مقاعده؛ تقدر تشيل تعيين موجود في أي وقت.', 'Access is paused. Enable this team to edit its seats; an existing assignment can still be removed.')}</p>}
             <div className="tms-seat-grid">
               {ROLES.map((role) => (
-                <SeatCard key={`${team.team_id}-${role}`} team={team} role={role} candidates={candidates.data ?? []} isOwner={ownerConfirmed} />
+                <SeatCard key={`${team.team_id}-${role}`} team={team} role={role} candidates={candidates.data ?? []} isOwner={isOwner} />
               ))}
             </div>
             {candidates.isError && <ErrorState message={t('تعذر تحميل حسابات التعيين.', 'Could not load assignment candidates.')} onRetry={() => { void candidates.refetch(); }} />}
           </section>
         )}
 
-        {tab === 'members' && (
+        {activeTab === 'members' && (
           team.is_active
             ? <MemberRoster team={team} />
             : <p className="tms-disabled" data-tm-anim><Pause size={15} aria-hidden="true" />{t('الوصول متوقف. فعّل الفريق لإدارة عضوياته؛ الحسابات والفرق الأخرى لا تتأثر.', 'Access is paused. Enable this team to manage memberships; accounts and other teams are unaffected.')}</p>
         )}
 
-        {tab === 'customize' && (
+        {activeTab === 'customize' && (
           <section className="tms-customize" aria-labelledby="tms-customize-title">
             <header className="tms-block-head" data-tm-anim>
               <div>
@@ -463,7 +506,7 @@ export default function TeamPage() {
           </section>
         )}
 
-        {tab === 'settings' && (
+        {activeTab === 'settings' && (
           <section className="tms-settings" aria-labelledby="tms-settings-title">
             <header className="tms-block-head" data-tm-anim>
               <div>

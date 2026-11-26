@@ -44,12 +44,12 @@ SELECT lives_ok($$SELECT public.owner_assign_team_admin(
 
 RESET ROLE;
 SELECT phantoms_test.login_as('multi-team-head');
-SELECT ok(NOT public.is_admin(), 'team-only Head is not a global administrator');
-SELECT ok(NOT public.has_admin_permission('tasks'), 'team-only task permission does not become global');
+SELECT ok(public.is_admin(), 'Head with an active assignment is an admin management account');
+SELECT ok(public.has_admin_permission('tasks'), 'assigned task permission is exposed to admin feature gates');
 SELECT ok(public.has_team_permission((phantoms_test.var('team_software_id')::uuid),'tasks'), 'Head has tasks permission in Software');
 SELECT ok(NOT public.has_team_permission((phantoms_test.var('team_hardware_id')::uuid),'tasks'), 'same Head lacks tasks permission in Hardware');
 SELECT ok(NOT public.has_team_permission((phantoms_test.var('team_ai_id')::uuid),'tasks'), 'Head has no access to an unassigned team');
-SELECT ok((public.get_admin_access() ->> 'is_admin')::BOOLEAN IS FALSE, 'team-only access response keeps is_admin false');
+SELECT ok((public.get_admin_access() ->> 'is_admin')::BOOLEAN IS TRUE, 'active team assignment is reported as admin access');
 SELECT ok((public.get_admin_access() ->> 'is_team_admin')::BOOLEAN IS TRUE, 'team-only access response reports separate team role');
 SELECT ok(jsonb_array_length(public.get_admin_access() -> 'teams') = 2, 'team-only access returns only its two assignments');
 SELECT throws_ok($$INSERT INTO public.teams(slug,name) VALUES ('forged','Forged')$$, '42501', NULL, 'team Head cannot insert teams directly');

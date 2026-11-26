@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const read = (path) => readFile(resolve(root, path), 'utf8');
-const [router, sidebar, header, listPage, teamPage, seatCard, memberRoster, teamCopy, api, db, routes, migration] = await Promise.all([
+const [router, sidebar, header, listPage, teamPage, seatCard, memberRoster, teamCopy, api, db, routes, migration, teamsCss] = await Promise.all([
   read('src/router/index.tsx'),
   read('src/components/layout/AppSidebar.tsx'),
   read('src/components/layout/AdminHeader.tsx'),
@@ -18,19 +18,20 @@ const [router, sidebar, header, listPage, teamPage, seatCard, memberRoster, team
   read('src/types/db.ts'),
   read('public/manus-routes.json'),
   read('../backend/supabase/migrations/20261120074604_internal_teams_foundation.sql'),
+  read('src/features/teams/teams-management.css'),
 ]);
 // The teams feature is split across the list page, the per-team page, and two
 // extracted panels; the guards below apply to the whole feature surface.
 const page = [listPage, teamPage, seatCard, memberRoster, teamCopy].join('\n');
 
-test('internal team management is lazy-loaded and doubly gated to the system Owner', () => {
+test('internal team management is lazy-loaded, Owner-gated for governance, and console-gated for team managers', () => {
   assert.match(router, /const TeamsManagementPage = lazy\(\(\) => import\('\.\.\/features\/teams\/TeamsManagementPage'\)\)/);
   assert.match(router, /path: 'teams', element: <ProtectedOwnerRoute><Page><TeamsManagementPage \/><\/Page><\/ProtectedOwnerRoute>/);
-  assert.match(router, /path: 'teams\/:teamId', element: <ProtectedOwnerRoute><Page><TeamPage \/><\/Page><\/ProtectedOwnerRoute>/);
+  assert.match(router, /path: 'teams\/:teamId', element: <ProtectedTeamConsoleRoute><Page><TeamPage \/><\/Page><\/ProtectedTeamConsoleRoute>/);
   assert.match(page, /const access = useAdminAccess\(user\?\.id \?\? null\)/);
-  assert.match(page, /if \(!access\.data\?\.owner_authority\)/);
-  assert.match(page, /useOwnerTeams\(ownerConfirmed\)/);
-  assert.match(page, /useTeamAdminCandidates\(ownerConfirmed\)/);
+  assert.match(page, /const canOpenConsole = isOwner \|\| isAdmin \|\| teamRole !== null/);
+  assert.match(page, /useOwnerTeams\(isOwner\)/);
+  assert.match(page, /useTeamAdminCandidates\(isOwner\)/);
   assert.ok(JSON.parse(routes).routes.some((route) => route.path === '/admin/teams'));
 });
 
@@ -60,4 +61,13 @@ test('team navigation appears in the Owner-only system administration group', ()
   const sidebarEntry = sidebar.slice(sidebar.indexOf("to: '/admin/teams'"), sidebar.indexOf("to: '/admin/teams'") + 160);
   assert.match(sidebarEntry, /ownerOnly: true/);
   assert.match(header, /path: '\/admin\/teams'.*ownerOnly: true/);
+});
+
+test('the team console stays responsive: section nav drops below the header and panels stack on small screens', () => {
+  assert.match(teamsCss, /@media \(max-width: 900px\) \{\s*\.tms-tabs \{\s*position: sticky;/);
+  assert.match(teamsCss, /inset-block-start: calc\(var\(--header-h, 64px\) \+ 10px\)/);
+  assert.match(teamsCss, /@media \(max-width: 640px\) \{[\s\S]*\.tmc-panel-head \{ flex-direction: column; align-items: stretch; \}/);
+  assert.match(teamsCss, /@media \(max-width: 380px\) \{/);
+  assert.match(teamsCss, /@media \(min-width: 861px\) and \(max-width: 1023px\)/);
+  assert.doesNotMatch(teamsCss, /#[0-9a-fA-F]{3,6}\b/, 'Team styles must stay on design tokens, never raw hex');
 });

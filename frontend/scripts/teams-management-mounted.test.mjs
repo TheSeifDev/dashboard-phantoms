@@ -187,6 +187,7 @@ function defaultFixture(overrides = {}) {
     profiles: { [TEAM_ALPHA]: queryState({ team_id: TEAM_ALPHA, slug: 'alpha-studio', name: 'Alpha Studio', is_active: true, ...defaultProfile }), [TEAM_BETA]: queryState({ team_id: TEAM_BETA, slug: 'beta-ops', name: 'Beta Operations', is_active: false, tagline: '', accent: 'primary', focus_areas: [], updated_at: null }) },
     console: { [TEAM_ALPHA]: queryState(consoleFixture), [TEAM_BETA]: queryState(emptyConsoleFixture(TEAM_BETA, 'beta-ops', 'Beta Operations')) },
     references: queryState(referenceFixture),
+    teamPlan: queryState({ team_id: TEAM_ALPHA, plan: '', updated_at: null, can_edit: true }),
     ...overrides,
   };
 }
@@ -378,6 +379,27 @@ exports.useCreateTeamTask = mutation('createTeamTask');
 exports.useDeleteTeamTask = mutation('deleteTeamTask');
 exports.useReviewTeamTask = mutation('reviewTeamTask');
 exports.useCreateTeamEvaluation = mutation('createTeamEvaluation');
+exports.useTeamPlan = (teamId, enabled = true) => { state().hookEnabled.push({ hook: 'teamPlan', enabled }); return query(state().teamPlan); };
+exports.useSaveTeamPlan = mutation('saveTeamPlan');
+`],
+    ['src/features/teams/access.js', `
+const authorized = (access) => {
+  if (access?.is_admin === true || access?.is_team_admin !== true || !Array.isArray(access.teams)) return [];
+  return access.teams.filter((team) => typeof team.team_id === 'string' && team.team_id.length > 0
+    && (team.role === 'head' || team.role === 'monitor')
+    && typeof team.permissions === 'object' && team.permissions !== null);
+};
+exports.authorizedTeamEntries = authorized;
+exports.workspaceTeamEntries = (access) => {
+  if (access?.is_admin !== true) return authorized(access);
+  if (!Array.isArray(access.teams)) return [];
+  return access.teams.filter((team) => typeof team.team_id === 'string' && team.team_id.length > 0
+    && team.role === null && typeof team.permissions === 'object' && team.permissions !== null);
+};
+exports.managerDestination = (access) => {
+  if (access?.is_admin === true) return '/admin';
+  return authorized(access).length ? '/team' : null;
+};
 `],
     ['src/features/references/api.js', `
 const state = () => globalThis.__TM_FIXTURE;
@@ -1005,6 +1027,64 @@ try {
         await openTab('Tasks');
         assert.match(document.querySelector('.tms-tab-panel')?.textContent || '', /No team tasks yet/, 'An empty team must show an honest empty state');
         assert.equal(document.querySelector('.tmc-kcard'), null, 'No task cards may be fabricated');
+      } finally { await mounted.unmount(); }
+    });
+    await t.test('a team Head opens the console with permission-scoped tabs and writes the team plan', async () => {
+      const headAccess = {
+        isPending: false, isFetching: false, isError: false, refetch: async () => {},
+        data: {
+          is_admin: false, is_owner: false, is_team_admin: true, owner_authority: false, role: null, email: 'head.alpha@example.test', permissions: {},
+          teams: [{
+            team_id: TEAM_ALPHA, slug: 'alpha-studio', name: 'Alpha Studio', role: 'head',
+            permissions: { dashboard: true, tasks: false, ranking: true, members: false, notes: false, announcements: false, whatsapp: false, ai_assistant: false },
+          }],
+        },
+      };
+      const mounted = await mount(bundle, { page: 'team', access: headAccess });
+      try {
+        const labels = [...document.querySelectorAll('.tms-tabs button')].map((tab) => tab.textContent?.trim() ?? '');
+        assert.ok(labels.some((label) => label.includes('Overview')), 'A Head must reach the overview');
+        assert.ok(labels.some((label) => label.includes('Plan')), 'A Head with dashboard permission must reach the plan');
+        assert.ok(labels.some((label) => label.includes('Evaluations')), 'A Head with ranking permission must reach evaluations');
+        assert.equal(labels.some((label) => label.includes('Tasks')), false, 'A Head without the tasks permission must not see tasks');
+        assert.equal(labels.some((label) => label.includes('Leadership')), false, 'Leadership governance stays with the Owner');
+        assert.equal(labels.some((label) => label.includes('Settings')), false, 'Team settings stay with the Owner');
+        assert.equal(labels.some((label) => label.includes('Members')), false, 'The member roster stays with the Owner and admins');
+        const consoleCalls = mounted.fixture.hookEnabled.filter((entry) => entry.hook === 'console');
+        assert.ok(consoleCalls.length >= 1 && consoleCalls.every((entry) => entry.enabled), 'The console query must be enabled for a Head');
+        const teamCalls = mounted.fixture.hookEnabled.filter((entry) => entry.hook === 'teams');
+        assert.ok(teamCalls.every((entry) => entry.enabled === false), 'Owner-only team queries must stay disabled for a Head');
+        await openTab('Plan');
+        await changeControl(findLabelControl('Plan text', 'textarea'), 'Ship the alpha beta by week 6.');
+        await click(buttonContaining('Save plan'));
+        const planMutation = mounted.fixture.mutations.find((entry) => entry.kind === 'saveTeamPlan');
+        assert.ok(planMutation, 'Saving the written plan must call the plan mutation');
+        assert.equal(planMutation.input, 'Ship the alpha beta by week 6.', 'The written plan text must be forwarded');
+      } finally { await mounted.unmount(); }
+    });
+    await t.test('a team Monitor sees the plan read-only when the plan permission is missing', async () => {
+      const monitorAccess = {
+        isPending: false, isFetching: false, isError: false, refetch: async () => {},
+        data: {
+          is_admin: false, is_owner: false, is_team_admin: true, owner_authority: false, role: null, email: 'monitor.alpha@example.test', permissions: {},
+          teams: [{
+            team_id: TEAM_ALPHA, slug: 'alpha-studio', name: 'Alpha Studio', role: 'monitor',
+            permissions: { dashboard: false, tasks: true, ranking: false, members: false, notes: false, announcements: false, whatsapp: false, ai_assistant: false },
+          }],
+        },
+      };
+      const mounted = await mount(bundle, {
+        page: 'team',
+        access: monitorAccess,
+        fixture: defaultFixture({
+          teamPlan: queryState({ team_id: TEAM_ALPHA, plan: 'Owner-set plan for the term.', updated_at: null, can_edit: false }),
+        }),
+      });
+      try {
+        const labels = [...document.querySelectorAll('.tms-tabs button')].map((tab) => tab.textContent?.trim() ?? '');
+        assert.ok(labels.some((label) => label.includes('Tasks')), 'A Monitor with the tasks permission must reach tasks');
+        assert.equal(labels.some((label) => label.includes('Plan')), false, 'A Monitor without dashboard permission must not reach the plan');
+        assert.equal(document.querySelector('textarea'), null, 'Read-only members must not receive a plan editor');
       } finally { await mounted.unmount(); }
     });
   });

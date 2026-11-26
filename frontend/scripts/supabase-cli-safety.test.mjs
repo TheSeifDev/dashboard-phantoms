@@ -29,14 +29,18 @@ function runCheck() {
     encoding: 'utf8',
   });
 }
-test('local inventory retains sixty-six applied forwards including exact app-use, Owner-erasure and app-usage platform timestamps', () => {
+test('local inventory retains seventy-three applied forwards and the sole pending team-scope correction', () => {
   const result = runCheck();
   assert.equal(result.status, 0, result.stderr);
   const entries = JSON.parse(readFileSync(resolve(repoRoot, 'backend/supabase/forward-migration-manifest.json'), 'utf8'));
   const pending = entries.filter((entry) => entry.production_status === 'not_applied').length;
   const applied = entries.length - pending;
-  assert.equal(pending, 0);
-  assert.equal(applied, 71);
+  assert.equal(pending, 1);
+  assert.equal(applied, 73);
+  const pendingScopeFix = entries.find((entry) => entry.version === '20261126130000');
+  assert.equal(pendingScopeFix?.name, 'team_rpc_scope_isolation');
+  assert.equal(pendingScopeFix?.production_status, 'not_applied');
+  assert.equal(pendingScopeFix?.remote_applied_timestamp, null);
   const appUsage = entries.find((entry) => entry.version === '20261121090000');
   assert.equal(appUsage.name, 'member_app_usage');
   assert.equal(appUsage.production_status, 'applied');

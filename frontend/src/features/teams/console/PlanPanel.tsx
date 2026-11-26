@@ -1,14 +1,96 @@
-import { useState, type FormEvent } from 'react';
-import { Pencil, Plus, Target, Trash2, X } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Pencil, Plus, ScrollText, Target, Trash2, X } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
+import { ErrorState } from '../../../components/ui/ErrorState';
+import { Skeleton } from '../../../components/ui/Skeleton';
 import { toast } from '../../../store/toast';
 import { toAppError } from '../../../lib/supabase/errors';
 import { useLocale } from '../../../i18n/useLocale';
 import type { TeamConsole, TeamGoal, TeamGoalStatus } from '../../../types/db';
-import { useDeleteTeamGoal, useSaveTeamGoal } from './api';
+import { useDeleteTeamGoal, useSaveTeamGoal, useSaveTeamPlan, useTeamPlan } from './api';
 import { GOAL_STATUS_COPY, PanelShell, StateChip } from './shared';
 import { ProgressRing } from './charts';
+
+const PLAN_LIMIT = 6000;
+
+/**
+ * خطة الفريق المكتوبة: مساحة حرة يكتب فيها الفريق خطته بنفسه (أهداف، مواعيد،
+ * طريقة شغل) وبيشوفها كل من له وصول للوحة. الحفظ عبر team_plan_save.
+ */
+function TeamPlanCard({ teamId }: { teamId: string }) {
+  const { t, date } = useLocale();
+  const planQuery = useTeamPlan(teamId);
+  const savePlan = useSaveTeamPlan(teamId);
+  const [text, setText] = useState('');
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    if (!planQuery.data || dirty) return;
+    setText(planQuery.data.plan);
+  }, [planQuery.data, dirty]);
+
+  const canEdit = planQuery.data?.can_edit === true;
+
+  const save = async () => {
+    try {
+      await savePlan.mutateAsync(text.trim());
+      setDirty(false);
+      toast.success(t('اتحفظت خطة الفريق.', 'Team plan saved.'));
+    } catch (error) {
+      toast.error(toAppError(error, t('معرفناش نحفظ خطة الفريق.', 'Could not save the team plan.')).message);
+    }
+  };
+
+  return (
+    <PanelShell
+      id="tmc-plan-written"
+      kicker={<><ScrollText size={14} aria-hidden="true" />{t('خطة الفريق', 'Team plan')}</>}
+      title={t('الفريق بيكتب خطته بنفسه', 'The team writes its own plan')}
+      hint={t('اكتب الأهداف والمواعيد وطريقة الشغل. أي حد عنده صلاحية الخطة على الفريق يقدر يعدّلها.', 'Write goals, milestones, and how the team works. Anyone with plan permission on the team can edit it.')}
+    >
+      {planQuery.isPending ? <Skeleton className="h-32 w-full" /> : null}
+      {planQuery.isError ? (
+        <ErrorState
+          message={t('تعذر تحميل خطة الفريق.', 'Could not load the team plan.')}
+          onRetry={() => { void planQuery.refetch(); }}
+        />
+      ) : null}
+      {planQuery.data ? (
+        canEdit ? (
+          <div className="tmc-form">
+            <label className="tmc-field tmc-field--wide">
+              <span>{t('نص الخطة', 'Plan text')}</span>
+              <textarea
+                value={text}
+                onChange={(event) => { setText(event.target.value.slice(0, PLAN_LIMIT)); setDirty(true); }}
+                rows={9}
+                maxLength={PLAN_LIMIT}
+                placeholder={t('مثال: الشهر ده بنسلّم نسخة تجريبية، مراجعة كل أسبوع، وكل عضو عليه مهمة واحدة…', 'e.g. Ship a beta this month, review weekly, one owned task per member…')}
+              />
+            </label>
+            <div className="tmc-form-actions">
+              <Button type="button" icon={<ScrollText size={15} aria-hidden="true" />} isLoading={savePlan.isPending} disabled={!dirty} onClick={() => void save()}>
+                {t('حفظ الخطة', 'Save plan')}
+              </Button>
+              <span className="tmc-note" dir="ltr">{text.length}/{PLAN_LIMIT}</span>
+              {planQuery.data.updated_at ? (
+                <span className="tmc-note">{t('آخر تحديث', 'Updated')} {date(planQuery.data.updated_at)}</span>
+              ) : null}
+            </div>
+          </div>
+        ) : planQuery.data.plan ? (
+          <div className="tmc-plan-text">
+            <p>{planQuery.data.plan}</p>
+            {planQuery.data.updated_at ? <span className="tmc-note">{t('آخر تحديث', 'Updated')} {date(planQuery.data.updated_at)}</span> : null}
+          </div>
+        ) : (
+          <p className="tmc-note">{t('لسه الفريق مكتبش خطته. أي Head أو Monitor عنده صلاحية الخطة يقدر يكتبها.', 'The team has not written its plan yet. A Head or Monitor with plan permission can write it.')}</p>
+        )
+      ) : null}
+    </PanelShell>
+  );
+}
 
 interface Draft {
   id: number | null;
@@ -83,6 +165,8 @@ export function PlanPanel({ teamId, data }: { teamId: string; data: TeamConsole 
 
   return (
     <>
+      <TeamPlanCard teamId={teamId} />
+
       <div className="tmc-metrics">
         <article className="tmc-metric" data-tmc-anim>
           <strong dir="ltr">{Math.round(overall * 100)}%</strong>

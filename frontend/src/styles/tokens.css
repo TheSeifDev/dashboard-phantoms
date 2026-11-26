@@ -217,6 +217,15 @@
   --medal-bronze-ink: #8A4A1F;
 }
 
+/* Mobile: البار العائم بينزل 22px تحت، فالمتغيّر بيمشي معاه عشان أي sticky
+   (رؤوس الجداول، تابات الفريق، إلخ) يفضل مستقر تحته بالظبط. */
+@media (max-width: 900px) {
+  :root { --header-h: 82px; }
+}
+@media (max-width: 599px) {
+  :root { --header-h: 88px; }
+}
+
 [data-theme="dark"] {
   color-scheme: dark;
   --primary: #DC143C;
