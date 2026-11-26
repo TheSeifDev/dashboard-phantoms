@@ -12,8 +12,8 @@ test('global access remains in /admin even if a team projection is returned', ()
   assert.deepEqual(authorizedTeamEntries({ is_admin: true, is_team_admin: true, teams: [a] }), []);
 });
 
-test('team-only access requires the trusted flag and actual team seats', () => {
-  assert.equal(managerDestination({ is_admin: false, is_team_admin: true, teams: [a, b] }), '/team');
+test('team-only management access requires the trusted flag and actual team seats', () => {
+  assert.equal(managerDestination({ is_admin: false, is_team_admin: true, teams: [a, b] }), '/admin');
   assert.equal(managerDestination({ is_admin: false, is_team_admin: false, teams: [a] }), null);
   assert.equal(managerDestination({ is_team_admin: true, teams: [{ ...a, role: null }] }), null);
   assert.equal(managerDestination({ is_team_admin: true, teams: [] }), null);
@@ -39,7 +39,8 @@ test('global administrators explicitly enter teams without becoming Head or comb
 
 test('router has separate team routes while global pages remain protected', () => {
   const source = readFileSync(new URL('../src/router/index.tsx', import.meta.url), 'utf8');
-  assert.match(source, /managerDestination\(access\.data\) === '\/team'/);
+  assert.match(source, /if \(destination === '\/admin'\) return <>{children}<\/>/);
+  assert.match(source, /if \(destination !== '\/team'\) return <Navigate to="\/admin\/login" replace \/>/);
   assert.match(source, /path: '\/team'.*ProtectedTeamRoute/);
   assert.match(source, /path: '\/team\/:teamId'.*ProtectedTeamRoute/);
   assert.match(source, /path: 'admins'.*ProtectedOwnerRoute/);

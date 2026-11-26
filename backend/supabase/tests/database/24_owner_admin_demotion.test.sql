@@ -206,11 +206,11 @@ SELECT is(
 RESET ROLE;
 
 SELECT phantoms_test.login_as('linked');
-SELECT ok(NOT public.is_admin(), 'the demoted identity is immediately non-global');
+SELECT ok(public.is_admin(), 'the demoted identity retains management access through its active team assignment');
 SELECT is(
   public.get_admin_access() ->> 'is_admin',
-  'false',
-  'get_admin_access immediately reports is_admin=false after row removal'
+  'true',
+  'get_admin_access keeps is_admin=true while the active team assignment remains'
 );
 SELECT is(
   public.get_member_password_access() ->> 'member_id',

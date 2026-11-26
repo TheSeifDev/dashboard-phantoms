@@ -718,5 +718,25 @@
     "remote_applied_timestamp": "20261125190000",
     "original_source_version": "20261125190000",
     "original_source_filename": "backend/supabase/migrations/20261125190000_team_console_access.sql"
+  },
+  {
+    "version": "20261126120000",
+    "name": "team_managers_admin_access",
+    "canonical_repository_filename": "backend/supabase/migrations/20261126120000_team_managers_admin_access.sql",
+    "sha256": "c205099c0b98ceddb80be3d7a97035a3b58fb3d56a5786ffc61b6145c448d4cf",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261126121515",
+    "original_source_version": "20261126120000",
+    "original_source_filename": "backend/supabase/migrations/20261126120000_team_managers_admin_access.sql"
+  },
+  {
+    "version": "20261126130000",
+    "name": "team_rpc_scope_isolation",
+    "canonical_repository_filename": "backend/supabase/migrations/20261126130000_team_rpc_scope_isolation.sql",
+    "sha256": "3a4521d1dc4b852f8580f2d680e2fcb3574587297e480bea732801b587ff73ea",
+    "production_status": "not_applied",
+    "remote_applied_timestamp": null,
+    "original_source_version": "20261126130000",
+    "original_source_filename": "backend/supabase/migrations/20261126130000_team_rpc_scope_isolation.sql"
   }
 ]

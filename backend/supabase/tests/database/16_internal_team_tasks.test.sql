@@ -38,10 +38,10 @@ SELECT lives_ok($$SELECT public.team_add_member(
 RESET ROLE;
 SELECT phantoms_test.clear_auth();
 
--- Team head has only the tasks feature, not global Admin status or other teams.
+-- Team Head has admin UI access, but team RPC permissions remain scoped.
 SELECT phantoms_test.login_as('internal_task_head');
-SELECT ok(NOT public.is_admin(),'team task role does not become a global Admin');
-SELECT ok(NOT public.has_admin_permission('tasks'),'team task permission does not become global');
+SELECT ok(public.is_admin(),'active team task assignment is an admin management account');
+SELECT ok(public.has_admin_permission('tasks'),'assigned task permission is available to admin feature gates');
 SELECT is(jsonb_array_length(public.team_list_roster(
   phantoms_test.var('internal_task_software')::UUID,'tasks')),1,
   'task-scoped roster exposes only active members in the selected team');
