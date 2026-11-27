@@ -9,8 +9,9 @@ import { memberAuthErrorMessage, normalizeAuthEmail } from './member-password';
 import { PhantomLoader } from '../../components/motion/PhantomLoader';
 import { useLocale } from '../../i18n/useLocale';
 import { MemberAppUsageTracker } from '../app-usage/MemberAppUsageTracker';
+import { adoptManagementSession, isManagementAccount } from './management-session';
 
-type GuardState = 'checking' | 'allowed' | 'denied';
+type GuardState = 'checking' | 'allowed' | 'denied' | 'management';
 
 type AuthSignal = {
   sequence: number;
@@ -89,6 +90,9 @@ async function cleanupMemberState(snapshot?: CleanupSnapshot, latestAuthSignal?:
 
 export function MemberAccessGuard({ children }: { children: ReactNode }) {
   const { t } = useLocale();
+  // A management account is moved to the admin workspace exactly once; the
+  // member state cleanup below must not bounce it back to /login.
+  const handedOffRef = useRef(false);
   const currentMember = useAuthStore((state) => state.currentMember);
   const currentMemberId = currentMember?.id ?? null;
   const currentMemberEmail = normalizeAuthEmail(currentMember?.email ?? '');
@@ -123,6 +127,7 @@ export function MemberAccessGuard({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (handedOffRef.current) return;
     let active = true;
     const generation = ++latestVerificationGeneration;
     const snapshot: CleanupSnapshot = {
@@ -179,6 +184,19 @@ export function MemberAccessGuard({ children }: { children: ReactNode }) {
         ) throw new Error('INVALID_MEMBER_SESSION');
 
         if (!active || generation !== latestVerificationGeneration) return;
+
+        // Head/Monitor (and any management account) must never sit in the member
+        // portal, even when an old member session is restored on app launch.
+        if (await isManagementAccount(snapshot.authUid)) {
+          const adopted = await adoptManagementSession();
+          if (!active || generation !== latestVerificationGeneration) return;
+          if (adopted) {
+            handedOffRef.current = true;
+            setGuardState({ key: memberKey, authSequence: authSignal.sequence, state: 'management' });
+            return;
+          }
+        }
+
         setGuardState({ key: memberKey, authSequence: authSignal.sequence, state: 'allowed' });
       } catch {
         // Cleanup is intentionally not gated by `active`: known failures must
@@ -202,6 +220,7 @@ export function MemberAccessGuard({ children }: { children: ReactNode }) {
     ? guardState.state
     : 'checking';
 
+  if (visibleState === 'management' || handedOffRef.current) return <Navigate to="/admin" replace />;
   if (visibleState === 'denied') return <Navigate to="/login" replace />;
   if (visibleState === 'checking') {
     return <PhantomLoader message={t('بنتأكد من جلسة العضو وصلاحية الجهاز...', 'Verifying the member session and device access...')} />;

@@ -12,7 +12,7 @@ import {
   useAuthStore,
 } from '../../store/auth';
 import { memberSupabase } from '../../lib/supabase/member-client';
-import { supabase } from '../../lib/supabase/client';
+import { handOffToAdminWorkspace } from './management-session';
 import { fetchMemberByEmail, bindMemberDeviceSession } from '../members/api';
 import { isValidEmail } from '../../lib/validators';
 import { generateMemberDeviceToken, memberAuthErrorMessage, normalizeAuthEmail } from './member-password';
@@ -56,21 +56,6 @@ async function localMemberAuthCleanup(logoutMember: () => void): Promise<void> {
   await memberSupabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
   clearDeviceToken();
   logoutMember();
-}
-
-/**
- * Heads, Monitors and global administrators sign in from the member screen too.
- * They are management accounts, so they must land in the admin workspace instead
- * of the member portal. The check runs on the member session we just created.
- */
-async function isManagementAccount(): Promise<boolean> {
-  try {
-    const { data, error } = await memberSupabase.rpc('get_admin_access');
-    if (error) return false;
-    return data?.is_admin === true;
-  } catch {
-    return false;
-  }
 }
 
 export default function LoginPage() {
@@ -154,18 +139,11 @@ export default function LoginPage() {
         }
 
         // Management accounts (Owner/Admin/Head/Monitor) never continue into the
-        // member portal from this screen: open the admin session with the same
-        // verified credentials and hand them the dashboard.
-        if (await isManagementAccount()) {
-          const { error: adminSignInError } = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password: submittedPassword,
-          });
-          if (!adminSignInError) {
-            await localMemberAuthCleanup(logoutMember);
-            if (liveRef.current) navigate('/admin', { replace: true });
-            return;
-          }
+        // member portal from this screen: their session is handed to the admin
+        // client and they land on the management workspace.
+        if (await handOffToAdminWorkspace(data.user.id)) {
+          if (liveRef.current) navigate('/admin', { replace: true });
+          return;
         }
 
         let access = await getMemberPasswordAccess();
