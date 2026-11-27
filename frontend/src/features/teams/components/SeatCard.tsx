@@ -7,7 +7,7 @@ import { useLocale } from '../../../i18n/useLocale';
 import type { TeamAdminCandidate, TeamAdminRole, TeamPermissions, TeamOverview } from '../../../types/db';
 import { TEAM_PERMISSION_OPTIONS } from '../../admin/access/permissions';
 import { useSetTeamAdminSeat } from '../api';
-import { EMPTY_PERMISSIONS, PERMISSION_COPY, initials, roleCopy } from './teamCopy';
+import { EMPTY_PERMISSIONS, FULL_TEAM_PERMISSIONS, PERMISSION_COPY, initials, roleCopy } from './teamCopy';
 
 export function SeatCard({ team, role, candidates, isOwner }: {
   team: TeamOverview;
@@ -21,12 +21,12 @@ export function SeatCard({ team, role, candidates, isOwner }: {
   const eligible = candidates.filter((candidate) => candidate.global_role === null);
   const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState(existing?.user_id ?? '');
-  const [permissions, setPermissions] = useState<TeamPermissions>(existing?.permissions ?? EMPTY_PERMISSIONS);
+  const [permissions, setPermissions] = useState<TeamPermissions>(existing?.permissions ?? FULL_TEAM_PERMISSIONS);
   const setSeat = useSetTeamAdminSeat();
 
   useEffect(() => {
     setUserId(existing?.user_id ?? '');
-    setPermissions(existing?.permissions ?? EMPTY_PERMISSIONS);
+    setPermissions(existing?.permissions ?? FULL_TEAM_PERMISSIONS);
   }, [existing?.id, existing?.user_id, existing?.permissions]);
 
   const enabled = TEAM_PERMISSION_OPTIONS.filter(({ key }) => (existing?.permissions ?? EMPTY_PERMISSIONS)[key]);

@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { CheckSquare, Layers, List, Plus, Search, X } from 'lucide-react';
 import type { Task, TaskTrackingEntry } from '../../types/db';
 import { useTasks, useDeleteTask } from './api';
-import { useMembers } from '../members/api';
+import { useMemberTeamDirectory, useMembers } from '../members/api';
+import { useAdminAccess } from '../admin/access/api';
+import { authorizedTeamEntries } from '../teams/access';
+import { useAuthStore } from '../../store/auth';
 import { Button } from '../../components/ui/Button';
 import { CardSkeletons } from '../../components/ui/Skeleton';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -25,6 +28,9 @@ export default function TasksPage() {
   const { t, dir, locale, number } = useLocale();
   const tasksQuery = useTasks();
   const membersQuery = useMembers();
+  const userId = useAuthStore((state) => state.user?.id ?? null);
+  const accessQuery = useAdminAccess(userId);
+  const teamDirectory = useMemberTeamDirectory();
   const deleteTask = useDeleteTask();
   const [createOpen, setCreateOpen] = useState(false);
   const [view, setView] = useState<'cards' | 'table'>('cards');
@@ -32,8 +38,20 @@ export default function TasksPage() {
   const [remove, setRemove] = useState<Task | null>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<TaskFilter>('all');
-  const tasks = tasksQuery.data ?? [];
-  const members = membersQuery.data ?? [];
+  const allTasks = tasksQuery.data ?? [];
+  const allMembers = membersQuery.data ?? [];
+  // Head/Monitor seats manage their own team only: the assignment picker is
+  // limited to that team's active members and the task is stamped with it.
+  const managerTeams = authorizedTeamEntries(accessQuery.data);
+  const managerTeamSlugs = new Set(managerTeams.map((team) => team.slug));
+  const members = managerTeams.length > 0 && teamDirectory.data
+    ? allMembers.filter((member) => (teamDirectory.data.byMember[member.id] ?? []).some((slug) => managerTeamSlugs.has(slug)))
+    : allMembers;
+  const managerTeamId = managerTeams.length === 1 ? managerTeams[0].team_id : null;
+  const managerTeamIds = new Set(managerTeams.map((team) => team.team_id));
+  const tasks = managerTeams.length > 0
+    ? allTasks.filter((task) => Boolean(task.team_id) && managerTeamIds.has(String(task.team_id)))
+    : allTasks;
 
   const items = tasks.map((task) => ({ task, summary: summarizeTask(task) }));
   const awaiting = items.reduce((sum, item) => sum + item.summary.awaitingReview, 0);
@@ -128,7 +146,7 @@ export default function TasksPage() {
               : view === 'cards' ? <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-3">{filteredTasks.map(({ task }) => <TaskCard key={task.id} task={task} members={members} onReview={setReview} onDelete={setRemove} />)}</div>
                 : <TaskTable tasks={filteredTasks.map(({ task }) => task)} members={members} onReview={setReview} onDelete={setRemove} />}
 
-      <TaskAssignmentModal isOpen={createOpen} members={members} membersLoading={membersQuery.isLoading} onClose={() => setCreateOpen(false)} />
+      <TaskAssignmentModal isOpen={createOpen} members={members} membersLoading={membersQuery.isLoading || (managerTeams.length > 0 && teamDirectory.isLoading)} teamId={managerTeamId} onClose={() => setCreateOpen(false)} />
       <TaskReviewModal item={review} members={members} onClose={() => setReview(null)} />
       <TaskDeleteModal task={remove} isDeleting={deleteTask.isPending} onClose={() => setRemove(null)} onConfirm={() => void confirmDelete()} />
     </section>
