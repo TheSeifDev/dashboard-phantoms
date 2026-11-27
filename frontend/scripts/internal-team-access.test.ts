@@ -45,5 +45,5 @@ test('router has separate team routes while global pages remain protected', () =
   assert.match(source, /path: '\/team\/:teamId'.*ProtectedTeamRoute/);
   assert.match(source, /path: 'admins'.*ProtectedOwnerRoute/);
   assert.match(source, /path: 'teams'.*ProtectedOwnerRoute/);
-  assert.match(source, /if \(!access\.data\?\.is_admin\)/);
+  assert.match(source, /if \(!access\.data\?\.is_admin && !teamManagerConsole\)/);
 });

@@ -66,11 +66,14 @@ export function TaskAssignmentModal({
   isOpen,
   members,
   membersLoading = false,
+  teamId = null,
   onClose,
 }: {
   isOpen: boolean;
   members: Member[];
   membersLoading?: boolean;
+  /** Head/Monitor seats create tasks for their own team only. */
+  teamId?: string | null;
   onClose: () => void;
 }) {
   const { t, number, date, locale } = useLocale();
@@ -193,6 +196,7 @@ export function TaskAssignmentModal({
       (audience === 'ALL' ? members.map((member) => String(member.id)) : audience).map((id) => [id, { status: 'pending', updated_at: now, note: '', submission_url: '' }]),
     );
     const payload: TaskInsert = {
+      team_id: teamId ?? null,
       title: cleanTitle,
       description: description.trim() || null,
       has_deadline: Boolean(deadline),

@@ -11,6 +11,14 @@ export const EMPTY_PERMISSIONS = Object.fromEntries(
   TEAM_PERMISSION_OPTIONS.map(({ key }) => [key, false]),
 ) as TeamPermissions;
 
+/**
+ * A Head/Monitor seat starts with the same sections a global administrator sees.
+ * The Owner can still switch any section off for a specific seat.
+ */
+export const FULL_TEAM_PERMISSIONS = Object.fromEntries(
+  TEAM_PERMISSION_OPTIONS.map(({ key }) => [key, true]),
+) as TeamPermissions;
+
 export const PERMISSION_COPY: Record<TeamPermission, { ar: string; en: string }> = {
   dashboard: { ar: 'لوحة الفريق', en: 'Team dashboard' },
   members: { ar: 'الأعضاء', en: 'Members' },
