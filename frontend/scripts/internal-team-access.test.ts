@@ -7,9 +7,12 @@ import type { TeamAccessEntry } from '../src/types/db';
 const a: TeamAccessEntry = { team_id: 'team-a-local', slug: 'software', name: 'Software', role: 'head', permissions: { tasks: true } };
 const b: TeamAccessEntry = { team_id: 'team-b-local', slug: 'hardware', name: 'Hardware', role: 'monitor', permissions: { members: true, tasks: false } };
 
-test('global access remains in /admin even if a team projection is returned', () => {
-  assert.equal(managerDestination({ is_admin: true, is_team_admin: true, teams: [a] }), '/admin');
-  assert.deepEqual(authorizedTeamEntries({ is_admin: true, is_team_admin: true, teams: [a] }), []);
+test('global projections never become team seats, while a Head keeps theirs', () => {
+  const globalProjection: TeamAccessEntry = { ...a, role: null, permissions: { tasks: true } };
+  assert.equal(managerDestination({ is_admin: true, is_team_admin: false, teams: [globalProjection] }), '/admin');
+  assert.deepEqual(authorizedTeamEntries({ is_admin: true, is_team_admin: false, teams: [globalProjection] }), []);
+  // A Head/Monitor also reports is_admin=true; the seat list comes from the role.
+  assert.deepEqual(authorizedTeamEntries({ is_admin: true, is_team_admin: true, teams: [a] }), [a]);
 });
 
 test('team-only management access requires the trusted flag and actual team seats', () => {

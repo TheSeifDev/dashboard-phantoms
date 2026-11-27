@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type FocusEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type PointerEvent, type ReactNode } from 'react';
 import gsap from 'gsap';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -61,6 +61,7 @@ const EN: Record<string, string> = {
   'شغلي': 'My work', 'مهامي': 'My tasks', 'تقييماتي': 'My evaluations',
   'الفريق الداخلي': 'Internal team', 'مساحات المشروعات': 'Project workspaces',
   'الحساب والإعدادات': 'Account & settings', 'بوابة العضو': 'Member portal',
+  'فريقي': 'My team', 'لوحة الفريق': 'Team console',
 };
 
 export interface SidebarLink {
@@ -421,6 +422,7 @@ export function AppSidebar({
   drawerOpen,
   onCloseDrawer,
   groups = GROUPS,
+  teams,
   guest = false,
   brandTo = '/admin',
   roleLabel,
@@ -437,6 +439,8 @@ export function AppSidebar({
   drawerOpen: boolean;
   onCloseDrawer: () => void;
   groups?: SidebarGroup[];
+  /** Teams this Head/Monitor manages; each opens its own console. */
+  teams?: Array<{ to: string; label: string }>;
   guest?: boolean;
   brandTo?: string;
   /** Overrides the footer role line (member portal shows the member's own role). */
@@ -449,6 +453,18 @@ export function AppSidebar({
   avatarHandle?: string | null;
   brandSubtitle?: string;
 }) {
+  // Head/Monitor seats open their own team console from the sidebar; the
+  // owner-only team directory stays for global administrators.
+  const groupsWithTeams = useMemo<SidebarGroup[]>(() => {
+    if (!teams || teams.length === 0) return groups;
+    const teamGroup: SidebarGroup = {
+      title: 'فريقي',
+      items: teams.map((team) => ({ to: team.to, label: team.label, icon: Network })),
+    };
+    const index = groups.findIndex((group) => group.title === 'الحساب والإدارة');
+    if (index === -1) return [...groups, teamGroup];
+    return [...groups.slice(0, index), teamGroup, ...groups.slice(index)];
+  }, [groups, teams]);
   const { t, dir } = useLocale();
   const [collapsed, setCollapsed] = useState(readSidebarCollapsed);
   const [signingOut, setSigningOut] = useState(false);
@@ -579,7 +595,7 @@ export function AppSidebar({
         </div>
         <nav ref={navRef} id="desktop-sidebar-navigation" aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-sidebar-nav">
           <span ref={indicatorRef} className="app-sidebar-indicator" aria-hidden="true" />
-          <SidebarLinks railTips collapsed={collapsed} isOwner={isOwner} isAdmin={isAdmin} permissions={permissions} groups={groups} />
+          <SidebarLinks railTips collapsed={collapsed} isOwner={isOwner} isAdmin={isAdmin} permissions={permissions} groups={groupsWithTeams} />
         </nav>
         <div className="app-sidebar-footer">
           {guest ? (
@@ -627,7 +643,7 @@ export function AppSidebar({
           </div>
         </div>
         <nav aria-label={t('التنقل الرئيسي', 'Main navigation')} className="app-drawer-nav flex flex-col gap-4 py-4">
-          <SidebarLinks onNavigate={onCloseDrawer} isOwner={isOwner} isAdmin={isAdmin} permissions={permissions} groups={groups} />
+          <SidebarLinks onNavigate={onCloseDrawer} isOwner={isOwner} isAdmin={isAdmin} permissions={permissions} groups={groupsWithTeams} />
           {guest ? (
             <>
               <NavLink to="/login" className="app-sidebar-item app-sidebar-guest-cta" onClick={onCloseDrawer}>

@@ -53,7 +53,8 @@ export default function TeamPage() {
   const user = useAuthStore((state) => state.user);
   const access = useAdminAccess(user?.id ?? null);
   const isOwner = access.data?.owner_authority === true;
-  const isAdmin = access.data?.is_admin === true;
+  // Global administrators only; Head/Monitor reach their own team through teamRole.
+  const isAdmin = access.data?.role === 'owner' || access.data?.role === 'admin';
   /** Head/Monitor على نفس الفريق — من get_admin_access، مش تخمين في الواجهة. */
   const accessTeam = useMemo(() => {
     const entries = [...authorizedTeamEntries(access.data), ...workspaceTeamEntries(access.data)];

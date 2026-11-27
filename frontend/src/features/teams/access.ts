@@ -26,7 +26,9 @@ export function workspaceTeamEntries(access: WorkspaceAccess | null | undefined)
 }
 
 export function authorizedTeamEntries(access: WorkspaceAccess | null | undefined): TeamAccessEntry[] {
-  if (access?.is_admin === true || access?.is_team_admin !== true || !Array.isArray(access.teams)) return [];
+  // A Head/Monitor also reports is_admin=true (management shell), so the seat
+  // list must come from the entries' own role, never from that flag.
+  if (access?.is_team_admin !== true || !Array.isArray(access.teams)) return [];
   return access.teams.filter((team) => (
     typeof team.team_id === 'string' && team.team_id.length > 0
     && (team.role === 'head' || team.role === 'monitor')
