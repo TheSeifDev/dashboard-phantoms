@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase/client';
 import { memberSupabase } from '../../lib/supabase/member-client';
 import { toAppError } from '../../lib/supabase/errors';
 import { TABLES } from '../../types/db';
-import type { RevokeTaskApprovalResult, Task, TaskInsert, TaskStatus, TaskTrackingEntry } from '../../types/db';
+import type { RevokeTaskApprovalResult, Task, TaskDifficulty, TaskInsert, TaskStatus, TaskSubmissionLink, TaskTrackingEntry } from '../../types/db';
 import { getDeviceToken, useAuthStore } from '../../store/auth';
 import { isPositiveId, safeHref } from '../../lib/validators';
 import { EVAL_CARRIER_PREFIX } from '../evaluations/api';
@@ -50,6 +50,38 @@ export const useMemberTasks = (memberId: number | undefined) => {
       return (data as Task[]).filter((t) => !t.title.startsWith(EVAL_CARRIER_PREFIX));
     },
     staleTime: 10_000,
+  });
+};
+
+/** Structured member delivery; server generates submitted_at after assignment checks. */
+export const useSubmitTaskDelivery = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { taskId: number; memberId: number; description: string; notes: string; usefulnessStars: number; difficulty: TaskDifficulty; links: TaskSubmissionLink[] }): Promise<Task> => {
+      if (!isPositiveId(input.taskId) || !isPositiveId(input.memberId)) throw new Error('بيانات المهمة أو العضو مش صحيحة.');
+      if (useAuthStore.getState().currentMember?.id !== input.memberId) throw new Error('MEMBER_SESSION_REQUIRED: سجل دخولك كصاحب المهمة.');
+      const deviceToken = getDeviceToken();
+      if (!deviceToken) throw new Error('DEVICE_REQUIRED: سجّل دخولك من جديد للتحقق من جلسة الجهاز.');
+      const description = input.description.trim();
+      const notes = input.notes.trim();
+      if (!description || description.length > 4000 || notes.length > 2000) throw new Error('وصف الإنجاز أو الملاحظات غير صالحة.');
+      if (!Number.isInteger(input.usefulnessStars) || input.usefulnessStars < 1 || input.usefulnessStars > 5) throw new Error('تقييم الاستفادة لازم يكون من نجمة إلى خمس نجوم.');
+      if (!['easy', 'medium', 'hard'].includes(input.difficulty)) throw new Error('مستوى الصعوبة غير صالح.');
+      if (input.links.length > 10 || input.links.some((link) => !link.label.trim() || link.label.trim().length > 80 || !safeHref(link.url.trim()) || link.url.trim().length > 2048)) throw new Error('تحقق من أسماء وروابط التسليم.');
+      const { error } = await memberSupabase.rpc('submit_task_delivery', {
+        p_task_id: input.taskId, p_member_id: input.memberId, p_device_token: deviceToken,
+        p_description: description, p_notes: notes, p_usefulness_stars: input.usefulnessStars,
+        p_difficulty: input.difficulty,
+        p_links: input.links.map((link) => ({ label: link.label.trim(), url: link.url.trim() })),
+      });
+      if (error) throw toAppError(error, 'معرفناش نحفظ تسليم المهمة.');
+      const { data, error: fetchError } = await memberSupabase.rpc('get_member_tasks', { p_member_id: input.memberId, p_device_token: deviceToken });
+      if (fetchError) throw toAppError(fetchError, 'اتحفظ التسليم لكن معرفناش نحدّث العرض.');
+      const task = (data as Task[] | null)?.find((row) => row.id === input.taskId);
+      if (!task) throw new Error('MEMBER_TASK_NOT_FOUND: المهمة مش موجودة في تكليفاتك.');
+      return task;
+    },
+    onSettled: () => Promise.all([qc.invalidateQueries({ queryKey: ['tasks'] }), qc.invalidateQueries({ queryKey: ['member-tasks'] })]),
   });
 };
 

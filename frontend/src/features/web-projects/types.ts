@@ -53,6 +53,12 @@ export interface WebTask {
   labels: string[]; created_at: string; updated_at: string; completed_at: string | null; created_by_auth_user_id: string;
 }
 export interface WebAssignee { project_id: string; task_id: string; member_id: number; is_primary: boolean }
+export type WebTaskDifficulty = 'easy' | 'medium' | 'hard';
+export interface WebTaskSubmission {
+  id: string; project_id: string; task_id: string; member_id: number;
+  description: string; notes: string; usefulness_stars: number; difficulty: WebTaskDifficulty;
+  links: Array<{ label: string; url: string }>; submitted_at: string; updated_at: string;
+}
 export interface WebDeliverable {
   id: string; project_id: string; milestone_id: string | null; task_id: string | null; submitted_by_member_id: number;
   title: string; description: string; evidence: WebJson[]; due_date: string | null;

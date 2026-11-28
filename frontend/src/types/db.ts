@@ -66,11 +66,20 @@ export type MemberCustomFieldInsert = Omit<MemberCustomField, 'id' | 'created_at
 
 export type TaskStatus = 'pending' | 'in_progress' | 'under_review' | 'approved' | 'revision_requested';
 
+export type TaskDifficulty = 'easy' | 'medium' | 'hard';
+export interface TaskSubmissionLink { label: string; url: string }
+
 /** حالة تتبع عضو داخل مهمة */
 export interface TaskTrackingEntry {
   status: TaskStatus;
   note?: string;
   submission_url?: string;
+  submission_description?: string;
+  submission_notes?: string;
+  submission_links?: TaskSubmissionLink[];
+  usefulness_stars?: number;
+  difficulty?: TaskDifficulty;
+  submitted_at?: string;
   updated_at?: string;
   /** البونص الممنوح فعلياً عند الاعتماد (migration 0012) */
   bonus_awarded?: number;
@@ -597,6 +606,10 @@ export interface Database {
       logout_member_device: { Args: { p_member_id: number; p_device_token?: string | null }; Returns: boolean };
       submit_task_status: {
         Args: { p_task_id: number; p_member_id: number; p_device_token?: string | null; p_status?: string; p_note?: string; p_submission_url?: string };
+        Returns: unknown;
+      };
+      submit_task_delivery: {
+        Args: { p_task_id: number; p_member_id: number; p_device_token: string; p_description: string; p_notes: string; p_usefulness_stars: number; p_difficulty: string; p_links: TaskSubmissionLink[] };
         Returns: unknown;
       };
       update_member_readiness: { Args: { p_member_id: number; p_device_token: string; p_can_go: boolean }; Returns: boolean };

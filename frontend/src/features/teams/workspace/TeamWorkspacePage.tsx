@@ -41,7 +41,9 @@ import type {
   MemberEvaluationGrade,
   TeamMemberSummary,
   TeamMembershipStatus,
+  TaskTrackingEntry,
 } from '../../../types/db';
+import { safeHref } from '../../../lib/validators';
 import { useAdminAccess } from '../../admin/access/api';
 import {
   createWorkspaceAnnouncement,
@@ -267,6 +269,7 @@ function TaskSubmissionReview({
   task,
   member,
   status,
+  entry,
   note,
   onNoteChange,
   onReview,
@@ -275,6 +278,7 @@ function TaskSubmissionReview({
   task: WorkspaceTask;
   member: WorkspaceRosterEntry;
   status: 'under_review' | 'approved';
+  entry: TaskTrackingEntry;
   note: string;
   onNoteChange: (value: string) => void;
   onReview: (task: WorkspaceTask, memberId: number, action: 'approve' | 'revoke' | 'revision', note: string) => Promise<void>;
@@ -287,6 +291,11 @@ function TaskSubmissionReview({
       <span className="break-words text-sm font-extrabold">{member.full_name}</span>
       <span className="rounded-full border border-[var(--border)] px-2 py-1 text-xs font-bold">{status === 'under_review' ? t('بانتظار المراجعة', 'Awaiting review') : status}</span>
     </div>
+    {entry.submitted_at && <p className="text-xs text-[var(--text-muted)]">{t('وقت التسليم (من الخادم):', 'Submitted (server time):')} {new Date(entry.submitted_at).toLocaleString()}</p>}
+    {entry.submission_description && <p className="whitespace-pre-line rounded-lg border border-[var(--border)] p-3 text-sm leading-6"><strong>{t('وصف الإنجاز:', 'Completed work:')}</strong> {entry.submission_description}</p>}
+    {(entry.submission_notes || entry.note) && <p className="whitespace-pre-line rounded-lg border border-[var(--border)] p-3 text-sm leading-6"><strong>{t(entry.status === 'revision_requested' ? 'توجيه التعديل:' : 'ملاحظات العضو:', entry.status === 'revision_requested' ? 'Revision instructions:' : 'Member notes:')}</strong> {entry.status === 'revision_requested' ? entry.note : entry.submission_notes ?? entry.note}</p>}
+    {entry.usefulness_stars != null && <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{t('الاستفادة:', 'Usefulness:')} {'★'.repeat(entry.usefulness_stars)}{'☆'.repeat(5-entry.usefulness_stars)} ({entry.usefulness_stars}/5) · {t('الصعوبة:', 'Difficulty:')} {entry.difficulty === 'easy' ? t('سهل', 'Easy') : entry.difficulty === 'medium' ? t('متوسط', 'Medium') : entry.difficulty === 'hard' ? t('صعب', 'Hard') : '—'}</p>}
+    {(entry.submission_links ?? (entry.submission_url ? [{ label: '', url: entry.submission_url }] : [])).map((link, index) => { const href = safeHref(link.url); return href ? <a key={`${href}-${index}`} href={href} target="_blank" rel="noreferrer noopener" className="break-all text-sm font-bold text-[var(--link)]">{link.label || href}</a> : null; })}
     <label className="grid gap-1 text-xs font-bold">{status === 'approved' ? t('سبب إلغاء الاعتماد (مطلوب)', 'Reason for revoking approval (required)') : t('ملاحظة للعضو عند طلب التعديل', 'Member note for a revision request')}
       <textarea value={note} onChange={(event) => onNoteChange(event.target.value)} rows={2} maxLength={1000} className={inputClass('min-h-20')} />
     </label>
@@ -397,7 +406,7 @@ function TeamTasksSection({ userId, teamId }: { userId: string; teamId: string }
   const reviewEntries = (task: WorkspaceTask) => activeMembers.flatMap((member) => {
     const entry = task.tracking?.[String(member.member_id)];
     if (!assignedToMember(task, member.member_id) || !entry) return [];
-    return entry.status === 'under_review' || entry.status === 'approved' ? [{ member, status: entry.status }] : [];
+    return entry.status === 'under_review' || entry.status === 'approved' ? [{ member, status: entry.status, entry }] : [];
   });
   const visibleTasks = (tasks.data ?? []).filter((task) => {
     const query = taskFilter.trim().toLocaleLowerCase();
@@ -445,9 +454,9 @@ function TeamTasksSection({ userId, teamId }: { userId: string; teamId: string }
               <div className="min-w-0"><h3 className="break-words font-black">{task.title}</h3>{task.description && <p className="mt-1 whitespace-pre-line break-words text-sm leading-6 text-[var(--text-2)]">{task.description}</p>}<p className="mt-2 text-xs text-[var(--text-muted)]">{task.deadline_date ? `${t('الموعد النهائي:', 'Deadline:')} ${task.deadline_date}` : t('من غير موعد نهائي', 'No deadline')} · {number(assignedMembers.length)} {t('أعضاء نشطون مسند إليهم', 'active assignees')}</p></div>
               <TaskDeleteButton task={task} onDelete={deleteTask} pending={remove.isPending} />
             </div>
-            {reviews.length > 0 && <div className="grid gap-2 border-t border-[var(--border)] pt-3"><h4 className="text-sm font-extrabold">{t('تسليمات تحتاج مراجعة', 'Submissions to review')}</h4>{reviews.map(({ member, status }) => {
+            {reviews.length > 0 && <div className="grid gap-2 border-t border-[var(--border)] pt-3"><h4 className="text-sm font-extrabold">{t('تسليمات تحتاج مراجعة', 'Submissions to review')}</h4>{reviews.map(({ member, status, entry }) => {
               const key = `${task.id}:${member.member_id}`;
-              return <TaskSubmissionReview key={key} task={task} member={member} status={status} note={reviewNotes[key] ?? ''} onNoteChange={(value) => setReviewNotes((current) => ({ ...current, [key]: value }))} onReview={decide} pending={review.isPending} />;
+              return <TaskSubmissionReview key={key} task={task} member={member} status={status} entry={entry} note={reviewNotes[key] ?? ''} onNoteChange={(value) => setReviewNotes((current) => ({ ...current, [key]: value }))} onReview={decide} pending={review.isPending} />;
             })}</div>}
           </Card>;
         })}

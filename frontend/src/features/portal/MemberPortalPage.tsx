@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
-import { useMemberTasks, useUpdateTaskStatus } from '../tasks/api';
+import { useMemberTasks, useSubmitTaskDelivery, useUpdateTaskStatus } from '../tasks/api';
 import { updateMemberReadiness } from '../members/api';
-import type { Task } from '../../types/db';
+import type { Task, TaskDifficulty, TaskSubmissionLink } from '../../types/db';
 import { toast } from '../../store/toast';
 import { handleSupabaseError } from '../../lib/errorHandler';
 import { MemberHero } from './MemberHero';
@@ -38,6 +38,7 @@ export default function MemberPortalPage() {
   const tasksQuery = useMemberTasks(member?.id);
   const evaluationsQuery = useMemberEvaluations(member?.id);
   const updateTask = useUpdateTaskStatus();
+  const submitDelivery = useSubmitTaskDelivery();
   const [params, setParams] = useSearchParams();
   const requestedTab = (params.get('tab') ?? 'ALL').toUpperCase() as PortalTab;
   const activeTab: PortalTab = (['ALL', 'TASKS', 'EVALUATIONS', 'ANNOUNCEMENTS'] as PortalTab[]).includes(requestedTab) ? requestedTab : 'ALL';
@@ -45,8 +46,11 @@ export default function MemberPortalPage() {
     setParams(next === 'ALL' ? {} : { tab: next }, { replace: false });
   };
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [submissionUrl, setSubmissionUrl] = useState('');
-  const [submissionNote, setSubmissionNote] = useState('');
+  const [submissionDescription, setSubmissionDescription] = useState('');
+  const [submissionNotes, setSubmissionNotes] = useState('');
+  const [usefulnessStars, setUsefulnessStars] = useState(5);
+  const [submissionDifficulty, setSubmissionDifficulty] = useState<TaskDifficulty>('medium');
+  const [submissionLinks, setSubmissionLinks] = useState<TaskSubmissionLink[]>([{ label: '', url: '' }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTogglingReadiness, setIsTogglingReadiness] = useState(false);
   const [celebration, setCelebration] = useState<SubmissionCelebration | null>(null);
@@ -99,18 +103,17 @@ export default function MemberPortalPage() {
     if (!selectedTask) return;
     setIsSubmitting(true);
     try {
-      await updateTask.mutateAsync({
-        taskId: selectedTask.id,
-        memberId: member.id,
-        status: 'under_review',
-        submissionUrl: submissionUrl.trim(),
-        note: submissionNote.trim(),
-        currentTracking: selectedTask.tracking ?? {},
+      const updatedTask = await submitDelivery.mutateAsync({
+        taskId: selectedTask.id, memberId: member.id,
+        description: submissionDescription, notes: submissionNotes,
+        usefulnessStars, difficulty: submissionDifficulty,
+        links: submissionLinks.filter((link) => link.label.trim() || link.url.trim()),
       });
       const submitted = selectedTask;
+      const submittedEntry = updatedTask.tracking?.[memberId];
       setSelectedTask(null);
-      setSubmissionUrl('');
-      setSubmissionNote('');
+      setSubmissionDescription(''); setSubmissionNotes(''); setUsefulnessStars(5);
+      setSubmissionDifficulty('medium'); setSubmissionLinks([{ label: '', url: '' }]);
       void bonusQuery.refetch();
       setCelebration({
         taskId: submitted.id,
@@ -118,7 +121,7 @@ export default function MemberPortalPage() {
         firstName: member.full_name.trim().split(/\s+/)[0] || member.full_name,
         bonus: taskBonus(submitted),
         deadline: submitted.has_deadline ? submitted.deadline_date : null,
-        submittedAt: new Date().toISOString(),
+        submittedAt: submittedEntry?.submitted_at ?? new Date().toISOString(),
         isResubmission: submitted.tracking?.[String(member.id)]?.status === 'revision_requested',
       });
     } catch (cause) {
@@ -144,8 +147,12 @@ export default function MemberPortalPage() {
 
   const openSubmission = (task: Task) => {
     setSelectedTask(task);
-    setSubmissionNote(task.tracking?.[memberId]?.note ?? '');
-    setSubmissionUrl(task.tracking?.[memberId]?.submission_url ?? '');
+    const entry = task.tracking?.[memberId];
+    setSubmissionDescription(entry?.submission_description ?? '');
+    setSubmissionNotes(entry?.submission_notes ?? entry?.note ?? '');
+    setUsefulnessStars(entry?.usefulness_stars ?? 5);
+    setSubmissionDifficulty(entry?.difficulty ?? 'medium');
+    setSubmissionLinks(entry?.submission_links?.length ? entry.submission_links : [{ label: '', url: '' }]);
   };
 
   return (
@@ -204,7 +211,7 @@ export default function MemberPortalPage() {
             memberId={memberId}
             isLoading={tasksQuery.isLoading}
             isError={tasksQuery.isError}
-            isUpdating={updateTask.isPending}
+        isUpdating={updateTask.isPending || submitDelivery.isPending}
             onRetry={() => {
               void tasksQuery.refetch();
             }}
@@ -228,11 +235,17 @@ export default function MemberPortalPage() {
       ) : null}
       <SubmissionModal
         task={selectedTask}
-        url={submissionUrl}
-        note={submissionNote}
+        description={submissionDescription}
+        notes={submissionNotes}
+        stars={usefulnessStars}
+        difficulty={submissionDifficulty}
+        links={submissionLinks}
         isSubmitting={isSubmitting}
-        onUrlChange={setSubmissionUrl}
-        onNoteChange={setSubmissionNote}
+        onDescriptionChange={setSubmissionDescription}
+        onNotesChange={setSubmissionNotes}
+        onStarsChange={setUsefulnessStars}
+        onDifficultyChange={setSubmissionDifficulty}
+        onLinksChange={setSubmissionLinks}
         onClose={() => setSelectedTask(null)}
         onSubmit={submitTask}
       />

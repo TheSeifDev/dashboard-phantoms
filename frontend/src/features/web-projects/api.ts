@@ -10,7 +10,7 @@ const TABLES = new Set([
   'web_project_members', 'web_project_agreement_acceptances', 'web_project_consents', 'web_project_milestones',
   'web_project_milestone_dependencies', 'web_project_deliverables', 'web_project_sprints', 'web_project_tasks',
   'web_project_task_assignees', 'web_project_task_comments', 'web_project_task_checklist_items',
-  'web_project_task_attachments', 'web_project_updates', 'web_project_member_reports', 'web_resources',
+  'web_project_task_attachments', 'web_project_task_submissions', 'web_project_updates', 'web_project_member_reports', 'web_resources',
   'web_project_resource_refs', 'web_project_integrations', 'web_project_activity_logs', 'web_program_admin_audit',
   'web_project_progress', 'web_project_milestone_progress', 'web_project_sprint_progress',
 ]);
@@ -20,7 +20,7 @@ const RPCS = new Set([
   'web_amend_project_agreement', 'web_record_project_consent', 'web_set_project_permissions',
   'web_set_project_status', 'web_transition_project_task', 'web_submit_member_report', 'web_review_member_report',
   'web_list_member_candidates', 'web_list_project_roster', 'web_list_my_project_invitations', 'web_set_project_member_status',
-  'web_create_idea', 'web_delete_project_task',
+  'web_create_idea', 'web_delete_project_task', 'web_submit_project_task',
 ]);
 // The app keeps a hand-maintained legacy Database type. This isolated transport
 // describes only the new namespace; it does not weaken that legacy schema.
