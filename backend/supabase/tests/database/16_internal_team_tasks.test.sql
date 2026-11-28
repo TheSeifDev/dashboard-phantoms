@@ -130,10 +130,26 @@ SELECT is(public.submit_task_status(
   phantoms_test.var('internal_task_main')::BIGINT,phantoms_test.mid('internal_task_alice'),
   phantoms_test.tok('internal_task_alice'),'under_review','synthetic submission','') ->> 'status',
   'under_review','member submits a team task with the existing device identity guard');
+SELECT is(public.submit_task_delivery(
+  phantoms_test.var('internal_task_cleanup')::BIGINT,phantoms_test.mid('internal_task_alice'),
+  phantoms_test.tok('internal_task_alice'),'Completed scoped team work','Feedback for the team',4,'hard',
+  '[{"label":"GitHub","url":"https://github.com/example/team"},{"label":"Wokwi","url":"https://wokwi.com/projects/456"}]'::JSONB)->>'status',
+  'under_review','member submits structured work to an ALL-assigned active team task');
+SELECT is((SELECT jsonb_array_length(tracking->phantoms_test.mid('internal_task_alice')::TEXT->'submission_links')
+           FROM public.tasks WHERE id=phantoms_test.var('internal_task_cleanup')::BIGINT),2,
+  'internal team task preserves multiple submission links in this member’s tracking key');
+SELECT ok((SELECT (tracking->phantoms_test.mid('internal_task_alice')::TEXT->>'submitted_at')::TIMESTAMPTZ <= clock_timestamp()
+            AND tracking->phantoms_test.mid('internal_task_alice')::TEXT ? 'usefulness_stars'
+           FROM public.tasks WHERE id=phantoms_test.var('internal_task_cleanup')::BIGINT),
+  'internal team task delivery has a server timestamp and usefulness rating');
 SELECT throws_like($$SELECT public.submit_task_status(
   phantoms_test.var('internal_task_hardware_task')::BIGINT,phantoms_test.mid('internal_task_alice'),
   phantoms_test.tok('internal_task_alice'),'under_review','','')$$,
   '%TEAM_MEMBERSHIP_REQUIRED%','member cannot submit an ALL task without active membership in its team');
+SELECT throws_like($$SELECT public.submit_task_delivery(
+  phantoms_test.var('internal_task_hardware_task')::BIGINT,phantoms_test.mid('internal_task_alice'),
+  phantoms_test.tok('internal_task_alice'),'Cross-team attempt','',3,'easy','[]'::JSONB)$$,
+  '%TEAM_MEMBERSHIP_REQUIRED%','structured delivery cannot cross Internal Team membership boundaries');
 SELECT is(public.submit_task_status(
   phantoms_test.var('internal_task_revision')::BIGINT,phantoms_test.mid('internal_task_alice'),
   phantoms_test.tok('internal_task_alice'),'under_review','revision path','') ->> 'status',

@@ -7,6 +7,7 @@ import type {
   TeamMemberSummary,
   TeamMembershipStatus,
   TaskStatus,
+  TaskTrackingEntry,
 } from '../../../types/db';
 
 export type TeamWorkspaceSection =
@@ -38,7 +39,7 @@ export interface WorkspaceTask {
   has_deadline: boolean;
   deadline_date: string | null;
   assigned_to: Array<string | number> | 'ALL' | null;
-  tracking: Record<string, { status: TaskStatus; note?: string; submission_url?: string; updated_at?: string }> | null;
+  tracking: Record<string, TaskTrackingEntry> | null;
   bonus_points: number;
 }
 

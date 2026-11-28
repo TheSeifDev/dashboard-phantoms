@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { WebAssignee, WebAttachment, WebChecklist, WebComment, WebMilestone, WebSprint, WebTask } from "./types";
+import type { WebTaskDifficulty, WebTaskSubmission } from "../types";
 type WorkspaceChecklistRow = WebChecklist & { created_by_member_id: number; updated_by_member_id: number | null };
 import {
   MessageSquare,
@@ -43,6 +44,11 @@ export function TaskDialog({
   const [checkText, setCheckText] = useState("");
   const [attachmentTitle, setAttachmentTitle] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState("");
+  const [deliveryDescription, setDeliveryDescription] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
+  const [deliveryStars, setDeliveryStars] = useState(5);
+  const [deliveryDifficulty, setDeliveryDifficulty] = useState<WebTaskDifficulty>("medium");
+  const [deliveryLinks, setDeliveryLinks] = useState<Array<{ label: string; url: string }>>([{ label: "", url: "" }]);
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [form, setForm] = useState({
@@ -80,6 +86,7 @@ export function TaskDialog({
     { task_id: task?.id ?? "" },
     Boolean(task?.id),
   );
+  const submissions = useWebQuery<WebTaskSubmission>(mode, "web_project_task_submissions", projectId, { task_id: task?.id ?? "" }, Boolean(task?.id));
   const sprints = useWebQuery<WebSprint>(mode, "web_project_sprints", projectId);
   const milestones = useWebQuery<WebMilestone>(mode, "web_project_milestones",
     projectId,
@@ -100,6 +107,15 @@ export function TaskDialog({
       && member.accepted_agreement_version === project.current_agreement_version);
   const currentMembership = activeContributors.find((member) => member.member_id === currentMemberId);
   const canSubmitMemberWork = Boolean(currentMembership);
+  const canSubmitThisTask = Boolean(task && canSubmitMemberWork && assigned.includes(String(currentMemberId)) && task.status === "in_progress");
+  const mySubmission = (submissions.data ?? []).find((submission) => submission.member_id === currentMemberId);
+  useEffect(() => {
+    setDeliveryDescription(mySubmission?.description ?? "");
+    setDeliveryNotes(mySubmission?.notes ?? "");
+    setDeliveryStars(mySubmission?.usefulness_stars ?? 5);
+    setDeliveryDifficulty(mySubmission?.difficulty ?? "medium");
+    setDeliveryLinks(mySubmission?.links?.length ? mySubmission.links : [{ label: "", url: "" }]);
+  }, [task?.id, mySubmission?.id, mySubmission?.updated_at]);
   const editable = workspace.isLead || workspace.isProgramAdmin || (task !== null && assigned.includes(String(currentMemberId)));
   const canEditLinks = workspace.isLead || workspace.isProgramAdmin;
   useEffect(() => {
@@ -273,8 +289,8 @@ export function TaskDialog({
     }
   };
   const formId = "web-project-task-form";
-  const queryError = sprints.error ?? milestones.error ?? members.error ?? comments.error ?? checklist.error ?? attachments.error ?? subtasks.error;
-  if (queryError) return <WorkspaceQueryError error={queryError} queries={[sprints, milestones, members, comments, checklist, attachments, subtasks]} />;
+  const queryError = sprints.error ?? milestones.error ?? members.error ?? comments.error ?? checklist.error ?? attachments.error ?? subtasks.error ?? submissions.error;
+  if (queryError) return <WorkspaceQueryError error={queryError} queries={[sprints, milestones, members, comments, checklist, attachments, subtasks, submissions]} />;
   return (
     <Modal
       isOpen
@@ -443,6 +459,44 @@ export function TaskDialog({
         )}
         {task && (
           <div className="wp-task-detail-sections">
+            {mySubmission && <section className="wp-panel">
+              <h3>{t("تسليمك الحالي", "Your current submission")}</h3>
+              <p><strong>{t("وقت التسليم:", "Submitted:")}</strong> {new Date(mySubmission.submitted_at).toLocaleString()}</p>
+              <p><strong>{t("وصف الإنجاز:", "Completed work:")}</strong> {mySubmission.description}</p>
+              {mySubmission.notes && <p><strong>{t("ملاحظات:", "Notes:")}</strong> {mySubmission.notes}</p>}
+              <p>{t(`الاستفادة: ${mySubmission.usefulness_stars}/5 نجوم · الصعوبة: ${mySubmission.difficulty}`, `Usefulness: ${mySubmission.usefulness_stars}/5 stars · Difficulty: ${mySubmission.difficulty}`)}</p>
+              {mySubmission.links.map((link, index) => <div key={`${link.url}-${index}`}><SafeLink href={link.url}>{link.label || link.url}</SafeLink></div>)}
+            </section>}
+            {(workspace.isLead || workspace.isProgramAdmin) && (submissions.data ?? []).length > 0 && <section className="wp-panel">
+              <h3>{t("تسليمات أعضاء المهمة", "Task member submissions")}</h3>
+              {(submissions.data ?? []).map((submission) => <article key={submission.id} className="wp-row">
+                <div><strong>{roster.find((member) => member.member_id === submission.member_id)?.full_name ?? `#${submission.member_id}`}</strong>
+                  <p>{t("وقت التسليم:", "Submitted:")} {new Date(submission.submitted_at).toLocaleString()}</p>
+                  <p>{t("الإنجاز:", "Completed work:")} {submission.description}</p>
+                  {submission.notes && <p>{t("ملاحظات:", "Notes:")} {submission.notes}</p>}
+                  <p>{t(`الاستفادة: ${submission.usefulness_stars}/5 نجوم · الصعوبة: ${submission.difficulty}`, `Usefulness: ${submission.usefulness_stars}/5 stars · Difficulty: ${submission.difficulty}`)}</p>
+                  {submission.links.map((link, index) => <div key={`${link.url}-${index}`}><SafeLink href={link.url}>{link.label || link.url}</SafeLink></div>)}
+                </div>
+              </article>)}
+            </section>}
+            {canSubmitThisTask && <section className="wp-panel">
+              <h3>{t("تسليم المهمة", "Submit task")}</h3>
+              <label>{t("وصف الإنجاز", "Completed work")}<textarea required minLength={1} maxLength={4000} rows={3} value={deliveryDescription} onChange={(event) => setDeliveryDescription(event.target.value)} /></label>
+              <label>{t("ملاحظات إضافية", "Additional notes")}<textarea maxLength={2000} rows={2} value={deliveryNotes} onChange={(event) => setDeliveryNotes(event.target.value)} /></label>
+              <label>{t("تقييم الاستفادة", "Usefulness rating")}<select value={deliveryStars} onChange={(event) => setDeliveryStars(Number(event.target.value))}>{[1,2,3,4,5].map((star) => <option key={star} value={star}>{"★".repeat(star)} ({star}/5)</option>)}</select></label>
+              <label>{t("مستوى الصعوبة", "Difficulty")}<select value={deliveryDifficulty} onChange={(event) => setDeliveryDifficulty(event.target.value as WebTaskDifficulty)}><option value="easy">{t("سهل", "Easy")}</option><option value="medium">{t("متوسط", "Medium")}</option><option value="hard">{t("صعب", "Hard")}</option></select></label>
+              {deliveryLinks.map((link, index) => <div key={index} className="wp-inline-add"><input aria-label={t("اسم الرابط", "Link label")} maxLength={80} placeholder="GitHub / Wokwi" value={link.label} onChange={(event) => setDeliveryLinks((current) => current.map((item, i) => i === index ? { ...item, label: event.target.value } : item))} /><input aria-label={t("رابط التسليم", "Submission URL")} type="url" required={Boolean(link.label)} maxLength={2048} placeholder="https://" value={link.url} onChange={(event) => setDeliveryLinks((current) => current.map((item, i) => i === index ? { ...item, url: event.target.value } : item))} />{deliveryLinks.length > 1 && <Button type="button" variant="danger" onClick={() => setDeliveryLinks((current) => current.filter((_, i) => i !== index))}><Trash2 size={14}/></Button>}</div>)}
+              <Button type="button" disabled={deliveryLinks.length >= 10} onClick={() => setDeliveryLinks((current) => [...current, { label: "", url: "" }])}><Plus size={15}/>{t("إضافة رابط", "Add link")}</Button>
+              <Button type="button" isLoading={rpc.isPending} disabled={!deliveryDescription.trim() || deliveryLinks.some((link) => Boolean(link.label.trim()) !== Boolean(link.url.trim()))} onClick={async () => {
+                try {
+                  const links = deliveryLinks.filter((link) => link.label.trim() || link.url.trim());
+                  await rpc.mutateAsync({ name: "web_submit_project_task", args: { p_task_id: task.id, p_description: deliveryDescription.trim(), p_notes: deliveryNotes.trim(), p_usefulness_stars: deliveryStars, p_difficulty: deliveryDifficulty, p_links: links.map((link) => ({ label: link.label.trim(), url: link.url.trim() })) } });
+                  toast.success(t("تم حفظ التسليم ووقت الخادم تلقائيًا.", "Submission saved with server time."));
+                  onSaved();
+                } catch (error) { toast.error(error instanceof Error ? error.message : t("تعذر حفظ التسليم.", "Could not save submission.")); }
+              }}>{mySubmission ? t("تحديث التسليم", "Update submission") : t("إرسال التسليم", "Submit work")}</Button>
+              <small>{t("وقت التسليم يحدده الخادم. يمكنك إضافة حتى 10 روابط.", "Submission time is assigned by the server. Add up to 10 links.")}</small>
+            </section>}
             {canChangeStatus && (
               <section className="wp-panel">
                 <h3>{t("تحديث سير العمل", "Workflow transition")}</h3>

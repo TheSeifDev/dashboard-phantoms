@@ -32,12 +32,13 @@ export function TaskReviewModal({ item, members, onClose }: { item: { task: Task
   const memberName = member?.full_name ?? (item ? t(`عضو #${item.memberId}`, `Member #${item.memberId}`) : '');
   const entry = item?.entry;
   const href = entry?.submission_url ? safeHref(entry.submission_url) : null;
-  const hasSubmission = Boolean(href || entry?.note);
+  const submissionLinks = entry?.submission_links ?? (href ? [{ label: '', url: href }] : []);
+  const hasSubmission = Boolean(submissionLinks.length || entry?.submission_description || entry?.submission_notes || entry?.note);
   const isApproved = entry?.status === 'approved';
   const busy = approve.isPending || revise.isPending || revoke.isPending;
   const bonus = item ? taskBonus(item.task) : 0;
   const deadline = item?.task.has_deadline ? item.task.deadline_date : null;
-  const submittedAt = entry?.updated_at ? new Date(entry.updated_at) : null;
+  const submittedAt = entry?.submitted_at ? new Date(entry.submitted_at) : null;
   const deadlineAt = parseDeadline(deadline);
   const submittedLate = Boolean(deadlineAt && submittedAt && submittedAt.getTime() > deadlineAt.getTime());
   const formatLocalizedDateTime = (value: string) => locale === 'ar'
@@ -120,7 +121,7 @@ export function TaskReviewModal({ item, members, onClose }: { item: { task: Task
             <span className="font-bold">{t('العضو:', 'Member:')} <span className="text-[var(--link)]">{memberName}</span></span>
             {entry && <span className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${STATUS_META[entry.status]?.tone ?? ''}`}>{taskStatusLabel(entry.status, locale) ?? entry.status}</span>}
           </div>
-          {entry?.updated_at && <p className="text-xs text-[var(--text-muted)]">{t('آخر تحديث:', 'Last updated:')} {formatLocalizedDateTime(entry.updated_at)}</p>}
+          {entry?.submitted_at && <p className="text-xs text-[var(--text-muted)]">{t('وقت التسليم (من الخادم):', 'Submitted (server time):')} {formatLocalizedDateTime(entry.submitted_at)}</p>}
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="rounded-xl border border-[var(--border)] p-3">
               <p className="text-xs font-bold text-[var(--text-muted)]">{t('الموعد النهائي', 'Deadline')}</p>
@@ -136,12 +137,21 @@ export function TaskReviewModal({ item, members, onClose }: { item: { task: Task
               <p className="mt-0.5 font-black tabular-nums text-amber-900 dark:text-amber-100">{bonus > 0 ? t(`${signedBonus(bonus, locale)} بونص عند الاعتماد`, `${signedBonus(bonus, locale)} bonus on approval`) : t('بدون بونص', 'No bonus')}</p>
             </div>
           </div>
-          {href && (
-            <a href={href} target="_blank" rel="noreferrer noopener" className="flex min-h-11 items-center gap-2 break-all rounded-xl border border-[var(--border)] px-3 py-2 font-bold text-[var(--link)] hover:bg-[var(--primary-soft)]">
+          {submissionLinks.map((link, index) => {
+            const linkHref = safeHref(link.url);
+            return linkHref && <a key={`${link.url}-${index}`} href={linkHref} target="_blank" rel="noreferrer noopener" className="flex min-h-11 items-center gap-2 break-all rounded-xl border border-[var(--border)] px-3 py-2 font-bold text-[var(--link)] hover:bg-[var(--primary-soft)]">
               <ExternalLink size={16} className="shrink-0" aria-hidden="true" />
-              <span dir="ltr" className="min-w-0 break-all text-start">{href}</span>
-            </a>
+              <span dir="ltr" className="min-w-0 break-all text-start">{link.label || linkHref} · {linkHref}</span>
+            </a>;
+          })}
+          {entry?.submission_description && <div className="rounded-xl border border-[var(--border)] p-3"><p className="mb-1 text-xs font-bold text-[var(--text-muted)]">{t('وصف الإنجاز', 'Completed work')}</p><p className="whitespace-pre-line leading-7">{entry.submission_description}</p></div>}
+          {(entry?.submission_notes || entry?.note) && (
+            <div className="rounded-xl border border-[var(--border)] p-3">
+              <p className="mb-1 text-xs font-bold text-[var(--text-muted)]">{entry.approval_reversed_at && entry.status === 'revision_requested' ? t('سبب إلغاء الاعتماد', 'Reason approval was revoked') : entry.status === 'revision_requested' ? t('آخر ملاحظة تعديل من الإدارة', 'Latest revision note from admin') : t('ملاحظات العضو', 'Member notes')}</p>
+              <p className="whitespace-pre-line leading-7">{entry.status === 'revision_requested' ? entry.note : entry.submission_notes ?? entry.note}</p>
+            </div>
           )}
+          {entry?.usefulness_stars != null && <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 font-bold text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">{t('تقييم الاستفادة:', 'Usefulness:')} {'★'.repeat(entry.usefulness_stars)}{'☆'.repeat(5 - entry.usefulness_stars)} ({entry.usefulness_stars}/5) · {t('الصعوبة:', 'Difficulty:')} {entry.difficulty === 'easy' ? t('سهل', 'Easy') : entry.difficulty === 'medium' ? t('متوسط', 'Medium') : entry.difficulty === 'hard' ? t('صعب', 'Hard') : '—'}</p>}
           {entry?.note && (
             <div className="rounded-xl border border-[var(--border)] p-3">
               <p className="mb-1 text-xs font-bold text-[var(--text-muted)]">{entry.approval_reversed_at && entry.status === 'revision_requested' ? t('سبب إلغاء الاعتماد', 'Reason approval was revoked') : entry.status === 'revision_requested' ? t('آخر ملاحظة تعديل من الإدارة', 'Latest revision note from admin') : t('ملاحظة العضو', 'Member note')}</p>
