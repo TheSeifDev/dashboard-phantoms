@@ -177,7 +177,7 @@ BEGIN
        OR jsonb_typeof(v_link -> 'label') <> 'string'
        OR char_length(btrim(v_link ->> 'label')) NOT BETWEEN 1 AND 80
        OR jsonb_typeof(v_link -> 'url') <> 'string'
-       OR char_length(v_link ->> 'url') NOT BETWEEN 9 AND 2048
+       OR char_length(btrim(v_link ->> 'url')) NOT BETWEEN 9 AND 2048
        OR (v_link ->> 'url') !~* '^https?://[^[:space:]]+$' THEN
       RAISE EXCEPTION 'INVALID_WEB_PROJECT_TASK_SUBMISSION_LINK';
     END IF;

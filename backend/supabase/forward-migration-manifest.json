@@ -743,9 +743,9 @@
     "version": "20261128110000",
     "name": "task_submission_feedback",
     "canonical_repository_filename": "backend/supabase/migrations/20261128110000_task_submission_feedback.sql",
-    "sha256": "bdbfe095e2bb046f8ac48e3b4887ded3e42a459e546f55e5f45d2fe57021d649",
-    "production_status": "not_applied",
-    "remote_applied_timestamp": null,
+    "sha256": "91917e23e63d12d1089ac0ebf125be30126955e1269f7a0d46f04fa1316df55a",
+    "production_status": "applied",
+    "remote_applied_timestamp": "20261128101347",
     "original_source_version": "20261128110000",
     "original_source_filename": "backend/supabase/migrations/20261128110000_task_submission_feedback.sql"
   }
